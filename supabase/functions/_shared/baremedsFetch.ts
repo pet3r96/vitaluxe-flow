@@ -30,12 +30,30 @@ export async function baremedsFetch(
 
     const baremedsCreds = JSON.parse(credData.credential_key);
 
+    // Normalize field names (handle base_url, baseUrl, api_base_url variations)
+    const baseUrl = baremedsCreds.base_url || baremedsCreds.baseUrl || baremedsCreds.api_base_url;
+    const email = baremedsCreds.email;
+    const password = baremedsCreds.password;
+    const siteId = baremedsCreds.site_id || baremedsCreds.siteId;
+
+    console.log("BareMeds credentials parsed:", {
+      hasBaseUrl: !!baseUrl,
+      baseUrl: baseUrl,
+      hasEmail: !!email,
+      hasSiteId: !!siteId,
+      credKeys: Object.keys(baremedsCreds)
+    });
+
+    if (!baseUrl || !email || !password || !siteId) {
+      throw new Error(`Missing required BareMeds credentials. Found: ${JSON.stringify(Object.keys(baremedsCreds))}`);
+    }
+
     // Get authentication token
-    const loginUrl = `${baremedsCreds.base_url}/api/auth/login`;
+    const loginUrl = `${baseUrl}/api/auth/login`;
     const loginPayload = {
-      email: baremedsCreds.email,
-      password: baremedsCreds.password,
-      site_id: baremedsCreds.site_id,
+      email: email,
+      password: password,
+      site_id: siteId,
     };
 
     const loginResponse = await fetch(loginUrl, {
@@ -59,7 +77,7 @@ export async function baremedsFetch(
     }
 
     // Make the actual API call with the token
-    const apiUrl = `${baremedsCreds.base_url}${endpoint}`;
+    const apiUrl = `${baseUrl}${endpoint}`;
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`,
