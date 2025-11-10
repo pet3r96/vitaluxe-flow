@@ -14,81 +14,9 @@ export function OrdersBreakdown() {
     queryFn: async () => {
       if (!effectiveUserId) return null;
 
+      // Pharmacies don't pull orders via API - they receive via pharmacy API integration
       if (effectiveRole === 'pharmacy') {
-        // For pharmacies, get pharmacy ID first, then get orders
-        const { data: pharmacyData, error: pharmacyError } = await supabase
-          .from('pharmacies')
-          .select('id')
-          .eq('user_id', effectiveUserId)
-          .maybeSingle();
-
-        if (pharmacyError) throw pharmacyError;
-
-        if (!pharmacyData) {
-          return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
-        }
-
-        // Get order lines assigned to this pharmacy with parent order details
-        const { data: orderLines, error: linesError } = await supabase
-          .from('order_lines')
-          .select(`
-            order_id,
-            status,
-            orders!inner(status, payment_status)
-          `)
-          .eq('assigned_pharmacy_id', pharmacyData.id);
-
-        if (linesError) throw linesError;
-
-        if (!orderLines || orderLines.length === 0) {
-          return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
-        }
-
-        // Exclude cancelled parent orders and payment failures
-        const filtered = orderLines.filter((ol: any) => 
-          ol.orders?.status?.toLowerCase() !== 'cancelled' &&
-          ol.orders?.payment_status !== 'payment_failed'
-        );
-        
-        if (filtered.length === 0) {
-          return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
-        }
-
-        // Group line statuses by unique order_id
-        const byOrder = new Map<string, string[]>();
-        for (const ol of filtered as any[]) {
-          const arr = byOrder.get(ol.order_id) || [];
-          if (ol.status) arr.push(String(ol.status).toLowerCase());
-          byOrder.set(ol.order_id, arr);
-        }
-
-        // Determine final status per order using precedence:
-        // denied > completed/delivered > shipped > processing > on_hold > pending
-        const counts = { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 } as any;
-        for (const [orderId, statuses] of byOrder) {
-          const has = (s: string) => statuses.includes(s);
-          if (has('denied')) {
-            counts.declined++;
-          } else if (has('delivered') || has('completed')) {
-            counts.completed++;
-          } else if (has('shipped')) {
-            counts.shipped++;
-          } else if (has('processing')) {
-            counts.processing++;
-          } else if (has('on_hold')) {
-            counts.on_hold++;
-          } else {
-            counts.pending++;
-          }
-        }
-
-        console.log('[OrdersBreakdown] Pharmacy counts:', { 
-          uniqueOrders: byOrder.size,
-          counts,
-          totalCalculated: Object.values(counts).reduce((a: any, b: any) => a + b, 0)
-        });
-
-        return counts;
+        return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
       } else if (effectiveRole === 'provider') {
         // For providers: get only their prescribed order lines
         const { data: providerData } = await supabase

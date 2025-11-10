@@ -102,66 +102,9 @@ export const OrdersDataTable = () => {
           authUid: user?.id 
         }));
 
-      // Special handling for pharmacy users - fetch from order_lines
-      // OPTIMIZED: Only fetch fields needed for table display
+      // Pharmacies don't pull orders via API - they receive via pharmacy API integration
       if (effectiveRole === "pharmacy") {
-        const { data: pharmacyData } = await supabase
-          .from("pharmacies")
-          .select("id")
-          .eq("user_id", effectiveUserId)
-          .maybeSingle();
-        
-        if (!pharmacyData) {
-          return []; // Pharmacy not found
-        }
-
-        const { data: orderLinesData, error: orderLinesError } = await supabase
-          .from("order_lines")
-          .select(`
-            id,
-            order_id,
-            status,
-            tracking_number,
-            created_at,
-            patient_name,
-            patient_id,
-            shipping_speed,
-            products(name, product_types(name)),
-            orders!inner(
-              id,
-              created_at,
-              payment_status,
-              ship_to,
-              status,
-              status_manual_override,
-              profiles:doctor_id(name, company)
-            )
-          `)
-          .eq("assigned_pharmacy_id", pharmacyData.id)
-          .order("created_at", { ascending: false });
-
-        if (orderLinesError) {
-          logger.error('Pharmacy order lines query error', orderLinesError);
-          throw orderLinesError;
-        }
-
-        // Transform data to match expected format - group order_lines by order
-        const ordersMap = new Map();
-        (orderLinesData as any)?.forEach((line: any) => {
-          const orderId = line.orders.id;
-          if (!ordersMap.has(orderId)) {
-            ordersMap.set(orderId, {
-              ...line.orders,
-              order_lines: []
-            });
-          }
-          // Remove the nested orders object from the line before adding to array
-          const { orders: _, ...lineWithoutOrders } = line;
-          ordersMap.get(orderId).order_lines.push(lineWithoutOrders);
-        });
-        
-        // Filter out orders with failed payments
-        return Array.from(ordersMap.values()).filter(order => order.payment_status !== 'payment_failed');
+        return [];
       }
 
       // OPTIMIZED: Only fetch fields needed for table display

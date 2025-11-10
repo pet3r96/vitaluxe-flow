@@ -13,44 +13,9 @@ export function RecentActivityWidget({ className }: { className?: string }) {
     queryFn: async () => {
       if (!effectiveUserId) return [] as any[];
       
-      // For pharmacies, get orders assigned to them
+      // Pharmacies don't pull orders via API - they receive via pharmacy API integration
       if (effectiveRole === 'pharmacy') {
-        const { data: pharmacyData } = await supabase
-          .from('pharmacies')
-          .select('id')
-          .eq('user_id', effectiveUserId)
-          .maybeSingle();
-
-        if (!pharmacyData) return [];
-
-        // Get order lines for this pharmacy
-        const { data: orderLines } = await supabase
-          .from('order_lines')
-          .select(`
-            order_id,
-            updated_at,
-            orders!inner(id, status, updated_at)
-          `)
-          .eq('assigned_pharmacy_id', pharmacyData.id)
-          .order('updated_at', { ascending: false })
-          .limit(10);
-
-        const combined: any[] = [];
-        const seenOrders = new Set();
-
-        orderLines?.forEach((line: any) => {
-          if (!seenOrders.has(line.order_id)) {
-            seenOrders.add(line.order_id);
-            combined.push({
-              type: "order",
-              icon: Package,
-              description: `Order #${line.order_id.slice(0, 8)} - ${line.orders.status}`,
-              time: line.orders.updated_at,
-            });
-          }
-        });
-
-        // Get recent messages (support tickets)
+        // Get recent messages (support tickets) only
         const { data: messages } = await supabase
           .from('message_threads')
           .select('id, subject, updated_at, thread_type')
@@ -58,18 +23,12 @@ export function RecentActivityWidget({ className }: { className?: string }) {
           .order('updated_at', { ascending: false })
           .limit(5);
 
-        messages?.forEach((msg: any) => {
-          combined.push({
-            type: "message",
-            icon: FileText,
-            description: `${msg.thread_type === 'support' ? 'Support' : 'Order Issue'}: ${msg.subject}`,
-            time: msg.updated_at,
-          });
-        });
-
-        return combined
-          .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-          .slice(0, 5);
+        return (messages || []).map((msg: any) => ({
+          type: "message",
+          icon: FileText,
+          description: `${msg.thread_type === 'support' ? 'Support' : 'Order Issue'}: ${msg.subject}`,
+          time: msg.updated_at,
+        }));
       }
 
       // Reps: show their own support tickets
