@@ -64,6 +64,8 @@ export const AgoraVideoRoom = ({
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState<'not_started' | 'starting' | 'active' | 'stopping' | 'stopped'>('not_started');
+  const [backendEcho, setBackendEcho] = useState<{appIdSample: string; cert8: string} | null>(null);
+  const [joinAttempt, setJoinAttempt] = useState(0);
 
   const quality = useNetworkQuality(client, sessionId);
   const { logVideoError } = useVideoErrorLogger();
@@ -142,6 +144,22 @@ export const AgoraVideoRoom = ({
       setClient(null);
     }
   };
+
+  // Fetch backend echo on mount for diagnostics
+  useEffect(() => {
+    const fetchBackendEcho = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('agora-echo');
+        if (!error && data) {
+          setBackendEcho({ appIdSample: data.appIdSample, cert8: data.cert8 });
+          console.log("[AgoraVideoRoom] Backend echo:", data);
+        }
+      } catch (err) {
+        console.warn("[AgoraVideoRoom] Could not fetch backend echo:", err);
+      }
+    };
+    fetchBackendEcho();
+  }, []);
 
   const chat = rtmToken && rtmUid ? useVideoChat({
     appId,
@@ -271,17 +289,61 @@ export const AgoraVideoRoom = ({
       } catch (error: any) {
         console.group("🔴 AGORA JOIN FAILURE");
         console.error("Error Object:", error);
+        console.log("Attempt:", joinAttempt + 1);
         console.log("Error Code:", error.code);
         console.log("Error Message:", error.message);
         console.log("Error Name:", error.name);
         console.log("Join Parameters Used:");
-        console.log("  - FE App ID (FULL):", appId);
-        console.log("  - FE Channel:", channelName);
-        console.log("  - FE UID:", uid);
+        console.log("  - FE App ID:", appId);
         console.log("  - FE Token prefix:", token.substring(0, 30));
-        console.log("⚠️ MISMATCH CHECK: Look for 'EDGE AppID' in backend logs above");
-        console.log("⚠️ They MUST match exactly or you get CAN_NOT_GET_GATEWAY_SERVER");
+        console.log("  - Channel:", channelName);
+        console.log("  - UID:", uid);
+        if (backendEcho) {
+          console.log("  - BE App ID Sample:", backendEcho.appIdSample);
+          console.log("  - BE Cert8:", backendEcho.cert8);
+        }
         console.groupEnd();
+        
+        // Auto-retry once for gateway errors
+        if (error.code === "CAN_NOT_GET_GATEWAY_SERVER" && joinAttempt === 0) {
+          console.log("[AgoraVideoRoom] Retrying join after gateway failure...");
+          setJoinAttempt(1);
+          
+          toast({
+            title: "Retrying Connection",
+            description: "Gateway handshake failed. Fetching fresh token and retrying...",
+          });
+          
+          // Wait 1.2s, fetch fresh token, retry
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          
+          try {
+            const { data: refreshData, error: refreshError } = await supabase.functions.invoke('join-video-session', {
+              body: { sessionId }
+            });
+            
+            if (refreshError || !refreshData || !clientRef.current) {
+              throw new Error("Failed to refresh token or client not available");
+            }
+            
+            console.log("[AgoraVideoRoom] Retrying with fresh token...");
+            await clientRef.current.join(
+              refreshData.appId,
+              refreshData.channelName,
+              refreshData.token,
+              String(refreshData.uid)
+            );
+            
+            toast({
+              title: "Reconnected",
+              description: "Successfully connected on retry",
+            });
+            return; // Success, exit early
+          } catch (retryError: any) {
+            console.error("[AgoraVideoRoom] Retry failed:", retryError);
+            // Fall through to show error
+          }
+        }
 
         await logVideoError({
           sessionId,
@@ -308,7 +370,7 @@ export const AgoraVideoRoom = ({
           errorDescription = "Session token is invalid or expired. Please rejoin the session.";
         } else if (error.code === "CAN_NOT_GET_GATEWAY_SERVER") {
           errorTitle = "Gateway Connection Failed";
-          errorDescription = "App ID mismatch detected! Check the debug panel (top-left) and console logs. Frontend and backend App IDs must match exactly. Try /video-test with a console-generated token to isolate the issue.";
+          errorDescription = "Gateway handshake failed. Retrying automatically... If this persists, try another network (e.g., hotspot) or the Video Test Room.";
         } else if (error.message?.includes("Permission denied")) {
           errorTitle = "Permission Denied";
           errorDescription = "Camera/microphone permission denied. Please allow access in your browser.";
@@ -587,8 +649,16 @@ export const AgoraVideoRoom = ({
           <div><span className="text-gray-400">Channel:</span> {channelName}</div>
           <div><span className="text-gray-400">UID:</span> {String(uid)}</div>
           <div><span className="text-gray-400">Token Prefix:</span> {token.substring(0, 30)}...</div>
+          {backendEcho && (
+            <>
+              <div className="mt-2 border-t border-gray-700 pt-2">
+                <span className="text-gray-400">BE App ID Sample:</span> {backendEcho.appIdSample}
+              </div>
+              <div><span className="text-gray-400">BE Cert8:</span> {backendEcho.cert8}</div>
+            </>
+          )}
           <div className="text-xs text-gray-500 mt-2">
-            Compare FE App ID with backend logs in console
+            FE & BE App IDs must match exactly
           </div>
         </div>
       )}
