@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { baremedsFetch } from "../_shared/baremedsFetch.ts";
+import { createTestOrderPayload } from "../_shared/baremedsPayloads.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -96,92 +97,25 @@ serve(async (req) => {
     const testOrderId = `TEST-ORD-${Date.now()}`;
     const testLineId = `TEST-LINE-${Date.now()}`;
 
-    // Create BareMeds-specific payload if needed
+    // Helper function to extract site_id from URL path
+    const extractSiteIdFromUrl = (url: string): string | undefined => {
+      try {
+        const u = new URL(url);
+        const parts = u.pathname.split('/').filter(Boolean);
+        return parts[parts.length - 1];
+      } catch {
+        return undefined;
+      }
+    };
+
+    // Build payload based on pharmacy type
     let payload: any;
     
     if (pharmacy.api_auth_type === "baremeds") {
-      // BareMeds requires nested structure
-      const endpointSiteId = (() => {
-        try {
-          const u = new URL(pharmacy.api_endpoint_url);
-          const parts = u.pathname.split('/').filter(Boolean);
-          return parts[parts.length - 1];
-        } catch {
-          return undefined;
-        }
-      })();
-
-      const testPatientId = `TEST-PAT-${Date.now()}`;
-
-      payload = {
-        // Some BareMeds installations require site_id in body even if present in path
-        ...(endpointSiteId ? { site_id: String(endpointSiteId) } : {}),
-        patient: {
-          // Primary expected field per BareMeds errors
-          patient_id: testPatientId,
-          // Compatibility shape some deployments expect
-          patient: { id: testPatientId },
-          first_name: "Test",
-          last_name: "Patient (Do Not Process)",
-          date_of_birth: "1990-01-01",
-          dob: "1990-01-01",
-          gender: "M",
-          phone: "5550100",
-          email: "test@example.com",
-          address: {
-            street: "123 Test Street",
-            line1: "123 Test Street",
-            city: "Test City",
-            state: "CA",
-            zip: "90001",
-            postal_code: "90001"
-          }
-        },
-        prescriber: {
-          npi: "1234567890",
-          first_name: "Test",
-          last_name: "Provider",
-          dea: "AT1234567",
-          address: {
-            street: "456 Provider Ave",
-            line1: "456 Provider Ave",
-            city: "Test City",
-            state: "CA",
-            zip: "90001",
-            postal_code: "90001"
-          }
-        },
-        // Some versions expect 'prescription' vs 'medication' - include both
-        medication: {
-          name: "TEST PRODUCT - PLEASE IGNORE",
-          strength: "1mg",
-          quantity: 1,
-          directions: "Test instructions - DO NOT PROCESS THIS ORDER",
-          refills: 0
-        },
-        prescription: {
-          drug_name: "TEST PRODUCT - PLEASE IGNORE",
-          strength: "1mg",
-          quantity: 1,
-          directions: "Test instructions - DO NOT PROCESS THIS ORDER",
-          refills: 0
-        },
-        shipping_method: "Ground",
-        shipping: {
-          method: "Ground",
-          address: {
-            street: "123 Test Street",
-            line1: "123 Test Street",
-            city: "Test City",
-            state: "CA",
-            zip: "90001",
-            postal_code: "90001"
-          }
-        },
-        notes: "THIS IS A TEST ORDER - DO NOT FULFILL. Sent via API configuration test.",
-        external_order_id: testOrderId
-      };
-
+      // Use standardized BareMeds payload builder
+      const endpointSiteId = extractSiteIdFromUrl(pharmacy.api_endpoint_url);
+      payload = createTestOrderPayload(endpointSiteId);
+      
       console.log("[test-pharmacy-api] BareMeds FULL PAYLOAD:", JSON.stringify(payload, null, 2));
     } else {
       // Generic payload for other pharmacy types
@@ -232,38 +166,50 @@ serve(async (req) => {
       "Content-Type": "application/json",
     };
 
-    // Handle BareMeds using baremedsFetch helper
+    // Handle BareMeds using standardized token flow
     if (pharmacy.api_auth_type === "baremeds") {
-      console.log("Using baremedsFetch for BareMeds test order...");
-      
+      console.log("[test-pharmacy-api] Using BareMeds API with standardized token flow");
       
       try {
-        // Parse the endpoint URL to extract the path
-        const endpointUrl = new URL(pharmacy.api_endpoint_url);
-        const endpointPath = endpointUrl.pathname + endpointUrl.search;
-        console.log(`Extracted endpoint path: ${endpointPath}`);
-        
-        // Use baremedsFetch to make the authenticated call
-        const response = await baremedsFetch(supabaseAdmin, pharmacy_id, endpointPath, {
-          method: 'POST',
-          body: payload,
-          headers: { 'Accept': 'application/json' }
+        // Step 1: Get authentication token
+        console.log("[test-pharmacy-api] Requesting BareMeds token...");
+        const tokenResponse = await supabaseAdmin.functions.invoke('baremeds-get-token', {
+          body: { pharmacy_id: pharmacy.id }
         });
 
-        let responseBody: any;
-        try {
-          responseBody = await response.json();
-        } catch {
-          responseBody = { text: await response.text() };
+        if (tokenResponse.error || !tokenResponse.data?.token) {
+          throw new Error(`Token retrieval failed: ${tokenResponse.error?.message || 'No token returned'}`);
         }
 
+        const { token } = tokenResponse.data;
+        console.log("[test-pharmacy-api] ✅ Token retrieved successfully");
+
+        // Step 2: Extract endpoint path
+        const endpointUrl = new URL(pharmacy.api_endpoint_url);
+        const endpointPath = endpointUrl.pathname + endpointUrl.search;
+        
+        // Step 3: Make API call using simplified baremedsFetch
+        console.log("[test-pharmacy-api] Sending test order to BareMeds...");
+        const response = await baremedsFetch(endpointPath, payload, token, {
+          method: 'POST',
+        });
+
+        // Step 4: Parse response
+        const responseText = await response.text();
+        let responseBody: any;
+        try {
+          responseBody = JSON.parse(responseText);
+        } catch {
+          responseBody = { text: responseText };
+        }
+
+        // Step 5: Handle success/failure
         if (response.ok) {
-          console.log(`Test order sent successfully via baremedsFetch`);
-          
-          // Extract pharmacy order ID from response if available
           const pharmacyOrderId = responseBody.order_id || 
                                    responseBody.baremeds_order_id || 
                                    responseBody.id;
+          
+          console.log(`✅ Test order sent successfully. Pharmacy order ID: ${pharmacyOrderId || 'Not provided'}`);
           
           return new Response(
             JSON.stringify({ 
@@ -276,30 +222,30 @@ serve(async (req) => {
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
           );
+        } else {
+          console.error(`❌ Test order failed with status ${response.status}`);
+          console.error(`Full BareMeds error response:`, JSON.stringify(responseBody, null, 2));
+          console.error(`Payload that was sent:`, JSON.stringify(payload, null, 2));
+          
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: `HTTP ${response.status}: ${JSON.stringify(responseBody)}`,
+              response_status: response.status,
+              response_body: responseBody,
+              sent_payload: payload,
+              endpoint: endpointPath,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: response.status }
+          );
         }
-
-        // Request failed
-        console.error(`Test order failed with status ${response.status}`);
-        console.error(`Full BareMeds error response:`, JSON.stringify(responseBody, null, 2));
-        console.error(`Payload that was sent:`, JSON.stringify(payload, null, 2));
-        
+      } catch (error: any) {
+        console.error("[test-pharmacy-api] ❌ BareMeds error:", error);
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: `HTTP ${response.status}: ${JSON.stringify(responseBody)}`,
-            response_status: response.status,
-            response_body: responseBody,
+            error: error.message,
             sent_payload: payload,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: response.status }
-        );
-
-      } catch (error) {
-        console.error("BareMeds test order error:", error);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: `Failed to send test order to BareMeds: ${error instanceof Error ? error.message : String(error)}` 
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
         );

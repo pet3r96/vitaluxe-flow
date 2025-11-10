@@ -1,135 +1,67 @@
 /**
- * Reusable helper for making authenticated BareMeds API calls
- * Automatically handles token retrieval and authorization headers
+ * Simple HTTP client for BareMeds API calls
+ * Assumes authentication token is already retrieved
+ * Use baremeds-get-token function to obtain tokens
  */
 
 export interface BaremedsFetchOptions {
   method?: string;
-  body?: any;
   headers?: Record<string, string>;
 }
 
+/**
+ * Makes an authenticated HTTP request to BareMeds API
+ * @param endpoint - API endpoint path (e.g., "/api/orders")
+ * @param payload - Request body data
+ * @param token - Bearer authentication token
+ * @param options - Additional request options
+ * @returns Raw Response object
+ */
 export async function baremedsFetch(
-  supabaseAdmin: any,
-  pharmacyId: string,
   endpoint: string,
+  payload: unknown,
+  token: string,
   options: BaremedsFetchOptions = {}
 ): Promise<Response> {
+  // Get base URL from environment or use default staging
+  const baseUrl = Deno.env.get("BAREMEDS_API_BASE_URL") || "https://staging-rxorders.baremeds.com";
+  const fullUrl = `${baseUrl}${endpoint}`;
+  
+  console.log(`[baremedsFetch] 📤 Sending request`, {
+    endpoint,
+    method: options.method || "POST",
+    baseUrl,
+    payloadSize: JSON.stringify(payload).length,
+    hasToken: !!token,
+  });
+
   try {
-    // Get BareMeds credentials
-    const { data: credData, error: credError } = await supabaseAdmin
-      .from("pharmacy_api_credentials")
-      .select("credential_key")
-      .eq("pharmacy_id", pharmacyId)
-      .eq("credential_type", "baremeds_oauth")
-      .single();
-
-    if (credError || !credData) {
-      throw new Error(`BareMeds credentials not found for pharmacy ${pharmacyId}`);
-    }
-
-    // Parse credentials, handling double-encoded JSON
-    let baremedsCreds = JSON.parse(credData.credential_key);
-    
-    // Handle double-encoded credentials (stored as string)
-    if (typeof baremedsCreds === 'string') {
-      console.log("Detected double-encoded credentials, parsing again...");
-      baremedsCreds = JSON.parse(baremedsCreds);
-    }
-
-    // Normalize field names (handle multiple naming conventions)
-    const normalized = {
-      baseUrl: baremedsCreds.base_url || baremedsCreds.baseUrl || baremedsCreds.url || baremedsCreds.base || baremedsCreds.api_base_url,
-      email: baremedsCreds.email || baremedsCreds.Email,
-      password: baremedsCreds.password || baremedsCreds.Password,
-      siteId: baremedsCreds.site_id || baremedsCreds.siteId || baremedsCreds.site,
-    };
-
-    console.log("BareMeds credentials parsed:", {
-      rawLength: credData.credential_key.length,
-      wasDoubleEncoded: typeof JSON.parse(credData.credential_key) === 'string',
-      hasBaseUrl: !!normalized.baseUrl,
-      baseUrlOrigin: normalized.baseUrl ? new URL(normalized.baseUrl).origin : null,
-      hasEmail: !!normalized.email,
-      hasSiteId: !!normalized.siteId,
-      credKeys: Object.keys(baremedsCreds).slice(0, 10) // First 10 keys only
-    });
-
-    // Validate required fields
-    const missing = [];
-    if (!normalized.baseUrl) missing.push('base_url');
-    if (!normalized.email) missing.push('email');
-    if (!normalized.password) missing.push('password');
-    if (!normalized.siteId) missing.push('site_id');
-    
-    if (missing.length > 0) {
-      throw new Error(`Missing required BareMeds credentials: ${missing.join(', ')}. Available keys: ${Object.keys(baremedsCreds).slice(0, 20).join(', ')}`);
-    }
-
-    // Get authentication token
-    const loginUrl = new URL('/api/auth/login', normalized.baseUrl).toString();
-    const loginPayload = {
-      email: normalized.email,
-      password: normalized.password,
-      site_id: String(normalized.siteId), // BareMeds API requires site_id as string
-    };
-
-    console.log(`[baremedsFetch] Attempting login at: ${loginUrl}`);
-
-    const loginResponse = await fetch(loginUrl, {
-      method: "POST",
+    const response = await fetch(fullUrl, {
+      method: options.method || "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...options.headers,
       },
-      body: JSON.stringify(loginPayload),
+      body: JSON.stringify(payload),
     });
 
-    const contentType = loginResponse.headers.get("content-type") || "";
-    const responseText = await loginResponse.text();
+    // Clone response to log it without consuming the stream
+    const responseClone = response.clone();
+    const responseText = await responseClone.text();
     
-    console.log(`[baremedsFetch] Login response status: ${loginResponse.status}, Content-Type: ${contentType}`);
-
-    if (contentType.includes("text/html")) {
-      throw new Error(`BareMeds login endpoint returned HTML instead of JSON. The endpoint '/api/auth/login' might be incorrect for this server. Response preview: ${responseText.substring(0, 200)}`);
-    }
-
-    if (!loginResponse.ok) {
-      throw new Error(`BareMeds login failed: HTTP ${loginResponse.status} - ${responseText.substring(0, 200)}`);
-    }
-
-    let loginData;
-    try {
-      loginData = JSON.parse(responseText);
-    } catch (jsonError) {
-      throw new Error(`BareMeds login response is not valid JSON. Response: ${responseText.substring(0, 200)}`);
-    }
-    const token = loginData.token || loginData.access_token || loginData.data?.token || loginData.data?.access_token;
-
-    if (!token) {
-      throw new Error("BareMeds authentication response missing token");
-    }
-
-    // Make the actual API call with the token
-    const apiUrl = new URL(endpoint, normalized.baseUrl).toString();
-    console.log(`Calling BareMeds API: ${apiUrl}`);
-    
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-      ...options.headers,
-    };
-
-    const response = await fetch(apiUrl, {
-      method: options.method || "GET",
-      headers,
-      body: options.body ? JSON.stringify(options.body) : undefined,
+    console.log(`[baremedsFetch] 📥 Response received`, {
+      status: response.status,
+      ok: response.ok,
+      contentType: response.headers.get("content-type"),
+      bodyPreview: responseText.substring(0, 500),
+      bodySize: responseText.length,
     });
 
     return response;
 
   } catch (error) {
-    console.error("Error in baremedsFetch:", error);
+    console.error(`[baremedsFetch] ❌ Fetch error:`, error);
     throw error;
   }
 }

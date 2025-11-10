@@ -89,7 +89,28 @@ serve(async (req) => {
       "Content-Type": "application/json",
     };
 
-    if (pharmacy.api_auth_type === "bearer" && credentials?.length) {
+    // Handle BareMeds OAuth using standardized token flow
+    if (pharmacy.api_auth_type === "baremeds") {
+      console.log('[send-cancellation] Getting BareMeds token...');
+      try {
+        const tokenResponse = await supabaseAdmin.functions.invoke('baremeds-get-token', {
+          body: { pharmacy_id: pharmacy_id }
+        });
+
+        if (tokenResponse.error || !tokenResponse.data?.token) {
+          throw new Error(`Token retrieval failed: ${tokenResponse.error?.message || 'No token returned'}`);
+        }
+
+        headers["Authorization"] = `Bearer ${tokenResponse.data.token}`;
+        console.log('[send-cancellation] ✅ Token retrieved successfully');
+      } catch (error: any) {
+        console.error('[send-cancellation] ❌ Token error:', error);
+        return new Response(
+          JSON.stringify({ success: false, error: `BareMeds auth failed: ${error.message}` }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+        );
+      }
+    } else if (pharmacy.api_auth_type === "bearer" && credentials?.length) {
       const token = credentials.find(c => c.credential_type === "bearer_token")?.credential_key;
       if (token) headers["Authorization"] = `Bearer ${token}`;
     } else if (pharmacy.api_auth_type === "api_key" && credentials?.length) {

@@ -149,31 +149,22 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       };
 
-      // Handle BareMeds OAuth separately
+      // Handle BareMeds OAuth using standardized token flow
       if (pharmacy.api_auth_type === 'baremeds') {
-        console.log('Fetching BareMeds token for retry...');
+        console.log('[retry-pharmacy] Getting BareMeds token...');
         try {
-          const tokenResponse = await fetch(
-            `${Deno.env.get('SUPABASE_URL')}/functions/v1/baremeds-get-token`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-              },
-              body: JSON.stringify({ pharmacy_id: pharmacy.id })
-            }
-          );
+          const tokenResponse = await supabase.functions.invoke('baremeds-get-token', {
+            body: { pharmacy_id: pharmacy.id }
+          });
 
-          if (!tokenResponse.ok) {
-            throw new Error(`Failed to get BareMeds token: ${await tokenResponse.text()}`);
+          if (tokenResponse.error || !tokenResponse.data?.token) {
+            throw new Error(`Token retrieval failed: ${tokenResponse.error?.message || 'No token returned'}`);
           }
 
-          const tokenData = await tokenResponse.json();
-          headers['Authorization'] = `Bearer ${tokenData.token}`;
-          console.log(`Got BareMeds token for retry`);
+          headers['Authorization'] = `Bearer ${tokenResponse.data.token}`;
+          console.log('[retry-pharmacy] ✅ Token retrieved successfully');
         } catch (error: any) {
-          console.error('BareMeds token fetch error:', error);
+          console.error('[retry-pharmacy] ❌ Token fetch error:', error);
           results.failed++;
           results.details.push({
             transmission_id: transmission.id,
