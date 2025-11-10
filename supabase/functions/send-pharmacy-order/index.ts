@@ -139,6 +139,7 @@ Deno.serve(async (req) => {
         headers: {
           Authorization: `Bearer ${apiToken}`,
           "Content-Type": "application/json",
+          "Accept": "application/json", // Critical for Laravel Sanctum
         },
         body: JSON.stringify(payload),
       }
@@ -146,7 +147,13 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       const errorData = await response.text();
-      throw new Error(`BareMeds API error (${response.status}): ${errorData}`);
+      console.error("❌ BareMeds API Response:", {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: errorData.substring(0, 500), // Log first 500 chars
+      });
+      throw new Error(`BareMeds API error (${response.status}): ${errorData.substring(0, 200)}`);
     }
 
     const responseData = await response.json();
