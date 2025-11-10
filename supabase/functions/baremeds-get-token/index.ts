@@ -32,7 +32,16 @@ serve(async (req) => {
     let baremedsCreds: any;
 
     if (credentials) {
-      // Direct credentials provided (for testing)
+      // Direct credentials provided (for testing) - but validate they're complete
+      if (!credentials.email || !credentials.password || !credentials.site_id || !credentials.base_url) {
+        console.error("Incomplete credentials provided:", { 
+          hasEmail: !!credentials.email,
+          hasPassword: !!credentials.password, 
+          hasSiteId: !!credentials.site_id,
+          hasBaseUrl: !!credentials.base_url
+        });
+        throw new Error("Incomplete credentials: missing email, password, site_id, or base_url");
+      }
       baremedsCreds = credentials;
     } else if (pharmacy_id) {
       // Fetch credentials from database
@@ -47,15 +56,79 @@ serve(async (req) => {
         throw new Error(`BareMeds credentials not found for pharmacy ${pharmacy_id}`);
       }
 
-      baremedsCreds = JSON.parse(credData.credential_key);
+      console.log(`Raw credential_key length: ${credData.credential_key?.length || 0}`);
+
+      // Parse credential_key - handle double-encoding
+      let parsed: any;
+      try {
+        parsed = JSON.parse(credData.credential_key);
+        // Check if it's double-encoded (string instead of object)
+        if (typeof parsed === 'string') {
+          console.log("Detected double-encoded credential_key, parsing again");
+          parsed = JSON.parse(parsed);
+        }
+      } catch (e) {
+        console.error("Failed to parse credential_key:", e);
+        throw new Error("Invalid credential_key format in database");
+      }
+
+      // Normalize key names (handle variations like baseUrl vs base_url)
+      baremedsCreds = {
+        email: parsed.email || parsed.Email,
+        password: parsed.password || parsed.Password,
+        site_id: parsed.site_id || parsed.siteId || parsed.site,
+        base_url: parsed.base_url || parsed.baseUrl || parsed.url || parsed.base,
+      };
+
+      // Validate all required fields are present
+      const missing = [];
+      if (!baremedsCreds.email) missing.push('email');
+      if (!baremedsCreds.password) missing.push('password');
+      if (!baremedsCreds.site_id) missing.push('site_id');
+      if (!baremedsCreds.base_url) missing.push('base_url');
+
+      if (missing.length > 0) {
+        console.error("Missing required fields after normalization:", missing);
+        console.error("Parsed object keys:", Object.keys(parsed));
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Missing required BareMeds configuration: ${missing.join(', ')}. Please update pharmacy API configuration.`,
+            missing_fields: missing
+          }),
+          { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+            status: 400 
+          }
+        );
+      }
+
+      console.log(`Resolved credentials - base_url origin: ${new URL(baremedsCreds.base_url).origin}, site_id: ${baremedsCreds.site_id}`);
     } else {
       throw new Error("Either pharmacy_id or credentials must be provided");
     }
 
     console.log(`Authenticating with BareMeds for site_id: ${baremedsCreds.site_id}`);
 
-    // Call BareMeds login endpoint
-    const loginUrl = `${baremedsCreds.base_url}/api/auth/login`;
+    // Build login URL safely
+    let loginUrl: string;
+    try {
+      loginUrl = new URL('/api/auth/login', baremedsCreds.base_url).toString();
+      console.log(`Constructed login URL: ${loginUrl}`);
+    } catch (e) {
+      console.error("Invalid base_url:", baremedsCreds.base_url, e);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Invalid BareMeds base_url: ${baremedsCreds.base_url}` 
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+          status: 400 
+        }
+      );
+    }
+
     const loginPayload = {
       email: baremedsCreds.email,
       password: baremedsCreds.password,

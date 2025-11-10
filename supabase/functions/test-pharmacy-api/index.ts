@@ -107,39 +107,74 @@ serve(async (req) => {
       "Content-Type": "application/json",
     };
 
-    // Handle BareMeds OAuth separately
-    let baremedToken: string | null = null;
+    // Handle BareMeds using baremedsFetch helper
     if (pharmacy.api_auth_type === "baremeds") {
-      console.log("Fetching BareMeds token for test order...");
+      console.log("Using baremedsFetch for BareMeds test order...");
+      
+      // Import baremedsFetch
+      const { baremedsFetch } = await import("../_shared/baremedsFetch.ts");
+      
       try {
-        const tokenResponse = await fetch(
-          `${Deno.env.get('SUPABASE_URL')}/functions/v1/baremeds-get-token`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-            },
-            body: JSON.stringify({ pharmacy_id })
-          }
-        );
+        // Parse the endpoint URL to extract the path
+        const endpointUrl = new URL(pharmacy.api_endpoint_url);
+        const endpointPath = endpointUrl.pathname + endpointUrl.search;
+        console.log(`Extracted endpoint path: ${endpointPath}`);
+        
+        // Use baremedsFetch to make the authenticated call
+        const response = await baremedsFetch(supabaseAdmin, pharmacy_id, endpointPath, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: { 'Accept': 'application/json' }
+        });
 
-        if (!tokenResponse.ok) {
-          throw new Error(`Failed to get BareMeds token: ${await tokenResponse.text()}`);
+        let responseBody: any;
+        try {
+          responseBody = await response.json();
+        } catch {
+          responseBody = { text: await response.text() };
         }
 
-        const tokenData = await tokenResponse.json();
-        baremedToken = tokenData.token;
-        headers["Authorization"] = `Bearer ${baremedToken}`;
-        console.log(`Got BareMeds token for test: ${baremedToken?.substring(0, 10)}...`);
-      } catch (error) {
-        console.error("BareMeds token fetch error:", error);
+        if (response.ok) {
+          console.log(`Test order sent successfully via baremedsFetch`);
+          
+          // Extract pharmacy order ID from response if available
+          const pharmacyOrderId = responseBody.order_id || 
+                                   responseBody.baremeds_order_id || 
+                                   responseBody.id;
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true,
+              message: "Test order sent successfully",
+              test_order_id: testOrderId,
+              pharmacy_order_id: pharmacyOrderId,
+              response_status: response.status,
+              response_body: responseBody,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
+        }
+
+        // Request failed
+        console.error(`Test order failed with status ${response.status}`);
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: `Failed to authenticate with BareMeds: ${error instanceof Error ? error.message : String(error)}` 
+            error: `HTTP ${response.status}: ${JSON.stringify(responseBody)}`,
+            response_status: response.status,
+            response_body: responseBody,
           }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: response.status }
+        );
+
+      } catch (error) {
+        console.error("BareMeds test order error:", error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Failed to send test order to BareMeds: ${error instanceof Error ? error.message : String(error)}` 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
         );
       }
     } else if (pharmacy.api_auth_type === "bearer" && credentials?.length) {
