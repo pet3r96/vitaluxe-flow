@@ -37,7 +37,7 @@ export const PharmacyApiConfigDialog = ({
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [retryCount, setRetryCount] = useState("3");
-  const [timeout, setTimeout] = useState("30");
+  const [timeoutSeconds, setTimeoutSeconds] = useState("30");
   
   // BareMeds-specific fields
   const [baremedEmail, setBaremedEmail] = useState("");
@@ -65,7 +65,7 @@ export const PharmacyApiConfigDialog = ({
       setWebhookUrl(data.webhook_url || "");
       setWebhookSecret(data.webhook_secret || "");
       setRetryCount(String(data.api_retry_count || 3));
-      setTimeout(String(data.api_timeout_seconds || 30));
+      setTimeoutSeconds(String(data.api_timeout_seconds || 30));
 
       return data;
     },
@@ -138,7 +138,7 @@ export const PharmacyApiConfigDialog = ({
           webhook_url: webhookUrl || null,
           webhook_secret: webhookSecret || null,
           api_retry_count: parseInt(retryCount),
-          api_timeout_seconds: parseInt(timeout),
+          api_timeout_seconds: parseInt(timeoutSeconds),
         })
         .eq("id", pharmacyId);
 
@@ -470,8 +470,8 @@ export const PharmacyApiConfigDialog = ({
                       type="number"
                       min="5"
                       max="120"
-                      value={timeout}
-                      onChange={(e) => setTimeout(e.target.value)}
+                      value={timeoutSeconds}
+                      onChange={(e) => setTimeoutSeconds(e.target.value)}
                     />
                   </div>
                 </div>
