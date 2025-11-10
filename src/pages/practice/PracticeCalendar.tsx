@@ -10,6 +10,7 @@ import { Plus, Settings, Download, Clock, Filter, AlertCircle } from "lucide-rea
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { CalendarHeader, CalendarView } from "@/components/calendar/CalendarHeader";
 import { CalendarFilters } from "@/components/calendar/CalendarFilters";
 import { WeekViewByTime } from "@/components/calendar/WeekViewByTime";
@@ -376,7 +377,10 @@ export default function PracticeCalendar() {
               </div>
             )}
 
-            <div className="flex-1 mt-4 overflow-hidden">
+            <div className={cn(
+              "flex-1 mt-4",
+              view === 'agenda' ? "overflow-y-auto" : "overflow-hidden"
+            )}>
               {view === 'week' && (
                 <WeekViewByTime
                   currentDate={currentDate}
