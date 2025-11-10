@@ -2124,6 +2124,8 @@ export type Database = {
           patient_name: string
           patient_phone: string | null
           patient_phone_encrypted: string | null
+          pharmacy_order_id: string | null
+          pharmacy_order_metadata: Json | null
           prescription_method: string | null
           prescription_url: string | null
           prescription_url_encrypted: string | null
@@ -2171,6 +2173,8 @@ export type Database = {
           patient_name: string
           patient_phone?: string | null
           patient_phone_encrypted?: string | null
+          pharmacy_order_id?: string | null
+          pharmacy_order_metadata?: Json | null
           prescription_method?: string | null
           prescription_url?: string | null
           prescription_url_encrypted?: string | null
@@ -2218,6 +2222,8 @@ export type Database = {
           patient_name?: string
           patient_phone?: string | null
           patient_phone_encrypted?: string | null
+          pharmacy_order_id?: string | null
+          pharmacy_order_metadata?: Json | null
           prescription_method?: string | null
           prescription_url?: string | null
           prescription_url_encrypted?: string | null
@@ -4721,6 +4727,7 @@ export type Database = {
           order_id: string
           order_line_id: string | null
           pharmacy_id: string
+          pharmacy_order_id: string | null
           request_payload: Json
           response_body: Json | null
           response_status: number | null
@@ -4740,6 +4747,7 @@ export type Database = {
           order_id: string
           order_line_id?: string | null
           pharmacy_id: string
+          pharmacy_order_id?: string | null
           request_payload: Json
           response_body?: Json | null
           response_status?: number | null
@@ -4759,6 +4767,7 @@ export type Database = {
           order_id?: string
           order_line_id?: string | null
           pharmacy_id?: string
+          pharmacy_order_id?: string | null
           request_payload?: Json
           response_body?: Json | null
           response_status?: number | null

@@ -75,6 +75,19 @@ serve(async (req) => {
       throw new Error(`Order line not found: ${lineError?.message}`);
     }
 
+    // Check if this order was already sent to the pharmacy
+    if (orderLine.pharmacy_order_id) {
+      console.log(`Order line ${order_line_id} already has pharmacy_order_id: ${orderLine.pharmacy_order_id}`);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "Order already sent to pharmacy",
+          pharmacy_order_id: orderLine.pharmacy_order_id
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
     // Fetch API credentials
     const { data: credentials } = await supabaseAdmin
       .from("pharmacy_api_credentials")
@@ -189,6 +202,28 @@ serve(async (req) => {
         if (response.ok) {
           console.log(`Successfully sent order to pharmacy (attempt ${attempt + 1})`);
           
+          // Extract pharmacy order ID from response
+          let pharmacyOrderId = null;
+          if (pharmacy.api_auth_type === "baremeds" && responseBody) {
+            // BareMeds might return it as "order_id", "baremeds_order_id", "id", etc.
+            pharmacyOrderId = responseBody.order_id || 
+                             responseBody.baremeds_order_id || 
+                             responseBody.id;
+          }
+          
+          // Update order_line with pharmacy order ID
+          if (pharmacyOrderId) {
+            await supabaseAdmin
+              .from("order_lines")
+              .update({
+                pharmacy_order_id: pharmacyOrderId,
+                pharmacy_order_metadata: responseBody
+              })
+              .eq("id", order_line_id);
+            
+            console.log(`Stored pharmacy order ID: ${pharmacyOrderId} for order_line ${order_line_id}`);
+          }
+          
           // Log successful transmission
           await supabaseAdmin.from("pharmacy_order_transmissions").insert({
             order_id: order.id,
@@ -199,6 +234,7 @@ serve(async (req) => {
             request_payload: payload,
             response_status: responseStatus,
             response_body: responseBody,
+            pharmacy_order_id: pharmacyOrderId,
             success: true,
             retry_count: attempt,
           });
@@ -258,6 +294,7 @@ serve(async (req) => {
       request_payload: payload,
       response_status: responseStatus,
       response_body: responseBody,
+      pharmacy_order_id: null,
       success: false,
       error_message: lastError,
       retry_count: maxRetries,

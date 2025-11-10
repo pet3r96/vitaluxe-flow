@@ -124,6 +124,19 @@ serve(async (req) => {
         continue;
       }
 
+      // Check if order already has a pharmacy_order_id (prevents duplicate BareMeds orders)
+      const orderLine = order.order_lines?.find((line: any) => line.id === transmission.order_line_id);
+      if (orderLine?.pharmacy_order_id) {
+        results.skipped++;
+        results.details.push({
+          transmission_id: transmission.id,
+          order_number: transmission.order_number,
+          status: 'skipped',
+          reason: `Order already sent to pharmacy (pharmacy_order_id: ${orderLine.pharmacy_order_id})`
+        });
+        continue;
+      }
+
       // Fetch API credentials
       const { data: credentials } = await supabase
         .from('pharmacy_api_credentials')
@@ -213,6 +226,33 @@ serve(async (req) => {
 
           if (response.ok) {
             success = true;
+            
+            // Extract pharmacy order ID from response (for BareMeds)
+            let pharmacyOrderId = null;
+            try {
+              const parsedResponse = JSON.parse(responseBody);
+              if (pharmacy.api_auth_type === 'baremeds' && parsedResponse) {
+                pharmacyOrderId = parsedResponse.order_id || 
+                                 parsedResponse.baremeds_order_id || 
+                                 parsedResponse.id;
+                
+                // Update order_line with pharmacy order ID
+                if (pharmacyOrderId && transmission.order_line_id) {
+                  await supabase
+                    .from('order_lines')
+                    .update({
+                      pharmacy_order_id: pharmacyOrderId,
+                      pharmacy_order_metadata: parsedResponse
+                    })
+                    .eq('id', transmission.order_line_id);
+                  
+                  console.log(`Stored pharmacy order ID: ${pharmacyOrderId} for order_line ${transmission.order_line_id}`);
+                }
+              }
+            } catch (e) {
+              console.log('Could not parse response for pharmacy order ID extraction');
+            }
+            
             break;
           } else {
             lastError = `HTTP ${response.status}: ${responseBody}`;
@@ -229,6 +269,21 @@ serve(async (req) => {
         }
       }
 
+      // Extract pharmacy_order_id from successful response if available
+      let logPharmacyOrderId = null;
+      if (success) {
+        try {
+          const parsedResponse = JSON.parse(responseBody);
+          if (pharmacy.api_auth_type === 'baremeds' && parsedResponse) {
+            logPharmacyOrderId = parsedResponse.order_id || 
+                                parsedResponse.baremeds_order_id || 
+                                parsedResponse.id;
+          }
+        } catch (e) {
+          // Response not JSON, skip extraction
+        }
+      }
+
       // Create new transmission log entry
       const { error: logError } = await supabase
         .from('pharmacy_order_transmissions')
@@ -240,6 +295,7 @@ serve(async (req) => {
           transmission_type: transmission.transmission_type,
           request_body: payload,
           response_body: responseBody,
+          pharmacy_order_id: logPharmacyOrderId,
           success,
           error_message: success ? null : lastError,
           http_status_code: statusCode,

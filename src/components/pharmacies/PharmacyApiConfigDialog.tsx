@@ -194,7 +194,7 @@ export const PharmacyApiConfigDialog = ({
         if (data?.token) {
           toast({
             title: "BareMeds login successful",
-            description: `Token: ${data.token.substring(0, 10)}...${data.token.substring(data.token.length - 10)}`,
+            description: `Token: ${data.token.substring(0, 10)}...${data.token.substring(data.token.length - 10)}. When orders are sent, BareMeds will return an order ID that we'll capture and store.`,
           });
         } else {
           throw new Error("No token received from BareMeds");
