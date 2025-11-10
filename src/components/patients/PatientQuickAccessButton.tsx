@@ -20,6 +20,7 @@ interface PatientQuickAccessButtonProps {
   variant?: 'icon' | 'button' | 'inline';
   size?: 'sm' | 'default' | 'lg';
   showLabel?: boolean;
+  onViewMedicalVault?: () => void;
 }
 
 export function PatientQuickAccessButton({ 
@@ -27,7 +28,8 @@ export function PatientQuickAccessButton({
   patientName, 
   variant = 'icon',
   size = 'sm',
-  showLabel = true
+  showLabel = true,
+  onViewMedicalVault
 }: PatientQuickAccessButtonProps) {
   const navigate = useNavigate();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -72,7 +74,11 @@ export function PatientQuickAccessButton({
   });
 
   const handleViewMedicalVault = () => {
-    navigate(`/patients/${patientId}?tab=medical-vault`);
+    if (onViewMedicalVault) {
+      onViewMedicalVault();
+    } else {
+      navigate(`/patients/${patientId}?tab=medical-vault`);
+    }
   };
 
   const handleViewDocuments = () => {
