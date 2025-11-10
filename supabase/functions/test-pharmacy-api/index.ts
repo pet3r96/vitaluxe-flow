@@ -182,14 +182,7 @@ serve(async (req) => {
         external_order_id: testOrderId
       };
 
-      console.log("[test-pharmacy-api] BareMeds payload debug:", {
-        has_patient: !!payload.patient,
-        has_patient_id: !!payload.patient?.patient_id,
-        has_nested_patient_id: !!payload.patient?.patient?.id,
-        has_prescriber: !!payload.prescriber,
-        has_medication: !!payload.medication,
-        site_id_in_body: payload.site_id ?? null
-      });
+      console.log("[test-pharmacy-api] BareMeds FULL PAYLOAD:", JSON.stringify(payload, null, 2));
     } else {
       // Generic payload for other pharmacy types
       payload = {
@@ -287,12 +280,16 @@ serve(async (req) => {
 
         // Request failed
         console.error(`Test order failed with status ${response.status}`);
+        console.error(`Full BareMeds error response:`, JSON.stringify(responseBody, null, 2));
+        console.error(`Payload that was sent:`, JSON.stringify(payload, null, 2));
+        
         return new Response(
           JSON.stringify({ 
             success: false, 
             error: `HTTP ${response.status}: ${JSON.stringify(responseBody)}`,
             response_status: response.status,
             response_body: responseBody,
+            sent_payload: payload,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: response.status }
         );
