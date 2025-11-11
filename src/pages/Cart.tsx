@@ -513,7 +513,8 @@ export default function Cart() {
                     discountCode, 
                     discountPercentage,
                     merchantFeePercentage: feePercentage,
-                    merchantFeeAmount: merchantFee
+                    merchantFeeAmount: merchantFee,
+                    shippingPreview: shippingPreview // Pass actual calculated shipping to checkout
                   } 
                 })}
               >

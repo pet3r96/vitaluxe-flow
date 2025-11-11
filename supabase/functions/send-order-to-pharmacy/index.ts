@@ -199,10 +199,12 @@ serve(async (req) => {
         clearTimeout(timeoutId);
         responseStatus = response.status;
 
+        // Read response body once as text to avoid "Body already consumed" error
+        const responseText = await response.text();
         try {
-          responseBody = await response.json();
+          responseBody = JSON.parse(responseText);
         } catch {
-          responseBody = { text: await response.text() };
+          responseBody = { text: responseText };
         }
 
         if (response.ok) {

@@ -83,25 +83,10 @@ export default function Checkout() {
   };
 
   const calculateShipping = () => {
-    // Group cart lines by patient + shipping speed to calculate shipping costs
-    const shippingGroups = new Map<string, { speed: string; count: number }>();
-    
-    (cart?.lines || []).forEach((line: any) => {
-      const key = `${line.patient_id || 'practice'}_${line.shipping_speed}`;
-      if (!shippingGroups.has(key)) {
-        shippingGroups.set(key, { speed: line.shipping_speed, count: 1 });
-      }
-    });
-    
-    // Calculate shipping based on groups (one charge per patient/speed combination)
-    const shippingRates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
-    let total = 0;
-    
-    shippingGroups.forEach(group => {
-      total += shippingRates[group.speed as keyof typeof shippingRates] || 9.99;
-    });
-    
-    return total;
+    // For checkout preview, we need actual rates from the cart which already has them calculated
+    // Cart calculates real rates using useMultiplePharmacyRates
+    // We just show what was passed from cart via navigation state
+    return location.state?.shippingPreview || 0;
   };
 
   const calculateFinalTotal = () => {
@@ -505,9 +490,7 @@ export default function Checkout() {
             }
           } catch (error) {
             logger.error('Shipping calculation failed', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'calculate_practice_shipping' }));
-            // Use default rates as fallback
-            const defaultRates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
-            group.shipping_cost = defaultRates[group.shipping_speed as keyof typeof defaultRates] || 9.99;
+            throw new Error(`Unable to calculate shipping for ${group.shipping_speed} shipping. Please contact support or try a different shipping option.`);
           }
         }
 
@@ -613,9 +596,7 @@ export default function Checkout() {
             }
           } catch (error) {
             logger.error('Shipping calculation failed', error instanceof Error ? error : new Error(String(error)), logger.sanitize({ operation: 'calculate_patient_shipping' }));
-            // Use default rates as fallback
-            const defaultRates = { ground: 9.99, '2day': 19.99, overnight: 29.99 };
-            group.shipping_cost = defaultRates[group.shipping_speed as keyof typeof defaultRates] || 9.99;
+            throw new Error(`Unable to calculate shipping for ${group.shipping_speed} shipping. Please contact support or try a different shipping option.`);
           }
         }
         
