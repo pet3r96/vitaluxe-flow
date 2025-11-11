@@ -60,9 +60,10 @@ export const SmsTemplateSettings = ({ practiceId }: SmsTemplateSettingsProps) =>
     queryKey: ['sms-templates', practiceId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('practice_sms_templates')
+        .from('notification_templates')
         .select('*')
-        .eq('practice_id', practiceId);
+        .eq('practice_id', practiceId)
+        .eq('channel', 'sms');
 
       if (error) throw error;
       return data || [];
@@ -72,7 +73,7 @@ export const SmsTemplateSettings = ({ practiceId }: SmsTemplateSettingsProps) =>
   // Update template text when templates or selectedType changes
   useEffect(() => {
     if (templates) {
-      const currentTemplate = templates.find(t => t.template_type === selectedType);
+      const currentTemplate = templates.find(t => t.event_type === selectedType);
       setTemplateText(currentTemplate?.message_template || DEFAULT_TEMPLATES[selectedType]);
     }
   }, [templates, selectedType]);
@@ -104,7 +105,7 @@ export const SmsTemplateSettings = ({ practiceId }: SmsTemplateSettingsProps) =>
 
   const handleTemplateTypeChange = (type: string) => {
     setSelectedType(type);
-    const currentTemplate = templates?.find(t => t.template_type === type);
+    const currentTemplate = templates?.find(t => t.event_type === type);
     setTemplateText(currentTemplate?.message_template || DEFAULT_TEMPLATES[type]);
   };
 
