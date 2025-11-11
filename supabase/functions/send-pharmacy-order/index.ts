@@ -97,6 +97,23 @@ Deno.serve(async (req) => {
       throw new Error("No order lines found");
     }
 
+    // Check if this is a patient order (patient_id must exist)
+    const isPatientOrder = firstLine.patient_id !== null;
+
+    if (!isPatientOrder) {
+      console.log("⏭️ Skipping: Practice order (no patient_id)");
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          sent: false, 
+          reason: "Practice order - not sent to pharmacy" 
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("✅ Patient order confirmed, proceeding with BareMeds transmission");
+
     // Parse patient name (assuming format "FirstName LastName" or just a single name)
     const nameParts = (firstLine.patient_name || "Unknown Patient").split(" ");
     const firstName = nameParts[0] || "Unknown";
