@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import { RtcTokenBuilder, RtcRole, RtmTokenBuilder } from "https://esm.sh/agora-access-token@2.0.4";
+import { RtcTokenBuilder, RtcRole, RtmTokenBuilder } from "https://esm.sh/agora-token@2.0.5";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     // Generate tokens using official Agora implementation
     const expire = Math.floor(Date.now() / 1000) + 3600;
 
-    const rtcToken = RtcTokenBuilder.buildTokenWithUserAccount(
+    const rtcToken = RtcTokenBuilder.buildTokenWithAccount(
       appId,
       appCertificate,
       channelName,
