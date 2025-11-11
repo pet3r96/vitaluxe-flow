@@ -19,6 +19,7 @@ interface InvoiceListProps {
 export function InvoiceList({ invoices }: InvoiceListProps) {
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      succeeded: "default",
       paid: "default",
       pending: "secondary",
       failed: "destructive",
@@ -60,7 +61,7 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Invoice #</TableHead>
+              <TableHead>Transaction #</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
@@ -71,15 +72,15 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
             {invoices.map((invoice) => (
               <TableRow key={invoice.id}>
                 <TableCell className="font-medium">
-                  {invoice.invoice_number || `INV-${invoice.id.slice(0, 8)}`}
+                  {invoice.transaction_id || `PAY-${invoice.id.slice(0, 8)}`}
                 </TableCell>
                 <TableCell>
-                  {format(new Date(invoice.invoice_date), 'MMM dd, yyyy')}
+                  {format(new Date(invoice.created_at), 'MMM dd, yyyy')}
                 </TableCell>
                 <TableCell>${invoice.amount.toFixed(2)}</TableCell>
                 <TableCell>
-                  <Badge variant={getStatusBadge(invoice.status)}>
-                    {invoice.status}
+                  <Badge variant={getStatusBadge(invoice.payment_status)}>
+                    {invoice.payment_status}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -87,6 +88,7 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDownload(invoice.id)}
+                    disabled
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download

@@ -68,12 +68,12 @@ serve(async (req) => {
       console.error('Error fetching payment methods:', pmError);
     }
 
-    // Get invoices
+    // Get payment history
     const { data: invoices, error: invError } = await supabaseAdmin
-      .from('subscription_invoices')
+      .from('subscription_payments')
       .select('*')
       .eq('practice_id', practiceIdToQuery)
-      .order('invoice_date', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(12);
 
     if (invError) {
