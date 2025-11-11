@@ -1,6 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Truck, Clock, Zap } from "lucide-react";
+import { useEffect } from "react";
 
 interface ShippingSpeedSelectorProps {
   value: 'ground' | '2day' | 'overnight';
@@ -28,6 +29,13 @@ export const ShippingSpeedSelector = ({
   const visibleOptions = enabledOptions 
     ? allOptions.filter(opt => enabledOptions.includes(opt.value))
     : allOptions;
+
+  // Auto-select if only one option is available
+  useEffect(() => {
+    if (visibleOptions.length === 1 && value !== visibleOptions[0].value) {
+      onChange(visibleOptions[0].value);
+    }
+  }, [visibleOptions, value, onChange]);
 
   if (isLoading) {
     return (
