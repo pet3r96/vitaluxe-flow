@@ -20,6 +20,12 @@ export default function TokenVerificationTest() {
   const [uid, setUid] = useState("debug-user-1");
   const [role, setRole] = useState<"publisher" | "subscriber">("publisher");
 
+  // Manual hardcoded token inputs (no mutation!)
+  const [manualAppId, setManualAppId] = useState("2443c37d5f97424c8b7e1c08e3a3032e");
+  const [manualChannel, setManualChannel] = useState("vlx-debug");
+  const [manualUid, setManualUid] = useState("debug-user-1");
+  const [manualRtcToken, setManualRtcToken] = useState("");
+
   const fetchBackendToken = async () => {
     setLoading(true);
     try {
@@ -139,6 +145,46 @@ export default function TokenVerificationTest() {
     }
   };
 
+  const testJoinWithManualToken = async () => {
+    if (!manualRtcToken) {
+      toast({
+        title: "Paste RTC Token",
+        description: "Paste the rtcToken from /test-agora-token",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setJoining(true);
+    try {
+      const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+
+      const appId = manualAppId; // EXACT appId
+      const channel = manualChannel; // EXACT channel
+      const rtcToken = manualRtcToken; // EXACT token pasted
+      const joinUid = manualUid; // EXACT uid used in token generation
+
+      console.log("=== FE HARD-CODED TOKEN TEST ===");
+      console.log("[FE TEST] rtcToken prefix:", rtcToken.slice(0, 30));
+      console.log("[FE TEST] rtcToken length:", rtcToken.length);
+      console.log("[FE TEST] starts with 007:", rtcToken.startsWith("007"));
+      console.log("[FE TEST] appId:", appId);
+      console.log("[FE TEST] channel:", channel);
+      console.log("[FE TEST] uid:", joinUid);
+      console.log("================================");
+
+      await agoraClient.join(appId, channel, rtcToken, joinUid);
+      console.log("✅ [FE TEST] Joined successfully with pasted backend token");
+      setClient(agoraClient);
+      toast({ title: "Join Successful!", description: "Hardcoded token join worked." });
+    } catch (error: any) {
+      console.error("❌ [FE TEST] Join failed:", error);
+      toast({ title: "Join Failed", description: `${error.code}: ${error.message}`, variant: "destructive" });
+    } finally {
+      setJoining(false);
+    }
+  };
+
   const leaveChannel = async () => {
     if (client) {
       await client.leave();
@@ -232,12 +278,51 @@ export default function TokenVerificationTest() {
             {joining ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Testing Join...
+                2. Test Join with Backend Token
               </>
             ) : (
               "2. Test Join with Backend Token"
             )}
           </Button>
+
+          <div className="mt-8 space-y-3">
+            <h3 className="font-semibold">Manual Hardcoded Token Test</h3>
+            <p className="text-sm text-muted-foreground">Paste the exact rtcToken from /test-agora-token. We will use it verbatim without any transformation.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label>App ID</Label>
+                <Input value={manualAppId} onChange={(e) => setManualAppId(e.target.value)} />
+              </div>
+              <div>
+                <Label>Channel</Label>
+                <Input value={manualChannel} onChange={(e) => setManualChannel(e.target.value)} />
+              </div>
+              <div>
+                <Label>UID (string)</Label>
+                <Input value={manualUid} onChange={(e) => setManualUid(e.target.value)} />
+              </div>
+              <div className="md:col-span-2">
+                <Label>RTC Token (paste exactly)</Label>
+                <textarea
+                  className="w-full border rounded px-3 py-2 font-mono text-sm"
+                  rows={4}
+                  value={manualRtcToken}
+                  onChange={(e) => setManualRtcToken(e.target.value)}
+                  placeholder="007..."
+                />
+              </div>
+            </div>
+            <Button onClick={testJoinWithManualToken} disabled={joining || !!client} className="w-full">
+              {joining ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  3. Join with MANUAL rtcToken
+                </>
+              ) : (
+                "3. Join with MANUAL rtcToken"
+              )}
+            </Button>
+          </div>
 
           {client && (
             <Button
@@ -256,8 +341,8 @@ export default function TokenVerificationTest() {
             <li>Click "Fetch Backend Token" to get a token from /test-agora-token</li>
             <li>Check the console logs to see backend token details</li>
             <li>Click "Test Join" to join Agora with the EXACT backend token</li>
+            <li>Alternatively, paste the rtcToken into the manual section and join</li>
             <li>Compare [BE] and [FE] logs - they MUST be identical</li>
-            <li>If join succeeds, the token is correct</li>
             <li>If join fails, check for token mutation or parameter mismatch</li>
           </ol>
         </div>
