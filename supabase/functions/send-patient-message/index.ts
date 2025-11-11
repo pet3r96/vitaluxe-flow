@@ -1,6 +1,17 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sendMessageSchema, validateInput } from '../_shared/zodSchemas.ts';
+import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
+
+// Helper to normalize phone to E.164
+function normalizePhoneToE164(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (phone.startsWith('+')) return phone;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return `+${digits}`;
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -265,7 +276,7 @@ Deno.serve(async (req) => {
       // Create notification for the patient
       const { data: patientData } = await supabaseAdmin
         .from('patient_accounts')
-        .select('user_id, first_name, last_name')
+        .select('user_id, first_name, last_name, email, phone')
         .eq('id', patient_id)
         .single();
 
@@ -275,13 +286,18 @@ Deno.serve(async (req) => {
         .eq('id', effectivePracticeId)
         .single();
 
+      const practiceName = practiceData?.name || 'your provider';
+      const messageTitle = `New message from ${practiceName}`;
+      const messageBody = subject || 'You have a new message';
+
       if (patientData?.user_id) {
+        // Patient has portal account - use standard notification pipeline
         const { error: notificationError } = await supabaseAdmin.functions.invoke('handleNotifications', {
           body: {
             user_id: patientData.user_id,
             notification_type: 'practice_message_received',
-            title: `New message from ${practiceData?.name || 'your provider'}`,
-            message: subject || 'You have a new message',
+            title: messageTitle,
+            message: messageBody,
             metadata: {
               message_id: insertedMessage.id,
               patient_id: patient_id,
@@ -298,6 +314,40 @@ Deno.serve(async (req) => {
           console.error('[send-patient-message] Failed to create patient notification:', notificationError);
         } else {
           console.log('[send-patient-message] Patient notification created successfully');
+        }
+      } else {
+        // Patient has no portal account - send email/SMS directly via fallback
+        console.log('[send-patient-message] Fallback: Patient has no user_id, sending direct email/SMS');
+        
+        if (patientData?.email) {
+          const recipientName = `${patientData.first_name || ''} ${patientData.last_name || ''}`.trim() || 'Valued Patient';
+          const emailResult = await sendNotificationEmail({
+            to: patientData.email,
+            recipientName,
+            subject: messageTitle,
+            title: messageTitle,
+            message: messageBody,
+            actionUrl: undefined
+          });
+          
+          console.log('[send-patient-message] Fallback email result:', emailResult);
+        }
+        
+        if (patientData?.phone) {
+          const normalizedPhone = normalizePhoneToE164(patientData.phone);
+          const smsMessage = `${messageTitle}\n\n${messageBody}`;
+          
+          const smsResult = await sendNotificationSms({
+            phoneNumber: normalizedPhone,
+            message: smsMessage,
+            metadata: { patient_id, practice_id: effectivePracticeId }
+          });
+          
+          console.log('[send-patient-message] Fallback SMS result:', smsResult);
+        }
+        
+        if (!patientData?.email && !patientData?.phone) {
+          console.warn('[send-patient-message] No email or phone for patient without user_id - no notification sent');
         }
       }
 

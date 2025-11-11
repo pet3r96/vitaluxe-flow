@@ -68,8 +68,8 @@ serve(async (req) => {
       console.log('[handleNotifications] No preferences found, using defaults');
     }
 
-    const emailEnabled = preferences?.email_enabled ?? false;
-    const smsEnabled = preferences?.sms_enabled ?? false;
+    const emailEnabled = preferences?.email_enabled ?? true;
+    const smsEnabled = preferences?.sms_enabled ?? true;
     const inAppEnabled = preferences?.in_app_enabled ?? true;
 
     // Step 3: Check if all channels disabled
