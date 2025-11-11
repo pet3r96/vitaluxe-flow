@@ -192,7 +192,7 @@ serve(async (req) => {
           body: new URLSearchParams({
             MessagingServiceSid: twilioMessagingServiceSid,
             To: phoneNumber,
-            Body: `Your VitaLuxePro verification code is: ${code}. Valid for 5 minutes.`
+            Body: `Your VitaLuxe verification code is: ${code}. This code expires in 5 minutes. Do not share this code.`
           }),
           signal: controller.signal
         });
