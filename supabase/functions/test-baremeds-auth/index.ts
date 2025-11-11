@@ -8,8 +8,13 @@ Deno.serve(async (req) => {
 
   try {
     const apiToken = Deno.env.get("BAREMEDS_API_TOKEN");
-    const apiUrl = Deno.env.get("BAREMEDS_API_URL") || "https://rxorders.baremeds.com";
+    let apiUrl = Deno.env.get("BAREMEDS_API_URL") || "https://rxorders.baremeds.com";
     const siteId = Deno.env.get("BAREMEDS_SITE_ID") || "98923";
+
+    // Ensure API URL has protocol
+    if (!apiUrl.startsWith("http://") && !apiUrl.startsWith("https://")) {
+      apiUrl = `https://${apiUrl}`;
+    }
 
     if (!apiToken) {
       throw new Error("BAREMEDS_API_TOKEN not configured");

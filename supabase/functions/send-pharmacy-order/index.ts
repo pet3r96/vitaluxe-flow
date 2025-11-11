@@ -118,7 +118,13 @@ Deno.serve(async (req) => {
     };
 
     // Get BareMeds configuration
-    const apiUrl = Deno.env.get("BAREMEDS_API_URL") || "https://rxorders.baremeds.com";
+    let apiUrl = Deno.env.get("BAREMEDS_API_URL") || "https://rxorders.baremeds.com";
+    
+    // Ensure API URL has protocol
+    if (!apiUrl.startsWith("http://") && !apiUrl.startsWith("https://")) {
+      apiUrl = `https://${apiUrl}`;
+    }
+    
     const siteId = Deno.env.get("BAREMEDS_SITE_ID") || "98923";
     const apiToken = Deno.env.get("BAREMEDS_API_TOKEN");
 
