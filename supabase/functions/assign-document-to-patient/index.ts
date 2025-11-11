@@ -1,10 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Helper to normalize phone to E.164
+function normalizePhoneToE164(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (phone.startsWith('+')) return phone;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return `+${digits}`;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -239,36 +250,61 @@ serve(async (req) => {
     // Get full patient account details for notifications
     const { data: patientAccounts } = await supabaseAdmin
       .from('patient_accounts')
-      .select('id, user_id, email, first_name, last_name')
+      .select('id, user_id, email, phone, first_name, last_name')
       .in('id', resolvedPatientIds);
 
     // Create notifications for each patient
     if (patientAccounts && patientAccounts.length > 0) {
-      const notifications = patientAccounts.map(account => ({
-        user_id: account.user_id,
-        title: 'New Document Available',
-        message: message || `"${document?.document_name}" has been assigned to you`,
-        notification_type: 'document_assigned',
-        severity: 'info',
-        entity_type: 'provider_document',
-        entity_id: documentId,
-        action_url: '/documents',
-      }));
-
-      // Send notifications via unified system
-      for (const notification of notifications) {
-        await supabaseAdmin.functions.invoke('handleNotifications', {
-          body: {
-            user_id: notification.user_id,
-            notification_type: 'document_assigned',
-            title: notification.title,
-            message: notification.message,
-            metadata: notification.metadata,
-            action_url: '/documents',
-            entity_type: 'provider_document',
-            entity_id: documentId
+      for (const account of patientAccounts) {
+        const notificationTitle = 'New Document Available';
+        const notificationMessage = message || `"${document?.document_name}" has been assigned to you`;
+        
+        if (account.user_id) {
+          // Patient has portal account - standard notification pipeline
+          await supabaseAdmin.functions.invoke('handleNotifications', {
+            body: {
+              user_id: account.user_id,
+              notification_type: 'document_assigned',
+              title: notificationTitle,
+              message: notificationMessage,
+              action_url: '/documents',
+              entity_type: 'provider_document',
+              entity_id: documentId,
+              metadata: {
+                document_id: documentId,
+                practice_id: effectivePracticeId
+              }
+            }
+          });
+          console.log(`[assign-document-to-patient] Notification sent for patient ${account.id}`);
+        } else {
+          // Patient has no portal account - direct email/SMS fallback
+          console.log(`[assign-document-to-patient] Fallback: Patient ${account.id} has no user_id`);
+          
+          if (account.email) {
+            const recipientName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || 'Valued Patient';
+            const emailResult = await sendNotificationEmail({
+              to: account.email,
+              recipientName,
+              subject: notificationTitle,
+              title: notificationTitle,
+              message: notificationMessage,
+              actionUrl: undefined
+            });
+            console.log('[assign-document-to-patient] Fallback email:', emailResult.success ? 'sent' : 'failed');
           }
-        });
+          
+          if (account.phone) {
+            const normalizedPhone = normalizePhoneToE164(account.phone);
+            const smsMessage = `${notificationTitle}\n\n${notificationMessage}`;
+            const smsResult = await sendNotificationSms({
+              phoneNumber: normalizedPhone,
+              message: smsMessage,
+              metadata: { document_id: documentId, practice_id: effectivePracticeId }
+            });
+            console.log('[assign-document-to-patient] Fallback SMS:', smsResult.success ? 'sent' : 'failed');
+          }
+        }
       }
     }
 

@@ -1,5 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
+
+// Helper to normalize phone to E.164
+function normalizePhoneToE164(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (phone.startsWith('+')) return phone;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return `+${digits}`;
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -253,19 +264,59 @@ Deno.serve(async (req) => {
 
       // Create notifications for patients about new document
       for (const patientId of patientIds) {
-        await supabaseAdmin.functions.invoke('handleNotifications', {
-          body: {
-            user_id: patientId,
-            notification_type: 'document_assigned',
-            title: 'New Document Available',
-            message: `A new document "${document_name}" has been shared with you.`,
-            metadata: {
-              document_id: document.id,
-              document_name: document_name,
-              practice_id: effectivePracticeId
+        const { data: patientData } = await supabaseAdmin
+          .from('patient_accounts')
+          .select('user_id, first_name, last_name, email, phone')
+          .eq('id', patientId)
+          .single();
+        
+        const notificationTitle = 'New Document Available';
+        const notificationMessage = `A new document "${document_name}" has been shared with you.`;
+        
+        if (patientData?.user_id) {
+          // Patient has portal account - standard notification pipeline
+          await supabaseAdmin.functions.invoke('handleNotifications', {
+            body: {
+              user_id: patientData.user_id,
+              notification_type: 'document_assigned',
+              title: notificationTitle,
+              message: notificationMessage,
+              metadata: {
+                document_id: document.id,
+                document_name: document_name,
+                practice_id: effectivePracticeId
+              }
             }
+          });
+          console.log(`[create-provider-document] Notification sent for patient ${patientId}`);
+        } else {
+          // Patient has no portal account - direct email/SMS fallback
+          console.log(`[create-provider-document] Fallback: Patient ${patientId} has no user_id`);
+          
+          if (patientData?.email) {
+            const recipientName = `${patientData.first_name || ''} ${patientData.last_name || ''}`.trim() || 'Valued Patient';
+            const emailResult = await sendNotificationEmail({
+              to: patientData.email,
+              recipientName,
+              subject: notificationTitle,
+              title: notificationTitle,
+              message: notificationMessage,
+              actionUrl: undefined
+            });
+            console.log('[create-provider-document] Fallback email:', emailResult.success ? 'sent' : 'failed');
           }
-        });
+          
+          if (patientData?.phone) {
+            const normalizedPhone = normalizePhoneToE164(patientData.phone);
+            const smsMessage = `${notificationTitle}\n\n${notificationMessage}`;
+            const smsResult = await sendNotificationSms({
+              phoneNumber: normalizedPhone,
+              message: smsMessage,
+              metadata: { document_id: document.id, practice_id: effectivePracticeId }
+            });
+            console.log('[create-provider-document] Fallback SMS:', smsResult.success ? 'sent' : 'failed');
+          }
+        }
       }
 
       // Log audit event
