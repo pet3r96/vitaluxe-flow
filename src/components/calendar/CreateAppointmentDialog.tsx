@@ -109,7 +109,7 @@ export function CreateAppointmentDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patient_accounts')
-        .select('id, first_name, last_name, email')
+        .select('id, first_name, last_name, email, user_id')
         .eq('practice_id', practiceId)
         .order('last_name');
       if (error) throw error;
@@ -180,10 +180,49 @@ export function CreateAppointmentDialog({
 
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
       queryClient.invalidateQueries({ queryKey: ['waiting-room'] });
       queryClient.invalidateQueries({ queryKey: ['patient-follow-ups'] });
+      
+      // Send notification to patient if they have portal access
+      const selectedPatient = patients?.find(p => p.id === selectedPatientId);
+      if (selectedPatient?.user_id) {
+        try {
+          const appointmentDate = new Date(data.start_time);
+          const formattedDate = appointmentDate.toLocaleDateString();
+          const formattedTime = appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          
+          const isVideo = data.visit_type === 'video';
+          const title = isVideo ? 'Video Appointment Scheduled' : 'Appointment Scheduled';
+          const message = isVideo 
+            ? `Your video appointment is scheduled for ${formattedDate} at ${formattedTime}.`
+            : `Your appointment is scheduled for ${formattedDate} at ${formattedTime}.`;
+          
+          await supabase.functions.invoke('handleNotifications', {
+            body: {
+              user_id: selectedPatient.user_id,
+              notification_type: 'appointment_confirmed',
+              title,
+              message,
+              metadata: {
+                appointmentId: data.id,
+                appointmentDate: formattedDate,
+                appointmentTime: formattedTime,
+                visitType: data.visit_type
+              },
+              entity_type: 'appointment',
+              entity_id: data.id
+            }
+          });
+          console.log('[CreateAppointmentDialog] Notification sent for appointment:', data.id);
+        } catch (notifError) {
+          console.error('[CreateAppointmentDialog] Failed to send notification:', notifError);
+        }
+      } else {
+        console.log('[CreateAppointmentDialog] No portal access for patient; skipping notifications.');
+      }
+      
       toast.success(
         createFollowUp 
           ? (isWalkIn ? "Walk-in and follow-up created" : "Appointment and follow-up created")

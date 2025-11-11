@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
           await supabaseClient.functions.invoke('handleNotifications', {
             body: {
               user_id: patientWithUser.user_id,
-              type: 'appointment_booked',
+              notification_type: 'appointment_booked',
               title: 'Appointment Requested',
               message: `Your appointment request for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been submitted and is pending approval.`,
               metadata: {
