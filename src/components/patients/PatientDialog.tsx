@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,6 +47,7 @@ export const PatientDialog = ({
     email: "",
     phone: "",
     birth_date: "",
+    gender: "",
     allergies: "",
     notes: "",
     address_street: "",
@@ -76,7 +78,7 @@ export const PatientDialog = ({
         try {
           const { data: fetchedPatient, error } = await supabase
             .from("patient_accounts")
-            .select("id, name, first_name, last_name, email, phone, birth_date, date_of_birth, allergies, notes, address_street, address_city, address_state, address_zip, address_formatted, address_verification_status, address_verification_source")
+            .select("id, name, first_name, last_name, email, phone, birth_date, date_of_birth, gender_at_birth, allergies, notes, address_street, address_city, address_state, address_zip, address_formatted, address_verification_status, address_verification_source")
             .eq("id", patient.id)
             .maybeSingle();
 
@@ -122,6 +124,9 @@ export const PatientDialog = ({
         email: fullPatient.email || "",
         phone: fullPatient.phone || "",
         birth_date: birthFormatted,
+        gender: fullPatient.gender_at_birth?.toLowerCase() === 'male' ? 'm' : 
+                fullPatient.gender_at_birth?.toLowerCase() === 'female' ? 'f' : 
+                fullPatient.gender_at_birth || "",
         address_street: fullPatient.address_street || "",
         address_city: fullPatient.address_city || "",
         address_state: fullPatient.address_state || "",
@@ -225,6 +230,7 @@ export const PatientDialog = ({
       email: "",
       phone: "",
       birth_date: "",
+      gender: "",
       allergies: "",
       notes: "",
       address_street: "",
@@ -248,6 +254,16 @@ export const PatientDialog = ({
 
     if (!formData.birth_date) {
       toast.error("Date of birth is required");
+      return;
+    }
+
+    if (!formData.gender) {
+      toast.error("Gender is required");
+      return;
+    }
+
+    if (formData.gender !== "m" && formData.gender !== "f") {
+      toast.error("Please select a valid gender option");
       return;
     }
 
@@ -301,6 +317,7 @@ export const PatientDialog = ({
         email: formData.email || null,
         phone: formData.phone || null,
         birth_date: formData.birth_date || null,
+        gender_at_birth: formData.gender,
         allergies: formData.allergies || null,
         notes: formData.notes || null,
         address_street: formData.address_street || null,
@@ -528,6 +545,30 @@ export const PatientDialog = ({
                 max={new Date().toISOString().split('T')[0]}
                 required
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="gender" className="flex items-center gap-1">
+                Gender <span className="text-destructive">*</span>
+              </Label>
+              <RadioGroup
+                value={formData.gender}
+                onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                required
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="m" id="gender-male" />
+                  <Label htmlFor="gender-male" className="font-normal cursor-pointer">
+                    Male (M)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="f" id="gender-female" />
+                  <Label htmlFor="gender-female" className="font-normal cursor-pointer">
+                    Female (F)
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
 
             <GoogleAddressAutocomplete
