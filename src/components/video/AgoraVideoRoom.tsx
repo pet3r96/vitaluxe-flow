@@ -259,6 +259,18 @@ export const AgoraVideoRoom = ({
         });
         console.log("================================");
         
+        // Validate channel name before join
+        if (!channelName || channelName.trim() === '') {
+          throw new Error('Invalid channel name: empty or null');
+        }
+
+        if (channelName.includes('-')) {
+          console.warn('⚠️ Channel name contains hyphens, may cause issues:', channelName);
+          console.warn('   Expected format: vlx_<uuid_with_underscores>');
+        }
+
+        console.log('✅ Validated channel name:', channelName);
+        
         try {
           await agoraClient.join(appId, channelName, token, joinUid);
           console.log('✅ [AgoraVideoRoom] Successfully joined RTC channel');

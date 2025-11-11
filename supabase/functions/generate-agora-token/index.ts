@@ -114,6 +114,27 @@ Deno.serve(async (req) => {
     console.log('✅ [generate-agora-token] Authorization successful');
 
     const channelName = session.channel_name;
+    
+    // Validate channel name format
+    if (!channelName) {
+      console.error('❌ [generate-agora-token] Missing channel_name for session:', sessionId);
+      return new Response(JSON.stringify({ 
+        error: 'Session has no channel name configured',
+        details: 'Database integrity issue - channel_name is null'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (channelName.includes('-')) {
+      console.warn('⚠️ [generate-agora-token] Channel name contains hyphens:', channelName);
+      console.warn('   This may cause Agora token/join issues');
+      console.warn('   Expected format: vlx_<uuid_with_underscores>');
+    }
+
+    console.log('✅ [generate-agora-token] Valid channel name:', channelName);
+    
     const uid = effectiveUserId;
     const tokenRole = role === 'publisher' ? 'publisher' : 'subscriber';
 

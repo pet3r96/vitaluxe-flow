@@ -116,8 +116,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create video session
-    const channelName = `apt_${appointmentId.replace(/-/g, '_')}`;
+    // Create video session with Agora-friendly channel name
+    const channelName = `vlx_${appointmentId.replace(/-/g, '_')}`;
     
     const { data: newSession, error: createError } = await supabase
       .from('video_sessions')
