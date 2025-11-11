@@ -125,7 +125,8 @@ export const PatientDialog = ({
         phone: fullPatient.phone || "",
         birth_date: birthFormatted,
         gender: fullPatient.gender_at_birth?.toLowerCase() === 'male' ? 'm' : 
-                fullPatient.gender_at_birth?.toLowerCase() === 'female' ? 'f' : 
+                fullPatient.gender_at_birth?.toLowerCase() === 'female' ? 'f' :
+                fullPatient.gender_at_birth?.toLowerCase() === 'u' ? 'u' :
                 fullPatient.gender_at_birth || "",
         address_street: fullPatient.address_street || "",
         address_city: fullPatient.address_city || "",
@@ -262,7 +263,7 @@ export const PatientDialog = ({
       return;
     }
 
-    if (formData.gender !== "m" && formData.gender !== "f") {
+    if (!["m", "f", "u"].includes(formData.gender)) {
       toast.error("Please select a valid gender option");
       return;
     }
@@ -566,6 +567,18 @@ export const PatientDialog = ({
                   <RadioGroupItem value="f" id="gender-female" />
                   <Label htmlFor="gender-female" className="font-normal cursor-pointer">
                     Female (F)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="u" id="gender-intersex" />
+                  <Label htmlFor="gender-intersex" className="font-normal cursor-pointer">
+                    Intersex (U)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="u" id="gender-prefer-not-to-say" />
+                  <Label htmlFor="gender-prefer-not-to-say" className="font-normal cursor-pointer">
+                    Prefer not to say (U)
                   </Label>
                 </div>
               </RadioGroup>

@@ -1,6 +1,26 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
+/**
+ * Normalize gender values to BareMeds API format
+ * BareMeds accepts: "M", "F", or "U" (uppercase single letters)
+ * 
+ * @param genderValue - Can be "Male"/"Female"/"m"/"f"/"u"/null/undefined
+ * @returns "M" | "F" | "U" (U for unknown/intersex/prefer not to say)
+ */
+function normalizeGender(genderValue: string | null | undefined): "M" | "F" | "U" {
+  if (!genderValue) return "U";
+  
+  const normalized = genderValue.toLowerCase().trim();
+  
+  if (normalized === "m" || normalized === "male") return "M";
+  if (normalized === "f" || normalized === "female") return "F";
+  if (normalized === "u") return "U";
+  
+  console.warn(`⚠️ Unknown gender value: "${genderValue}", using "U"`);
+  return "U";
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -45,20 +65,21 @@ Deno.serve(async (req) => {
         id,
         created_at,
         doctor_id,
-        order_lines(
-          id,
-          patient_id,
-          patient_name,
-          patient_email,
-          patient_phone,
-          patient_address,
-          provider_id,
-          product_id,
-          quantity,
-          custom_dosage,
-          custom_sig,
-          products(name)
-        )
+      order_lines(
+        id,
+        patient_id,
+        patient_name,
+        patient_email,
+        patient_phone,
+        patient_address,
+        provider_id,
+        product_id,
+        quantity,
+        custom_dosage,
+        custom_sig,
+        gender_at_birth,
+        products(name)
+      )
       `)
       .eq("id", order_id)
       .single();
@@ -91,6 +112,11 @@ Deno.serve(async (req) => {
     const state = stateZipParts[0] || "";
     const zip = stateZipParts[1] || "";
 
+    // Get gender from order line, with fallback to "U" for practice orders
+    const patientGender = normalizeGender(firstLine.gender_at_birth);
+
+    console.log(`📋 Patient gender: ${firstLine.gender_at_birth} → ${patientGender}`);
+
     // Build BareMeds payload
     const payload = {
       patient: {
@@ -98,7 +124,7 @@ Deno.serve(async (req) => {
         firstName,
         lastName,
         dob: "2000-01-01", // BareMeds requires DOB, using placeholder for practice orders
-        gender: "U",
+        gender: patientGender,
         phone: firstLine.patient_phone || "",
         address: {
           line1,
@@ -139,6 +165,7 @@ Deno.serve(async (req) => {
       siteId,
       endpoint,
       patientName: `${payload.patient.firstName} ${payload.patient.lastName}`,
+      patientGender: payload.patient.gender,
       prescriptionCount: payload.prescription.length,
     });
 
