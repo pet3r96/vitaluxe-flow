@@ -262,6 +262,42 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Create notification for the patient
+      const { data: patientData } = await supabaseAdmin
+        .from('patient_accounts')
+        .select('user_id, first_name, last_name')
+        .eq('id', patient_id)
+        .single();
+
+      const { data: practiceData } = await supabaseAdmin
+        .from('profiles')
+        .select('name')
+        .eq('id', effectivePracticeId)
+        .single();
+
+      if (patientData?.user_id) {
+        const { error: notificationError } = await supabaseAdmin
+          .from('notifications')
+          .insert({
+            user_id: patientData.user_id,
+            notification_type: 'patient_message_received',
+            title: `New message from ${practiceData?.name || 'your provider'}`,
+            message: subject || 'You have a new message',
+            metadata: {
+              message_id: insertedMessage.id,
+              patient_id: patient_id,
+              practice_id: effectivePracticeId,
+              thread_id: insertedMessage.thread_id || insertedMessage.id
+            }
+          });
+
+        if (notificationError) {
+          console.error('[send-patient-message] Failed to create patient notification:', notificationError);
+        } else {
+          console.log('[send-patient-message] Patient notification created successfully');
+        }
+      }
+
       console.log('[send-patient-message] Provider message sent successfully');
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -364,6 +400,61 @@ Deno.serve(async (req) => {
         
       if (updateError) {
         console.error('[send-patient-message] Failed to set thread_id:', updateError);
+      }
+    }
+
+    // Create notifications for practice team members
+    const { data: patientInfo } = await supabaseAdmin
+      .from('patient_accounts')
+      .select('first_name, last_name')
+      .eq('id', patientAccount.id)
+      .single();
+
+    // Get all team members (doctor + providers + staff) for this practice
+    const { data: practiceTeam } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('id', patientAccount.practice_id);
+
+    const { data: providers } = await supabaseAdmin
+      .from('providers')
+      .select('user_id')
+      .eq('practice_id', patientAccount.practice_id);
+
+    const { data: staff } = await supabaseAdmin
+      .from('practice_staff')
+      .select('user_id')
+      .eq('practice_id', patientAccount.practice_id);
+
+    // Combine all team member IDs
+    const teamMemberIds = [
+      ...(practiceTeam?.map(p => p.id) || []),
+      ...(providers?.map(p => p.user_id) || []),
+      ...(staff?.map(s => s.user_id) || [])
+    ].filter(Boolean);
+
+    if (teamMemberIds.length > 0) {
+      const notifications = teamMemberIds.map(memberId => ({
+        user_id: memberId,
+        notification_type: 'new_patient_message',
+        title: `New message from ${patientInfo?.first_name || ''} ${patientInfo?.last_name || ''}`.trim() || 'Patient',
+        message: subject || 'You have a new patient message',
+        metadata: {
+          message_id: insertedMessage.id,
+          patient_id: patientAccount.id,
+          practice_id: patientAccount.practice_id,
+          thread_id: insertedMessage.thread_id || insertedMessage.id
+        }
+      }));
+
+      const { error: notificationError } = await supabaseAdmin
+        .from('notifications')
+        .insert(notifications);
+
+      if (notificationError) {
+        console.error('[send-patient-message] Failed to create team notifications:', notificationError);
+      } else {
+        console.log('[send-patient-message] Created notifications for', teamMemberIds.length, 'team members');
       }
     }
 
