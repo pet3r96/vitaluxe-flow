@@ -244,14 +244,23 @@ export const AgoraVideoRoom = ({
         // Join the channel with the token from backend
         // CRITICAL: Ensure UID is a string to match token generation
         const joinUid = String(uid);
-        console.log('🔗 [AgoraVideoRoom] Attempting to join channel with UID:', joinUid);
-        console.log('🔗 [AgoraVideoRoom] Join parameters:', {
-          appId,
-          channelName,
-          uid: joinUid,
-          tokenPrefix: token.substring(0, 15),
-          tokenLength: token.length,
-        });
+        
+        console.log('=== TOKEN VERIFICATION COMPARISON (FRONTEND) ===');
+        console.log('Frontend Parameters (passed to client.join):');
+        console.log('  [FE] appId:', appId);
+        console.log('  [FE] channel:', channelName);
+        console.log('  [FE] uid:', joinUid);
+        console.log('  [FE] rtcToken.len:', token.length);
+        console.log('  [FE] rtcToken.prefix:', token.slice(0, 15));
+        console.log('  [FE] rtcToken starts with 007:', token.startsWith('007'));
+        if (rtmToken) {
+          console.log('  [FE] rtmToken.len:', rtmToken.length);
+          console.log('  [FE] rtmToken.prefix:', rtmToken.slice(0, 15));
+          console.log('  [FE] rtmToken starts with 007:', rtmToken.startsWith('007'));
+          console.log('  [FE] rtmUid:', rtmUid);
+        }
+        console.log('  NOTE: Compare these values with Backend Parameters in edge function logs');
+        console.log('=====================================================');
         
         try {
           await agoraClient.join(appId, channelName, token, joinUid);

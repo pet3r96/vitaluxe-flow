@@ -238,14 +238,22 @@ Deno.serve(async (req) => {
 
     console.log('✅ [join-video-session] Token generated successfully');
 
-    // Final debug output before returning to frontend
-    console.log("=== EDGE AGORA DEBUG ===");
-    console.log("AppID:", tokenData.appId);
-    console.log("Cert8:", agoraAppCertificate?.slice(0, 8) || 'not-set');
-    console.log("Channel:", tokenData.channelName);
-    console.log("UID:", tokenData.uid);
-    console.log("Token10:", tokenData.token.slice(0, 10));
-    console.log("========================");
+    // Enhanced diagnostic logging for comparison with frontend
+    console.log('=== TOKEN GENERATION PARAMETERS (BACKEND) ===');
+    console.log('Backend Parameters (used to generate token):');
+    console.log('  [BE] appId:', tokenData.appId);
+    console.log('  [BE] channel:', tokenData.channelName);
+    console.log('  [BE] uid:', tokenData.uid);
+    console.log('  [BE] rtcToken.len:', tokenData.token.length);
+    console.log('  [BE] rtcToken.prefix:', tokenData.token.slice(0, 15));
+    console.log('  [BE] rtcToken starts with 007:', tokenData.token.startsWith('007'));
+    console.log('  [BE] rtmToken.len:', tokenData.rtmToken.length);
+    console.log('  [BE] rtmToken.prefix:', tokenData.rtmToken.slice(0, 15));
+    console.log('  [BE] rtmToken starts with 007:', tokenData.rtmToken.startsWith('007'));
+    console.log('  [BE] rtmUid:', tokenData.rtmUid);
+    console.log('  [BE] Cert8:', agoraAppCertificate?.slice(0, 8) || 'not-set');
+    console.log('  NOTE: Frontend should log IDENTICAL values when client.join() is called');
+    console.log('=============================================');
 
     return new Response(JSON.stringify({
       success: true,
