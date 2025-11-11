@@ -187,20 +187,44 @@ Deno.serve(async (req) => {
       const appointmentDateFormatted = new Date(data.start_time).toLocaleDateString();
       const appointmentTimeFormatted = new Date(data.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
+      // Fetch practice address
+      const { data: practice, error: practiceError } = await supabaseClient
+        .from('profiles')
+        .select('address_street, address_city, address_state, address_zip')
+        .eq('id', patientWithUser.practice_id)
+        .single();
+      
+      if (practiceError) {
+        console.error('[book-appointment] Error fetching practice address:', practiceError);
+      }
+      
+      const isVideo = visitType === 'video';
+      
       if (patientWithUser.user_id) {
         // Patient has portal access - use handleNotifications
         console.log('[book-appointment] Patient has portal access, calling handleNotifications');
         try {
+          let message;
+          if (isVideo) {
+            message = `Your appointment request for a video appointment on ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been submitted and is pending approval.`;
+          } else {
+            const address = practice 
+              ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
+              : '';
+            message = `Your appointment request for an in-office appointment on ${appointmentDateFormatted} at ${appointmentTimeFormatted}${address ? ` at ${address}` : ''} has been submitted and is pending approval.`;
+          }
+          
           await supabaseClient.functions.invoke('handleNotifications', {
             body: {
               user_id: patientWithUser.user_id,
               notification_type: 'appointment_booked',
               title: 'Appointment Requested',
-              message: `Your appointment request for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been submitted and is pending approval.`,
+              message,
               metadata: {
                 appointmentId: data.id,
                 appointmentDate: appointmentDateFormatted,
-                appointmentTime: appointmentTimeFormatted
+                appointmentTime: appointmentTimeFormatted,
+                visitType: visitType
               }
             }
           });
@@ -212,13 +236,23 @@ Deno.serve(async (req) => {
         // No portal access - send email/SMS directly
         console.log('[book-appointment] Patient has no portal access, sending direct email/SMS');
         
+        let directMessage;
+        if (isVideo) {
+          directMessage = `Your appointment request for a video appointment on ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been submitted and is pending approval.`;
+        } else {
+          const address = practice 
+            ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
+            : '';
+          directMessage = `Your appointment request for an in-office appointment on ${appointmentDateFormatted} at ${appointmentTimeFormatted}${address ? ` at ${address}` : ''} has been submitted and is pending approval.`;
+        }
+        
         if (patientWithUser.email) {
           try {
             await sendNotificationEmail({
               to: patientWithUser.email,
               toName: patientName,
               subject: 'Appointment Requested',
-              message: `Your appointment request for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been submitted and is pending approval.`,
+              message: directMessage,
               actionUrl: undefined,
               senderContext: { fromName: 'Your Healthcare Provider' }
             });
@@ -231,9 +265,13 @@ Deno.serve(async (req) => {
         if (patientWithUser.phone) {
           try {
             const normalizedPhone = normalizePhoneToE164(patientWithUser.phone);
+            const smsMessage = isVideo
+              ? `Video appointment request for ${appointmentDateFormatted} at ${appointmentTimeFormatted}. Pending approval.`
+              : `In-office appointment request for ${appointmentDateFormatted} at ${appointmentTimeFormatted}${practice ? ` at ${practice.address_city}, ${practice.address_state}` : ''}. Pending approval.`;
+            
             await sendNotificationSms({
               phoneNumber: normalizedPhone,
-              message: `Appointment request submitted for ${appointmentDateFormatted} at ${appointmentTimeFormatted}. Pending approval.`,
+              message: smsMessage,
               metadata: { appointmentId: data.id }
             });
             console.log('[book-appointment] SMS sent to:', normalizedPhone);

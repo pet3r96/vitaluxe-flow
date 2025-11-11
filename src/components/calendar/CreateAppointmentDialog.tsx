@@ -193,11 +193,25 @@ export function CreateAppointmentDialog({
           const formattedDate = appointmentDate.toLocaleDateString();
           const formattedTime = appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           
+          // Fetch practice address
+          const { data: practice } = await supabase
+            .from('profiles')
+            .select('address_street, address_city, address_state, address_zip')
+            .eq('id', practiceId)
+            .single();
+          
           const isVideo = data.visit_type === 'video';
           const title = isVideo ? 'Video Appointment Scheduled' : 'Appointment Scheduled';
-          const message = isVideo 
-            ? `Your video appointment is scheduled for ${formattedDate} at ${formattedTime}.`
-            : `Your appointment is scheduled for ${formattedDate} at ${formattedTime}.`;
+          
+          let message;
+          if (isVideo) {
+            message = `Your appointment is scheduled for a video appointment on ${formattedDate} at ${formattedTime}.`;
+          } else {
+            const address = practice 
+              ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
+              : '';
+            message = `Your appointment is scheduled for an in-office appointment on ${formattedDate} at ${formattedTime}${address ? ` at ${address}` : ''}.`;
+          }
           
           await supabase.functions.invoke('handleNotifications', {
             body: {
