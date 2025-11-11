@@ -245,24 +245,19 @@ export const AgoraVideoRoom = ({
         // CRITICAL: Ensure UID is a string to match token generation
         const joinUid = String(uid);
         
-        console.log('=== TOKEN VERIFICATION COMPARISON (FRONTEND) ===');
-        console.log('Frontend Parameters (passed to client.join):');
-        console.log('  [FE] appId:', appId);
-        console.log('  [FE] channel:', channelName);
-        console.log('  [FE] uid:', joinUid);
-        console.log('  [FE] rtcToken.len:', token.length);
-        console.log('  [FE] rtcToken.prefix:', token.slice(0, 20));
-        console.log('  [FE] rtcToken starts with 007:', token.startsWith('007'));
-        console.log('  [FE TOKEN DEBUG] Full RTC token:', token);
-        if (rtmToken) {
-          console.log('  [FE] rtmToken.len:', rtmToken.length);
-          console.log('  [FE] rtmToken.prefix:', rtmToken.slice(0, 20));
-          console.log('  [FE] rtmToken starts with 007:', rtmToken.startsWith('007'));
-          console.log('  [FE] rtmUid:', rtmUid);
-          console.log('  [FE TOKEN DEBUG] Full RTM token:', rtmToken);
-        }
-        console.log('  NOTE: Compare these values with Backend Parameters in edge function logs');
-        console.log('=====================================================');
+        console.log("===== FE TOKEN DEBUG =====");
+        console.log("FE RTC Token (full):", token);
+        console.log("FE RTM Token (full):", rtmToken);
+        console.log("RTC Token length:", token?.length);
+        console.log("RTM Token length:", rtmToken?.length);
+        console.log("RTC Token prefix:", token?.substring(0, 20));
+        console.log("RTM Token prefix:", rtmToken?.substring(0, 20));
+        console.log("Agora Join Params:", {
+          appId,
+          channelName,
+          uid: joinUid,
+        });
+        console.log("================================");
         
         try {
           await agoraClient.join(appId, channelName, token, joinUid);
@@ -381,6 +376,21 @@ export const AgoraVideoRoom = ({
             if (refreshError || !refreshData || !clientRef.current) {
               throw new Error("Failed to refresh token or client not available");
             }
+            
+            console.log("RAW BACKEND TOKEN RESPONSE (retry):", refreshData);
+            console.log("===== FE TOKEN DEBUG (retry) =====");
+            console.log("FE RTC Token (full):", refreshData?.token);
+            console.log("FE RTM Token (full):", refreshData?.rtmToken);
+            console.log("RTC Token length:", refreshData?.token?.length);
+            console.log("RTM Token length:", refreshData?.rtmToken?.length);
+            console.log("RTC Token prefix:", refreshData?.token?.substring(0, 20));
+            console.log("RTM Token prefix:", refreshData?.rtmToken?.substring(0, 20));
+            console.log("Agora Join Params:", {
+              appId: refreshData?.appId,
+              channelName: refreshData?.channelName,
+              uid: String(refreshData?.uid)
+            });
+            console.log("================================");
             
             console.log("[AgoraVideoRoom] Retrying with fresh token...");
             await clientRef.current.join(

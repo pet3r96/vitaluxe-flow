@@ -55,19 +55,7 @@ export default function VideoConsultationRoom() {
 
         const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
 
-        // RAW backend response for token comparison
-        console.group("📡 FE RAW BACKEND RESPONSE");
-        console.log("[FE RAW BACKEND RESPONSE]", data);
-        console.log("[FE TOKEN DEBUG] Full RTC token:", data?.token);
-        console.log("[FE TOKEN DEBUG] Full RTM token:", data?.rtmToken);
-        console.log("[FE TOKEN DEBUG] RTC token length:", data?.token?.length);
-        console.log("[FE TOKEN DEBUG] RTM token length:", data?.rtmToken?.length);
-        console.log("[FE TOKEN DEBUG] RTC prefix:", data?.token?.substring(0, 20));
-        console.log("[FE TOKEN DEBUG] RTM prefix:", data?.rtmToken?.substring(0, 20));
-        console.log("EDGE App ID (FULL):", data?.appId);
-        console.log("EDGE Channel:", data?.channelName);
-        console.log("EDGE UID:", data?.uid);
-        console.groupEnd();
+        console.log("RAW BACKEND TOKEN RESPONSE:", data);
 
         if (error) {
           console.error("❌ Join session error:", error);

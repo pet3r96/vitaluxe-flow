@@ -45,15 +45,12 @@ export const useVideoChat = ({
         const client = createRTMClient(appId);
         clientRef.current = client;
 
-        console.log('=== RTM LOGIN VERIFICATION (FRONTEND) ===');
-        console.log('  [RTM-FE] appId:', appId);
-        console.log('  [RTM-FE] uid:', rtmUid);
-        console.log('  [RTM-FE] token.len:', rtmToken.length);
-        console.log('  [RTM-FE] token.prefix:', rtmToken.slice(0, 20));
-        console.log('  [RTM-FE] token starts with 007:', rtmToken.startsWith('007'));
-        console.log('  [FE TOKEN DEBUG] Full RTM token:', rtmToken);
-        console.log('  NOTE: Compare with Backend RTM Parameters');
-        console.log('=========================================');
+        console.log("===== FE TOKEN DEBUG (RTM) =====");
+        console.log("FE RTM Token (full):", rtmToken);
+        console.log("RTM Token length:", rtmToken?.length);
+        console.log("RTM Token prefix:", rtmToken?.substring(0, 20));
+        console.log("RTM Login Params:", { appId, rtmUid });
+        console.log("================================");
 
         try {
           await client.login({ uid: rtmUid, token: rtmToken });

@@ -62,16 +62,9 @@ export default function PatientVideoRoom() {
           throw error;
         }
 
-        const sessionStatus = data.session?.status || data.session_status;
+        console.log("RAW BACKEND TOKEN RESPONSE:", data);
         
-        // RAW backend response for token comparison
-        console.log('[FE RAW BACKEND RESPONSE]', data);
-        console.log('[FE TOKEN DEBUG] Full RTC token:', data?.token);
-        console.log('[FE TOKEN DEBUG] Full RTM token:', data?.rtmToken);
-        console.log('[FE TOKEN DEBUG] RTC token length:', data?.token?.length);
-        console.log('[FE TOKEN DEBUG] RTM token length:', data?.rtmToken?.length);
-        console.log('[FE TOKEN DEBUG] RTC prefix:', data?.token?.substring(0, 20));
-        console.log('[FE TOKEN DEBUG] RTM prefix:', data?.rtmToken?.substring(0, 20));
+        const sessionStatus = data.session?.status || data.session_status;
 
         if (sessionStatus === 'waiting') {
           setWaitingForProvider(true);
