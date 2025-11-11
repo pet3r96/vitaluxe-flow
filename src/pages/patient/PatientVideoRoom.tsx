@@ -62,7 +62,10 @@ export default function PatientVideoRoom() {
           throw error;
         }
 
+        console.log("RAW BACKEND TOKEN RESPONSE:", data);
+        
         const sessionStatus = data.session?.status || data.session_status;
+
         if (sessionStatus === 'waiting') {
           setWaitingForProvider(true);
         } else {

@@ -1,253 +1,237 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-interface PharmacyOrderRequest {
-  order_id: string;
-  pharmacy_email: string;
-  pharmacy_name: string;
-  payment_status: string;
-  site_id?: string;
+/**
+ * Normalize gender values to BareMeds API format
+ * BareMeds accepts: "M", "F", or "U" (uppercase single letters)
+ * 
+ * @param genderValue - Can be "Male"/"Female"/"m"/"f"/"u"/null/undefined
+ * @returns "M" | "F" | "U" (U for unknown/intersex/prefer not to say)
+ */
+function normalizeGender(genderValue: string | null | undefined): "M" | "F" | "U" {
+  if (!genderValue) return "U";
+  
+  const normalized = genderValue.toLowerCase().trim();
+  
+  if (normalized === "m" || normalized === "male") return "M";
+  if (normalized === "f" || normalized === "female") return "F";
+  if (normalized === "u") return "U";
+  
+  console.warn(`⚠️ Unknown gender value: "${genderValue}", using "U"`);
+  return "U";
 }
 
-interface BareMedsAuthResponse {
-  token: string;
-  expiresIn?: number;
-}
-
-type JsonLike = Record<string, unknown>;
-
-const TEST_PHARMACY_EMAIL = "dsporn00@yahoo.com";
-const TEST_PHARMACY_NAME = "Demo Pharmacy 1";
-const BAREMEDS_AUTH_URL = "https://staging-rxorders.baremeds.com/api/auth/login";
-const BAREMEDS_ORDERS_URL = "https://staging-rxorders.baremeds.com/api/orders";
-
-function sanitizeForLog(data: unknown): unknown {
-  if (data === null || typeof data !== "object") {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.map((item) => sanitizeForLog(item));
-  }
-
-  const sanitized: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
-    const lowered = key.toLowerCase();
-    if (lowered.includes("token") || lowered.includes("password")) {
-      sanitized[key] = "[REDACTED]";
-    } else if (typeof value === "object" && value !== null) {
-      sanitized[key] = sanitizeForLog(value);
-    } else {
-      sanitized[key] = value;
-    }
-  }
-
-  return sanitized;
-}
-
-function logSanitized(label: string, payload: unknown) {
-  console.log(`${label}:`, JSON.stringify(sanitizeForLog(payload)));
-}
-
-function getEnvOrThrow(key: string): string {
-  const value = Deno.env.get(key);
-  if (!value) {
-    throw new Error(`Missing environment variable: ${key}`);
-  }
-  return value;
-}
-
-serve(async (req) => {
+Deno.serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  let payload: PharmacyOrderRequest;
   try {
-    payload = (await req.json()) as PharmacyOrderRequest;
-  } catch (error) {
-    console.error("Failed to parse request body", error);
-    return new Response(JSON.stringify({ error: "Invalid JSON payload" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+    const { order_id, pharmacy_email, pharmacy_name, payment_status } = await req.json();
 
-  logSanitized("Received request", payload);
+    console.log("📦 Processing order:", { order_id, pharmacy_email, payment_status });
 
-  const { order_id, pharmacy_email, pharmacy_name, payment_status, site_id } = payload;
-
-  if (!order_id || typeof order_id !== "string") {
-    return new Response(JSON.stringify({ error: "order_id is required" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const isPaid = payment_status === "paid";
-  const isTestPharmacy =
-    pharmacy_email === TEST_PHARMACY_EMAIL && pharmacy_name === TEST_PHARMACY_NAME;
-
-  if (!isPaid || !isTestPharmacy) {
-    const reason = !isPaid
-      ? "payment_status is not paid"
-      : "pharmacy does not match the allowed test pharmacy";
-    logSanitized("Skipping request", { order_id, reason });
-    return new Response(
-      JSON.stringify({
-        success: true,
-        sent: false,
-        reason,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  }
-
-  try {
-    const bareMedsEmail = getEnvOrThrow("BAREMEDS_EMAIL");
-    const bareMedsPassword = getEnvOrThrow("BAREMEDS_PASSWORD");
-    const bareMedsSiteId = getEnvOrThrow("BAREMEDS_SITE_ID");
-
-    const authBody = {
-      email: bareMedsEmail,
-      password: bareMedsPassword,
-      site_id: bareMedsSiteId,
-    };
-
-    logSanitized("Authenticating with BareMeds", {
-      email: authBody.email,
-      site_id: authBody.site_id,
-    });
-
-    const authResponse = await fetch(BAREMEDS_AUTH_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(authBody),
-    });
-
-    let authJson: BareMedsAuthResponse | JsonLike | null = null;
-    try {
-      authJson = (await authResponse.json()) as BareMedsAuthResponse | JsonLike;
-    } catch {
-      authJson = null;
-    }
-
-    logSanitized("BareMeds auth response", {
-      status: authResponse.status,
-      body: authJson,
-    });
-
-    if (!authResponse.ok || !authJson || typeof authJson !== "object" || !("token" in authJson)) {
-      throw new Error(
-        `BareMeds authentication failed (${authResponse.status}): ${
-          authJson ? JSON.stringify(sanitizeForLog(authJson)) : "No response body"
-        }`
+    // Get configured pharmacy email
+    const configuredPharmacyEmail = Deno.env.get("BAREMEDS_EMAIL");
+    
+    // Skip if not configured pharmacy or not paid
+    if (configuredPharmacyEmail && pharmacy_email?.toLowerCase() !== configuredPharmacyEmail.toLowerCase()) {
+      console.log("⏭️ Skipping: not configured pharmacy");
+      return new Response(
+        JSON.stringify({ success: true, sent: false, reason: "Not configured pharmacy" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const token = (authJson as BareMedsAuthResponse).token;
-    if (!token) {
-      throw new Error("BareMeds authentication succeeded without a token");
+    if (payment_status !== "paid") {
+      console.log("⏭️ Skipping: payment not paid");
+      return new Response(
+        JSON.stringify({ success: true, sent: false, reason: "Payment not paid" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const orderPayload = {
-      site_id: site_id || bareMedsSiteId,
-      external_order_id: order_id,
+    // Initialize Supabase client
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Fetch order with order lines and patient/provider info
+    const { data: order, error } = await supabase
+      .from("orders")
+      .select(`
+        id,
+        created_at,
+        doctor_id,
+        order_lines(
+          id,
+          patient_id,
+          patient_name,
+          patient_email,
+          patient_phone,
+          patient_address,
+          provider_id,
+          product_id,
+          quantity,
+          custom_dosage,
+          custom_sig,
+          gender_at_birth,
+          products(name)
+        )
+      `)
+      .eq("id", order_id)
+      .single();
+
+    if (error || !order) {
+      console.error("❌ Order not found:", error);
+      throw new Error(`Order not found: ${error?.message || "Unknown error"}`);
+    }
+
+    console.log("✅ Order fetched successfully");
+
+    // Get patient info from first order line (assuming all lines have same patient)
+    const firstLine = order.order_lines[0];
+    if (!firstLine) {
+      throw new Error("No order lines found");
+    }
+
+    // Check if this is a patient order (patient_id must exist)
+    const isPatientOrder = firstLine.patient_id !== null;
+
+    if (!isPatientOrder) {
+      console.log("⏭️ Skipping: Practice order (no patient_id)");
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          sent: false, 
+          reason: "Practice order - not sent to pharmacy" 
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("✅ Patient order confirmed, proceeding with BareMeds transmission");
+
+    // Parse patient name (assuming format "FirstName LastName" or just a single name)
+    const nameParts = (firstLine.patient_name || "Unknown Patient").split(" ");
+    const firstName = nameParts[0] || "Unknown";
+    const lastName = nameParts.slice(1).join(" ") || "Patient";
+
+    // Parse patient address (assuming format "street, city, state zip")
+    const addressStr = firstLine.patient_address || "";
+    const addressParts = addressStr.split(",").map(p => p.trim());
+    const line1 = addressParts[0] || "";
+    const city = addressParts[1] || "";
+    const stateZip = addressParts[2] || "";
+    const stateZipParts = stateZip.split(" ");
+    const state = stateZipParts[0] || "";
+    const zip = stateZipParts[1] || "";
+
+    // Get gender from order line, with fallback to "U" for practice orders
+    const patientGender = normalizeGender(firstLine.gender_at_birth);
+
+    console.log(`📋 Patient gender: ${firstLine.gender_at_birth} → ${patientGender}`);
+
+    // Build BareMeds payload
+    const payload = {
       patient: {
-        first_name: "Test",
-        last_name: "Patient",
-        dob: "1990-01-01",
-        gender: "M",
-        phone: "555-123-4567",
-        email: "test@example.com",
+        patientId: firstLine.patient_id || `EXT-${order.id}`,
+        firstName,
+        lastName,
+        dob: "2000-01-01", // BareMeds requires DOB, using placeholder for practice orders
+        gender: patientGender,
+        phone: firstLine.patient_phone || "",
         address: {
-          street: "123 Main St",
-          city: "New York",
-          state: "NY",
-          zip: "10001",
+          line1,
+          city,
+          state,
+          zip,
         },
       },
-      prescriber: {
-        first_name: "John",
-        last_name: "Doe",
-        npi: "1234567890",
-      },
-      medication: {
-        name: "Amoxicillin",
-        strength: "500mg",
-        quantity: 30,
-        instructions: "Take one tablet twice a day",
-      },
-      shipping: {
-        method: "standard",
-      },
-      dry_run: true,
-      dryRun: true,
+      prescription: order.order_lines.map((line: any) => ({
+        drug: { name: line.products?.name || "Unknown Medication" },
+        quantity: line.quantity,
+        refills: 0, // BareMeds requires refills field
+      })),
+      requestId: order.id,
+      timestamp: order.created_at,
+      company: "Vitaluxe Services",
     };
 
-    logSanitized("Sending BareMeds order payload", orderPayload);
+    // Get BareMeds configuration
+    let apiUrl = Deno.env.get("BAREMEDS_API_URL") || "https://rxorders.baremeds.com";
+    
+    // Ensure API URL has protocol
+    if (!apiUrl.startsWith("http://") && !apiUrl.startsWith("https://")) {
+      apiUrl = `https://${apiUrl}`;
+    }
+    
+    const siteId = Deno.env.get("BAREMEDS_SITE_ID") || "98923";
+    const apiToken = Deno.env.get("BAREMEDS_API_TOKEN");
 
-    const orderResponse = await fetch(BAREMEDS_ORDERS_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(orderPayload),
-    });
-
-    let orderJson: JsonLike | null = null;
-    try {
-      orderJson = (await orderResponse.json()) as JsonLike;
-    } catch {
-      const text = await orderResponse.text();
-      orderJson = { message: text };
+    if (!apiToken) {
+      throw new Error("BAREMEDS_API_TOKEN environment variable not set");
     }
 
-    logSanitized("BareMeds order response", {
-      status: orderResponse.status,
-      body: orderJson,
+    const endpoint = `${apiUrl}/api/v1/rx-orders/${siteId}`;
+
+    console.log("🚀 Sending to BareMeds:", {
+      apiUrl,
+      siteId,
+      endpoint,
+      patientName: `${payload.patient.firstName} ${payload.patient.lastName}`,
+      patientGender: payload.patient.gender,
+      prescriptionCount: payload.prescription.length,
     });
 
-    if (!orderResponse.ok) {
-      throw new Error(
-        `BareMeds order creation failed (${orderResponse.status}): ${JSON.stringify(
-          sanitizeForLog(orderJson)
-        )}`
-      );
+    // Send to BareMeds API
+    const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiToken}`,
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("❌ BareMeds API Response:", {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: errorData.substring(0, 500), // Log first 500 chars
+      });
+      throw new Error(`BareMeds API error (${response.status}): ${errorData.substring(0, 200)}`);
     }
+
+    const responseData = await response.json();
+    console.log("✅ BareMeds Response:", responseData);
 
     return new Response(
       JSON.stringify({
         success: true,
         sent: true,
-        response: orderJson,
+        response: responseData,
       }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-  } catch (error) {
-    console.error("Error in send-pharmacy-order:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
+  } catch (err: any) {
+    console.error("❌ Error sending to BareMeds:", err.message);
+
     return new Response(
       JSON.stringify({
         success: false,
         sent: false,
-        error: message,
+        error: err.message,
+        details: null,
       }),
       {
         status: 500,
@@ -256,4 +240,3 @@ serve(async (req) => {
     );
   }
 });
-

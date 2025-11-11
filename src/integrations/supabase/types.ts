@@ -752,6 +752,7 @@ export type Database = {
           custom_sig_encrypted: string | null
           destination_state: string
           expires_at: string | null
+          gender_at_birth: string | null
           id: string
           order_notes: string | null
           patient_address: string | null
@@ -791,6 +792,7 @@ export type Database = {
           custom_sig_encrypted?: string | null
           destination_state: string
           expires_at?: string | null
+          gender_at_birth?: string | null
           id?: string
           order_notes?: string | null
           patient_address?: string | null
@@ -830,6 +832,7 @@ export type Database = {
           custom_sig_encrypted?: string | null
           destination_state?: string
           expires_at?: string | null
+          gender_at_birth?: string | null
           id?: string
           order_notes?: string | null
           patient_address?: string | null
@@ -2111,6 +2114,7 @@ export type Database = {
           destination_state: string | null
           discount_amount: number | null
           discount_percentage: number | null
+          gender_at_birth: string | null
           id: string
           is_refill: boolean | null
           order_id: string
@@ -2160,6 +2164,7 @@ export type Database = {
           destination_state?: string | null
           discount_amount?: number | null
           discount_percentage?: number | null
+          gender_at_birth?: string | null
           id?: string
           is_refill?: boolean | null
           order_id: string
@@ -2209,6 +2214,7 @@ export type Database = {
           destination_state?: string | null
           discount_amount?: number | null
           discount_percentage?: number | null
+          gender_at_birth?: string | null
           id?: string
           is_refill?: boolean | null
           order_id?: string
@@ -4710,6 +4716,73 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "pharmacy_api_credentials_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_order_jobs: {
+        Row: {
+          attempt_count: number | null
+          baremeds_response: Json | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          max_attempts: number | null
+          order_id: string
+          order_line_id: string
+          pharmacy_id: string
+          status: string
+        }
+        Insert: {
+          attempt_count?: number | null
+          baremeds_response?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number | null
+          order_id: string
+          order_line_id: string
+          pharmacy_id: string
+          status?: string
+        }
+        Update: {
+          attempt_count?: number | null
+          baremeds_response?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number | null
+          order_id?: string
+          order_line_id?: string
+          pharmacy_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_order_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_order_jobs_order_line_id_fkey"
+            columns: ["order_line_id"]
+            isOneToOne: true
+            referencedRelation: "order_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_order_jobs_pharmacy_id_fkey"
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"

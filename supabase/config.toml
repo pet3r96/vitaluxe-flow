@@ -379,3 +379,12 @@ verify_jwt = false
 verify_jwt = true
 [functions.pharmacy-api-diagnostics]
 verify_jwt = true
+
+[functions.process-pharmacy-order-queue]
+verify_jwt = false
+
+[functions.send-pharmacy-order]
+verify_jwt = false
+
+[functions.test-baremeds-auth]
+verify_jwt = false

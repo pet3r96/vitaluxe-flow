@@ -79,6 +79,15 @@ function concat(...arrays: Uint8Array[]): Uint8Array {
   return result;
 }
 
+// Hex dump utilities for byte-level diagnostics
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexSlice(bytes: Uint8Array, n: number): string {
+  return Array.from(bytes.slice(0, n)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+}
+
 // hexToBytes removed - certificate should be used as UTF-8 bytes, not hex-decoded
 
 // ============================================================================
@@ -110,11 +119,10 @@ function packPrivilegesMap(privileges: Map<number, number>): Uint8Array {
   return concat(...entries);
 }
 
-// Pack service with explicit length field: type(uint16) + length(uint16) + body
+// Pack service: type(uint16) + body (NO length field per Agora spec)
 function packService(type: number, body: Uint8Array): Uint8Array {
   const typeBytes = writeUint16LE(type);
-  const lenBytes = writeUint16LE(body.length);
-  return concat(typeBytes, lenBytes, body);
+  return concat(typeBytes, body);
 }
 
 function packServiceRtcBody(
@@ -168,11 +176,16 @@ async function generateAccessToken2(
   expiresAt: number,
   role: 'publisher' | 'subscriber'
 ): Promise<string> {
-  // Generate random salt
-  const salt = crypto.getRandomValues(new Uint32Array(1))[0];
+  // Optional deterministic debug mode for reproducible testing
+  const dbgFixed = Deno.env.get("AGORA_DEBUG_FIXED_SALT_TS") === "1";
+  let salt = crypto.getRandomValues(new Uint32Array(1))[0];
+  let ts = Math.floor(Date.now() / 1000);
   
-  // Current timestamp
-  const ts = Math.floor(Date.now() / 1000);
+  if (dbgFixed) {
+    salt = Number(Deno.env.get("AGORA_DEBUG_SALT") ?? 0x01020304) >>> 0;
+    ts = Number(Deno.env.get("AGORA_DEBUG_TS") ?? 1731200000) >>> 0;
+    console.log("🔧 [DEBUG MODE] Using fixed salt/ts:", { salt, ts });
+  }
   
   // Build service body
   let serviceBody: Uint8Array;
@@ -186,7 +199,7 @@ async function generateAccessToken2(
     serviceBody = packServiceRtmBody(uid, expiresAt);
   }
   
-  // Pack service with type and length: type(uint16) + length(uint16) + body
+  // Pack service: type(uint16) + body (NO length field per Agora spec)
   const servicePack = packService(serviceTypeNum, serviceBody);
   
   // Services: serviceCount(uint16) + service pack
@@ -221,6 +234,50 @@ async function generateAccessToken2(
   // Final payload: signature + message
   const payload = concat(signature, message);
   
+  // ============================================================================
+  // BYTE-LEVEL DIAGNOSTICS (BEFORE BASE64 ENCODING)
+  // ============================================================================
+  console.log("\n🔬 [RAW TOKEN BYTES - BEFORE BASE64]");
+  console.log("message hex (full):", toHex(message));
+  console.log("full buffer hex (signature + message):", toHex(payload));
+  
+  // Structure diagnostics
+  const serviceCountVal = 1;
+  console.log("\n📊 [STRUCTURE DIAGNOSTICS]");
+  console.log("serviceCount (uint16):", serviceCountVal);
+  console.log("serviceType (uint16):", serviceTypeNum);
+  console.log("serviceBody length (bytes):", serviceBody.length);
+  console.log("serviceBody first 20 bytes (hex):", hexSlice(serviceBody, 20));
+  console.log("services.pack() first 20 bytes (hex):", hexSlice(servicesPack, 20));
+  console.log("message first 20 bytes (hex):", hexSlice(message, 20));
+  
+  // Length validation - ensure NO extra fields
+  const expectedServicePackLen = 2 /* type */ + serviceBody.length;
+  const expectedServicesPackLen = 2 /* serviceCount */ + expectedServicePackLen;
+  const expectedMessageLen = 4 /* salt */ + 4 /* ts */ + expectedServicesPackLen;
+  
+  console.log("\n✅ [LENGTH VALIDATION - No Extra Fields Check]");
+  console.log("  servicePack: expected", expectedServicePackLen, "actual", servicePack.length, "ok:", expectedServicePackLen === servicePack.length);
+  console.log("  servicesPack: expected", expectedServicesPackLen, "actual", servicesPack.length, "ok:", expectedServicesPackLen === servicesPack.length);
+  console.log("  message: expected", expectedMessageLen, "actual", message.length, "ok:", expectedMessageLen === message.length);
+  
+  // Parse back to verify byte layout (Little-Endian)
+  const view = message;
+  let off = 0;
+  const saltLE = view[off] | (view[off+1]<<8) | (view[off+2]<<16) | (view[off+3]<<24); off += 4;
+  const tsLE   = view[off] | (view[off+1]<<8) | (view[off+2]<<16) | (view[off+3]<<24); off += 4;
+  const serviceCountLE = view[off] | (view[off+1]<<8); off += 2;
+  const svcTypeLE = view[off] | (view[off+1]<<8); // don't advance, just to log
+  
+  console.log("\n🔍 [PARSED BACK (LE) - Verification]");
+  console.log("Parsed values:", { saltLE, tsLE, serviceCountLE, svcTypeLE });
+  console.log("Match original:", { 
+    saltMatch: saltLE === salt, 
+    tsMatch: tsLE === ts, 
+    serviceCountMatch: serviceCountLE === serviceCountVal, 
+    svcTypeMatch: svcTypeLE === serviceTypeNum 
+  });
+  
   // Encode to base64
   const base64Payload = btoa(String.fromCharCode(...payload));
   
@@ -253,13 +310,25 @@ async function generateAccessToken2(
   
   console.log("├─ Certificate UTF-8 byte count:", keyBytes.length);
   console.log("├─ Service body length:", serviceBody.length, "bytes");
-  console.log("├─ Service pack length (with type+len):", servicePack.length, "bytes");
+  console.log("├─ Service pack length:", servicePack.length, "bytes");
   console.log("├─ Services pack length:", servicesPack.length, "bytes");
   console.log("├─ Message length:", message.length, "bytes");
   console.log("├─ Signature length:", signature.length, "bytes");
   console.log("├─ Token starts with 007:", token.startsWith("007"));
   console.log("├─ Token length:", token.length);
   console.log("└─ Token prefix:", token.substring(0, 20));
+  
+  // Byte-level diagnostics
+  console.log("\n🔬 [Byte-Level Diagnostics]");
+  console.log("├─ First 16 bytes of message (hex):", 
+    Array.from(message.slice(0, 16))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join(' '));
+  console.log("├─ First 16 bytes of signature (hex):", 
+    Array.from(signature.slice(0, 16))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join(' '));
+  console.log("└─ Certificate encoding: UTF-8 (NOT hex-decoded)");
 
   return token;
 }

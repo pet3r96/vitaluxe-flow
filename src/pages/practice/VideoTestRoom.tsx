@@ -20,7 +20,7 @@ export default function VideoTestRoom() {
   const [skipRTM, setSkipRTM] = useState(false);
 
   const handleJoin = async () => {
-    if (!appId.trim() || !token.trim()) {
+    if (!appId || !token) {
       toast({
         title: "Missing Fields",
         description: "Please provide App ID and Token",
@@ -60,13 +60,16 @@ export default function VideoTestRoom() {
       });
 
       // Join channel
-      console.log('🔗 [VideoTestRoom] Attempting to join channel:', {
+      console.log("===== FE TOKEN DEBUG (VideoTestRoom) =====");
+      console.log("FE RTC Token (full):", token);
+      console.log("RTC Token length:", token?.length);
+      console.log("RTC Token prefix:", token?.substring(0, 20));
+      console.log("Agora Join Params:", {
         appId,
         channelName,
         uid,
-        tokenPrefix: token.substring(0, 15),
-        tokenLength: token.length,
       });
+      console.log("================================");
       
       try {
         await agoraClient.join(appId, channelName, token, uid);

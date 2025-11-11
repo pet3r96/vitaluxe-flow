@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AddAccountDialog } from "./AddAccountDialog";
 import { AccountDetailsDialog } from "./AccountDetailsDialog";
-import { DataSyncButton } from "./DataSyncButton";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { useAuth } from "@/contexts/AuthContext";
@@ -309,7 +308,6 @@ export const AccountsDataTable = () => {
           </Select>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <DataSyncButton onSyncComplete={() => refetch()} />
           <Button onClick={() => setAddDialogOpen(true)}>
             Add Account
           </Button>

@@ -50,13 +50,13 @@ function decodeToken(token: string, appId: string, appCertificate: string) {
     const services: any[] = [];
     for (let i = 0; i < serviceCount; i++) {
       const serviceType = readUint16LE();
-      const serviceLen = readUint16LE();
-      const serviceStart = offset;
-
-      let serviceData: any = { type: serviceType, length: serviceLen };
+      // CRITICAL FIX: AccessToken2 does NOT have a serviceLen field after serviceType
+      // Parse fields directly in sequence (no length wrapper)
+      
+      let serviceData: any = { type: serviceType };
 
       if (serviceType === 1) {
-        // RTC
+        // RTC: channelName + uid + privileges
         serviceData.channelName = readString();
         serviceData.uid = readString();
         const privCount = readUint16LE();
@@ -67,7 +67,7 @@ function decodeToken(token: string, appId: string, appCertificate: string) {
           serviceData.privileges.push({ key, expire, expireISO: new Date(expire * 1000).toISOString() });
         }
       } else if (serviceType === 2) {
-        // RTM
+        // RTM: uid + privileges (no channelName)
         serviceData.uid = readString();
         const privCount = readUint16LE();
         serviceData.privileges = [];
@@ -79,7 +79,7 @@ function decodeToken(token: string, appId: string, appCertificate: string) {
       }
 
       services.push(serviceData);
-      offset = serviceStart + serviceLen;
+      // No offset jump by length - we're already at the end of the service body
     }
 
     return {

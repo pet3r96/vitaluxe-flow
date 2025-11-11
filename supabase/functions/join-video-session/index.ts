@@ -117,17 +117,27 @@ Deno.serve(async (req) => {
     const isProvider = provider?.user_id === effectiveUserId;
     const isPatient = patientAccount?.user_id === effectiveUserId;
     const isSystemAdmin = userRole?.role === 'admin';
+    // Check if effectiveUserId is a practice that owns this session
+    const isPracticeAdmin = effectiveUserId === session.practice_id;
     
     console.log('👤 [join-video-session] User role check:', { 
       effectiveUserId,
       isProvider,
       isPatient,
       isSystemAdmin,
+      isPracticeAdmin,
       sessionPracticeId: session.practice_id
     });
 
-    if (!isProvider && !isPatient && !isSystemAdmin) {
-      console.error('❌ [join-video-session] Not authorized:', { effectiveUserId, sessionId });
+    if (!isProvider && !isPatient && !isSystemAdmin && !isPracticeAdmin) {
+      console.error('❌ [join-video-session] Not authorized:', { 
+        effectiveUserId, 
+        sessionId,
+        isProvider,
+        isPatient,
+        isSystemAdmin,
+        isPracticeAdmin 
+      });
       return new Response(JSON.stringify({ error: 'Not authorized for this session' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -148,8 +158,8 @@ Deno.serve(async (req) => {
 
     // Update participant join timestamp
     const updateFields: any = {};
-    // System admins and providers join as providers
-    if (isProvider || isSystemAdmin) {
+    // System admins, providers, and practice admins join as providers
+    if (isProvider || isSystemAdmin || isPracticeAdmin) {
       updateFields.provider_joined_at = new Date().toISOString();
       // Provider joining makes session active
       if (session.status === 'waiting') {
@@ -175,7 +185,7 @@ Deno.serve(async (req) => {
       session_id: sessionId,
       event_type: 'join',
       user_id: user.id,
-      user_type: (isProvider || isSystemAdmin) ? 'provider' : 'patient',
+      user_type: (isProvider || isSystemAdmin || isPracticeAdmin) ? 'provider' : 'patient',
       event_data: { 
         joined_at: new Date().toISOString(),
         new_status: updateFields.status || session.status,
@@ -183,7 +193,11 @@ Deno.serve(async (req) => {
       }
     });
 
-    console.log('✅ [join-video-session] Session joined successfully:', { sessionId, role: (isProvider || isSystemAdmin) ? 'provider' : 'patient' });
+    console.log('✅ [join-video-session] Session joined successfully:', { 
+      sessionId, 
+      role: (isProvider || isSystemAdmin || isPracticeAdmin) ? 'provider' : 'patient',
+      impersonated: effectiveUserId !== user.id
+    });
 
     // Generate Agora token for this user
     console.log('🎫 [join-video-session] Generating Agora token...');
@@ -224,14 +238,22 @@ Deno.serve(async (req) => {
 
     console.log('✅ [join-video-session] Token generated successfully');
 
-    // Final debug output before returning to frontend
-    console.log("=== EDGE AGORA DEBUG ===");
-    console.log("AppID:", tokenData.appId);
-    console.log("Cert8:", agoraAppCertificate?.slice(0, 8) || 'not-set');
-    console.log("Channel:", tokenData.channelName);
-    console.log("UID:", tokenData.uid);
-    console.log("Token10:", tokenData.token.slice(0, 10));
-    console.log("========================");
+    // Enhanced diagnostic logging for comparison with frontend
+    console.log('=== TOKEN GENERATION PARAMETERS (BACKEND) ===');
+    console.log('Backend Parameters (used to generate token):');
+    console.log('  [BE] appId:', tokenData.appId);
+    console.log('  [BE] channel:', tokenData.channelName);
+    console.log('  [BE] uid:', tokenData.uid);
+    console.log('  [BE] rtcToken.len:', tokenData.token.length);
+    console.log('  [BE] rtcToken.prefix:', tokenData.token.slice(0, 15));
+    console.log('  [BE] rtcToken starts with 007:', tokenData.token.startsWith('007'));
+    console.log('  [BE] rtmToken.len:', tokenData.rtmToken.length);
+    console.log('  [BE] rtmToken.prefix:', tokenData.rtmToken.slice(0, 15));
+    console.log('  [BE] rtmToken starts with 007:', tokenData.rtmToken.startsWith('007'));
+    console.log('  [BE] rtmUid:', tokenData.rtmUid);
+    console.log('  [BE] Cert8:', agoraAppCertificate?.slice(0, 8) || 'not-set');
+    console.log('  NOTE: Frontend should log IDENTICAL values when client.join() is called');
+    console.log('=============================================');
 
     return new Response(JSON.stringify({
       success: true,

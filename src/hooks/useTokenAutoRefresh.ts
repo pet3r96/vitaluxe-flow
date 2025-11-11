@@ -44,6 +44,16 @@ export const useTokenAutoRefresh = ({
         throw new Error("Invalid token response");
       }
 
+      console.log("RAW BACKEND TOKEN RESPONSE (auto refresh):", data);
+      console.log("===== FE TOKEN DEBUG (auto refresh) =====");
+      console.log("FE RTC Token (full):", data?.rtcToken);
+      console.log("FE RTM Token (full):", data?.rtmToken);
+      console.log("RTC Token length:", data?.rtcToken?.length);
+      console.log("RTM Token length:", data?.rtmToken?.length);
+      console.log("RTC Token prefix:", data?.rtcToken?.substring(0, 20));
+      console.log("RTM Token prefix:", data?.rtmToken?.substring(0, 20));
+      console.log("================================");
+
       // Renew RTC token
       await client.renewToken(data.rtcToken);
       console.log("✅ RTC token renewed successfully");

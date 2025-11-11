@@ -244,14 +244,20 @@ export const AgoraVideoRoom = ({
         // Join the channel with the token from backend
         // CRITICAL: Ensure UID is a string to match token generation
         const joinUid = String(uid);
-        console.log('🔗 [AgoraVideoRoom] Attempting to join channel with UID:', joinUid);
-        console.log('🔗 [AgoraVideoRoom] Join parameters:', {
+        
+        console.log("===== FE TOKEN DEBUG =====");
+        console.log("FE RTC Token (full):", token);
+        console.log("FE RTM Token (full):", rtmToken);
+        console.log("RTC Token length:", token?.length);
+        console.log("RTM Token length:", rtmToken?.length);
+        console.log("RTC Token prefix:", token?.substring(0, 20));
+        console.log("RTM Token prefix:", rtmToken?.substring(0, 20));
+        console.log("Agora Join Params:", {
           appId,
           channelName,
           uid: joinUid,
-          tokenPrefix: token.substring(0, 15),
-          tokenLength: token.length,
         });
+        console.log("================================");
         
         try {
           await agoraClient.join(appId, channelName, token, joinUid);
@@ -370,6 +376,21 @@ export const AgoraVideoRoom = ({
             if (refreshError || !refreshData || !clientRef.current) {
               throw new Error("Failed to refresh token or client not available");
             }
+            
+            console.log("RAW BACKEND TOKEN RESPONSE (retry):", refreshData);
+            console.log("===== FE TOKEN DEBUG (retry) =====");
+            console.log("FE RTC Token (full):", refreshData?.token);
+            console.log("FE RTM Token (full):", refreshData?.rtmToken);
+            console.log("RTC Token length:", refreshData?.token?.length);
+            console.log("RTM Token length:", refreshData?.rtmToken?.length);
+            console.log("RTC Token prefix:", refreshData?.token?.substring(0, 20));
+            console.log("RTM Token prefix:", refreshData?.rtmToken?.substring(0, 20));
+            console.log("Agora Join Params:", {
+              appId: refreshData?.appId,
+              channelName: refreshData?.channelName,
+              uid: String(refreshData?.uid)
+            });
+            console.log("================================");
             
             console.log("[AgoraVideoRoom] Retrying with fresh token...");
             await clientRef.current.join(
