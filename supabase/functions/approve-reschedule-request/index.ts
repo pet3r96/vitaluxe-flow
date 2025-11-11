@@ -1,5 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
+
+const normalizePhoneToE164 = (phone: string): string => {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) return `+1${cleaned}`;
+  if (cleaned.length === 11 && cleaned.startsWith('1')) return `+${cleaned}`;
+  return phone;
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -123,6 +132,73 @@ Deno.serve(async (req) => {
       if (updateError) throw updateError;
 
       console.log('Appointment moved successfully:', updated.id);
+
+      // Send rescheduled notification to patient
+      console.log('[approve-reschedule] Sending reschedule notification');
+      const { data: patientWithUser, error: patientUserError } = await supabaseClient
+        .from('patient_accounts')
+        .select('user_id, first_name, last_name, email, phone')
+        .eq('id', appointment.patient_id)
+        .single();
+
+      if (patientUserError) {
+        console.error('[approve-reschedule] Error fetching patient user data:', patientUserError);
+      } else if (patientWithUser) {
+        const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
+        const appointmentDateFormatted = new Date(updated.start_time).toLocaleDateString();
+        const appointmentTimeFormatted = new Date(updated.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        if (patientWithUser.user_id) {
+          try {
+            await supabaseClient.functions.invoke('handleNotifications', {
+              body: {
+                userId: patientWithUser.user_id,
+                type: 'appointment_rescheduled',
+                title: 'Appointment Rescheduled',
+                message: `Your appointment has been rescheduled to ${appointmentDateFormatted} at ${appointmentTimeFormatted}.`,
+                metadata: {
+                  appointmentId: updated.id,
+                  appointmentDate: appointmentDateFormatted,
+                  appointmentTime: appointmentTimeFormatted
+                }
+              }
+            });
+            console.log('[approve-reschedule] Notification sent via handleNotifications');
+          } catch (notifError) {
+            console.error('[approve-reschedule] Error calling handleNotifications:', notifError);
+          }
+        } else {
+          if (patientWithUser.email) {
+            try {
+              await sendNotificationEmail({
+                to: patientWithUser.email,
+                toName: patientName,
+                subject: 'Appointment Rescheduled',
+                message: `Your appointment has been rescheduled to ${appointmentDateFormatted} at ${appointmentTimeFormatted}.`,
+                actionUrl: undefined,
+                senderContext: { fromName: 'Your Healthcare Provider' }
+              });
+              console.log('[approve-reschedule] Email sent to:', patientWithUser.email);
+            } catch (emailError) {
+              console.error('[approve-reschedule] Error sending email:', emailError);
+            }
+          }
+          
+          if (patientWithUser.phone) {
+            try {
+              const normalizedPhone = normalizePhoneToE164(patientWithUser.phone);
+              await sendNotificationSms({
+                phoneNumber: normalizedPhone,
+                message: `Appointment rescheduled to ${appointmentDateFormatted} at ${appointmentTimeFormatted}.`,
+                metadata: { appointmentId: updated.id }
+              });
+              console.log('[approve-reschedule] SMS sent to:', normalizedPhone);
+            } catch (smsError) {
+              console.error('[approve-reschedule] Error sending SMS:', smsError);
+            }
+          }
+        }
+      }
 
       return new Response(JSON.stringify({ success: true, appointment: updated, action: 'moved' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -1,6 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { bookAppointmentSchema, validateInput } from '../_shared/zodSchemas.ts';
+import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
+
+const normalizePhoneToE164 = (phone: string): string => {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) return `+1${cleaned}`;
+  if (cleaned.length === 11 && cleaned.startsWith('1')) return `+${cleaned}`;
+  return phone;
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -161,6 +170,79 @@ Deno.serve(async (req) => {
       .single();
 
     if (error) throw error;
+
+    // Send notification to patient
+    console.log('[book-appointment] Sending notification for appointment:', data.id);
+    
+    const { data: patientWithUser, error: patientUserError } = await supabaseClient
+      .from('patient_accounts')
+      .select('user_id, first_name, last_name, email, phone')
+      .eq('id', data.patient_id)
+      .single();
+
+    if (patientUserError) {
+      console.error('[book-appointment] Error fetching patient user data:', patientUserError);
+    } else if (patientWithUser) {
+      const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
+      const appointmentDateFormatted = new Date(data.start_time).toLocaleDateString();
+      const appointmentTimeFormatted = new Date(data.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      if (patientWithUser.user_id) {
+        // Patient has portal access - use handleNotifications
+        console.log('[book-appointment] Patient has portal access, calling handleNotifications');
+        try {
+          await supabaseClient.functions.invoke('handleNotifications', {
+            body: {
+              userId: patientWithUser.user_id,
+              type: 'appointment_booked',
+              title: 'Appointment Requested',
+              message: `Your appointment request for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been submitted and is pending approval.`,
+              metadata: {
+                appointmentId: data.id,
+                appointmentDate: appointmentDateFormatted,
+                appointmentTime: appointmentTimeFormatted
+              }
+            }
+          });
+          console.log('[book-appointment] Notification sent via handleNotifications');
+        } catch (notifError) {
+          console.error('[book-appointment] Error calling handleNotifications:', notifError);
+        }
+      } else {
+        // No portal access - send email/SMS directly
+        console.log('[book-appointment] Patient has no portal access, sending direct email/SMS');
+        
+        if (patientWithUser.email) {
+          try {
+            await sendNotificationEmail({
+              to: patientWithUser.email,
+              toName: patientName,
+              subject: 'Appointment Requested',
+              message: `Your appointment request for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been submitted and is pending approval.`,
+              actionUrl: undefined,
+              senderContext: { fromName: 'Your Healthcare Provider' }
+            });
+            console.log('[book-appointment] Email sent to:', patientWithUser.email);
+          } catch (emailError) {
+            console.error('[book-appointment] Error sending email:', emailError);
+          }
+        }
+        
+        if (patientWithUser.phone) {
+          try {
+            const normalizedPhone = normalizePhoneToE164(patientWithUser.phone);
+            await sendNotificationSms({
+              phoneNumber: normalizedPhone,
+              message: `Appointment request submitted for ${appointmentDateFormatted} at ${appointmentTimeFormatted}. Pending approval.`,
+              metadata: { appointmentId: data.id }
+            });
+            console.log('[book-appointment] SMS sent to:', normalizedPhone);
+          } catch (smsError) {
+            console.error('[book-appointment] Error sending SMS:', smsError);
+          }
+        }
+      }
+    }
 
     return new Response(JSON.stringify({ success: true, appointment: data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

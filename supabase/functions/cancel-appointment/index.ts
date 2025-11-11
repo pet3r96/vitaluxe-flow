@@ -1,5 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
+
+const normalizePhoneToE164 = (phone: string): string => {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) return `+1${cleaned}`;
+  if (cleaned.length === 11 && cleaned.startsWith('1')) return `+${cleaned}`;
+  return phone;
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -209,6 +218,93 @@ Deno.serve(async (req) => {
       console.log('✅ [cancel-appointment] Video session also cancelled');
     } else if (videoSession) {
       console.log('ℹ️ [cancel-appointment] Video session already ended');
+    }
+
+    console.log(`[cancel-appointment] Successfully cancelled appointment ${appointmentId}${videoSessionUpdated ? ' and ended video session' : ''}`);
+
+    // Send cancellation notification to patient (only if not already cancelled)
+    if (!appointmentWasAlreadyCancelled && appointment) {
+      console.log('[cancel-appointment] Sending cancellation notification');
+      
+      const { data: patientWithUser, error: patientUserError } = await supabaseAdmin
+        .from('patient_accounts')
+        .select('user_id, first_name, last_name, email, phone, id')
+        .eq('id', appointment.patient_id)
+        .single();
+
+      if (patientUserError) {
+        console.error('[cancel-appointment] Error fetching patient user data:', patientUserError);
+      } else if (patientWithUser) {
+        const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
+        
+        // Get appointment details for notification
+        const { data: appointmentDetails } = await supabaseAdmin
+          .from('patient_appointments')
+          .select('start_time, end_time')
+          .eq('id', appointmentId)
+          .single();
+        
+        if (appointmentDetails) {
+          const appointmentDateFormatted = new Date(appointmentDetails.start_time).toLocaleDateString();
+          const appointmentTimeFormatted = new Date(appointmentDetails.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          
+          if (patientWithUser.user_id) {
+            // Patient has portal access - use handleNotifications
+            console.log('[cancel-appointment] Patient has portal access, calling handleNotifications');
+            try {
+              await supabaseAdmin.functions.invoke('handleNotifications', {
+                body: {
+                  userId: patientWithUser.user_id,
+                  type: 'appointment_cancelled',
+                  title: 'Appointment Cancelled',
+                  message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been cancelled.`,
+                  metadata: {
+                    appointmentId: appointmentId,
+                    appointmentDate: appointmentDateFormatted,
+                    appointmentTime: appointmentTimeFormatted
+                  }
+                }
+              });
+              console.log('[cancel-appointment] Notification sent via handleNotifications');
+            } catch (notifError) {
+              console.error('[cancel-appointment] Error calling handleNotifications:', notifError);
+            }
+          } else {
+            // No portal access - send email/SMS directly
+            console.log('[cancel-appointment] Patient has no portal access, sending direct email/SMS');
+            
+            if (patientWithUser.email) {
+              try {
+                await sendNotificationEmail({
+                  to: patientWithUser.email,
+                  toName: patientName,
+                  subject: 'Appointment Cancelled',
+                  message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been cancelled.`,
+                  actionUrl: undefined,
+                  senderContext: { fromName: 'Your Healthcare Provider' }
+                });
+                console.log('[cancel-appointment] Email sent to:', patientWithUser.email);
+              } catch (emailError) {
+                console.error('[cancel-appointment] Error sending email:', emailError);
+              }
+            }
+            
+            if (patientWithUser.phone) {
+              try {
+                const normalizedPhone = normalizePhoneToE164(patientWithUser.phone);
+                await sendNotificationSms({
+                  phoneNumber: normalizedPhone,
+                  message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been cancelled.`,
+                  metadata: { appointmentId: appointmentId }
+                });
+                console.log('[cancel-appointment] SMS sent to:', normalizedPhone);
+              } catch (smsError) {
+                console.error('[cancel-appointment] Error sending SMS:', smsError);
+              }
+            }
+          }
+        }
+      }
     }
 
     return new Response(JSON.stringify({ 
