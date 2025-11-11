@@ -117,17 +117,27 @@ Deno.serve(async (req) => {
     const isProvider = provider?.user_id === effectiveUserId;
     const isPatient = patientAccount?.user_id === effectiveUserId;
     const isSystemAdmin = userRole?.role === 'admin';
+    // Check if effectiveUserId is a practice that owns this session
+    const isPracticeAdmin = effectiveUserId === session.practice_id;
     
     console.log('👤 [join-video-session] User role check:', { 
       effectiveUserId,
       isProvider,
       isPatient,
       isSystemAdmin,
+      isPracticeAdmin,
       sessionPracticeId: session.practice_id
     });
 
-    if (!isProvider && !isPatient && !isSystemAdmin) {
-      console.error('❌ [join-video-session] Not authorized:', { effectiveUserId, sessionId });
+    if (!isProvider && !isPatient && !isSystemAdmin && !isPracticeAdmin) {
+      console.error('❌ [join-video-session] Not authorized:', { 
+        effectiveUserId, 
+        sessionId,
+        isProvider,
+        isPatient,
+        isSystemAdmin,
+        isPracticeAdmin 
+      });
       return new Response(JSON.stringify({ error: 'Not authorized for this session' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -148,8 +158,8 @@ Deno.serve(async (req) => {
 
     // Update participant join timestamp
     const updateFields: any = {};
-    // System admins and providers join as providers
-    if (isProvider || isSystemAdmin) {
+    // System admins, providers, and practice admins join as providers
+    if (isProvider || isSystemAdmin || isPracticeAdmin) {
       updateFields.provider_joined_at = new Date().toISOString();
       // Provider joining makes session active
       if (session.status === 'waiting') {
@@ -175,7 +185,7 @@ Deno.serve(async (req) => {
       session_id: sessionId,
       event_type: 'join',
       user_id: user.id,
-      user_type: (isProvider || isSystemAdmin) ? 'provider' : 'patient',
+      user_type: (isProvider || isSystemAdmin || isPracticeAdmin) ? 'provider' : 'patient',
       event_data: { 
         joined_at: new Date().toISOString(),
         new_status: updateFields.status || session.status,
@@ -183,7 +193,11 @@ Deno.serve(async (req) => {
       }
     });
 
-    console.log('✅ [join-video-session] Session joined successfully:', { sessionId, role: (isProvider || isSystemAdmin) ? 'provider' : 'patient' });
+    console.log('✅ [join-video-session] Session joined successfully:', { 
+      sessionId, 
+      role: (isProvider || isSystemAdmin || isPracticeAdmin) ? 'provider' : 'patient',
+      impersonated: effectiveUserId !== user.id
+    });
 
     // Generate Agora token for this user
     console.log('🎫 [join-video-session] Generating Agora token...');
