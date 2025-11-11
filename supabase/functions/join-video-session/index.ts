@@ -30,6 +30,11 @@ Deno.serve(async (req) => {
     }
 
     const { sessionId } = await req.json();
+    
+    console.log("join-video-session invoked", {
+      sessionId,
+      timestamp: new Date().toISOString()
+    });
 
     if (!sessionId) {
       return new Response(JSON.stringify({ error: 'Session ID required' }), {

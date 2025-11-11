@@ -1,30 +1,18 @@
-import { corsHeaders } from '../_shared/cors.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+serve((req) => {
+  const res = {
+    ok: true,
+    timestamp: new Date().toISOString(),
+    region: Deno.env.get("SUPABASE_REGION") ?? "unknown"
+  };
 
-  try {
-    const region = Deno.env.get('DENO_REGION') || 'unknown';
-    
-    return new Response(JSON.stringify({
-      ok: true,
-      timestamp: new Date().toISOString(),
-      region,
-      message: 'Edge functions are reachable'
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  } catch (error) {
-    console.error('Edge ping error:', error);
-    return new Response(JSON.stringify({
-      ok: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
+  return new Response(JSON.stringify(res), {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "authorization, x-client-info, content-type",
+      "Access-Control-Allow-Methods": "POST, OPTIONS"
+    }
+  });
 });
