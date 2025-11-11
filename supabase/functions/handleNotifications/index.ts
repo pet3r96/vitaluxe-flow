@@ -21,6 +21,24 @@ interface NotificationPayload {
   entity_id?: string;
 }
 
+// Helper function to normalize phone numbers to E.164 format
+function normalizePhoneToE164(phone: string): string {
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, '');
+  
+  // If already starts with +, return as-is
+  if (phone.startsWith('+')) return phone;
+  
+  // If 10 digits, assume US number
+  if (digits.length === 10) return `+1${digits}`;
+  
+  // If 11 digits starting with 1, add +
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  
+  // Return with + prefix for other cases
+  return `+${digits}`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -105,6 +123,7 @@ serve(async (req) => {
           notification_type: payload.notification_type,
           title: payload.title,
           message: payload.message,
+          severity: 'info',
           metadata: payload.metadata || {},
           action_url: payload.action_url,
           entity_type: payload.entity_type,
@@ -144,15 +163,23 @@ serve(async (req) => {
       .eq('id', payload.user_id)
       .single();
 
+    // Try to get phone from patient_accounts if not in profiles
+    let userPhone = profile?.phone;
+    
     let practiceId: string | null = null;
     const { data: patientAccount } = await supabase
       .from('patient_accounts')
-      .select('practice_id')
+      .select('practice_id, phone')
       .eq('user_id', payload.user_id)
       .single();
 
     if (patientAccount) {
       practiceId = patientAccount.practice_id;
+      // Use phone from patient_accounts if profiles.phone is null
+      if (!userPhone && patientAccount.phone) {
+        userPhone = patientAccount.phone;
+        console.log('[handleNotifications] Using phone from patient_accounts');
+      }
     } else {
       const { data: practiceAccount } = await supabase
         .from('practice_accounts')
@@ -169,17 +196,35 @@ serve(async (req) => {
     let practiceSmsEnabled = true;
 
     if (practiceId) {
-      const { data: practiceSettings } = await supabase
+      const { data: practiceSettings, error: settingsError } = await supabase
         .from('practice_automation_settings')
-        .select('notifications_email_enabled, notifications_sms_enabled')
+        .select('enable_email_notifications, enable_sms_notifications')
         .eq('practice_id', practiceId)
         .single();
 
-      if (practiceSettings) {
-        practiceEmailEnabled = practiceSettings.notifications_email_enabled ?? true;
-        practiceSmsEnabled = practiceSettings.notifications_sms_enabled ?? true;
+      if (settingsError) {
+        console.log('[handleNotifications] Practice settings not found, defaulting to enabled');
+      } else if (practiceSettings) {
+        practiceEmailEnabled = practiceSettings.enable_email_notifications ?? true;
+        practiceSmsEnabled = practiceSettings.enable_sms_notifications ?? true;
       }
     }
+
+    // Enhanced debug logging for channel decisions
+    console.log('[handleNotifications] Channel decisions:', {
+      userPreferences: { emailEnabled, smsEnabled, inAppEnabled },
+      practiceSettings: { practiceEmailEnabled, practiceSmsEnabled },
+      userContact: { 
+        hasEmail: !!profile?.email, 
+        hasPhone: !!userPhone,
+        phoneNormalized: userPhone ? normalizePhoneToE164(userPhone).substring(0, 5) + '***' : null
+      },
+      willSend: {
+        email: emailEnabled && practiceEmailEnabled && !!profile?.email,
+        sms: smsEnabled && practiceSmsEnabled && !!userPhone,
+        inApp: inAppEnabled
+      }
+    });
 
     // Step 6: Send email if enabled
     if (emailEnabled && practiceEmailEnabled && profile?.email) {
@@ -216,11 +261,14 @@ serve(async (req) => {
     }
 
     // Step 7: Send SMS if enabled
-    if (smsEnabled && practiceSmsEnabled && profile?.phone) {
+    if (smsEnabled && practiceSmsEnabled && userPhone) {
+      const normalizedPhone = normalizePhoneToE164(userPhone);
+      console.log(`[handleNotifications] Sending SMS to ${normalizedPhone.substring(0, 5)}***`);
+      
       const smsMessage = `${payload.title}\n\n${payload.message}\n\nView in portal: https://app.vitaluxeservices.com`;
 
       const smsResult = await sendNotificationSms({
-        phoneNumber: profile.phone,
+        phoneNumber: normalizedPhone,
         message: smsMessage,
         metadata: payload.metadata
       });
@@ -243,6 +291,9 @@ serve(async (req) => {
     } else if (smsEnabled && !practiceSmsEnabled) {
       console.log('[handleNotifications] SMS blocked by practice settings');
       results.errors.push('SMS disabled at practice level');
+    } else if (smsEnabled && !userPhone) {
+      console.log('[handleNotifications] SMS enabled but no phone number found');
+      results.errors.push('No phone number available');
     }
 
     console.log('[handleNotifications] Completed:', results);
