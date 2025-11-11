@@ -202,12 +202,13 @@ export async function buildRtcToken(
     privileges[PRIVILEGE_PUBLISH_DATA_STREAM] = expireTimestamp;
   }
 
-  // Build message for signing
+  // Build message for signing (NO expire in main message - only in privileges!)
+  const serviceCount = packUint16LE(1); // Only 1 RTC service
   const serviceData = buildRtcService(channelName, uid, privileges);
   const message = concat(
     salt,
     packUint32LE(timestamp),
-    packUint32LE(expireTimestamp),
+    serviceCount,
     serviceData
   );
 
@@ -215,18 +216,18 @@ export async function buildRtcToken(
   const crc = crc32(message);
   const crcBytes = packUint32LE(crc);
 
-  // Build signing content (AppID + Message + CRC)
+  // Build content to sign: AppID + CRC + Message (in that order)
   const encoder = new TextEncoder();
+  const contentAfterSignature = concat(crcBytes, message);
   const signingContent = concat(
     encoder.encode(appId),
-    message,
-    crcBytes
+    contentAfterSignature
   );
 
   // Generate HMAC-SHA256 signature
   const signature = await hmacSign(signingContent, appCertificate);
 
-  // Final token structure: signature + crc + timestamp + message
+  // Final token structure: signature + crc + message
   const tokenData = concat(signature, crcBytes, message);
 
   // Base64 encode and prefix with version
@@ -260,12 +261,13 @@ export async function buildRtmToken(
     [PRIVILEGE_JOIN_CHANNEL]: expireTimestamp,
   };
 
-  // Build message for signing
+  // Build message for signing (NO expire in main message - only in privileges!)
+  const serviceCount = packUint16LE(1); // Only 1 RTM service
   const serviceData = buildRtmService(uid, privileges);
   const message = concat(
     salt,
     packUint32LE(timestamp),
-    packUint32LE(expireTimestamp),
+    serviceCount,
     serviceData
   );
 
@@ -273,12 +275,12 @@ export async function buildRtmToken(
   const crc = crc32(message);
   const crcBytes = packUint32LE(crc);
 
-  // Build signing content (AppID + Message + CRC)
+  // Build content to sign: AppID + CRC + Message (in that order)
   const encoder = new TextEncoder();
+  const contentAfterSignature = concat(crcBytes, message);
   const signingContent = concat(
     encoder.encode(appId),
-    message,
-    crcBytes
+    contentAfterSignature
   );
 
   // Generate HMAC-SHA256 signature
