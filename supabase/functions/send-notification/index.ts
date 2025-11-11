@@ -189,6 +189,9 @@ serve(async (req) => {
           // Extract sender context from metadata
           const senderContext = getSenderContext(notification);
           
+          // Set email subject
+          const emailSubject = notification.title || 'Notification from Vitaluxe';
+          
           // Set portal URLs
           const portalUrl = 'https://app.vitaluxeservices.com';
           const actionUrl = notification.action_url || portalUrl;
