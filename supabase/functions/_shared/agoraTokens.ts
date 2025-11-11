@@ -110,11 +110,10 @@ function packPrivilegesMap(privileges: Map<number, number>): Uint8Array {
   return concat(...entries);
 }
 
-// Pack service with explicit length field: type(uint16) + length(uint16) + body
+// Pack service: type(uint16) + body (NO length field per Agora spec)
 function packService(type: number, body: Uint8Array): Uint8Array {
   const typeBytes = writeUint16LE(type);
-  const lenBytes = writeUint16LE(body.length);
-  return concat(typeBytes, lenBytes, body);
+  return concat(typeBytes, body);
 }
 
 function packServiceRtcBody(
@@ -186,7 +185,7 @@ async function generateAccessToken2(
     serviceBody = packServiceRtmBody(uid, expiresAt);
   }
   
-  // Pack service with type and length: type(uint16) + length(uint16) + body
+  // Pack service: type(uint16) + body (NO length field per Agora spec)
   const servicePack = packService(serviceTypeNum, serviceBody);
   
   // Services: serviceCount(uint16) + service pack
@@ -253,13 +252,25 @@ async function generateAccessToken2(
   
   console.log("├─ Certificate UTF-8 byte count:", keyBytes.length);
   console.log("├─ Service body length:", serviceBody.length, "bytes");
-  console.log("├─ Service pack length (with type+len):", servicePack.length, "bytes");
+  console.log("├─ Service pack length:", servicePack.length, "bytes");
   console.log("├─ Services pack length:", servicesPack.length, "bytes");
   console.log("├─ Message length:", message.length, "bytes");
   console.log("├─ Signature length:", signature.length, "bytes");
   console.log("├─ Token starts with 007:", token.startsWith("007"));
   console.log("├─ Token length:", token.length);
   console.log("└─ Token prefix:", token.substring(0, 20));
+  
+  // Byte-level diagnostics
+  console.log("\n🔬 [Byte-Level Diagnostics]");
+  console.log("├─ First 16 bytes of message (hex):", 
+    Array.from(message.slice(0, 16))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join(' '));
+  console.log("├─ First 16 bytes of signature (hex):", 
+    Array.from(signature.slice(0, 16))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join(' '));
+  console.log("└─ Certificate encoding: UTF-8 (NOT hex-decoded)");
 
   return token;
 }
