@@ -8,6 +8,7 @@ Deno.serve(async (req) => {
 
   try {
     const apiToken = Deno.env.get("BAREMEDS_API_TOKEN");
+    const apiUrl = Deno.env.get("BAREMEDS_API_URL") || "https://rxorders.baremeds.com";
     const siteId = Deno.env.get("BAREMEDS_SITE_ID") || "98923";
 
     if (!apiToken) {
@@ -15,12 +16,13 @@ Deno.serve(async (req) => {
     }
 
     console.log("🔐 Testing BareMeds authentication...");
+    console.log("API URL:", apiUrl);
     console.log("Site ID:", siteId);
     console.log("Token length:", apiToken.length);
     console.log("Token prefix:", apiToken.substring(0, 10) + "...");
 
     // Test /api/auth/me endpoint
-    const meResponse = await fetch("https://rxorders.baremeds.com/api/auth/me", {
+    const meResponse = await fetch(`${apiUrl}/api/auth/me`, {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${Deno.env.get("BAREMEDS_API_TOKEN")}`,

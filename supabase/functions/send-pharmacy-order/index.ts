@@ -1,8 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const TEST_PHARMACY_EMAIL = "dsporn00@yahoo.com";
-
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -14,11 +12,14 @@ Deno.serve(async (req) => {
 
     console.log("📦 Processing order:", { order_id, pharmacy_email, payment_status });
 
-    // Skip if not test pharmacy or not paid
-    if (pharmacy_email?.toLowerCase() !== TEST_PHARMACY_EMAIL.toLowerCase()) {
-      console.log("⏭️ Skipping: not test pharmacy");
+    // Get configured pharmacy email
+    const configuredPharmacyEmail = Deno.env.get("BAREMEDS_EMAIL");
+    
+    // Skip if not configured pharmacy or not paid
+    if (configuredPharmacyEmail && pharmacy_email?.toLowerCase() !== configuredPharmacyEmail.toLowerCase()) {
+      console.log("⏭️ Skipping: not configured pharmacy");
       return new Response(
-        JSON.stringify({ success: true, sent: false, reason: "Not test pharmacy" }),
+        JSON.stringify({ success: true, sent: false, reason: "Not configured pharmacy" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -116,7 +117,8 @@ Deno.serve(async (req) => {
       company: "Vitaluxe Services",
     };
 
-    // Get site ID (default to live)
+    // Get BareMeds configuration
+    const apiUrl = Deno.env.get("BAREMEDS_API_URL") || "https://rxorders.baremeds.com";
     const siteId = Deno.env.get("BAREMEDS_SITE_ID") || "98923";
     const apiToken = Deno.env.get("BAREMEDS_API_TOKEN");
 
@@ -124,22 +126,23 @@ Deno.serve(async (req) => {
       throw new Error("BAREMEDS_API_TOKEN environment variable not set");
     }
 
+    const endpoint = `${apiUrl}/api/v1/rx-orders/${siteId}`;
+
     console.log("🚀 Sending to BareMeds:", {
+      apiUrl,
       siteId,
-      endpoint: `https://rxorders.baremeds.com/api/v1/rx-orders/${siteId}`,
+      endpoint,
       patientName: `${payload.patient.firstName} ${payload.patient.lastName}`,
       prescriptionCount: payload.prescription.length,
     });
 
     // Send to BareMeds API
-    const response = await fetch(
-      `https://rxorders.baremeds.com/api/v1/rx-orders/${siteId}`,
-      {
+    const response = await fetch(endpoint, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiToken}`,
+          "Authorization": `Bearer ${apiToken}`,
+          "Accept": "application/json",
           "Content-Type": "application/json",
-          "Accept": "application/json", // Critical for Laravel Sanctum
         },
         body: JSON.stringify(payload),
       }
