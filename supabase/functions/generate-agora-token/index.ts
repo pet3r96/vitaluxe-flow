@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import { RtcTokenBuilder, RtcRole, RtmTokenBuilder } from "https://esm.sh/agora-token@2.0.5";
+import { buildRtcToken, buildRtmToken, Role } from '../_shared/agoraTokenBuilder.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -147,14 +147,14 @@ Deno.serve(async (req) => {
     }
 
     const uid = String(effectiveUserId);
-    const tokenRole = role === 'publisher' ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
+    const tokenRole = role === 'publisher' ? Role.PUBLISHER : Role.SUBSCRIBER;
 
     console.log('🎫 [generate-agora-token] Generating tokens...', { channelName, uid, role });
 
-    // Generate tokens using official Agora implementation
+    // Generate tokens using Web Crypto API implementation
     const expire = Math.floor(Date.now() / 1000) + 3600;
 
-    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
+    const rtcToken = await buildRtcToken(
       appId,
       appCertificate,
       channelName,
@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
       expire
     );
 
-    const rtmToken = RtmTokenBuilder.buildToken(
+    const rtmToken = await buildRtmToken(
       appId,
       appCertificate,
       uid,

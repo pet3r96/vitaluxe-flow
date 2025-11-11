@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { RtcTokenBuilder, RtcRole, RtmTokenBuilder } from "https://esm.sh/agora-token@2.0.5";
+import { buildRtcToken, buildRtmToken, Role } from '../_shared/agoraTokenBuilder.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -133,19 +133,19 @@ Deno.serve(async (req) => {
       throw new Error('Agora credentials not configured');
     }
 
-    // Generate tokens using official Agora implementation
+    // Generate tokens using Web Crypto API implementation
     const expire = Math.floor(Date.now() / 1000) + 3600;
     
-    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
+    const rtcToken = await buildRtcToken(
       appId,
       appCertificate,
       channelName,
       guestUid,
-      RtcRole.PUBLISHER,
+      Role.PUBLISHER,
       expire
     );
     
-    const rtmToken = RtmTokenBuilder.buildToken(
+    const rtmToken = await buildRtmToken(
       appId,
       appCertificate,
       guestUid,

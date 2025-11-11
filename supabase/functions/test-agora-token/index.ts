@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { RtcTokenBuilder, RtcRole, RtmTokenBuilder } from "https://esm.sh/agora-token@2.0.5";
+import { buildRtcToken, buildRtmToken, verifyTokenSignature, Role } from "../_shared/agoraTokenBuilder.ts";
 
 console.log("Test Agora Token function started");
 
@@ -97,47 +97,7 @@ function decodeToken(token: string, appId: string, appCertificate: string) {
   }
 }
 
-async function verifyTokenSignature(token: string, appId: string, appCertificate: string) {
-  try {
-    if (!token.startsWith('007')) return false;
-
-    const base64Part = token.substring(3);
-    const binaryString = atob(base64Part);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    const signature = bytes.slice(0, 32);
-    const message = bytes.slice(32);
-
-    const keyBytes = new TextEncoder().encode(appCertificate);
-    const appIdBytes = new TextEncoder().encode(appId);
-    const dataToSign = new Uint8Array(appIdBytes.length + message.length);
-    dataToSign.set(appIdBytes, 0);
-    dataToSign.set(message, appIdBytes.length);
-
-    const key = await crypto.subtle.importKey(
-      "raw",
-      keyBytes,
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-
-    const computedSigBuffer = await crypto.subtle.sign("HMAC", key, dataToSign);
-    const computedSig = new Uint8Array(computedSigBuffer);
-
-    if (signature.length !== computedSig.length) return false;
-    for (let i = 0; i < signature.length; i++) {
-      if (signature[i] !== computedSig[i]) return false;
-    }
-    return true;
-  } catch (err) {
-    console.error("Signature verification error:", err);
-    return false;
-  }
-}
+// Note: verifyTokenSignature is now imported from _shared/agoraTokenBuilder.ts
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -166,10 +126,6 @@ serve(async (req) => {
 
     console.log("[Test Agora Token] Generating sample token...");
     console.log("[Test Agora Token] Deterministic mode:", deterministic);
-    
-    // Debug: Log available methods on RtcTokenBuilder
-    console.log("[Test Agora Token] RtcTokenBuilder methods:", Object.getOwnPropertyNames(RtcTokenBuilder));
-    console.log("[Test Agora Token] RtcTokenBuilder type:", typeof RtcTokenBuilder);
 
     // Generate test token with sample data
     const testChannelName = deterministic ? "test-channel-fixed" : "test-channel-" + Date.now();
@@ -183,19 +139,19 @@ serve(async (req) => {
       expiresInSeconds: 3600,
     });
     
-    // Generate tokens using official Agora implementation
+    // Generate tokens using Web Crypto API implementation
     const expire = Math.floor(Date.now() / 1000) + 3600;
     
-    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
+    const rtcToken = await buildRtcToken(
       rawAppId,
       rawCert,
       testChannelName,
       testUid,
-      RtcRole.PUBLISHER,
+      Role.PUBLISHER,
       expire
     );
     
-    const rtmToken = RtmTokenBuilder.buildToken(
+    const rtmToken = await buildRtmToken(
       rawAppId,
       rawCert,
       testUid,
@@ -210,7 +166,7 @@ serve(async (req) => {
       appId: rawAppId
     };
 
-    // Verify token signatures
+    // Verify token signatures using shared verifier
     const rtcSigValid = await verifyTokenSignature(tokens.rtcToken, rawAppId, rawCert);
     const rtmSigValid = await verifyTokenSignature(tokens.rtmToken, rawAppId, rawCert);
 
