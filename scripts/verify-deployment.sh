@@ -57,12 +57,16 @@ print_success "Authenticated successfully"
 # List functions
 print_header "Listing Deployed Functions"
 
-FUNCTION_COUNT=$(supabase functions list 2>/dev/null | grep -c "│" || echo "0")
+FUNCTION_LIST=$(supabase functions list 2>&1)
+FUNCTION_COUNT=$(echo "$FUNCTION_LIST" | grep -E "^\│" | wc -l | tr -d ' ')
 
 if [ "$FUNCTION_COUNT" -gt 0 ]; then
     print_success "Found $FUNCTION_COUNT deployed functions"
+    echo "$FUNCTION_LIST"
 else
-    print_error "No functions found"
+    print_error "No functions found. Functions need to be deployed."
+    echo ""
+    print_warning "Deploy functions with: ./scripts/deploy-functions.sh"
     exit 1
 fi
 
