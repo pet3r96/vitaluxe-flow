@@ -6,8 +6,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const frontendAppId = url.searchParams.get("appId");
+    const body = await req.json();
+    const frontendAppId = body.appId;
     const backendAppId = Deno.env.get("AGORA_APP_ID");
     const cert = Deno.env.get("AGORA_APP_CERTIFICATE");
 

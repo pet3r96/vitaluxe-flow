@@ -370,7 +370,10 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.agora-healthcheck]
-verify_jwt = true
+verify_jwt = false
+
+[functions.edge-ping]
+verify_jwt = false
 
 [functions.verify-agora-config]
 verify_jwt = false

@@ -7,6 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle, Clock, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { VideoDiagnostics } from "@/components/video/VideoDiagnostics";
+import { useVideoPreflight } from "@/hooks/useVideoPreflight";
+import { useVideoErrorLogger } from "@/hooks/useVideoErrorLogger";
 
 export default function VideoGuestJoin() {
   const { token } = useParams<{ token: string }>();
@@ -18,6 +21,8 @@ export default function VideoGuestJoin() {
     message: string;
   } | null>(null);
   const [showDeviceTest, setShowDeviceTest] = useState(false);
+  const { diagnostics, runPingTest, runHealthCheck, runJoinAttempt, clearDiagnostics } = useVideoPreflight();
+  const { logVideoError } = useVideoErrorLogger();
 
   useEffect(() => {
     const validateAndJoin = async () => {
@@ -30,38 +35,40 @@ export default function VideoGuestJoin() {
         return;
       }
 
+      clearDiagnostics();
+
       try {
-        // Pre-flight healthcheck (guest links don't require auth for healthcheck)
-        console.log('🏥 Running Agora healthcheck...');
-        const { data: healthData, error: healthError } = await supabase.functions.invoke('agora-healthcheck');
-        
-        if (healthError || !healthData?.healthy) {
-          const errorMsg = healthData?.error || healthError?.message || 'Agora credentials invalid';
-          console.error('❌ Healthcheck failed:', errorMsg);
+        // Step 1: Ping test
+        const pingSuccess = await runPingTest();
+        if (!pingSuccess) {
           setError({
-            type: 'error',
-            message: `Video system configuration error: ${errorMsg}. Please contact your provider.`,
+            type: 'network',
+            message: 'Cannot reach backend servers. Please check your internet connection.',
           });
           setLoading(false);
           return;
         }
-        
-        console.log('✅ Healthcheck passed:', healthData);
-        
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 12000)
-        );
 
-        const invokePromise = supabase.functions.invoke(
+        // Step 2: Health check
+        const { success: healthSuccess } = await runHealthCheck();
+        if (!healthSuccess) {
+          setError({
+            type: 'config',
+            message: 'Video system configuration error. Please contact your provider.',
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Step 3: Validate guest link
+        const { success, data, error: joinError } = await runJoinAttempt(
           'validate-video-guest-link',
-          {
-            body: { token },
-          }
+          { token }
         );
 
-        const { data, error: validateError } = await Promise.race([invokePromise, timeoutPromise]) as any;
-
-        if (validateError) throw validateError;
+        if (!success || joinError) {
+          throw joinError || new Error('Failed to validate guest link');
+        }
 
         if (data.error) {
           setError({
@@ -74,9 +81,26 @@ export default function VideoGuestJoin() {
         }
       } catch (err: any) {
         console.error('Error validating guest link:', err);
+        
+        const errorDetails = {
+          sessionId: 'guest-link',
+          errorCode: err.code || 'GUEST_VALIDATION_ERROR',
+          errorMessage: err.message || 'Unknown error',
+          errorName: err.name || 'Error',
+          joinParams: {
+            appIdSample: 'guest',
+            channelName: 'guest',
+            uid: 'guest',
+            tokenPreview: token?.substring(0, 10) || 'none',
+            isProvider: false,
+          },
+        };
+
+        await logVideoError(errorDetails);
+
         setError({
-          type: err.message === 'timeout' ? 'timeout' : 'error',
-          message: err.message === 'timeout' ? 'Validation is taking longer than expected. Please try again.' : (err.message || 'Failed to validate access link'),
+          type: 'error',
+          message: err.message || 'Failed to validate access link',
         });
       } finally {
         setLoading(false);
@@ -165,9 +189,21 @@ export default function VideoGuestJoin() {
               </Alert>
             )}
 
-            <Button onClick={() => navigate('/')} className="w-full">
-              Return Home
-            </Button>
+            <div className="space-y-4 w-full">
+              {diagnostics.length > 0 && <VideoDiagnostics results={diagnostics} />}
+              
+              <div className="flex gap-2">
+                <Button onClick={async () => {
+                  clearDiagnostics();
+                  await runPingTest();
+                }} variant="outline" className="flex-1">
+                  Run Ping Test
+                </Button>
+                <Button onClick={() => navigate('/')} className="flex-1">
+                  Return Home
+                </Button>
+              </div>
+            </div>
           </div>
         </Card>
       </div>

@@ -1,18 +1,16 @@
 import { useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useValidateAgoraConfig = () => {
   const validateConfig = useCallback(async (appId: string) => {
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const res = await fetch(
-        `${supabaseUrl}/functions/v1/verify-agora-config?appId=${appId}`
-      );
-      
-      if (!res.ok) {
-        throw new Error(`Validation request failed: ${res.status}`);
-      }
+      const { data, error } = await supabase.functions.invoke('verify-agora-config', {
+        body: { appId }
+      });
 
-      const data = await res.json();
+      if (error) {
+        throw new Error(`Validation request failed: ${error.message}`);
+      }
 
       if (!data.match) {
         console.error("❌ Agora App ID mismatch!", data);

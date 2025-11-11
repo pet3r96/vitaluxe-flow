@@ -6,6 +6,10 @@ import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Loader2, Video } from "lucide-react";
+import { VideoDiagnostics } from "@/components/video/VideoDiagnostics";
+import { useVideoPreflight } from "@/hooks/useVideoPreflight";
+import { useVideoErrorLogger } from "@/hooks/useVideoErrorLogger";
+import { Button } from "@/components/ui/button";
 
 export default function PatientVideoRoom() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -16,6 +20,8 @@ export default function PatientVideoRoom() {
   const [error, setError] = useState<string | null>(null);
   const [waitingForProvider, setWaitingForProvider] = useState(false);
   const [showDeviceTest, setShowDeviceTest] = useState(false);
+  const { diagnostics, runPingTest, runHealthCheck, runJoinAttempt, clearDiagnostics } = useVideoPreflight();
+  const { logVideoError } = useVideoErrorLogger();
 
   useEffect(() => {
     const joinSession = async () => {
@@ -25,41 +31,55 @@ export default function PatientVideoRoom() {
         return;
       }
 
+      clearDiagnostics();
+
       try {
-        // Pre-flight healthcheck
-        console.log('🏥 Running Agora healthcheck...');
-        const { data: healthData, error: healthError } = await supabase.functions.invoke('agora-healthcheck');
-        
-        if (healthError || !healthData?.healthy) {
-          const errorMsg = healthData?.error || healthError?.message || 'Agora credentials invalid';
-          console.error('❌ Healthcheck failed:', errorMsg);
-          setError(`Video system configuration error: ${errorMsg}. Please contact support.`);
+        // Step 1: Ping test
+        const pingSuccess = await runPingTest();
+        if (!pingSuccess) {
+          setError('Cannot reach backend servers. Please check your internet connection.');
           setLoading(false);
           toast({
-            title: "Configuration Error",
-            description: "Invalid Agora credentials. Please contact support.",
+            title: "Connection Error",
+            description: "Unable to reach backend",
             variant: "destructive",
           });
           return;
         }
-        
-        console.log('✅ Healthcheck passed:', healthData);
-        
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 12000)
+
+        // Step 2: Health check
+        const { success: healthSuccess } = await runHealthCheck();
+        if (!healthSuccess) {
+          setError('Video system configuration error. Please contact support.');
+          setLoading(false);
+          toast({
+            title: "Configuration Error",
+            description: "Invalid video system setup",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Step 3: Join session
+        const { success, data, error: joinError } = await runJoinAttempt(
+          'join-video-session',
+          { sessionId }
         );
 
-        const invokePromise = supabase.functions.invoke('join-video-session', {
-          body: { sessionId }
-        });
-
-        const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
-
-        if (error) {
-          // Extract detailed error info
-          const errorDetails = error.context?.details || error.details || '';
-          console.error("❌ Join error with details:", { error, errorDetails });
-          throw error;
+        if (!success || joinError) {
+          // Check if auth error
+          if (joinError?.message?.includes('401') || joinError?.message?.includes('Unauthorized')) {
+            setError('Session expired. Please log in again.');
+            toast({
+              title: "Authentication Required",
+              description: "Your session has expired",
+              variant: "destructive",
+            });
+          } else {
+            throw joinError || new Error('Failed to join session');
+          }
+          setLoading(false);
+          return;
         }
 
         console.log("RAW BACKEND TOKEN RESPONSE:", data);
@@ -75,14 +95,29 @@ export default function PatientVideoRoom() {
         setSessionData(data);
       } catch (err: any) {
         console.error("Error joining video session:", err);
-        const message = err.message === 'timeout'
-          ? 'Connection is taking longer than expected. Please try again.'
-          : (err.message || 'Failed to join video session');
+        
+        const errorDetails = {
+          sessionId: sessionId || 'unknown',
+          errorCode: err.code || 'JOIN_ERROR',
+          errorMessage: err.message || 'Unknown error',
+          errorName: err.name || 'Error',
+          joinParams: {
+            appIdSample: 'patient',
+            channelName: sessionId || 'unknown',
+            uid: 'patient',
+            tokenPreview: 'N/A',
+            isProvider: false,
+          },
+        };
+
+        await logVideoError(errorDetails);
+
+        const message = err.message || 'Failed to join video session';
         setError(message);
         toast({
-          title: err.message === 'timeout' ? 'Still connecting' : 'Connection Error',
+          title: 'Connection Error',
           description: message,
-          variant: err.message === 'timeout' ? undefined : 'destructive'
+          variant: 'destructive'
         });
       } finally {
         setLoading(false);
@@ -139,24 +174,40 @@ export default function PatientVideoRoom() {
 
   if (error || !sessionData) {
     return (
-      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
-        <Card className="p-8 max-w-md">
+      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center p-4">
+        <Card className="p-8 max-w-md w-full">
           <div className="text-center space-y-4">
             <h2 className="text-xl font-semibold text-destructive">Connection Failed</h2>
             <p className="text-muted-foreground">{error || "Unable to join video session"}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => window.location.reload()}
-                className="btn btn-outline w-full"
-              >
-                Try Again
-              </button>
-              <button
+            
+            {diagnostics.length > 0 && <VideoDiagnostics results={diagnostics} />}
+            
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Button
+                  onClick={async () => {
+                    clearDiagnostics();
+                    await runPingTest();
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Run Ping Test
+                </Button>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Try Again
+                </Button>
+              </div>
+              <Button
                 onClick={() => navigate('/appointments')}
-                className="btn btn-primary w-full"
+                className="w-full"
               >
                 Return to Appointments
-              </button>
+              </Button>
             </div>
           </div>
         </Card>

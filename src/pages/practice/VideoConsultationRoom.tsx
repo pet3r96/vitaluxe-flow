@@ -6,6 +6,10 @@ import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { VideoDiagnostics } from "@/components/video/VideoDiagnostics";
+import { useVideoPreflight } from "@/hooks/useVideoPreflight";
+import { useVideoErrorLogger } from "@/hooks/useVideoErrorLogger";
+import { Button } from "@/components/ui/button";
 
 export default function VideoConsultationRoom() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -15,68 +19,59 @@ export default function VideoConsultationRoom() {
   const [sessionData, setSessionData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDeviceTest, setShowDeviceTest] = useState(false);
+  const { diagnostics, runPingTest, runHealthCheck, runJoinAttempt, clearDiagnostics } = useVideoPreflight();
+  const { logVideoError } = useVideoErrorLogger();
 
   useEffect(() => {
-    const joinSession = async (retryCount = 0) => {
+    const joinSession = async () => {
       if (!sessionId) {
         setError("Session ID is required");
         setLoading(false);
         return;
       }
 
+      clearDiagnostics();
+
       try {
-        // Pre-flight healthcheck
-        console.log('🏥 Running Agora healthcheck...');
-        const { data: healthData, error: healthError } = await supabase.functions.invoke('agora-healthcheck');
-        
-        if (healthError || !healthData?.healthy) {
-          const errorMsg = healthData?.error || healthError?.message || 'Agora credentials invalid';
-          console.error('❌ Healthcheck failed:', errorMsg);
-          setError(`Video system configuration error: ${errorMsg}. Please contact support.`);
+        // Step 1: Ping test
+        const pingSuccess = await runPingTest();
+        if (!pingSuccess) {
+          setError('Cannot reach backend servers. Please check your internet connection.');
           setLoading(false);
           toast({
-            title: "Configuration Error",
-            description: "Invalid Agora credentials detected. Please contact support.",
+            title: "Connection Error",
+            description: "Unable to reach backend",
             variant: "destructive",
           });
           return;
         }
+
+        // Step 2: Health check
+        const { success: healthSuccess } = await runHealthCheck();
+        if (!healthSuccess) {
+          setError('Video system configuration error. Please contact support.');
+          setLoading(false);
+          toast({
+            title: "Configuration Error",
+            description: "Invalid video system setup",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Step 3: Join session
+        console.log(`🔗 Joining video session:`, sessionId);
         
-        console.log('✅ Healthcheck passed:', healthData);
-        console.log(`🔗 [Attempt ${retryCount + 1}] Joining video session:`, sessionId);
-        
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 15000)
+        const { success, data, error: joinError } = await runJoinAttempt(
+          'join-video-session',
+          { sessionId }
         );
 
-        const invokePromise = supabase.functions.invoke('join-video-session', {
-          body: { sessionId }
-        });
-
-        const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
+        if (!success || joinError) {
+          throw joinError || new Error('Failed to join session');
+        }
 
         console.log("RAW BACKEND TOKEN RESPONSE:", data);
-
-        if (error) {
-          console.error("❌ Join session error:", error);
-          
-          // Extract detailed error info if available
-          const errorDetails = error.context?.details || error.details || '';
-          
-          // Map specific errors to user-friendly messages
-          let friendlyMessage = "Failed to connect to video session";
-          if (error.message?.includes("not found")) {
-            friendlyMessage = "This video session no longer exists";
-          } else if (error.message?.includes("token") || error.message?.includes("INVALID_VENDOR_KEY")) {
-            friendlyMessage = `Unable to generate video credentials${errorDetails ? ': ' + errorDetails : ''}`;
-          } else if (error.message?.includes("unauthorized")) {
-            friendlyMessage = "You don't have permission to join this session";
-          } else if (errorDetails) {
-            friendlyMessage = `${error.message || 'Connection failed'}: ${errorDetails}`;
-          }
-          
-          throw new Error(friendlyMessage);
-        }
 
         if (!data) {
           throw new Error("No session data received from server");
@@ -95,24 +90,23 @@ export default function VideoConsultationRoom() {
       } catch (err: any) {
         console.error("❌ Error joining video session:", err);
         
-        // Retry logic with exponential backoff
-        if (retryCount < 2 && err.message !== 'timeout') {
-          const delay = retryCount === 0 ? 2000 : 5000;
-          console.log(`🔄 Retrying in ${delay}ms...`);
-          
-          toast({
-            title: "Still connecting...",
-            description: `Retry attempt ${retryCount + 2} of 3`,
-          });
-          
-          setTimeout(() => joinSession(retryCount + 1), delay);
-          return;
-        }
+        const errorDetails = {
+          sessionId: sessionId || 'unknown',
+          errorCode: err.code || 'JOIN_ERROR',
+          errorMessage: err.message || 'Unknown error',
+          errorName: err.name || 'Error',
+          joinParams: {
+            appIdSample: 'provider',
+            channelName: sessionId || 'unknown',
+            uid: 'provider',
+            tokenPreview: 'N/A',
+            isProvider: true,
+          },
+        };
+
+        await logVideoError(errorDetails);
         
-        // Final failure
-        const errorMessage = err.message === 'timeout'
-          ? "Connection timeout. Please check your internet and try again."
-          : (err.message || "Failed to join video session");
+        const errorMessage = err.message || "Failed to join video session";
         
         setError(errorMessage);
         toast({
@@ -162,24 +156,40 @@ export default function VideoConsultationRoom() {
 
   if (error || !sessionData) {
     return (
-      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
-        <Card className="p-8 max-w-md">
+      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center p-4">
+        <Card className="p-8 max-w-md w-full">
           <div className="text-center space-y-4">
             <h2 className="text-xl font-semibold text-destructive">Connection Failed</h2>
             <p className="text-muted-foreground">{error || "Unable to join video session"}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => window.location.reload()}
-                className="btn btn-outline w-full"
-              >
-                Try Again
-              </button>
-              <button
+            
+            {diagnostics.length > 0 && <VideoDiagnostics results={diagnostics} />}
+            
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Button
+                  onClick={async () => {
+                    clearDiagnostics();
+                    await runPingTest();
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Run Ping Test
+                </Button>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Try Again
+                </Button>
+              </div>
+              <Button
                 onClick={() => navigate('/practice-calendar')}
-                className="btn btn-primary w-full"
+                className="w-full"
               >
                 Return to Calendar
-              </button>
+              </Button>
             </div>
           </div>
         </Card>
