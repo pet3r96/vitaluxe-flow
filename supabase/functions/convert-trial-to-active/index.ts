@@ -73,20 +73,19 @@ serve(async (req) => {
               .eq("id", trial.id);
 
             // Create success notification
-            await supabaseClient
-              .from("notifications")
-              .insert({
+            await supabaseClient.functions.invoke('handleNotifications', {
+              body: {
                 user_id: trial.practice_id,
-                notification_type: "subscription_activated",
-                severity: "info",
-                title: "✅ VitaLuxePro Subscription Activated",
+                notification_type: 'subscription_activated',
+                title: '✅ VitaLuxePro Subscription Activated',
                 message: `Your trial has ended and your subscription is now active. Your next billing date is ${nextPeriodEnd.toLocaleDateString()}.`,
                 metadata: {
                   subscription_id: trial.id,
                   billing_amount: 500.00,
                   next_billing_date: nextPeriodEnd.toISOString()
                 }
-              });
+              }
+            });
 
             results.push({ 
               subscription_id: trial.id, 
@@ -116,21 +115,20 @@ serve(async (req) => {
             .eq("id", trial.id);
 
           // Create urgent notification
-          await supabaseClient
-            .from("notifications")
-            .insert({
+          await supabaseClient.functions.invoke('handleNotifications', {
+            body: {
               user_id: trial.practice_id,
-              notification_type: "payment_failed",
-              severity: "high",
-              title: "⚠️ Payment Failed - Action Required",
+              notification_type: 'payment_failed',
+              title: '⚠️ Payment Failed - Action Required',
               message: `We couldn't process your payment. Please update your payment method within 3 days to avoid service interruption.`,
-              action_url: "/profile",
+              action_url: '/profile',
               metadata: {
                 subscription_id: trial.id,
                 grace_period_ends: gracePeriodEnd.toISOString(),
                 error: error.message
               }
-            });
+            }
+          });
 
           results.push({ 
             subscription_id: trial.id, 
@@ -156,20 +154,19 @@ serve(async (req) => {
           .eq("id", trial.id);
 
         // Create urgent notification
-        await supabaseClient
-          .from("notifications")
-          .insert({
+        await supabaseClient.functions.invoke('handleNotifications', {
+          body: {
             user_id: trial.practice_id,
-            notification_type: "subscription_suspended",
-            severity: "high",
-            title: "⚠️ Subscription Suspended - Add Payment Method",
+            notification_type: 'subscription_suspended',
+            title: '⚠️ Subscription Suspended - Add Payment Method',
             message: `Your trial has ended but no payment method is on file. Add a payment method within 3 days to reactivate your subscription.`,
-            action_url: "/profile",
+            action_url: '/profile',
             metadata: {
               subscription_id: trial.id,
               grace_period_ends: gracePeriodEnd.toISOString()
             }
-          });
+          }
+        });
 
         // Mark reminder as sent
         const { error: reminderError } = await supabaseClient

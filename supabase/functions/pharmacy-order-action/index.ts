@@ -217,18 +217,22 @@ serve(async (req) => {
 
       // Send notification to practice
       if (order.profiles?.id) {
-        const { error: notifError } = await supabase
-          .from('notifications')
-          .insert({
+        const { error: notifError } = await supabase.functions.invoke('handleNotifications', {
+          body: {
             user_id: order.profiles.id,
             notification_type: 'order_update',
             title: 'Order Placed On Hold',
             message: `Your order #${order_id.slice(0, 8)} has been placed on hold by the pharmacy. Reason: ${reason}. Please check your messages for details.`,
-            entity_type: 'order',
-            entity_id: order_id,
-            severity: 'warning',
             action_url: '/messages',
-          });
+            metadata: {
+              order_id: order_id,
+              reason: reason,
+              thread_id: thread?.id
+            },
+            entity_type: 'order',
+            entity_id: order_id
+          }
+        });
 
         if (notifError) {
           console.error('Error creating notification:', notifError);
@@ -362,18 +366,23 @@ serve(async (req) => {
 
       // Send notification to practice
       if (order.profiles?.id) {
-        const { error: notifError } = await supabase
-          .from('notifications')
-          .insert({
+        const { error: notifError } = await supabase.functions.invoke('handleNotifications', {
+          body: {
             user_id: order.profiles.id,
-            notification_type: 'order_update',
+            notification_type: 'order_issue',
             title: 'Order Declined and Refunded',
             message: `Your order #${order_id.slice(0, 8)} has been declined by the pharmacy. Reason: ${reason}. A full refund has been processed.`,
-            entity_type: 'order',
-            entity_id: order_id,
-            severity: 'error',
             action_url: '/messages',
-          });
+            metadata: {
+              order_id: order_id,
+              reason: reason,
+              refund_id: refundData?.refund_id,
+              thread_id: thread?.id
+            },
+            entity_type: 'order',
+            entity_id: order_id
+          }
+        });
 
         if (notifError) {
           console.error('Error creating notification:', notifError);

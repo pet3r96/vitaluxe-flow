@@ -67,20 +67,19 @@ serve(async (req) => {
             .eq("id", subscription.id);
 
           // Create urgent notification
-          await supabaseClient
-            .from("notifications")
-            .insert({
+          await supabaseClient.functions.invoke('handleNotifications', {
+            body: {
               user_id: subscription.practice_id,
-              notification_type: "subscription_suspended",
-              severity: "high",
-              title: "⚠️ Subscription Suspended - Add Payment Method",
+              notification_type: 'subscription_suspended',
+              title: '⚠️ Subscription Suspended - Add Payment Method',
               message: `Your subscription renewal failed due to missing payment method. Add one within 3 days to avoid service interruption.`,
-              action_url: "/profile",
+              action_url: '/profile',
               metadata: {
                 subscription_id: subscription.id,
                 grace_period_ends: gracePeriodEnd.toISOString()
               }
-            });
+            }
+          });
 
           results.push({ 
             subscriptionId: subscription.id, 
@@ -113,20 +112,19 @@ serve(async (req) => {
             .eq("id", subscription.id);
 
           // Create success notification
-          await supabaseClient
-            .from("notifications")
-            .insert({
+          await supabaseClient.functions.invoke('handleNotifications', {
+            body: {
               user_id: subscription.practice_id,
-              notification_type: "subscription_renewed",
-              severity: "info",
-              title: "✅ Subscription Renewed",
+              notification_type: 'subscription_renewed',
+              title: '✅ Subscription Renewed',
               message: `Your VitaLuxePro subscription has been successfully renewed. Next billing date: ${newPeriodEnd.toLocaleDateString()}.`,
               metadata: {
                 subscription_id: subscription.id,
                 amount_charged: 500.00,
                 next_billing_date: newPeriodEnd.toISOString()
               }
-            });
+            }
+          });
 
           results.push({ 
             subscriptionId: subscription.id, 
@@ -155,20 +153,19 @@ serve(async (req) => {
               .eq("id", subscription.id);
 
             // Create notification about failed payment
-            await supabaseClient
-              .from("notifications")
-              .insert({
+            await supabaseClient.functions.invoke('handleNotifications', {
+              body: {
                 user_id: subscription.practice_id,
-                notification_type: "payment_failed",
-                severity: "medium",
-                title: "Payment Failed - Will Retry",
+                notification_type: 'payment_failed',
+                title: 'Payment Failed - Will Retry',
                 message: `Your subscription payment failed. We'll retry in 24 hours. Please check your payment method.`,
-                action_url: "/profile",
+                action_url: '/profile',
                 metadata: {
                   subscription_id: subscription.id,
                   retry_scheduled: true
                 }
-              });
+              }
+            });
 
             results.push({ 
               subscriptionId: subscription.id, 
@@ -192,20 +189,19 @@ serve(async (req) => {
               .eq("id", subscription.id);
 
             // Create urgent notification
-            await supabaseClient
-              .from("notifications")
-              .insert({
+            await supabaseClient.functions.invoke('handleNotifications', {
+              body: {
                 user_id: subscription.practice_id,
-                notification_type: "subscription_suspended",
-                severity: "high",
-                title: "⚠️ Subscription Suspended - Payment Failed",
+                notification_type: 'subscription_suspended',
+                title: '⚠️ Subscription Suspended - Payment Failed',
                 message: `Multiple payment attempts failed. Update your payment method within 3 days to avoid service interruption.`,
-                action_url: "/profile",
+                action_url: '/profile',
                 metadata: {
                   subscription_id: subscription.id,
                   grace_period_ends: gracePeriodEnd.toISOString()
                 }
-              });
+              }
+            });
 
             results.push({ 
               subscriptionId: subscription.id, 

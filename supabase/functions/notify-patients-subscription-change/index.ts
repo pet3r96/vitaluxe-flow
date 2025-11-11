@@ -59,13 +59,10 @@ serve(async (req) => {
     // Send notification to each patient
     for (const patient of patients || []) {
       try {
-        // Create in-app notification
-        const { error: notifError } = await supabaseClient
-          .from('notifications')
-          .insert({
+        const { error: notifError } = await supabaseClient.functions.invoke('handleNotifications', {
+          body: {
             user_id: patient.user_id,
             notification_type: 'subscription_alert',
-            severity: 'high',
             title: 'Practice Subscription Status Update',
             message: `${practiceName}'s subscription is currently inactive. Appointment booking and some features are temporarily unavailable. Please contact your practice for more information.`,
             metadata: {
@@ -74,7 +71,8 @@ serve(async (req) => {
               subscriptionStatus: newStatus,
               notificationType: 'practice_subscription_inactive'
             }
-          });
+          }
+        });
 
         if (notifError) {
           console.error('[NotifyPatients] Error creating notification for patient', patient.id, notifError);

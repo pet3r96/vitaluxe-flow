@@ -152,17 +152,21 @@ serve(async (req) => {
 
     // Send notification to practice
     if (order.profiles?.id) {
-      const { error: notifError } = await supabase
-        .from('notifications')
-        .insert({
+      const { error: notifError } = await supabase.functions.invoke('handleNotifications', {
+        body: {
           user_id: order.profiles.id,
-          notification_type: 'order_update',
+          notification_type: 'order_issue',
           title: 'Order Declined by Pharmacy',
           message: `Your order #${order.order_number || order_id.slice(0, 8)} has been declined by the pharmacy. Reason: ${decline_reason}. A full refund has been processed.`,
+          metadata: {
+            order_id: order_id,
+            decline_reason: decline_reason,
+            refund_processed: true
+          },
           entity_type: 'order',
-          entity_id: order_id,
-          severity: 'error',
-        });
+          entity_id: order_id
+        }
+      });
 
       if (notifError) {
         console.error('Error creating notification:', notifError);

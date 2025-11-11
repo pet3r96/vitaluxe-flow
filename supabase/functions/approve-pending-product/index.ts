@@ -84,14 +84,18 @@ Deno.serve(async (req) => {
       if (updateError) throw updateError;
 
       // Send rejection notification
-      await supabaseAdmin.functions.invoke('send-notification', {
+      await supabaseAdmin.functions.invoke('handleNotifications', {
         body: {
           user_id: request.created_by_user_id,
           notification_type: 'product_request_rejected',
           title: 'Product Request Rejected',
           message: `Your product request for "${request.name}" was rejected. Reason: ${rejectionReason}`,
-          severity: 'info',
-          action_url: '/products'
+          action_url: '/products',
+          metadata: {
+            request_id: requestId,
+            product_name: request.name,
+            rejection_reason: rejectionReason
+          }
         }
       });
 
@@ -188,14 +192,18 @@ Deno.serve(async (req) => {
       if (updateError) throw updateError;
 
       // Send approval notification
-      await supabaseAdmin.functions.invoke('send-notification', {
+      await supabaseAdmin.functions.invoke('handleNotifications', {
         body: {
           user_id: request.created_by_user_id,
           notification_type: 'product_request_approved',
           title: 'Product Request Approved',
           message: `Your product request for "${request.name}" has been approved and is now available.`,
-          severity: 'info',
-          action_url: '/products'
+          action_url: '/products',
+          metadata: {
+            request_id: requestId,
+            product_id: newProduct.id,
+            product_name: request.name
+          }
         }
       });
 

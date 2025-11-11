@@ -251,16 +251,22 @@ Deno.serve(async (req) => {
           .eq('id', document.id);
       }
 
-      // Create notifications
-      const notifications = patientIds.map((patientId: string) => ({
-        user_id: patientId,
-        title: 'New Document Available',
-        message: `A new document "${document_name}" has been shared with you.`,
-        type: 'info',
-        read: false,
-      }));
-
-      await supabaseAdmin.from('notifications').insert(notifications);
+      // Create notifications for patients about new document
+      for (const patientId of patientIds) {
+        await supabaseAdmin.functions.invoke('handleNotifications', {
+          body: {
+            user_id: patientId,
+            notification_type: 'document_assigned',
+            title: 'New Document Available',
+            message: `A new document "${document_name}" has been shared with you.`,
+            metadata: {
+              document_id: document.id,
+              document_name: document_name,
+              practice_id: effectivePracticeId
+            }
+          }
+        });
+      }
 
       // Log audit event
       await supabaseAdmin.from('audit_logs').insert({
