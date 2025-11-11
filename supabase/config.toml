@@ -381,6 +381,9 @@ verify_jwt = false
 [functions.test-agora-token]
 verify_jwt = false
 
+[functions.agora-echo]
+verify_jwt = false
+
 [functions.upgrade-trial-to-active]
 verify_jwt = true
 [functions.pharmacy-api-diagnostics]
