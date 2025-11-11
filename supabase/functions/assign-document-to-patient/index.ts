@@ -255,7 +255,21 @@ serve(async (req) => {
         action_url: '/documents',
       }));
 
-      await supabaseAdmin.from('notifications').insert(notifications);
+      // Send notifications via unified system
+      for (const notification of notifications) {
+        await supabaseAdmin.functions.invoke('handleNotifications', {
+          body: {
+            user_id: notification.user_id,
+            notification_type: 'document_assigned',
+            title: notification.title,
+            message: notification.message,
+            metadata: notification.metadata,
+            action_url: '/documents',
+            entity_type: 'provider_document',
+            entity_id: documentId
+          }
+        });
+      }
     }
 
     // Create audit log

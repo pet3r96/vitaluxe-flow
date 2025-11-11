@@ -88,22 +88,22 @@ serve(async (req) => {
       if (!hasPaymentMethod) {
         console.log(`Sending day 12 reminder to practice ${profile.name}`);
 
-        // Create notification
-        const { error: notifError } = await supabaseClient
-          .from("notifications")
-          .insert({
+        // Create notification via unified system
+        const { error: notifError } = await supabaseClient.functions.invoke('handleNotifications', {
+          body: {
             user_id: trial.practice_id,
             notification_type: "subscription_reminder",
-            severity: "medium",
             title: "Add Payment Method - Trial Ending Soon",
             message: `Your VitaLuxePro trial ends in 2 days. Please add a payment method to continue your subscription without interruption.`,
             action_url: "/profile",
             metadata: {
               subscription_id: trial.id,
               trial_ends_at: trial.trial_ends_at,
-              reminder_day: 12
+              reminder_day: 12,
+              days_remaining: 2
             }
-          });
+          }
+        });
 
         if (notifError) {
           console.error('Error creating notification:', notifError);
@@ -148,13 +148,11 @@ serve(async (req) => {
       if (!hasPaymentMethod) {
         console.log(`Sending day 13 (URGENT) reminder to practice ${profile.name}`);
 
-        // Create urgent notification
-        const { error: notifError } = await supabaseClient
-          .from("notifications")
-          .insert({
+        // Create urgent notification via unified system
+        const { error: notifError } = await supabaseClient.functions.invoke('handleNotifications', {
+          body: {
             user_id: trial.practice_id,
             notification_type: "subscription_reminder",
-            severity: "high",
             title: "⚠️ URGENT: Add Payment Method - Trial Ends Tomorrow",
             message: `Your VitaLuxePro trial ends in 1 day! Add a payment method now to avoid subscription suspension.`,
             action_url: "/profile",
@@ -162,9 +160,11 @@ serve(async (req) => {
               subscription_id: trial.id,
               trial_ends_at: trial.trial_ends_at,
               reminder_day: 13,
+              days_remaining: 1,
               urgent: true
             }
-          });
+          }
+        });
 
         if (notifError) {
           console.error('Error creating notification:', notifError);

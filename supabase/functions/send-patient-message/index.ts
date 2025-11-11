@@ -276,9 +276,8 @@ Deno.serve(async (req) => {
         .single();
 
       if (patientData?.user_id) {
-        const { error: notificationError } = await supabaseAdmin
-          .from('notifications')
-          .insert({
+        const { error: notificationError } = await supabaseAdmin.functions.invoke('handleNotifications', {
+          body: {
             user_id: patientData.user_id,
             notification_type: 'practice_message_received',
             title: `New message from ${practiceData?.name || 'your provider'}`,
@@ -288,8 +287,12 @@ Deno.serve(async (req) => {
               patient_id: patient_id,
               practice_id: effectivePracticeId,
               thread_id: insertedMessage.thread_id || insertedMessage.id
-            }
-          });
+            },
+            action_url: '/messages',
+            entity_type: 'message',
+            entity_id: insertedMessage.id
+          }
+        });
 
         if (notificationError) {
           console.error('[send-patient-message] Failed to create patient notification:', notificationError);
@@ -434,22 +437,26 @@ Deno.serve(async (req) => {
     ].filter(Boolean);
 
     if (teamMemberIds.length > 0) {
-      const notifications = teamMemberIds.map(memberId => ({
-        user_id: memberId,
-        notification_type: 'message',
-        title: `New message from ${patientInfo?.first_name || ''} ${patientInfo?.last_name || ''}`.trim() || 'Patient',
-        message: subject || 'You have a new patient message',
-        metadata: {
-          message_id: insertedMessage.id,
-          patient_id: patientAccount.id,
-          practice_id: patientAccount.practice_id,
-          thread_id: insertedMessage.thread_id || insertedMessage.id
-        }
-      }));
-
-      const { error: notificationError } = await supabaseAdmin
-        .from('notifications')
-        .insert(notifications);
+      // Send notification to each team member via unified system
+      for (const memberId of teamMemberIds) {
+        await supabaseAdmin.functions.invoke('handleNotifications', {
+          body: {
+            user_id: memberId,
+            notification_type: 'message',
+            title: `New message from ${patientInfo?.first_name || ''} ${patientInfo?.last_name || ''}`.trim() || 'Patient',
+            message: subject || 'You have a new patient message',
+            metadata: {
+              message_id: insertedMessage.id,
+              patient_id: patientAccount.id,
+              practice_id: patientAccount.practice_id,
+              thread_id: insertedMessage.thread_id || insertedMessage.id
+            },
+            action_url: '/messages',
+            entity_type: 'message',
+            entity_id: insertedMessage.id
+          }
+        });
+      }
 
       if (notificationError) {
         console.error('[send-patient-message] Failed to create team notifications:', notificationError);
