@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
             try {
               await supabaseAdmin.functions.invoke('handleNotifications', {
                 body: {
-                  userId: patientWithUser.user_id,
+                  user_id: patientWithUser.user_id,
                   type: 'appointment_cancelled',
                   title: 'Appointment Cancelled',
                   message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been cancelled.`,

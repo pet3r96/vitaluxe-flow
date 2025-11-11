@@ -780,12 +780,52 @@ export default function Checkout() {
 
       return { createdOrders, failedPayments, failedOrders };
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       const { createdOrders, failedPayments, failedOrders } = result;
       
       if (failedPayments.length === 0) {
         // All payments succeeded
         const orderCount = createdOrders.length;
+        
+        // Send order notifications to patients
+        for (const order of createdOrders) {
+          if (order.ship_to === 'patient' && order.patient_id) {
+            try {
+              const { data: patientWithUser } = await supabase
+                .from('patient_accounts')
+                .select('user_id, first_name, last_name, email, phone')
+                .eq('id', order.patient_id)
+                .single();
+
+              if (patientWithUser) {
+                const orderTotal = order.total_amount || 0;
+                
+                if (patientWithUser.user_id) {
+                  // Patient has portal access - use handleNotifications
+                  console.log('[Checkout] Calling handleNotifications for patient order');
+                  await supabase.functions.invoke('handleNotifications', {
+                    body: {
+                      user_id: patientWithUser.user_id,
+                      type: 'order_placed',
+                      title: 'Order Confirmed',
+                      message: `Your order #${order.order_number} has been placed and will be shipped to you. Total: $${orderTotal.toFixed(2)}`,
+                      metadata: {
+                        orderId: order.id,
+                        orderNumber: order.order_number,
+                        orderTotal: orderTotal.toFixed(2)
+                      }
+                    }
+                  });
+                } else {
+                  console.log('[Checkout] Patient has no portal access, skipping notification');
+                }
+              }
+            } catch (notifError) {
+              console.error('[Checkout] Error sending order notification:', notifError);
+            }
+          }
+        }
+        
         toast({
           title: "Order Placed Successfully! 🎉",
           description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,

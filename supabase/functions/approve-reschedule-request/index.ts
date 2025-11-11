@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
           try {
             await supabaseClient.functions.invoke('handleNotifications', {
               body: {
-                userId: patientWithUser.user_id,
+                user_id: patientWithUser.user_id,
                 type: 'appointment_rescheduled',
                 title: 'Appointment Rescheduled',
                 message: `Your appointment has been rescheduled to ${appointmentDateFormatted} at ${appointmentTimeFormatted}.`,

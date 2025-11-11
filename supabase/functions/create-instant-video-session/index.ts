@@ -110,6 +110,89 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Send instant video notification to patient
+    console.log('[create-instant-video-session] Sending notification for instant video session');
+    
+    const { data: patientWithUser, error: patientUserError } = await supabase
+      .from('patient_accounts')
+      .select('user_id, first_name, last_name, email, phone')
+      .eq('id', patientId)
+      .single();
+
+    if (patientUserError) {
+      console.error('[create-instant-video-session] Error fetching patient user data:', patientUserError);
+    } else if (patientWithUser) {
+      const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
+      const appointmentDateFormatted = new Date(appointment.start_time).toLocaleDateString();
+      const appointmentTimeFormatted = new Date(appointment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      if (patientWithUser.user_id) {
+        // Patient has portal access - use handleNotifications
+        console.log('[create-instant-video-session] Patient has portal access, calling handleNotifications');
+        try {
+          await supabase.functions.invoke('handleNotifications', {
+            body: {
+              user_id: patientWithUser.user_id,
+              type: 'video_session_started',
+              title: 'Video Session Ready',
+              message: `Your instant video session is ready to join.`,
+              metadata: {
+                appointmentId: appointment.id,
+                sessionId: videoSession.id,
+                appointmentDate: appointmentDateFormatted,
+                appointmentTime: appointmentTimeFormatted
+              }
+            }
+          });
+          console.log('[create-instant-video-session] Notification sent via handleNotifications');
+        } catch (notifError) {
+          console.error('[create-instant-video-session] Error calling handleNotifications:', notifError);
+        }
+      } else {
+        // No portal access - send email/SMS directly
+        console.log('[create-instant-video-session] Patient has no portal access, sending direct email/SMS');
+        
+        const { sendNotificationEmail } = await import('../_shared/notificationEmailSender.ts');
+        const { sendNotificationSms } = await import('../_shared/notificationSmsSender.ts');
+        
+        if (patientWithUser.email) {
+          try {
+            await sendNotificationEmail({
+              to: patientWithUser.email,
+              toName: patientName,
+              subject: 'Video Session Ready',
+              message: `Your instant video session is ready to join.`,
+              actionUrl: undefined,
+              senderContext: { fromName: 'Your Healthcare Provider' }
+            });
+            console.log('[create-instant-video-session] Email sent to:', patientWithUser.email);
+          } catch (emailError) {
+            console.error('[create-instant-video-session] Error sending email:', emailError);
+          }
+        }
+        
+        if (patientWithUser.phone) {
+          try {
+            const normalizePhoneToE164 = (phone: string): string => {
+              const cleaned = phone.replace(/\D/g, '');
+              if (cleaned.length === 10) return `+1${cleaned}`;
+              if (cleaned.length === 11 && cleaned.startsWith('1')) return `+${cleaned}`;
+              return phone;
+            };
+            const normalizedPhone = normalizePhoneToE164(patientWithUser.phone);
+            await sendNotificationSms({
+              phoneNumber: normalizedPhone,
+              message: `Your instant video session is ready to join.`,
+              metadata: { appointmentId: appointment.id, sessionId: videoSession.id }
+            });
+            console.log('[create-instant-video-session] SMS sent to:', normalizedPhone);
+          } catch (smsError) {
+            console.error('[create-instant-video-session] Error sending SMS:', smsError);
+          }
+        }
+      }
+    }
+
     // Return the session. Frontend will start the session (ensures proper user authorization)
     return new Response(
       JSON.stringify({ success: true, sessionId: videoSession.id, appointmentId: appointment.id }),
