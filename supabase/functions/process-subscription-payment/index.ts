@@ -75,7 +75,7 @@ serve(async (req) => {
         subscription_id: subscription.id,
         practice_id: subscription.practice_id,
         amount: subscription.monthly_price || 99.99,
-        payment_status: chargeSuccess ? "completed" : "failed",
+        payment_status: chargeSuccess ? "succeeded" : "failed",
         transaction_id: transactionId,
         payment_method: "credit_card"
       });
