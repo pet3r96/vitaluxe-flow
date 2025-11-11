@@ -23,8 +23,8 @@ Deno.serve(async (req) => {
     const meResponse = await fetch("https://rxorders.baremeds.com/api/auth/me", {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${apiToken}`,
-        Accept: "application/json",
+        "Authorization": `Bearer ${Deno.env.get("BAREMEDS_API_TOKEN")}`,
+        "Accept": "application/json",
         "Content-Type": "application/json",
       },
     });
