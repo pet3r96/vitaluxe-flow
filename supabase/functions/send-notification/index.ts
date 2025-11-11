@@ -287,33 +287,56 @@ To change your notification preferences, please log into your secure portal at h
       results.errors.push("Email disabled at practice level");
     }
 
-    // Send SMS via GHL webhook
+    // Send SMS via Twilio
     // Check BOTH user preference AND practice-level setting
     if (send_sms && preferences?.sms_enabled && practiceSmsEnabled && profile?.phone) {
       try {
-        const ghlWebhookUrl = Deno.env.get("GHL_WEBHOOK_URL");
+        const twilioAccountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
+        const twilioAuthToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+        const twilioMessagingServiceSid = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
 
-        if (!ghlWebhookUrl) {
-          console.log("GHL webhook not configured, skipping SMS");
+        if (!twilioAccountSid || !twilioAuthToken || !twilioMessagingServiceSid) {
+          console.log("Twilio credentials not configured, skipping SMS");
+          results.errors.push("SMS service not configured");
         } else {
-          const ghlResponse = await fetch(ghlWebhookUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              phone: profile.phone,
-              code: smsText // Send full notification text
-            })
-          });
+          const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
+          const auth = btoa(`${twilioAccountSid}:${twilioAuthToken}`);
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
+          
+          try {
+            const twilioResponse = await fetch(twilioUrl, {
+              method: 'POST',
+              headers: { 
+                'Authorization': `Basic ${auth}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: new URLSearchParams({
+                MessagingServiceSid: twilioMessagingServiceSid,
+                To: profile.phone,
+                Body: smsText
+              }),
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
 
-          if (!ghlResponse.ok) {
-            const error = await ghlResponse.text();
-            console.error("GHL SMS send failed:", error);
-            results.errors.push(`SMS failed: ${error}`);
-          } else {
-            results.sms_sent = true;
-            console.log("SMS sent successfully via GHL to:", profile.phone);
+            if (!twilioResponse.ok) {
+              const errorText = await twilioResponse.text();
+              console.error("Twilio SMS send failed:", errorText);
+              results.errors.push(`SMS failed: ${errorText}`);
+            } else {
+              results.sms_sent = true;
+              console.log("SMS sent successfully via Twilio to:", profile.phone);
+            }
+          } catch (fetchError: any) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+              console.log("Twilio SMS timeout after 12s, treating as queued");
+              results.sms_sent = true; // Treat timeout as queued/sent
+            } else {
+              throw fetchError;
+            }
           }
         }
       } catch (error) {

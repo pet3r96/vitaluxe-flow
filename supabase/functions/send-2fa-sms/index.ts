@@ -42,20 +42,8 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    // Get SMS provider setting
-    const { data: providerSetting, error: settingError } = await supabase
-      .from('system_settings')
-      .select('setting_value')
-      .eq('setting_key', 'sms_provider')
-      .single();
-
-    if (settingError) {
-      console.error('[2FA Router] Failed to fetch SMS provider setting:', settingError);
-      // Default to Twilio if setting not found
-    }
-
-    const provider = providerSetting?.setting_value?.replace(/"/g, '') || 'twilio';
-    console.log('[2FA Router] Using provider:', provider);
+    // Twilio-only SMS provider
+    console.log('[2FA Twilio] Processing SMS verification');
 
     // Parse request body
     const { phoneNumber, purpose = 'verification' } = await req.json();
@@ -121,7 +109,7 @@ serve(async (req) => {
 
     // Handle idempotent duplicate (unique constraint violation on window_key)
     if (insertError?.code === '23505') {
-      console.log(`[2FA ${provider.toUpperCase()}] Idempotent duplicate detected | User:`, user.id, '| Window:', windowBucket);
+      console.log('[2FA Twilio] Idempotent duplicate detected | User:', user.id, '| Window:', windowBucket);
       
       const { data: existingAttempt, error: fetchError } = await supabase
         .from('sms_verification_attempts')
@@ -130,7 +118,7 @@ serve(async (req) => {
         .single();
 
       if (fetchError || !existingAttempt) {
-        console.error(`[2FA ${provider.toUpperCase()}] Failed to fetch existing attempt:`, fetchError);
+        console.error('[2FA Twilio] Failed to fetch existing attempt:', fetchError);
         throw new Error('Failed to retrieve verification attempt');
       }
 
@@ -141,11 +129,11 @@ serve(async (req) => {
         metadata: { 
           purpose,
           reason: 'idempotent_window_key',
-          provider
+          provider: 'twilio'
         }
       });
 
-      console.log(`[2FA ${provider.toUpperCase()}] Idempotent duplicate blocked | Attempt:`, existingAttempt.attempt_id);
+      console.log('[2FA Twilio] Idempotent duplicate blocked | Attempt:', existingAttempt.attempt_id);
 
       return new Response(
         JSON.stringify({ 
@@ -160,143 +148,68 @@ serve(async (req) => {
     }
 
     if (insertError || !attemptData) {
-      console.error(`[2FA ${provider.toUpperCase()}] Attempt insert failed:`, insertError);
+      console.error('[2FA Twilio] Attempt insert failed:', insertError);
       throw new Error('Failed to create verification attempt');
     }
 
     const attemptId = attemptData.attempt_id;
 
-    // Route to appropriate provider
-    if (provider === 'twilio') {
-      // ========== TWILIO SMS LOGIC ==========
-      const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID')!;
-      const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN')!;
-      const twilioMessagingServiceSid = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID')!;
+    // ========== TWILIO SMS LOGIC ==========
+    const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID')!;
+    const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN')!;
+    const twilioMessagingServiceSid = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID')!;
 
-      console.log('[2FA Twilio] Attempt:', attemptId, '| Sending SMS');
+    console.log('[2FA Twilio] Attempt:', attemptId, '| Sending SMS');
       
-      const twilioStartTime = Date.now();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+    const twilioStartTime = Date.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+    
+    try {
+      const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
+      const auth = btoa(`${twilioAccountSid}:${twilioAuthToken}`);
       
-      try {
-        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
-        const auth = btoa(`${twilioAccountSid}:${twilioAuthToken}`);
+      const twilioResponse = await fetch(twilioUrl, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          MessagingServiceSid: twilioMessagingServiceSid,
+          To: phoneNumber,
+          Body: `Your VitaLuxe verification code is: ${code}. This code expires in 5 minutes. Do not share this code.`
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      const twilioEndTime = Date.now();
+      const responseTime = twilioEndTime - twilioStartTime;
+
+      console.log('[2FA Twilio] Attempt:', attemptId, '| Response:', twilioResponse.status, '| Time:', responseTime, 'ms');
+
+      if (!twilioResponse.ok) {
+        const errorText = await twilioResponse.text();
+        console.error('[2FA Twilio] Attempt:', attemptId, '| API failed:', errorText);
         
-        const twilioResponse = await fetch(twilioUrl, {
-          method: 'POST',
-          headers: { 
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: new URLSearchParams({
-            MessagingServiceSid: twilioMessagingServiceSid,
-            To: phoneNumber,
-            Body: `Your VitaLuxe verification code is: ${code}. This code expires in 5 minutes. Do not share this code.`
-          }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        
-        const twilioEndTime = Date.now();
-        const responseTime = twilioEndTime - twilioStartTime;
-
-        console.log('[2FA Twilio] Attempt:', attemptId, '| Response:', twilioResponse.status, '| Time:', responseTime, 'ms');
-
-        if (!twilioResponse.ok) {
-          const errorText = await twilioResponse.text();
-          console.error('[2FA Twilio] Attempt:', attemptId, '| API failed:', errorText);
-          
-          // For transient errors (5xx), treat as queued
-          if (twilioResponse.status >= 500 && twilioResponse.status < 600) {
-            await supabase.from('two_fa_audit_log').insert({
-              attempt_id: attemptId,
-              event_type: 'code_queued',
-              code_verified: false,
-              response_time_ms: responseTime,
-              metadata: { 
-                purpose,
-                queued_reason: 'upstream_5xx',
-                status: twilioResponse.status,
-                provider: 'twilio'
-              }
-            });
-
-            const totalTime = Date.now() - startTime;
-            console.log('[2FA Twilio] Attempt:', attemptId, '| Queued (5xx) | Total:', totalTime, 'ms');
-
-            return new Response(
-              JSON.stringify({ 
-                success: true,
-                attemptId: attemptId,
-                message: 'Code is being sent (queued)',
-                queued: true,
-                expiresIn: 300
-              }),
-              { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
-          
-          // Log definitive failures
+        // For transient errors (5xx), treat as queued
+        if (twilioResponse.status >= 500 && twilioResponse.status < 600) {
           await supabase.from('two_fa_audit_log').insert({
             attempt_id: attemptId,
-            event_type: 'twilio_api_failed',
+            event_type: 'code_queued',
             code_verified: false,
             response_time_ms: responseTime,
             metadata: { 
-              error: errorText.substring(0, 100),
+              purpose,
+              queued_reason: 'upstream_5xx',
               status: twilioResponse.status,
               provider: 'twilio'
             }
           });
-          
-          throw new Error(`Twilio API failed with status ${twilioResponse.status}`);
-        }
-        
-        // Log success
-        await supabase.from('two_fa_audit_log').insert({
-          attempt_id: attemptId,
-          event_type: 'code_sent',
-          code_verified: false,
-          response_time_ms: responseTime,
-          metadata: { purpose, provider: 'twilio' }
-        });
-
-        const totalTime = Date.now() - startTime;
-        console.log('[2FA Twilio] Attempt:', attemptId, '| Success | Total:', totalTime, 'ms');
-
-        return new Response(
-          JSON.stringify({ 
-            success: true,
-            attemptId: attemptId,
-            message: 'Verification code sent successfully',
-            expiresIn: 300
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-        
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId);
-        
-        if (fetchError.name === 'AbortError') {
-          // Treat timeout as queued - code was likely sent but upstream slow
-          const responseTime = Date.now() - twilioStartTime;
-          console.log('[2FA Twilio] Attempt:', attemptId, '| Timeout after 12s, treating as queued');
-          
-          await supabase.from('two_fa_audit_log').insert({
-            attempt_id: attemptId,
-            event_type: 'code_queued',
-            code_verified: false,
-            response_time_ms: responseTime,
-            metadata: { 
-              purpose,
-              queued_reason: 'api_timeout_12s',
-              provider: 'twilio'
-            }
-          });
 
           const totalTime = Date.now() - startTime;
-          console.log('[2FA Twilio] Attempt:', attemptId, '| Queued (timeout) | Total:', totalTime, 'ms');
+          console.log('[2FA Twilio] Attempt:', attemptId, '| Queued (5xx) | Total:', totalTime, 'ms');
 
           return new Response(
             JSON.stringify({ 
@@ -309,148 +222,80 @@ serve(async (req) => {
             { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        throw fetchError;
-      }
-
-    } else if (provider === 'ghl') {
-      // ========== GHL SMS LOGIC ==========
-      const ghlWebhookUrl = Deno.env.get('GHL_WEBHOOK_URL')!;
-
-      console.log('[2FA GHL] Attempt:', attemptId, '| Sending SMS');
-      
-      const ghlStartTime = Date.now();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
-      
-      try {
-        const ghlResponse = await fetch(ghlWebhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: phoneNumber, code }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
         
-        const ghlEndTime = Date.now();
-        const responseTime = ghlEndTime - ghlStartTime;
-
-        console.log('[2FA GHL] Attempt:', attemptId, '| Response:', ghlResponse.status, '| Time:', responseTime, 'ms');
-
-        if (!ghlResponse.ok) {
-          const errorText = await ghlResponse.text();
-          console.error('[2FA GHL] Attempt:', attemptId, '| Webhook failed:', errorText);
-          
-          // For transient errors (5xx), treat as queued
-          if (ghlResponse.status >= 500 && ghlResponse.status < 600) {
-            await supabase.from('two_fa_audit_log').insert({
-              attempt_id: attemptId,
-              event_type: 'code_queued',
-              code_verified: false,
-              response_time_ms: responseTime,
-              metadata: { 
-                purpose,
-                queued_reason: 'upstream_5xx',
-                status: ghlResponse.status,
-                provider: 'ghl'
-              }
-            });
-
-            const totalTime = Date.now() - startTime;
-            console.log('[2FA GHL] Attempt:', attemptId, '| Queued (5xx) | Total:', totalTime, 'ms');
-
-            return new Response(
-              JSON.stringify({ 
-                success: true,
-                attemptId: attemptId,
-                message: 'Code is being sent (queued)',
-                queued: true,
-                expiresIn: 300
-              }),
-              { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+        // Log definitive failures
+        await supabase.from('two_fa_audit_log').insert({
+          attempt_id: attemptId,
+          event_type: 'twilio_api_failed',
+          code_verified: false,
+          response_time_ms: responseTime,
+          metadata: { 
+            error: errorText.substring(0, 100),
+            status: twilioResponse.status,
+            provider: 'twilio'
           }
-          
-          // Log definitive failures
-          await supabase.from('two_fa_audit_log').insert({
-            attempt_id: attemptId,
-            event_type: 'ghl_webhook_failed',
-            code_verified: false,
-            response_time_ms: responseTime,
-            metadata: { 
-              error: errorText.substring(0, 100),
-              status: ghlResponse.status,
-              provider: 'ghl'
-            }
-          });
-          
-          throw new Error(`GHL webhook failed with status ${ghlResponse.status}`);
-        }
+        });
         
-        // Log success
+        throw new Error(`Twilio API failed with status ${twilioResponse.status}`);
+      }
+      
+      // Log success
+      await supabase.from('two_fa_audit_log').insert({
+        attempt_id: attemptId,
+        event_type: 'code_sent',
+        code_verified: false,
+        response_time_ms: responseTime,
+        metadata: { purpose, provider: 'twilio' }
+      });
+
+      const totalTime = Date.now() - startTime;
+      console.log('[2FA Twilio] Attempt:', attemptId, '| Success | Total:', totalTime, 'ms');
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          attemptId: attemptId,
+          message: 'Verification code sent successfully',
+          expiresIn: 300
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+      
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        // Treat timeout as queued - code was likely sent but upstream slow
+        const responseTime = Date.now() - twilioStartTime;
+        console.log('[2FA Twilio] Attempt:', attemptId, '| Timeout after 12s, treating as queued');
+        
         await supabase.from('two_fa_audit_log').insert({
           attempt_id: attemptId,
-          event_type: 'code_sent',
+          event_type: 'code_queued',
           code_verified: false,
           response_time_ms: responseTime,
-          metadata: { purpose, provider: 'ghl' }
+          metadata: { 
+            purpose,
+            queued_reason: 'api_timeout_12s',
+            provider: 'twilio'
+          }
         });
 
         const totalTime = Date.now() - startTime;
-        console.log('[2FA GHL] Attempt:', attemptId, '| Success | Total:', totalTime, 'ms');
+        console.log('[2FA Twilio] Attempt:', attemptId, '| Queued (timeout) | Total:', totalTime, 'ms');
 
         return new Response(
           JSON.stringify({ 
             success: true,
             attemptId: attemptId,
-            message: 'Verification code sent successfully',
+            message: 'Code is being sent (queued)',
+            queued: true,
             expiresIn: 300
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-        
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId);
-        
-        if (fetchError.name === 'AbortError') {
-          // Treat timeout as queued - code was likely sent but upstream slow
-          const responseTime = Date.now() - ghlStartTime;
-          console.log('[2FA GHL] Attempt:', attemptId, '| Timeout after 12s, treating as queued');
-          
-          await supabase.from('two_fa_audit_log').insert({
-            attempt_id: attemptId,
-            event_type: 'code_queued',
-            code_verified: false,
-            response_time_ms: responseTime,
-            metadata: { 
-              purpose,
-              queued_reason: 'webhook_timeout_12s',
-              provider: 'ghl'
-            }
-          });
-
-          const totalTime = Date.now() - startTime;
-          console.log('[2FA GHL] Attempt:', attemptId, '| Queued (timeout) | Total:', totalTime, 'ms');
-
-          return new Response(
-            JSON.stringify({ 
-              success: true,
-              attemptId: attemptId,
-              message: 'Code is being sent (queued)',
-              queued: true,
-              expiresIn: 300
-            }),
-            { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        throw fetchError;
       }
-
-    } else {
-      console.error('[2FA Router] Unknown provider:', provider);
-      return new Response(
-        JSON.stringify({ error: 'Invalid SMS provider configuration' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw fetchError;
     }
 
   } catch (error: any) {
