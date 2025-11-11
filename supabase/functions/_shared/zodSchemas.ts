@@ -11,7 +11,7 @@ export const sendMessageSchema = z.object({
   message: z.string().trim().min(1, 'Message is required').max(10000, 'Message must be less than 10000 characters'),
   sender_type: z.enum(['patient', 'provider'], { errorMap: () => ({ message: 'Sender type must be patient or provider' }) }),
   patient_id: z.string().uuid('Invalid patient ID format').optional(),
-  urgency: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  urgency: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   parent_message_id: z.string().uuid('Invalid parent message ID format').optional(),
 });
 
