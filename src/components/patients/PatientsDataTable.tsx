@@ -53,7 +53,7 @@ export const PatientsDataTable = () => {
     staleTime: 300000, // 5 minutes - patient data changes infrequently
     queryFn: async () => {
       logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
-      const columns = "id, name, first_name, last_name, email, phone, address, address_street, address_city, address_state, address_zip, address_formatted, city, state, zip_code, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at, user_id, last_login_at, status";
+      const columns = "id, name, first_name, last_name, email, phone, gender_at_birth, address, address_street, address_city, address_state, address_zip, address_formatted, city, state, zip_code, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at, user_id, last_login_at, status";
 
       let patientsData: any[] = [];
 
