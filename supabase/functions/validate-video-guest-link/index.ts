@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { generateAgoraTokens } from '../_shared/agoraTokens.ts';
+import { RtcTokenBuilder, RtcRole, RtmTokenBuilder } from "https://esm.sh/agora-access-token@2.0.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -125,13 +125,40 @@ Deno.serve(async (req) => {
     const channelName = session.channel_name;
     const guestUid = `guest_${guestLink.id}`;
 
-    const tokens = await generateAgoraTokens({
+    // Get Agora credentials
+    const appId = Deno.env.get('AGORA_APP_ID');
+    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
+    
+    if (!appId || !appCertificate) {
+      throw new Error('Agora credentials not configured');
+    }
+
+    // Generate tokens using official Agora implementation
+    const expire = Math.floor(Date.now() / 1000) + 3600;
+    
+    const rtcToken = RtcTokenBuilder.buildTokenWithUserAccount(
+      appId,
+      appCertificate,
       channelName,
-      uid: guestUid,
-      role: 'publisher',
-      expiresInSeconds: 3600,
-    });
-    const appId = tokens.appId;
+      guestUid,
+      RtcRole.PUBLISHER,
+      expire
+    );
+    
+    const rtmToken = RtmTokenBuilder.buildToken(
+      appId,
+      appCertificate,
+      guestUid,
+      expire
+    );
+    
+    const tokens = {
+      rtcToken,
+      rtmToken,
+      rtmUid: guestUid,
+      expiresAt: expire,
+      appId
+    };
 
     // Update access count and timestamps
     const updateData: any = {

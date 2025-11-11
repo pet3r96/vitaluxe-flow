@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { generateAgoraTokens } from "../_shared/agoraTokens.ts";
+import { RtcTokenBuilder, RtcRole, RtmTokenBuilder } from "https://esm.sh/agora-access-token@2.0.4";
 
 console.log("Test Agora Token function started");
 
@@ -179,12 +179,32 @@ serve(async (req) => {
       expiresInSeconds: 3600,
     });
     
-    const tokens = await generateAgoraTokens({
-      channelName: testChannelName,
-      uid: testUid,
-      role: 'publisher',
-      expiresInSeconds: 3600,
-    });
+    // Generate tokens using official Agora implementation
+    const expire = Math.floor(Date.now() / 1000) + 3600;
+    
+    const rtcToken = RtcTokenBuilder.buildTokenWithUserAccount(
+      rawAppId,
+      rawCert,
+      testChannelName,
+      testUid,
+      RtcRole.PUBLISHER,
+      expire
+    );
+    
+    const rtmToken = RtmTokenBuilder.buildToken(
+      rawAppId,
+      rawCert,
+      testUid,
+      expire
+    );
+    
+    const tokens = {
+      rtcToken,
+      rtmToken,
+      rtmUid: testUid,
+      expiresAt: expire,
+      appId: rawAppId
+    };
 
     // Verify token signatures
     const rtcSigValid = await verifyTokenSignature(tokens.rtcToken, rawAppId, rawCert);

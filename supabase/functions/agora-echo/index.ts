@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { getAgoraCredentials } from "../_shared/agoraTokens.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +11,12 @@ serve(async (req) => {
   }
 
   try {
-    const { appId, appCertificate } = getAgoraCredentials();
+    const appId = Deno.env.get('AGORA_APP_ID') || '';
+    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE') || '';
+    
+    if (!appId || !appCertificate) {
+      throw new Error('Agora credentials not configured');
+    }
 
     // Check raw bytes for hidden characters
     const rawAppId = Deno.env.get("AGORA_APP_ID") || "";
