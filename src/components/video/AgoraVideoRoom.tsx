@@ -26,6 +26,7 @@ import { useVideoChat } from "@/hooks/useVideoChat";
 import { VideoChatPanel } from "./VideoChatPanel";
 import { useVideoErrorLogger } from "@/hooks/useVideoErrorLogger";
 import { useTokenAutoRefresh } from "@/hooks/useTokenAutoRefresh";
+import { useValidateAgoraConfig } from "@/hooks/useValidateAgoraConfig";
 
 interface AgoraVideoRoomProps {
   channelName: string;
@@ -77,6 +78,7 @@ export const AgoraVideoRoom = ({
 
   const quality = useNetworkQuality(client, sessionId);
   const { logVideoError } = useVideoErrorLogger();
+  const { validateConfig } = useValidateAgoraConfig();
   
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null);
@@ -258,6 +260,19 @@ export const AgoraVideoRoom = ({
           uid: joinUid,
         });
         console.log("================================");
+        
+        // Validate Agora App ID matches between frontend and backend
+        try {
+          await validateConfig(appId);
+        } catch (validationError: any) {
+          console.error('❌ Agora config validation failed:', validationError);
+          toast({
+            title: "Configuration Error",
+            description: "Agora App ID mismatch detected. Please contact support.",
+            variant: "destructive",
+          });
+          throw validationError;
+        }
         
         // Validate channel name before join
         if (!channelName || channelName.trim() === '') {
