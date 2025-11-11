@@ -157,8 +157,8 @@ Deno.serve(async (req) => {
     
     if (practiceIds.length > 0) {
       const { data: practices, error: practiceError } = await supabaseClient
-        .from('practices')
-        .select('id, address_line1, address_line2, city, state, zip_code')
+        .from('profiles')
+        .select('id, address_street, address_city, address_state, address_zip')
         .in('id', practiceIds);
       
       if (practiceError) {
@@ -169,11 +169,10 @@ Deno.serve(async (req) => {
         console.log(`Successfully fetched ${practices.length} practice addresses`);
         for (const practice of practices) {
           const addressParts = [];
-          if (practice.address_line1) addressParts.push(practice.address_line1);
-          if (practice.address_line2) addressParts.push(practice.address_line2);
-          if (practice.city) addressParts.push(practice.city);
-          if (practice.state) addressParts.push(practice.state);
-          if (practice.zip_code) addressParts.push(practice.zip_code);
+          if (practice.address_street) addressParts.push(practice.address_street);
+          if (practice.address_city) addressParts.push(practice.address_city);
+          if (practice.address_state) addressParts.push(practice.address_state);
+          if (practice.address_zip) addressParts.push(practice.address_zip);
           
           const fullAddress = addressParts.join(', ');
           practiceMap.set(practice.id, fullAddress);
