@@ -43,6 +43,7 @@ export default function DeliveryConfirmation() {
     discountPercentage?: number;
     merchantFeePercentage?: number;
     merchantFeeAmount?: number;
+    shippingPreview?: number;
   };
 
   // Fetch cart data with patient groupings
