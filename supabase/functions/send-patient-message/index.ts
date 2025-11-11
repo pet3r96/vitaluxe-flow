@@ -280,7 +280,7 @@ Deno.serve(async (req) => {
           .from('notifications')
           .insert({
             user_id: patientData.user_id,
-            notification_type: 'patient_message_received',
+            notification_type: 'practice_message_received',
             title: `New message from ${practiceData?.name || 'your provider'}`,
             message: subject || 'You have a new message',
             metadata: {
@@ -436,7 +436,7 @@ Deno.serve(async (req) => {
     if (teamMemberIds.length > 0) {
       const notifications = teamMemberIds.map(memberId => ({
         user_id: memberId,
-        notification_type: 'new_patient_message',
+        notification_type: 'message',
         title: `New message from ${patientInfo?.first_name || ''} ${patientInfo?.last_name || ''}`.trim() || 'Patient',
         message: subject || 'You have a new patient message',
         metadata: {
