@@ -752,6 +752,7 @@ export type Database = {
           custom_sig_encrypted: string | null
           destination_state: string
           expires_at: string | null
+          gender_at_birth: string | null
           id: string
           order_notes: string | null
           patient_address: string | null
@@ -791,6 +792,7 @@ export type Database = {
           custom_sig_encrypted?: string | null
           destination_state: string
           expires_at?: string | null
+          gender_at_birth?: string | null
           id?: string
           order_notes?: string | null
           patient_address?: string | null
@@ -830,6 +832,7 @@ export type Database = {
           custom_sig_encrypted?: string | null
           destination_state?: string
           expires_at?: string | null
+          gender_at_birth?: string | null
           id?: string
           order_notes?: string | null
           patient_address?: string | null
@@ -2111,6 +2114,7 @@ export type Database = {
           destination_state: string | null
           discount_amount: number | null
           discount_percentage: number | null
+          gender_at_birth: string | null
           id: string
           is_refill: boolean | null
           order_id: string
@@ -2160,6 +2164,7 @@ export type Database = {
           destination_state?: string | null
           discount_amount?: number | null
           discount_percentage?: number | null
+          gender_at_birth?: string | null
           id?: string
           is_refill?: boolean | null
           order_id: string
@@ -2209,6 +2214,7 @@ export type Database = {
           destination_state?: string | null
           discount_amount?: number | null
           discount_percentage?: number | null
+          gender_at_birth?: string | null
           id?: string
           is_refill?: boolean | null
           order_id?: string

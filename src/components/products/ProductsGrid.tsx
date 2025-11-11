@@ -610,7 +610,7 @@ export const ProductsGrid = () => {
         // PATIENT ORDER - fetch from patient_accounts table (patientId is patient_accounts.id from dialog)
         const { data: patientRecord, error: patientError } = await supabase
           .from("patient_accounts")
-          .select("id, name, first_name, last_name, email, phone, address_street, address_city, address_state, address_zip, user_id")
+          .select("id, name, first_name, last_name, email, phone, address_street, address_city, address_state, address_zip, user_id, gender_at_birth")
           .eq("id", patientId!)
           .single();
 
@@ -746,6 +746,7 @@ export const ProductsGrid = () => {
             patient_address_zip: patientRecord.address_zip || null,
             patient_address_validated: hasCompleteAddress,
             patient_address_validation_source: hasCompleteAddress ? 'patient_record' : null,
+            gender_at_birth: patientRecord.gender_at_birth || null,
             quantity: quantity,
             price_snapshot: correctPrice,
             destination_state: destinationState,
