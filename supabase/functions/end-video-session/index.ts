@@ -202,18 +202,23 @@ Deno.serve(async (req) => {
 
     // Send completion notification to patient (optional)
     try {
-      await supabase.functions.invoke('send-notification', {
+      await supabase.functions.invoke('handleNotifications', {
         body: {
-          type: 'video_session_complete',
-          userId: session.patient_id,
-          data: {
-            sessionId,
-            appointmentId: session.appointment_id
+          user_id: session.patient_id,
+          notification_type: 'appointment_confirmed',
+          title: 'Video Session Complete',
+          message: 'Your video session has ended. Summary and follow-up information are available in your dashboard.',
+          action_url: '/appointments',
+          metadata: {
+            session_id: sessionId,
+            appointment_id: session.appointment_id,
+            duration_minutes: durationMinutes,
+            session_type: 'video'
           }
         }
       });
     } catch (error) {
-      console.error('Failed to send notification:', error);
+      console.error('Failed to send video completion notification:', error);
     }
 
     return new Response(JSON.stringify({

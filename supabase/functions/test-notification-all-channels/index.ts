@@ -65,72 +65,52 @@ serve(async (req) => {
         }, { onConflict: 'practice_id' });
     }
 
-    // Step 5: Create a test notification
-    console.log('[test-notification] Creating test notification...');
-    const { data: notification, error: notifError } = await supabaseClient
-      .from('notifications')
-      .insert({
-        user_id: testUserId,
-        notification_type: event_type,
-        title: `🧪 TEST: ${event_type}`,
-        message: `This is an automated test notification for event type: ${event_type}. Timestamp: ${new Date().toISOString()}`,
-        read: false,
-        metadata: {
-          test: true,
-          timestamp: new Date().toISOString(),
-        }
-      })
-      .select()
-      .single();
-
-    if (notifError) {
-      throw new Error(`Failed to create notification: ${notifError.message}`);
-    }
-
-    console.log('[test-notification] Notification created:', notification.id);
-
-    // Step 6: Call send-notification function to trigger email/SMS
-    console.log('[test-notification] Triggering send-notification function...');
-    const { data: sendResult, error: sendError } = await supabaseClient.functions.invoke(
-      'send-notification',
+    // Step 5: Test handleNotifications directly (all channels)
+    console.log('[test-notification] Testing handleNotifications...');
+    const { data: handleResult, error: handleError } = await supabaseClient.functions.invoke(
+      'handleNotifications',
       {
         body: {
-          notification_id: notification.id,
-          send_email: true,
-          send_sms: true,
+          user_id: testUserId,
+          notification_type: event_type,
+          title: `🧪 Test Notification - ${event_type}`,
+          message: `This is a test notification for all channels. Timestamp: ${new Date().toISOString()}`,
+          metadata: {
+            test: true,
+            event_type,
+            timestamp: new Date().toISOString()
+          }
         }
       }
     );
 
-    console.log('[test-notification] send-notification result:', sendResult);
-    if (sendError) {
-      console.error('[test-notification] send-notification error:', sendError);
+    console.log('[test-notification] handleNotifications result:', handleResult);
+    if (handleError) {
+      throw new Error(`Failed to send via handleNotifications: ${handleError.message}`);
     }
 
-    // Step 7: Compile results
+    // Step 6: Compile results
     const results = {
       success: true,
       test_timestamp: new Date().toISOString(),
       event_type,
       user_id: testUserId,
-      notification_id: notification.id,
       channels: {
         in_app: {
           enabled: true,
-          status: notification ? 'created' : 'failed',
-          notification_id: notification?.id,
+          status: handleResult?.inAppSent ? 'sent' : 'failed',
         },
         email: {
           enabled: true,
-          status: sendResult?.emailSent ? 'sent' : 'failed',
+          status: handleResult?.emailSent ? 'sent' : 'failed',
           recipient: profile.email,
-          error: sendResult?.emailError,
+          error: handleResult?.emailError,
         },
         sms: {
           enabled: true,
-          status: sendResult?.smsSent ? 'sent' : 'failed',
+          status: handleResult?.smsSent ? 'sent' : 'failed',
           recipient: profile.phone,
-          error: sendResult?.smsError,
+          error: handleResult?.smsError,
         },
       },
       preferences_enabled: {
@@ -143,8 +123,8 @@ serve(async (req) => {
         sms_enabled: true,
       },
       logs: {
-        send_notification_result: sendResult,
-        send_notification_error: sendError,
+        handleNotifications_result: handleResult,
+        handleNotifications_error: handleError,
       }
     };
 

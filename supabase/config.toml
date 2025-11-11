@@ -120,8 +120,8 @@ verify_jwt = true
 [functions.pharmacy-decline-order]
 verify_jwt = true
 
-[functions.send-notification]
-verify_jwt = true
+[functions.handleNotifications]
+verify_jwt = false
 
 [functions.get-user-context]
 verify_jwt = true
