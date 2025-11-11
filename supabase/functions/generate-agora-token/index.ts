@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import { generateAgoraTokens } from '../_shared/agoraTokens.ts';
+import { RtcTokenBuilder, RtcRole, RtmTokenBuilder } from "https://esm.sh/agora-access-token@2.0.4";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -135,18 +135,49 @@ Deno.serve(async (req) => {
 
     console.log('✅ [generate-agora-token] Valid channel name:', channelName);
     
-    const uid = effectiveUserId;
-    const tokenRole = role === 'publisher' ? 'publisher' : 'subscriber';
+    // Get Agora credentials from environment
+    const appId = Deno.env.get('AGORA_APP_ID');
+    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
 
-    console.log('🎫 [generate-agora-token] Generating tokens...', { channelName, uid, role: tokenRole });
+    if (!appId || !appCertificate) {
+      return new Response(JSON.stringify({ error: 'Agora credentials not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
-    const tokens = await generateAgoraTokens({
+    const uid = String(effectiveUserId);
+    const tokenRole = role === 'publisher' ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
+
+    console.log('🎫 [generate-agora-token] Generating tokens...', { channelName, uid, role });
+
+    // Generate tokens using official Agora implementation
+    const expire = Math.floor(Date.now() / 1000) + 3600;
+
+    const rtcToken = RtcTokenBuilder.buildTokenWithUserAccount(
+      appId,
+      appCertificate,
       channelName,
-      uid: String(uid),
-      role: tokenRole,
-      expiresInSeconds: 3600,
-    });
-    const appId = tokens.appId;
+      uid,
+      tokenRole,
+      expire
+    );
+
+    const rtmToken = RtmTokenBuilder.buildToken(
+      appId,
+      appCertificate,
+      uid,
+      expire
+    );
+
+    // Create tokens object in same format as before
+    const tokens = {
+      rtcToken,
+      rtmToken,
+      rtmUid: uid,
+      expiresAt: expire,
+      appId
+    };
 
     console.log('✅ [generate-agora-token] Tokens generated successfully');
     
