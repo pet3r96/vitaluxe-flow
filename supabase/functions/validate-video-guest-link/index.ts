@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
     // Generate tokens using official Agora implementation
     const expire = Math.floor(Date.now() / 1000) + 3600;
     
-    const rtcToken = RtcTokenBuilder.buildTokenWithAccount(
+    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
       appId,
       appCertificate,
       channelName,

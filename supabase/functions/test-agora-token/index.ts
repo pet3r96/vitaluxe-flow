@@ -166,6 +166,10 @@ serve(async (req) => {
 
     console.log("[Test Agora Token] Generating sample token...");
     console.log("[Test Agora Token] Deterministic mode:", deterministic);
+    
+    // Debug: Log available methods on RtcTokenBuilder
+    console.log("[Test Agora Token] RtcTokenBuilder methods:", Object.getOwnPropertyNames(RtcTokenBuilder));
+    console.log("[Test Agora Token] RtcTokenBuilder type:", typeof RtcTokenBuilder);
 
     // Generate test token with sample data
     const testChannelName = deterministic ? "test-channel-fixed" : "test-channel-" + Date.now();
@@ -182,7 +186,7 @@ serve(async (req) => {
     // Generate tokens using official Agora implementation
     const expire = Math.floor(Date.now() / 1000) + 3600;
     
-    const rtcToken = RtcTokenBuilder.buildTokenWithAccount(
+    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
       rawAppId,
       rawCert,
       testChannelName,
