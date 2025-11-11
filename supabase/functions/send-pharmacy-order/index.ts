@@ -65,21 +65,21 @@ Deno.serve(async (req) => {
         id,
         created_at,
         doctor_id,
-      order_lines(
-        id,
-        patient_id,
-        patient_name,
-        patient_email,
-        patient_phone,
-        patient_address,
-        provider_id,
-        product_id,
-        quantity,
-        custom_dosage,
-        custom_sig,
-        gender_at_birth,
-        products(name)
-      )
+        order_lines(
+          id,
+          patient_id,
+          patient_name,
+          patient_email,
+          patient_phone,
+          patient_address,
+          provider_id,
+          product_id,
+          quantity,
+          custom_dosage,
+          custom_sig,
+          gender_at_birth,
+          products(name)
+        )
       `)
       .eq("id", order_id)
       .single();
