@@ -251,13 +251,15 @@ export const AgoraVideoRoom = ({
         console.log('  [FE] channel:', channelName);
         console.log('  [FE] uid:', joinUid);
         console.log('  [FE] rtcToken.len:', token.length);
-        console.log('  [FE] rtcToken.prefix:', token.slice(0, 15));
+        console.log('  [FE] rtcToken.prefix:', token.slice(0, 20));
         console.log('  [FE] rtcToken starts with 007:', token.startsWith('007'));
+        console.log('  [FE TOKEN DEBUG] Full RTC token:', token);
         if (rtmToken) {
           console.log('  [FE] rtmToken.len:', rtmToken.length);
-          console.log('  [FE] rtmToken.prefix:', rtmToken.slice(0, 15));
+          console.log('  [FE] rtmToken.prefix:', rtmToken.slice(0, 20));
           console.log('  [FE] rtmToken starts with 007:', rtmToken.startsWith('007'));
           console.log('  [FE] rtmUid:', rtmUid);
+          console.log('  [FE TOKEN DEBUG] Full RTM token:', rtmToken);
         }
         console.log('  NOTE: Compare these values with Backend Parameters in edge function logs');
         console.log('=====================================================');

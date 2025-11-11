@@ -49,8 +49,9 @@ export const useVideoChat = ({
         console.log('  [RTM-FE] appId:', appId);
         console.log('  [RTM-FE] uid:', rtmUid);
         console.log('  [RTM-FE] token.len:', rtmToken.length);
-        console.log('  [RTM-FE] token.prefix:', rtmToken.slice(0, 15));
+        console.log('  [RTM-FE] token.prefix:', rtmToken.slice(0, 20));
         console.log('  [RTM-FE] token starts with 007:', rtmToken.startsWith('007'));
+        console.log('  [FE TOKEN DEBUG] Full RTM token:', rtmToken);
         console.log('  NOTE: Compare with Backend RTM Parameters');
         console.log('=========================================');
 
