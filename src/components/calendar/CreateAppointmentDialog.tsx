@@ -344,94 +344,42 @@ export function CreateAppointmentDialog({
             </Select>
           </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {!isProviderAccount && (
-                  <div className="space-y-2">
-                    <Label htmlFor="providerId">Provider *</Label>
-                    <Select 
-                      value={watch("providerId")} 
-                      onValueChange={(value) => setValue("providerId", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {providers && providers.length > 0 ? (
-                          providers.map((provider) => (
-                            <SelectItem key={provider.id} value={provider.id}>
-                              <div className="flex items-center justify-between w-full gap-2">
-                                <span>{(provider as any).display_name || getProviderDisplayName(provider)}</span>
-                                {(provider as any).type && (
-                                  <Badge 
-                                    variant={(provider as any).type === 'provider' ? 'default' : 'secondary'}
-                                    className="ml-2 text-[10px] px-1.5 py-0"
-                                  >
-                                    {(provider as any).type === 'provider' ? 'Provider' : 'Staff'}
-                                  </Badge>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-providers-available" disabled>
-                            No providers or staff available
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className={`space-y-2 ${isProviderAccount ? 'col-span-2' : ''}`}>
-                  <Label htmlFor="roomId">
-                    Room 
-                    {visitType === 'video' && (
-                      <span className="text-muted-foreground text-xs ml-1">
-                        (Not required for video)
-                      </span>
-                    )}
-                    {visitType === 'in_person' && !displayRooms?.length && (
-                      <span className="text-amber-500 text-xs ml-1">
-                        (No rooms configured)
-                      </span>
-                    )}
-                  </Label>
+              {!isProviderAccount && (
+                <div className="space-y-2">
+                  <Label htmlFor="providerId">Provider *</Label>
                   <Select 
-                    value={watch("roomId")} 
-                    onValueChange={(value) => setValue("roomId", value)}
-                    disabled={roomsLoading}
+                    value={watch("providerId")} 
+                    onValueChange={(value) => setValue("providerId", value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={
-                        roomsLoading 
-                          ? "Loading rooms..." 
-                          : visitType === 'in_person' && displayRooms?.length 
-                            ? "Select room (optional)" 
-                            : "No room"
-                      } />
+                      <SelectValue placeholder="Select provider" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No room</SelectItem>
-                      {displayRooms?.map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: room.color }}
-                            />
-                            {room.name}
-                            {room.capacity && (
-                              <span className="text-xs text-muted-foreground">
-                                (Cap: {room.capacity})
-                              </span>
-                            )}
-                          </div>
+                      {providers && providers.length > 0 ? (
+                        providers.map((provider) => (
+                          <SelectItem key={provider.id} value={provider.id}>
+                            <div className="flex items-center justify-between w-full gap-2">
+                              <span>{(provider as any).display_name || getProviderDisplayName(provider)}</span>
+                              {(provider as any).type && (
+                                <Badge 
+                                  variant={(provider as any).type === 'provider' ? 'default' : 'secondary'}
+                                  className="ml-2 text-[10px] px-1.5 py-0"
+                                >
+                                  {(provider as any).type === 'provider' ? 'Provider' : 'Staff'}
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-providers-available" disabled>
+                          No providers or staff available
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              )}
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
@@ -500,6 +448,56 @@ export function CreateAppointmentDialog({
               <SelectContent>
                 <SelectItem value="in_person">In-Person</SelectItem>
                 <SelectItem value="video">Video Call</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="roomId">
+              Room 
+              {visitType === 'video' && (
+                <span className="text-muted-foreground text-xs ml-1">
+                  (Not required for video)
+                </span>
+              )}
+              {visitType === 'in_person' && !displayRooms?.length && (
+                <span className="text-amber-500 text-xs ml-1">
+                  (No rooms configured)
+                </span>
+              )}
+            </Label>
+            <Select 
+              value={watch("roomId")} 
+              onValueChange={(value) => setValue("roomId", value)}
+              disabled={roomsLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={
+                  roomsLoading 
+                    ? "Loading rooms..." 
+                    : visitType === 'in_person' && displayRooms?.length 
+                      ? "Select room (optional)" 
+                      : "No room"
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No room</SelectItem>
+                {displayRooms?.map((room) => (
+                  <SelectItem key={room.id} value={room.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: room.color }}
+                      />
+                      {room.name}
+                      {room.capacity && (
+                        <span className="text-xs text-muted-foreground">
+                          (Cap: {room.capacity})
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
