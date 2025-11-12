@@ -218,6 +218,34 @@ export const AgoraVideoRoom = ({
         clientRef.current = agoraClient;
         setClient(agoraClient);
 
+        // Listen for token about to expire (30 seconds warning)
+        agoraClient.on("token-privilege-will-expire", async () => {
+          console.log("⚠️ [RTC] Token expiring in 30 seconds - triggering immediate refresh");
+          try {
+            await manualRefresh();
+          } catch (error) {
+            console.error("❌ [RTC] Emergency token refresh failed:", error);
+          }
+        });
+
+        // Listen for token already expired (failsafe)
+        agoraClient.on("token-privilege-did-expire", async () => {
+          console.error("❌ [RTC] Token expired! Attempting recovery...");
+          toast({
+            title: "Session Expired",
+            description: "Reconnecting with fresh credentials...",
+            variant: "destructive",
+          });
+          
+          try {
+            await manualRefresh();
+          } catch (error) {
+            console.error("❌ [RTC] Token expired recovery failed:", error);
+            // Force disconnect and show error
+            onLeave();
+          }
+        });
+
         agoraClient.on("user-published", async (user, mediaType) => {
           await agoraClient.subscribe(user, mediaType);
 

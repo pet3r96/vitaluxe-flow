@@ -86,8 +86,21 @@ export const useVideoChat = ({
         console.log('🔗 [RTM] Attempting to join channel:', channelName);
         try {
           await channel.join();
-          console.log('✅ [RTM] Successfully joined channel');
-        } catch (err: any) {
+        console.log('✅ [RTM] Successfully joined channel');
+        
+        // Monitor RTM connection errors
+        client.on('ConnectionStateChanged', (newState, reason) => {
+          console.log(`[RTM] Connection state: ${newState}, reason: ${reason}`);
+          
+          if (reason === 'TOKEN_EXPIRED') {
+            console.error('❌ [RTM] Token expired detected by SDK');
+          }
+          
+          if (newState === 'ABORTED') {
+            console.error('❌ [RTM] Connection aborted:', reason);
+          }
+        });
+      } catch (err: any) {
           console.error("=== AGORA RTM CHANNEL JOIN ERROR ===");
           console.error("Error Code:", err.code);
           console.error("Error Name:", err.name);
@@ -178,14 +191,33 @@ export const useVideoChat = ({
   }, [appId, rtmToken, rtmUid, channelName, sessionId, userName, userType]);
 
   const renewRtmToken = async (newToken: string) => {
-    if (!clientRef.current) return;
+    if (!clientRef.current || !channelRef.current) return;
     
     try {
-      await clientRef.current.renewToken(newToken);
+      console.log("🔄 [RTM Renewal] Starting logout/login cycle");
+      
+      // Step 1: Leave channel gracefully
+      await channelRef.current.leave();
+      console.log("✅ [RTM Renewal] Left channel");
+      
+      // Step 2: Logout from RTM client
+      await clientRef.current.logout();
+      console.log("✅ [RTM Renewal] Logged out");
+      
+      // Step 3: Login with new token
+      await clientRef.current.login({ uid: rtmUid, token: newToken });
+      console.log("✅ [RTM Renewal] Logged in with new token");
+      
+      // Step 4: Rejoin channel
+      await channelRef.current.join();
+      console.log("✅ [RTM Renewal] Rejoined channel");
+      
       currentTokenRef.current = newToken;
-      console.log("✅ RTM token renewed successfully");
+      console.log("✅ [RTM Renewal] Complete - Chat operational");
+      
     } catch (error) {
-      console.error("❌ RTM token renewal failed:", error);
+      console.error("❌ [RTM Renewal] Failed:", error);
+      throw error; // Let parent handle
     }
   };
 

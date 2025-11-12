@@ -1,6 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 serve((req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   const res = {
     ok: true,
     timestamp: new Date().toISOString(),
@@ -9,10 +15,8 @@ serve((req) => {
 
   return new Response(JSON.stringify(res), {
     headers: {
+      ...corsHeaders,
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "authorization, x-client-info, content-type",
-      "Access-Control-Allow-Methods": "POST, OPTIONS"
     }
   });
 });
