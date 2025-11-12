@@ -17,14 +17,8 @@ interface MediaDevice {
   kind: string;
 }
 
-console.log("[DEBUG] DeviceTestScreen JOIN PARAMS", {
-  appId,
-  channel,
-  rtcToken,
-  uid,
-});
-
 export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) => {
+  console.log("[DeviceTestScreen] appId:", appId);
   const [cameraStatus, setCameraStatus] = useState<"testing" | "success" | "error">("testing");
   const [micStatus, setMicStatus] = useState<"testing" | "success" | "error">("testing");
   const [speakerStatus, setSpeakerStatus] = useState<"testing" | "success" | "error">("testing");
