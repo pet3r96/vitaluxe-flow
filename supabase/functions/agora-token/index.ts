@@ -9,7 +9,7 @@ const corsHeaders = {
 
 // We reuse our existing Web Crypto builder
 // (_shared/agoraTokenBuilder.ts must exist in this repo)
-import { buildRtcToken, /* buildRtmToken, */ Role } from "../_shared/agoraTokenBuilder.ts";
+import { buildRtcToken, buildRtmToken, Role } from "../_shared/agoraTokenBuilder.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -17,7 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    const { channel, uid, role = "publisher", ttl = 3600 } = await req.json();
+    const { channel, uid, role = "publisher", ttl, expireSeconds } = await req.json();
     if (!channel || !uid) {
       return new Response(JSON.stringify({ error: "channel and uid are required" }), { status: 400, headers: corsHeaders });
     }
@@ -28,8 +28,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing AGORA_APP_ID/AGORA_APP_CERTIFICATE" }), { status: 500, headers: corsHeaders });
     }
 
+    // Accept both ttl and expireSeconds for backward compatibility
+    const expiry = ttl || expireSeconds || 3600;
     const now = Math.floor(Date.now() / 1000);
-    const expiresAt = now + Math.max(60, Math.min(Number(ttl) || 3600, 7200)); // 1–120 min
+    const expiresAt = now + Math.max(60, Math.min(Number(expiry), 7200)); // 1–120 min
 
     const rtcToken = await buildRtcToken(
       appId,
@@ -40,14 +42,14 @@ serve(async (req) => {
       expiresAt
     );
 
-    // RTM optional later:
-    // const rtmToken = await buildRtmToken(appId, appCert, String(uid), expiresAt);
+    // Generate RTM token
+    const rtmToken = await buildRtmToken(appId, appCert, String(uid), expiresAt);
 
     return new Response(JSON.stringify({
       ok: true,
       appId,
       rtcToken,
-      // rtmToken,
+      rtmToken,
       channel,
       uid: String(uid),
       role: String(role).toLowerCase(),

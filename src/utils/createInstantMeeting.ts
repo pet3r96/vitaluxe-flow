@@ -25,13 +25,13 @@ export async function createInstantMeeting(
 
   // Generate Agora tokens for the provider
   const { data: tokenData, error: tokenError } = await supabase.functions.invoke(
-    'generate-agora-token',
+    'agora-token',
     {
       body: {
         channel: channelId,
         uid: providerId,
         role: 'publisher',
-        expireSeconds: 3600
+        ttl: 3600
       }
     }
   );

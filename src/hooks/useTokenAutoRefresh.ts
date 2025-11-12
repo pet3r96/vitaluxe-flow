@@ -7,6 +7,7 @@ interface UseTokenAutoRefreshProps {
   client: IAgoraRTCClient | null;
   sessionId: string;
   channelName: string;
+  uid: string; // User ID for token generation
   initialTokenExpiry?: number; // Unix timestamp in seconds
   onRtmTokenRefresh?: (newToken: string) => void;
   enabled?: boolean;
@@ -24,6 +25,7 @@ export const useTokenAutoRefresh = ({
   client,
   sessionId,
   channelName,
+  uid,
   initialTokenExpiry,
   onRtmTokenRefresh,
   enabled = true,
@@ -58,8 +60,13 @@ export const useTokenAutoRefresh = ({
     console.log(`   Time Until Expiry: ${Math.round((tokenExpiryRef.current - refreshStartTime) / 60)} minutes`);
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-agora-token', {
-        body: { sessionId, role: 'publisher' }
+      const { data, error } = await supabase.functions.invoke('agora-token', {
+        body: { 
+          channel: channelName,
+          uid,
+          role: 'publisher',
+          ttl: 3600
+        }
       });
 
       if (error) throw error;
@@ -128,7 +135,7 @@ export const useTokenAutoRefresh = ({
     } finally {
       isRefreshingRef.current = false;
     }
-  }, [client, sessionId, enabled, onRtmTokenRefresh, toast]);
+  }, [client, channelName, uid, enabled, onRtmTokenRefresh, toast]);
 
   const scheduleNextRefresh = useCallback(() => {
     // Clear existing timer

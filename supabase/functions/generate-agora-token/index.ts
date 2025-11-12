@@ -1,3 +1,13 @@
+/**
+ * ⚠️ DEPRECATED: This endpoint is deprecated and will be removed soon.
+ * Please use /functions/v1/agora-token instead.
+ * 
+ * Migration Guide:
+ * - Change endpoint: 'generate-agora-token' → 'agora-token'
+ * - Change parameter: 'expireSeconds' → 'ttl'
+ * - Response format remains compatible
+ */
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAgoraTokens, type AgoraRole } from "../_shared/agoraTokenService.ts";
 
@@ -31,6 +41,9 @@ serve(async (req) => {
   }
 
   try {
+    // Log deprecation warning
+    console.warn('⚠️ DEPRECATED: /generate-agora-token called. Please migrate to /agora-token');
+    
     // Parse request body
     const body = await req.json();
     const { 
