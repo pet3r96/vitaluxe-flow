@@ -148,6 +148,7 @@ const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 const TestAgoraToken = lazy(() => import("./pages/admin/TestAgoraToken"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
 const AgoraSmokeTest = lazy(() => import("./pages/dev/AgoraSmokeTest"));
+const QuickAgoraTest = lazy(() => import("./pages/dev/QuickAgoraTest")); // Dev only - quick 1:1 test
 
 // Loading fallback component
 const PageLoader = () => (
@@ -285,6 +286,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                                        <Route path="/video-test" element={<DeveloperRoute><VideoTestRoom /></DeveloperRoute>} />
                                        <Route path="/token-verification-test" element={<DeveloperRoute><TokenVerificationTest /></DeveloperRoute>} />
                                        <Route path="/dev/agora-smoke" element={<DeveloperRoute><AgoraSmokeTest /></DeveloperRoute>} />
+                                       <Route path="/dev/agora" element={<DeveloperRoute><QuickAgoraTest /></DeveloperRoute>} /> {/* Dev only - quick 1:1 test */}
                                        <Route path="/practice/video/:sessionId" element={<SubscriptionProtectedRoute><VideoConsultationRoom /></SubscriptionProtectedRoute>} />
                                        <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
                                       <Route path="/my-subscription" element={<MySubscription />} />
