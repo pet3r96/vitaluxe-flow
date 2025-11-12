@@ -738,6 +738,7 @@ export const ProviderVirtualWaitingRoom = ({
               <div className="flex flex-col gap-2">
                 <Button 
                   onClick={() => setShowScheduleDialog(true)}
+                  variant="secondary"
                   className="gap-2 w-full"
                 >
                   <Calendar className="h-4 w-4" />
