@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,14 @@ interface UseTokenAutoRefreshProps {
   initialTokenExpiry?: number; // Unix timestamp in seconds
   onRtmTokenRefresh?: (newToken: string) => void;
   enabled?: boolean;
+}
+
+interface TokenRefreshStatus {
+  lastRefreshTime: number | null;
+  nextRefreshTime: number | null;
+  tokenExpiryTime: number | null;
+  isRefreshing: boolean;
+  refreshCount: number;
 }
 
 export const useTokenAutoRefresh = ({
@@ -24,6 +32,15 @@ export const useTokenAutoRefresh = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isRefreshingRef = useRef(false);
   const tokenExpiryRef = useRef<number>(initialTokenExpiry || Date.now() / 1000 + 3600);
+  const refreshCountRef = useRef(0);
+  
+  const [status, setStatus] = useState<TokenRefreshStatus>({
+    lastRefreshTime: null,
+    nextRefreshTime: null,
+    tokenExpiryTime: initialTokenExpiry || Date.now() / 1000 + 3600,
+    isRefreshing: false,
+    refreshCount: 0,
+  });
 
   const refreshTokens = useCallback(async () => {
     if (!client || !enabled || isRefreshingRef.current) {
@@ -31,7 +48,14 @@ export const useTokenAutoRefresh = ({
     }
 
     isRefreshingRef.current = true;
+    setStatus(prev => ({ ...prev, isRefreshing: true }));
+    
+    const refreshStartTime = Date.now() / 1000;
     console.log("🔄 Refreshing Agora tokens...");
+    console.log(`📊 Token Status Before Refresh:`);
+    console.log(`   Current Time: ${new Date(refreshStartTime * 1000).toISOString()}`);
+    console.log(`   Token Expires: ${new Date(tokenExpiryRef.current * 1000).toISOString()}`);
+    console.log(`   Time Until Expiry: ${Math.round((tokenExpiryRef.current - refreshStartTime) / 60)} minutes`);
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-agora-token', {
@@ -64,19 +88,38 @@ export const useTokenAutoRefresh = ({
         console.log("✅ RTM token renewal initiated");
       }
 
-      // Update expiry time
-      if (data.expiresAt) {
-        tokenExpiryRef.current = data.expiresAt;
-      } else {
-        // Fallback: assume 1 hour from now
-        tokenExpiryRef.current = Date.now() / 1000 + 3600;
-      }
+      // Update expiry time and refresh count
+      const newExpiryTime = data.expiresAt || (Date.now() / 1000 + 3600);
+      tokenExpiryRef.current = newExpiryTime;
+      refreshCountRef.current += 1;
+      
+      const currentTime = Date.now() / 1000;
+      
+      console.log(`✅ Token Refresh Complete (#${refreshCountRef.current})`);
+      console.log(`   New Token Expires: ${new Date(newExpiryTime * 1000).toISOString()}`);
+      console.log(`   Valid For: ${Math.round((newExpiryTime - currentTime) / 60)} minutes`);
+
+      setStatus({
+        lastRefreshTime: currentTime,
+        nextRefreshTime: null, // Will be set by scheduleNextRefresh
+        tokenExpiryTime: newExpiryTime,
+        isRefreshing: false,
+        refreshCount: refreshCountRef.current,
+      });
 
       // Schedule next refresh (5 minutes before expiry)
       scheduleNextRefresh();
+      
+      // Show success toast
+      toast({
+        title: "Session Extended",
+        description: `Tokens refreshed successfully. Session extended by ${Math.round((newExpiryTime - currentTime) / 60)} minutes.`,
+      });
 
     } catch (error) {
       console.error("❌ Token refresh failed:", error);
+      setStatus(prev => ({ ...prev, isRefreshing: false }));
+      
       toast({
         title: "Connection Warning",
         description: "Session token refresh failed. You may be disconnected soon.",
@@ -99,8 +142,15 @@ export const useTokenAutoRefresh = ({
     const timeUntilExpiry = tokenExpiryRef.current - now;
     const refreshBuffer = 5 * 60; // 5 minutes before expiry
     const timeUntilRefresh = Math.max(0, timeUntilExpiry - refreshBuffer);
+    const nextRefreshTime = now + timeUntilRefresh;
 
-    console.log(`⏰ Next token refresh scheduled in ${Math.round(timeUntilRefresh / 60)} minutes`);
+    console.log(`⏰ Token Refresh Schedule:`);
+    console.log(`   Current Time: ${new Date(now * 1000).toISOString()}`);
+    console.log(`   Token Expires: ${new Date(tokenExpiryRef.current * 1000).toISOString()}`);
+    console.log(`   Next Refresh: ${new Date(nextRefreshTime * 1000).toISOString()}`);
+    console.log(`   Time Until Refresh: ${Math.round(timeUntilRefresh / 60)} minutes`);
+
+    setStatus(prev => ({ ...prev, nextRefreshTime }));
 
     timerRef.current = setTimeout(() => {
       refreshTokens();
@@ -111,14 +161,23 @@ export const useTokenAutoRefresh = ({
   useEffect(() => {
     if (!client || !enabled) return;
 
+    console.log(`🎬 Token Auto-Refresh Initialized`);
+    console.log(`   Initial Token Expiry: ${new Date(tokenExpiryRef.current * 1000).toISOString()}`);
+    console.log(`   Refresh Buffer: 5 minutes before expiry`);
+    
     scheduleNextRefresh();
 
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
+        console.log(`🛑 Token Auto-Refresh Cleanup`);
       }
     };
   }, [client, enabled, scheduleNextRefresh]);
 
-  return { refreshTokens };
+  return { 
+    refreshTokens, 
+    status,
+    manualRefresh: refreshTokens,
+  };
 };

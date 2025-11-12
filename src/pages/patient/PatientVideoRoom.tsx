@@ -258,6 +258,7 @@ export default function PatientVideoRoom() {
       rtmToken={sessionData.rtmToken}
       rtmUid={sessionData.rtmUid}
       userName="Patient"
+      tokenExpiry={sessionData.expiresAt}
     />
   );
 }

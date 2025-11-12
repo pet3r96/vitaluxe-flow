@@ -218,6 +218,7 @@ export default function VideoConsultationRoom() {
       rtmToken={sessionData.rtmToken}
       rtmUid={sessionData.rtmUid}
       userName="Provider"
+      tokenExpiry={sessionData.expiresAt}
     />
   );
 }

@@ -40,6 +40,7 @@ interface AgoraVideoRoomProps {
   rtmUid?: string;
   userName?: string;
   skipRTM?: boolean;
+  tokenExpiry?: number; // Unix timestamp in seconds
 }
 
 export const AgoraVideoRoom = ({
@@ -54,6 +55,7 @@ export const AgoraVideoRoom = ({
   rtmUid,
   userName = "User",
   skipRTM = false,
+  tokenExpiry,
 }: AgoraVideoRoomProps) => {
   const { toast } = useToast();
   const [client, setClient] = useState<IAgoraRTCClient | null>(null);
@@ -182,10 +184,11 @@ export const AgoraVideoRoom = ({
   }) : { messages: [], sendMessage: async () => {}, isConnected: false, renewRtmToken: async () => {}, rtmErrorCode: null, rtmErrorMessage: null };
 
   // Auto-refresh tokens to prevent session interruptions
-  useTokenAutoRefresh({
+  const { status: tokenStatus, manualRefresh } = useTokenAutoRefresh({
     client,
     sessionId,
     channelName,
+    initialTokenExpiry: tokenExpiry,
     onRtmTokenRefresh: chat.renewRtmToken,
     enabled: !!client,
   });

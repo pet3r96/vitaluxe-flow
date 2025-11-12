@@ -239,6 +239,7 @@ export default function VideoGuestJoin() {
         rtmToken={sessionData.rtmToken}
         rtmUid={sessionData.rtmUid}
         userName="Guest"
+        tokenExpiry={sessionData.expiresAt}
       />
     </div>
   );
