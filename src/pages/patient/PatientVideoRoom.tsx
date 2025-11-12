@@ -1,11 +1,10 @@
 import { useParams } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
+import { supabase } from "@/integrations/supabase/client";
 
 const PatientVideoRoom = () => {
   const { sessionId } = useParams();
-  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [rtcToken, setRtcToken] = useState<string | null>(null);
@@ -22,8 +21,8 @@ const PatientVideoRoom = () => {
   });
 
   useEffect(() => {
-    if (!user || !channelName) {
-      console.error("[PatientVideoRoom] Missing user or channel.");
+    if (!channelName) {
+      console.error("[PatientVideoRoom] Missing channel.");
       return;
     }
 
@@ -33,26 +32,20 @@ const PatientVideoRoom = () => {
       try {
         setLoading(true);
 
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agora-token`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${user.access_token}`,
-          },
-          body: JSON.stringify({
+        const { data, error } = await supabase.functions.invoke('agora-token', {
+          body: {
             channel: channelName,
             role: "subscriber",
             ttl: 3600,
-          }),
+          }
         });
 
-        const data = await res.json();
         console.log("[PatientVideoRoom] Token Response:", data);
 
         if (!isMounted) return;
 
-        if (!data.ok) {
-          console.error("[PatientVideoRoom] Token error:", data.error);
+        if (error || !data) {
+          console.error("[PatientVideoRoom] Token error:", error);
           return;
         }
 
@@ -72,7 +65,7 @@ const PatientVideoRoom = () => {
     return () => {
       isMounted = false;
     };
-  }, [channelName, user]);
+  }, [channelName]);
 
   if (loading || !rtcToken || !rtmToken || !uid || !rtmUid) {
     return (
@@ -85,12 +78,14 @@ const PatientVideoRoom = () => {
   return (
     <AgoraVideoRoom
       channelName={channelName!}
-      rtcToken={rtcToken}
-      rtmToken={rtmToken}
+      token={rtcToken}
       uid={uid}
+      appId={import.meta.env.VITE_AGORA_APP_ID || ""}
+      sessionId={sessionId!}
+      rtmToken={rtmToken}
       rtmUid={rtmUid}
-      role="subscriber"
-      userType="patient"
+      isProvider={false}
+      onLeave={() => window.history.back()}
     />
   );
 };
