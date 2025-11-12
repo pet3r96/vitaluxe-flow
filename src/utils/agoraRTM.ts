@@ -1,7 +1,9 @@
-import AgoraRTM from "agora-rtm-sdk";
+// 🧹 TODO AGORA REFACTOR
+// import AgoraRTM from "agora-rtm-sdk";
 
 export const createRTMClient = (appId: string) => {
-  return AgoraRTM.createInstance(appId);
+  // return AgoraRTM.createInstance(appId);
+  throw new Error("Agora RTM client creation is disabled - TODO: refactor");
 };
 
 export const encodeMessage = (text: string) => {

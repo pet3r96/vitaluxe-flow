@@ -1,5 +1,6 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState, useEffect, useRef } from "react";
-import AgoraRTM from "agora-rtm-sdk";
+// import AgoraRTM from "agora-rtm-sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { createRTMClient, decodeMessage } from "@/utils/agoraRTM";
 
@@ -42,75 +43,71 @@ export const useVideoChat = ({
   useEffect(() => {
     const initRTM = async () => {
       try {
-        const client = createRTMClient(appId);
-        clientRef.current = client;
+        // Agora RTM disabled - TODO: refactor
+        // const client = createRTMClient(appId);
+        // clientRef.current = client;
 
-        console.log("===== FE TOKEN DEBUG (RTM) =====");
-        console.log("FE RTM Token (full):", rtmToken);
-        console.log("RTM Token length:", rtmToken?.length);
-        console.log("RTM Token prefix:", rtmToken?.substring(0, 20));
-        console.log("RTM Login Params:", { appId, rtmUid });
-        console.log("================================");
+        // console.log("===== FE TOKEN DEBUG (RTM) =====");
+        // console.log("FE RTM Token (full):", rtmToken);
+        // console.log("RTM Token length:", rtmToken?.length);
+        // console.log("RTM Token prefix:", rtmToken?.substring(0, 20));
+        // console.log("RTM Login Params:", { appId, rtmUid });
+        // console.log("================================");
 
-        try {
-          await client.login({ uid: rtmUid, token: rtmToken });
-          console.log('✅ [RTM] Successfully logged in');
-          // Clear any previous errors on successful login
-          setRtmErrorCode(null);
-          setRtmErrorMessage(null);
-        } catch (err: any) {
-          console.error("=== AGORA RTM LOGIN ERROR ===", err);
-          console.error("Error Code:", err.code);
-          console.error("Error Name:", err.name);
-          console.error("Error Message:", err.message);
-          console.error("Full Error Object:", err);
-          console.error("Error Stack:", err.stack);
-          console.error("Parameters Used:", {
-            appId,
-            rtmUid,
-            rtmTokenPrefix: rtmToken.substring(0, 20),
-            rtmTokenLength: rtmToken.length,
-          });
-          console.error("============================");
-          
-          // Capture error for parent component
-          setRtmErrorCode(err.code || null);
-          setRtmErrorMessage(err.message || String(err));
-          
-          throw err;
-        }
+        // try {
+        //   await client.login({ uid: rtmUid, token: rtmToken });
+        //   console.log('✅ [RTM] Successfully logged in');
+        //   // Clear any previous errors on successful login
+        //   setRtmErrorCode(null);
+        //   setRtmErrorMessage(null);
+        // } catch (err: any) {
+        //   console.error("=== AGORA RTM LOGIN ERROR ===", err);
+        //   console.error("Error Code:", err.code);
+        //   console.error("Error Name:", err.name);
+        //   console.error("Error Message:", err.message);
+        //   console.error("Full Error Object:", err);
+        //   console.error("Error Stack:", err.stack);
+        //   console.error("Parameters Used:", {
+        //     appId,
+        //     rtmUid,
+        //     rtmTokenPrefix: rtmToken.substring(0, 20),
+        //     rtmTokenLength: rtmToken.length,
+        //   });
+        //   console.error("============================");
+        //   setRtmErrorCode(err.code || null);
+        //   setRtmErrorMessage(err.message || String(err));
+        //   throw err;
+        // }
 
-        const channel = client.createChannel(channelName);
-        channelRef.current = channel;
+        // const channel = client.createChannel(channelName);
+        // channelRef.current = channel;
 
-        console.log('🔗 [RTM] Attempting to join channel:', channelName);
-        try {
-          await channel.join();
-        console.log('✅ [RTM] Successfully joined channel');
+        // console.log('🔗 [RTM] Attempting to join channel:', channelName);
+        // try {
+        //   await channel.join();
+        //   console.log('✅ [RTM] Successfully joined channel');
         
-        // Monitor RTM connection errors
-        client.on('ConnectionStateChanged', (newState, reason) => {
-          console.log(`[RTM] Connection state: ${newState}, reason: ${reason}`);
-          
-          if (reason === 'TOKEN_EXPIRED') {
-            console.error('❌ [RTM] Token expired detected by SDK');
-          }
-          
-          if (newState === 'ABORTED') {
-            console.error('❌ [RTM] Connection aborted:', reason);
-          }
-        });
-      } catch (err: any) {
-          console.error("=== AGORA RTM CHANNEL JOIN ERROR ===");
-          console.error("Error Code:", err.code);
-          console.error("Error Name:", err.name);
-          console.error("Error Message:", err.message);
-          console.error("Full Error Object:", err);
-          console.error("====================================");
-          throw err;
-        }
+        //   // Monitor RTM connection errors
+        //   client.on('ConnectionStateChanged', (newState, reason) => {
+        //     console.log(`[RTM] Connection state: ${newState}, reason: ${reason}`);
+        //     if (reason === 'TOKEN_EXPIRED') {
+        //       console.error('❌ [RTM] Token expired detected by SDK');
+        //     }
+        //     if (newState === 'ABORTED') {
+        //       console.error('❌ [RTM] Connection aborted:', reason);
+        //     }
+        //   });
+        // } catch (err: any) {
+        //   console.error("=== AGORA RTM CHANNEL JOIN ERROR ===");
+        //   console.error("Error Code:", err.code);
+        //   console.error("Error Name:", err.name);
+        //   console.error("Error Message:", err.message);
+        //   console.error("Full Error Object:", err);
+        //   console.error("====================================");
+        //   throw err;
+        // }
         
-        setIsConnected(true);
+        // setIsConnected(true);
 
         // Add system message for user joined
         const joinMessage: ChatMessage = {
@@ -124,30 +121,28 @@ export const useVideoChat = ({
         setMessages((prev) => [...prev, joinMessage]);
 
         // Handle incoming messages
-        channel.on("ChannelMessage", async (message: any, memberId: string) => {
-          const text = decodeMessage(message.text);
-          const newMessage: ChatMessage = {
-            id: `${memberId}-${Date.now()}`,
-            text,
-            senderId: memberId,
-            senderName: memberId === rtmUid ? userName : "Other User",
-            timestamp: new Date(),
-            type: "user",
-          };
-          setMessages((prev) => [...prev, newMessage]);
-
-          // Store message in database
-          await supabase.from("video_session_logs").insert({
-            session_id: sessionId,
-            event_type: "chat_message",
-            user_type: userType,
-            event_data: {
-              message: text,
-              sender_name: newMessage.senderName,
-              timestamp: new Date().toISOString(),
-            },
-          });
-        });
+        // channel.on("ChannelMessage", async (message: any, memberId: string) => {
+        //   const text = decodeMessage(message.text);
+        //   const newMessage: ChatMessage = {
+        //     id: `${memberId}-${Date.now()}`,
+        //     text,
+        //     senderId: memberId,
+        //     senderName: memberId === rtmUid ? userName : "Other User",
+        //     timestamp: new Date(),
+        //     type: "user",
+        //   };
+        //   setMessages((prev) => [...prev, newMessage]);
+        //   await supabase.from("video_session_logs").insert({
+        //     session_id: sessionId,
+        //     event_type: "chat_message",
+        //     user_type: userType,
+        //     event_data: {
+        //       message: text,
+        //       sender_name: newMessage.senderName,
+        //       timestamp: new Date().toISOString(),
+        //     },
+        //   });
+        // });
 
         // Load message history
         const { data: logs } = await supabase
@@ -181,51 +176,51 @@ export const useVideoChat = ({
     }
 
     return () => {
-      if (channelRef.current) {
-        channelRef.current.leave();
-      }
-      if (clientRef.current) {
-        clientRef.current.logout();
-      }
+      // if (channelRef.current) {
+      //   channelRef.current.leave();
+      // }
+      // if (clientRef.current) {
+      //   clientRef.current.logout();
+      // }
     };
   }, [appId, rtmToken, rtmUid, channelName, sessionId, userName, userType]);
 
   const renewRtmToken = async (newToken: string) => {
-    if (!clientRef.current || !channelRef.current) return;
+    // if (!clientRef.current || !channelRef.current) return;
     
-    try {
-      console.log("🔄 [RTM Renewal] Starting logout/login cycle");
+    // try {
+    //   console.log("🔄 [RTM Renewal] Starting logout/login cycle");
       
-      // Step 1: Leave channel gracefully
-      await channelRef.current.leave();
-      console.log("✅ [RTM Renewal] Left channel");
+    //   // Step 1: Leave channel gracefully
+    //   await channelRef.current.leave();
+    //   console.log("✅ [RTM Renewal] Left channel");
       
-      // Step 2: Logout from RTM client
-      await clientRef.current.logout();
-      console.log("✅ [RTM Renewal] Logged out");
+    //   // Step 2: Logout from RTM client
+    //   await clientRef.current.logout();
+    //   console.log("✅ [RTM Renewal] Logged out");
       
-      // Step 3: Login with new token
-      await clientRef.current.login({ uid: rtmUid, token: newToken });
-      console.log("✅ [RTM Renewal] Logged in with new token");
+    //   // Step 3: Login with new token
+    //   await clientRef.current.login({ uid: rtmUid, token: newToken });
+    //   console.log("✅ [RTM Renewal] Logged in with new token");
       
-      // Step 4: Rejoin channel
-      await channelRef.current.join();
-      console.log("✅ [RTM Renewal] Rejoined channel");
+    //   // Step 4: Rejoin channel
+    //   await channelRef.current.join();
+    //   console.log("✅ [RTM Renewal] Rejoined channel");
       
-      currentTokenRef.current = newToken;
-      console.log("✅ [RTM Renewal] Complete - Chat operational");
+    //   currentTokenRef.current = newToken;
+    //   console.log("✅ [RTM Renewal] Complete - Chat operational");
       
-    } catch (error) {
-      console.error("❌ [RTM Renewal] Failed:", error);
-      throw error; // Let parent handle
-    }
+    // } catch (error) {
+    //   console.error("❌ [RTM Renewal] Failed:", error);
+    //   throw error; // Let parent handle
+    // }
   };
 
   const sendMessage = async (text: string) => {
-    if (!channelRef.current || !text.trim()) return;
+    // if (!channelRef.current || !text.trim()) return;
 
-    try {
-      await channelRef.current.sendMessage({ text: text.trim() });
+    // try {
+    //   await channelRef.current.sendMessage({ text: text.trim() });
 
       // Add message to local state
       const newMessage: ChatMessage = {
@@ -248,10 +243,10 @@ export const useVideoChat = ({
           sender_name: userName,
           timestamp: new Date().toISOString(),
         },
-      });
-    } catch (error) {
-      console.error("Failed to send message:", error);
-    }
+      // });
+    // } catch (error) {
+    //   console.error("Failed to send message:", error);
+    // }
   };
 
   return { messages, sendMessage, isConnected, renewRtmToken, rtmErrorCode, rtmErrorMessage };

@@ -1,7 +1,11 @@
+// 🧹 TODO AGORA REFACTOR
 import { useEffect, useRef, useCallback, useState } from "react";
-import { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+// import { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+// Temporary type for compatibility
+type IAgoraRTCClient = any;
 
 interface UseTokenAutoRefreshProps {
   client: IAgoraRTCClient | null;
@@ -79,8 +83,8 @@ export const useTokenAutoRefresh = ({
       console.log("================================");
 
       // Renew RTC token
-      await client.renewToken(data.rtcToken);
-      console.log("✅ RTC token renewed successfully");
+      // await client.renewToken(data.rtcToken);
+      // console.log("✅ RTC token renewed successfully");
 
       // Notify RTM token refresh
       if (onRtmTokenRefresh && data.rtmToken) {
