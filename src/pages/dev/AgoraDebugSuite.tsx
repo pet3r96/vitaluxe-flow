@@ -1,13 +1,15 @@
 import { useEffect, useState, useRef } from "react";
-import AgoraRTC, { IAgoraRTCClient, IAgoraRTCRemoteUser, ILocalVideoTrack, ILocalAudioTrack } from "agora-rtc-sdk-ng";
+import AgoraRTC, {
+  IAgoraRTCClient,
+  IAgoraRTCRemoteUser,
+  ILocalVideoTrack,
+  ILocalAudioTrack
+} from "agora-rtc-sdk-ng";
 import { supabase } from "@/integrations/supabase/client";
 
 const APP_ID = import.meta.env.VITE_AGORA_APP_ID;
 
 export default function AgoraDebugSuite() {
-  // ============================
-  // STATE
-  // ============================
   const [sessionId, setSessionId] = useState("");
   const [channelName, setChannelName] = useState("");
   const [tokenData, setTokenData] = useState<any>(null);
@@ -22,15 +24,15 @@ export default function AgoraDebugSuite() {
   const remoteVideoRef = useRef<HTMLDivElement>(null);
   const micMeterRef = useRef<HTMLCanvasElement>(null);
 
-  // ============================
-  // LOGGER
-  // ============================
-  function debug(msg: string, data?: any) {
-    setLog((prev) => [`[${new Date().toISOString()}] ${msg}${data ? " " + JSON.stringify(data) : ""}`, ...prev]);
-  }
+  const debug = (msg: string, data?: any) => {
+    setLog((prev) => [
+      `[${new Date().toISOString()}] ${msg}${data ? " " + JSON.stringify(data) : ""}`,
+      ...prev
+    ]);
+  };
 
   // ============================
-  // REQUEST TOKENS
+  // FETCH TOKENS
   // ============================
   async function fetchTokens() {
     setError(null);
@@ -45,28 +47,25 @@ export default function AgoraDebugSuite() {
     const channel = `debug_${cleanSession.replace(/-/g, "_")}`;
     setChannelName(channel);
 
-    debug("Requesting Agora tokens for channel", channel);
+    debug("Requesting Agora tokens", { channel });
 
     try {
       const { data, error } = await supabase.functions.invoke("agora-token", {
         body: {
           channel,
           role: "publisher",
-          uid: "debug_user_" + Date.now(),
-          ttl: 3600,
-        },
+          uid: "debug_" + Date.now(),
+          ttl: 3600
+        }
       });
 
-      if (error) {
-        debug("Token request failed", error);
-        throw error;
-      }
+      if (error) throw error;
 
       debug("Token response", data);
       setTokenData(data);
-    } catch (e: any) {
-      setError(e.message || "Unknown error");
-      debug("Token fetch error", e.message);
+    } catch (err: any) {
+      setError(err.message);
+      debug("Token fetch error", err);
     }
   }
 
@@ -75,48 +74,41 @@ export default function AgoraDebugSuite() {
   // ============================
   async function startPublisher() {
     if (!tokenData?.rtcToken) {
-      setError("No RTC token to start publisher.");
+      setError("No RTC token found");
       return;
     }
 
     const rtc = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
     setClient(rtc);
 
-    debug("Joining RTC channel...");
-
     await rtc.join(APP_ID, channelName, tokenData.rtcToken, null);
 
-    debug("Creating local tracks...");
-    const mic = await AgoraRTC.createMicrophoneAudioTrack();
-    const cam = await AgoraRTC.createCameraVideoTrack();
+    debug("Creating tracks...");
 
-    setLocalAudioTrack(mic);
-    setLocalVideoTrack(cam);
+    const audio = await AgoraRTC.createMicrophoneAudioTrack();
+    const video = await AgoraRTC.createCameraVideoTrack();
 
-    cam.play(localVideoRef.current!);
+    setLocalAudioTrack(audio);
+    setLocalVideoTrack(video);
 
-    debug("Publishing local tracks...");
-    await rtc.publish([mic, cam]);
+    video.play(localVideoRef.current!);
+
+    await rtc.publish([audio, video]);
 
     debug("Local stream published");
   }
 
   // ============================
-  // START SUBSCRIBER (CONNECT REMOTE USER)
+  // SUBSCRIBE TO REMOTE USERS
   // ============================
   function enableRemoteSubscription() {
-    if (!client) {
-      setError("No client initialized.");
-      return;
-    }
+    if (!client) return;
 
     client.on("user-published", async (user: IAgoraRTCRemoteUser, mediaType) => {
-      debug("Remote user published", { uid: user.uid, mediaType });
-
+      debug("User published", { uid: user.uid, mediaType });
       await client.subscribe(user, mediaType);
 
       if (mediaType === "video") {
-        debug("Playing remote video");
         user.videoTrack?.play(remoteVideoRef.current!);
       }
       if (mediaType === "audio") {
@@ -124,99 +116,88 @@ export default function AgoraDebugSuite() {
       }
     });
 
-    client.on("user-unpublished", (user) => {
-      debug("Remote user unpublished", { uid: user.uid });
-    });
-
-    debug("Remote subscription enabled");
+    client.on("user-unpublished", (user) =>
+      debug("Remote user unpublished", { uid: user.uid })
+    );
   }
 
   // ============================
-  // MIC WAVEFORM ANALYZER
+  // MICROPHONE WAVEFORM FIXED
   // ============================
   useEffect(() => {
     if (!localAudioTrack) return;
 
     const audioContext = new AudioContext();
     const analyser = audioContext.createAnalyser();
+
+    // FIXED: wrap track in a MediaStream
     const mediaStreamTrack = localAudioTrack.getMediaStreamTrack();
     const mediaStream = new MediaStream([mediaStreamTrack]);
     const source = audioContext.createMediaStreamSource(mediaStream);
+
     source.connect(analyser);
 
     const canvas = micMeterRef.current;
     const ctx = canvas?.getContext("2d");
 
-    function draw() {
-      if (!ctx || !canvas) return;
+    const draw = () => {
+      if (!canvas || !ctx) return;
       requestAnimationFrame(draw);
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       analyser.getByteTimeDomainData(dataArray);
 
-      ctx.fillStyle = "#333";
+      ctx.fillStyle = "#222";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.lineWidth = 2;
-      ctx.strokeStyle = "#4ade80"; // green
+      ctx.strokeStyle = "#4ade80";
       ctx.beginPath();
 
-      const sliceWidth = (canvas.width * 1.0) / dataArray.length;
+      const sliceWidth = canvas.width / dataArray.length;
       let x = 0;
 
-      for (let i = 0; i < dataArray.length; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = (v * canvas.height) / 2;
-
+      dataArray.forEach((v, i) => {
+        const y = (v / 128.0) * (canvas.height / 2);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
-
         x += sliceWidth;
-      }
+      });
 
-      ctx.lineTo(canvas.width, canvas.height / 2);
       ctx.stroke();
-    }
+    };
 
     draw();
   }, [localAudioTrack]);
 
   // ============================
-  // LEAVE + CLEANUP
+  // CLEANUP
   // ============================
   async function cleanup() {
-    debug("Cleaning up...");
-
     try {
       localVideoTrack?.stop();
       localVideoTrack?.close();
       localAudioTrack?.stop();
       localAudioTrack?.close();
       await client?.leave();
-    } finally {
-      setClient(null);
-      setLocalAudioTrack(null);
-      setLocalVideoTrack(null);
       debug("Cleanup complete");
+    } catch (e) {
+      debug("Cleanup error", e);
     }
   }
 
-  // ============================
-  // UI
-  // ============================
   return (
-    <div className="p-8 text-white space-y-6">
-      <h1 className="text-3xl font-bold">Agora Debug Suite v2</h1>
+    <div className="p-10 text-white space-y-6">
+      <h1 className="text-3xl font-bold mb-4">Agora Debug Suite v2</h1>
 
       <div className="space-y-2">
-        <label className="font-semibold">Session ID</label>
         <input
           className="bg-gray-800 px-3 py-2 rounded border border-gray-700 w-80"
           placeholder="test-session-id"
           value={sessionId}
           onChange={(e) => setSessionId(e.target.value)}
         />
-        <button onClick={fetchTokens} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded">
+        <button onClick={fetchTokens} className="bg-blue-600 px-4 py-2 rounded">
           Fetch Tokens
         </button>
       </div>
@@ -227,35 +208,48 @@ export default function AgoraDebugSuite() {
         </pre>
       )}
 
-      <div className="flex space-x-4">
-        <div className="w-1/2 space-y-4">
-          <h2 className="text-xl font-semibold">Local Video</h2>
+      <div className="grid grid-cols-2 gap-8">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Local Video</h2>
           <div ref={localVideoRef} className="bg-black h-48 rounded" />
 
-          <h2 className="text-xl font-semibold">Mic Monitor</h2>
-          <canvas ref={micMeterRef} width={400} height={80} className="border border-gray-700 rounded" />
+          <h2 className="text-xl font-semibold mt-4 mb-2">Mic Analyzer</h2>
+          <canvas
+            ref={micMeterRef}
+            width={400}
+            height={80}
+            className="border border-gray-700 rounded"
+          />
 
-          <button onClick={startPublisher} className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded">
+          <button onClick={startPublisher} className="bg-green-600 px-4 py-2 rounded mt-4">
             Start Publisher
           </button>
         </div>
 
-        <div className="w-1/2 space-y-4">
-          <h2 className="text-xl font-semibold">Remote Video</h2>
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Remote Video</h2>
           <div ref={remoteVideoRef} className="bg-black h-48 rounded" />
 
-          <button onClick={enableRemoteSubscription} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded">
+          <button
+            onClick={enableRemoteSubscription}
+            className="bg-purple-600 px-4 py-2 rounded mt-4"
+          >
             Enable Subscriber
           </button>
 
-          <button onClick={cleanup} className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded">
+          <button
+            onClick={cleanup}
+            className="bg-red-600 px-4 py-2 rounded mt-4 ml-3"
+          >
             Cleanup
           </button>
         </div>
       </div>
 
       <h2 className="text-xl font-semibold mt-6">Debug Log</h2>
-      <pre className="bg-gray-900 p-4 rounded border border-gray-700 text-xs h-64 overflow-auto">{log.join("\n")}</pre>
+      <pre className="bg-gray-900 p-4 rounded border border-gray-700 text-xs h-64 overflow-auto">
+        {log.join("\n")}
+      </pre>
     </div>
   );
 }
