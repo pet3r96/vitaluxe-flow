@@ -1,224 +1,184 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AgoraRTC, { IAgoraRTCClient, ILocalAudioTrack, ILocalVideoTrack } from "agora-rtc-sdk-ng";
-import type { IAgoraRTCRemoteUser } from "agora-rtc-sdk-ng";
 
-type StartParams = {
+interface UseAgoraCallParams {
   channel: string;
-  uid?: string | number;         // default: random
-  role?: "publisher" | "subscriber";
-  ttlSeconds?: number;           // default: 3600
-  containerLocal?: HTMLElement | null;   // optional mount
-  containerRemote?: HTMLElement | null;  // optional mount
-};
+  userId: string;
+  appId?: string;
+  autoRenew?: boolean;
+}
 
-type UseAgoraCallOpts = {
-  tokenEndpoint?: string; // default: /functions/v1/agora-token
-};
-
-type TokenResponse = {
-  ok: boolean;
-  appId: string;
-  rtcToken: string;
-  channel: string;
-  uid: string;
-  role: string;
-  expiresAt: number; // unix sec
-};
-
-export function useAgoraCall(opts: UseAgoraCallOpts = {}) {
-  const tokenEndpoint = opts.tokenEndpoint || "/functions/v1/agora-token";
-  const appId = import.meta.env.VITE_AGORA_APP_ID as string;
-
+export function useAgoraCall({
+  channel,
+  userId,
+  appId = import.meta.env.VITE_AGORA_APP_ID as string,
+  autoRenew = true
+}: UseAgoraCallParams) {
+  const localVideoRef = useRef<HTMLDivElement>(null);
+  const remoteVideoRef = useRef<HTMLDivElement>(null);
+  
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micRef = useRef<ILocalAudioTrack | null>(null);
   const camRef = useRef<ILocalVideoTrack | null>(null);
-  const tokenRef = useRef<string>("");
-  const expiresRef = useRef<number>(0);
-  const channelRef = useRef<string>("");
-  const uidRef = useRef<string | number>("");
+  
+  const [isJoined, setIsJoined] = useState(false);
 
-  const [joined, setJoined] = useState(false);
-  const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshInSec, setRefreshInSec] = useState<number | null>(null);
-
-  const getToken = useCallback(async (channel: string, uid: string | number, role: "publisher"|"subscriber", ttlSeconds = 3600): Promise<TokenResponse> => {
-    const res = await fetch(tokenEndpoint, {
-      method: "POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({ channel, uid, role, ttl: ttlSeconds })
+  // Fetch token from backend
+  const fetchToken = useCallback(async () => {
+    const response = await fetch('/functions/v1/generate-agora-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channel,
+        uid: userId,
+        role: 'publisher',
+        expireSeconds: 3600
+      })
     });
-    if (!res.ok) throw new Error(`Token endpoint ${res.status}`);
-    const data = await res.json() as TokenResponse;
-    if (!data.ok || !data.rtcToken) throw new Error("Bad token payload");
-    return data;
-  }, [tokenEndpoint]);
 
-  const scheduleAutoRefresh = useCallback(() => {
-    if (!expiresRef.current) { setRefreshInSec(null); return; }
-    // refresh 5 minutes before expiry
-    const now = Math.floor(Date.now()/1000);
-    const delta = Math.max(0, expiresRef.current - now - 5*60);
-    setRefreshInSec(delta);
-    if (delta <= 0) {
-      clientRef.current?.renewToken?.(tokenRef.current).catch(()=>{});
+    if (!response.ok) {
+      throw new Error(`Token fetch failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.rtcToken) {
+      throw new Error('No RTC token in response');
+    }
+
+    return data.rtcToken;
+  }, [channel, userId]);
+
+  // Join channel
+  const join = useCallback(async () => {
+    if (isJoined || clientRef.current) {
+      console.warn('[useAgoraCall] Already joined');
       return;
     }
-    const t = setTimeout(async () => {
-      try {
-        // Emergency refresh (same channel/uid/role)
-        const data = await getToken(channelRef.current, uidRef.current, "publisher", 3600);
-        tokenRef.current = data.rtcToken;
-        expiresRef.current = data.expiresAt;
-        await clientRef.current?.renewToken(data.rtcToken);
-        scheduleAutoRefresh();
-      } catch (e:any) {
-        console.error("Auto refresh failed:", e?.message || e);
+
+    try {
+      console.log('[useAgoraCall] Fetching token...');
+      const token = await fetchToken();
+
+      console.log('[useAgoraCall] Creating RTC client...');
+      const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+      clientRef.current = client;
+
+      // Setup token renewal listeners
+      if (autoRenew) {
+        client.on('token-privilege-will-expire', async () => {
+          console.log('[useAgoraCall] Token will expire, renewing...');
+          try {
+            const newToken = await fetchToken();
+            await client.renewToken(newToken);
+            console.log('[useAgoraCall] Token renewed successfully');
+          } catch (error) {
+            console.error('[useAgoraCall] Token renewal failed:', error);
+          }
+        });
+
+        client.on('token-privilege-did-expire', async () => {
+          console.error('[useAgoraCall] Token expired! Attempting immediate refresh...');
+          try {
+            const newToken = await fetchToken();
+            await client.renewToken(newToken);
+            console.log('[useAgoraCall] Emergency token refresh succeeded');
+          } catch (error) {
+            console.error('[useAgoraCall] Emergency token refresh failed, leaving call:', error);
+            await leave();
+          }
+        });
       }
-    }, delta*1000);
-    return () => clearTimeout(t);
-  }, [getToken]);
 
-  const start = useCallback(async (p: StartParams) => {
-    setError(null);
-    const channel = p.channel;
-    const uid = p.uid ?? Math.floor(1e9 * Math.random());
-    const role = p.role ?? "publisher";
-    const ttl = p.ttlSeconds ?? 3600;
+      // Setup remote user handlers
+      client.on('user-published', async (user, mediaType) => {
+        console.log('[useAgoraCall] Remote user published:', mediaType);
+        await client.subscribe(user, mediaType);
+        
+        if (mediaType === 'video' && remoteVideoRef.current) {
+          user.videoTrack?.play(remoteVideoRef.current);
+        }
+        if (mediaType === 'audio') {
+          user.audioTrack?.play();
+        }
+      });
 
-    const data = await getToken(channel, uid, role, ttl);
+      client.on('user-unpublished', (user) => {
+        console.log('[useAgoraCall] Remote user unpublished');
+      });
 
-    channelRef.current = channel;
-    uidRef.current = uid;
-    tokenRef.current = data.rtcToken;
-    expiresRef.current = data.expiresAt;
+      // Join channel
+      console.log('[useAgoraCall] Joining channel:', channel);
+      await client.join(appId, channel, token, userId);
+      console.log('[useAgoraCall] Joined successfully');
 
-    const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-    clientRef.current = client;
+      // Create and publish local tracks
+      console.log('[useAgoraCall] Creating local tracks...');
+      const mic = await AgoraRTC.createMicrophoneAudioTrack();
+      const cam = await AgoraRTC.createCameraVideoTrack();
+      
+      micRef.current = mic;
+      camRef.current = cam;
 
-    client.on("user-published", async (user, mediaType) => {
-      await client.subscribe(user, mediaType);
-      if (mediaType === "video" && p.containerRemote) {
-        user.videoTrack?.play(p.containerRemote);
+      // Play local video
+      if (localVideoRef.current) {
+        cam.play(localVideoRef.current);
       }
-      if (mediaType === "audio") {
-        user.audioTrack?.play();
-      }
-      setRemoteUsers(Array.from(client.remoteUsers || []));
-    });
 
-    client.on("user-unpublished", () => {
-      setRemoteUsers(Array.from(client.remoteUsers || []));
-    });
+      // Publish tracks
+      console.log('[useAgoraCall] Publishing local tracks...');
+      await client.publish([mic, cam]);
 
-    client.on("token-privilege-will-expire", async () => {
-      try {
-        const latest = await getToken(channelRef.current, uidRef.current, "publisher", 3600);
-        tokenRef.current = latest.rtcToken;
-        expiresRef.current = latest.expiresAt;
-        await client.renewToken(latest.rtcToken);
-        scheduleAutoRefresh();
-      } catch (e:any) {
-        console.error("will-expire refresh failed:", e?.message || e);
-      }
-    });
-
-    client.on("token-privilege-did-expire", async () => {
-      try {
-        const latest = await getToken(channelRef.current, uidRef.current, "publisher", 3600);
-        tokenRef.current = latest.rtcToken;
-        expiresRef.current = latest.expiresAt;
-        await client.renewToken(latest.rtcToken);
-        scheduleAutoRefresh();
-      } catch (e:any) {
-        setError("Token expired and refresh failed.");
-      }
-    });
-
-    await client.join(data.appId, channel, data.rtcToken, uid);
-
-    // local tracks for 1:1
-    const mic = await AgoraRTC.createMicrophoneAudioTrack();
-    const cam = await AgoraRTC.createCameraVideoTrack();
-    micRef.current = mic;
-    camRef.current = cam;
-
-    if (p.containerLocal) {
-      cam.play(p.containerLocal);
+      setIsJoined(true);
+      console.log('[useAgoraCall] Call setup complete');
+    } catch (error) {
+      console.error('[useAgoraCall] Join failed:', error);
+      await leave();
+      throw error;
     }
+  }, [isJoined, channel, userId, appId, autoRenew, fetchToken]);
 
-    await client.publish([mic, cam]);
-
-    setJoined(true);
-    const cleanup = scheduleAutoRefresh();
-    return () => cleanup?.();
-  }, [getToken, scheduleAutoRefresh]);
-
+  // Leave channel
   const leave = useCallback(async () => {
     try {
-      camRef.current?.stop(); camRef.current?.close();
-      micRef.current?.stop(); micRef.current?.close();
-      camRef.current = null; micRef.current = null;
+      console.log('[useAgoraCall] Leaving call...');
 
+      // Stop and close tracks
+      if (camRef.current) {
+        camRef.current.stop();
+        camRef.current.close();
+        camRef.current = null;
+      }
+      if (micRef.current) {
+        micRef.current.stop();
+        micRef.current.close();
+        micRef.current = null;
+      }
+
+      // Leave channel
       if (clientRef.current) {
-        await clientRef.current.unpublish();
         await clientRef.current.leave();
         clientRef.current = null;
       }
-    } finally {
-      setJoined(false);
-      setRemoteUsers([]);
-      tokenRef.current = "";
-      expiresRef.current = 0;
-      channelRef.current = "";
-      uidRef.current = "";
+
+      setIsJoined(false);
+      console.log('[useAgoraCall] Left successfully');
+    } catch (error) {
+      console.error('[useAgoraCall] Leave error:', error);
     }
   }, []);
 
-  const publishCamera = useCallback(async () => {
-    if (!clientRef.current) return;
-    if (!camRef.current) {
-      camRef.current = await AgoraRTC.createCameraVideoTrack();
-    }
-    await clientRef.current.publish(camRef.current);
-  }, []);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      leave();
+    };
+  }, [leave]);
 
-  const unpublishCamera = useCallback(async () => {
-    if (clientRef.current && camRef.current) {
-      await clientRef.current.unpublish(camRef.current);
-      camRef.current.stop();
-      camRef.current.close();
-      camRef.current = null;
-    }
-  }, []);
-
-  const publishMic = useCallback(async () => {
-    if (!clientRef.current) return;
-    if (!micRef.current) {
-      micRef.current = await AgoraRTC.createMicrophoneAudioTrack();
-    }
-    await clientRef.current.publish(micRef.current);
-  }, []);
-
-  const unpublishMic = useCallback(async () => {
-    if (clientRef.current && micRef.current) {
-      await clientRef.current.unpublish(micRef.current);
-      micRef.current.stop();
-      micRef.current.close();
-      micRef.current = null;
-    }
-  }, []);
-
-  return useMemo(() => ({
-    joined,
-    remoteUsers,
-    error,
-    refreshInSec,
-    start,
+  return {
+    localVideoRef,
+    remoteVideoRef,
+    join,
     leave,
-    publishCamera,
-    unpublishCamera,
-    publishMic,
-    unpublishMic,
-  }), [joined, remoteUsers, error, refreshInSec, start, leave, publishCamera, unpublishCamera, publishMic, unpublishMic]);
+    isJoined
+  };
 }
