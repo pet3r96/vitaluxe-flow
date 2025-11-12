@@ -26,30 +26,30 @@ export function useAgoraCall({
   // Fetch token from backend
   const fetchToken = useCallback(async () => {
     try {
-      // Validate environment variable
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
       if (!SUPABASE_URL) {
         throw new Error("Missing VITE_SUPABASE_URL environment variable");
       }
 
       const TOKEN_ENDPOINT = `${SUPABASE_URL}/functions/v1/agora-token`;
-      
-      // Debug logging
+
       console.log("[TokenFetch] Requesting token from:", TOKEN_ENDPOINT);
-      console.log("[TokenFetch] Parameters:", { channel, userId, role: 'publisher', ttl: 3600 });
+      console.log("[TokenFetch] Params:", { channel, uid: userId, role: "publisher", ttl: 3600 });
 
       const response = await fetch(TOKEN_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           channel,
           uid: userId,
-          role: 'publisher',
+          role: "publisher",
           ttl: 3600,
-        }),
+        })
       });
 
-      // Defensive: capture text first so we can parse or show it
       const text = await response.text();
 
       if (!response.ok) {
@@ -57,28 +57,27 @@ export function useAgoraCall({
         throw new Error(`Token fetch failed: ${response.status} - ${text}`);
       }
 
-      let data: any;
+      let data;
       try {
         data = JSON.parse(text);
       } catch {
-        console.error('❌ Token fetch: invalid JSON payload', text);
-        throw new Error('Token fetch: invalid JSON payload');
+        console.error("❌ Token fetch returned invalid JSON:", text);
+        throw new Error("Token fetch returned invalid JSON");
       }
 
       if (!data.rtcToken) {
-        console.error('❌ Missing rtcToken field:', data);
-        throw new Error('Missing rtcToken field in token response');
+        console.error("❌ Missing rtcToken:", data);
+        throw new Error("Missing rtcToken in response");
       }
 
-      // Success logging
-      console.log("✅ Token fetched successfully:", {
-        rtcTokenPrefix: data.rtcToken.substring(0, 20) + '...',
+      console.log("✅ Token fetched:", {
+        prefix: data.rtcToken.substring(0, 16) + "...",
         expiresAt: data.expiresAt
       });
 
       return data.rtcToken;
-    } catch (err: any) {
-      console.error('❌ FetchToken error:', err);
+    } catch (err) {
+      console.error("❌ fetchToken error:", err);
       throw err;
     }
   }, [channel, userId]);
