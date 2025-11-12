@@ -1,85 +1,85 @@
-// ✅ Agora Token Endpoint v2.2 — robust health path & safe JSON parsing
-// - /functions/v1/agora-token/health → simple deployment check
-// - POST /functions/v1/agora-token (JSON) or GET with query params
-
+// ✅ Agora Token Endpoint v2.3 — safe /health handler + clean JSON parsing
 import { corsHeaders } from "../_shared/cors.ts";
-import { RtcRole, RtmRole, RtcTokenBuilder, RtmTokenBuilder } from "../_shared/agoraTokenService.ts";
+import {
+  RtcRole,
+  RtmRole,
+  RtcTokenBuilder,
+  RtmTokenBuilder,
+} from "../_shared/agoraTokenService.ts";
 
-console.log("[agora-token] init");
+console.log("[agora-token] v2.3 initialized");
 
 Deno.serve(async (req) => {
   const reqId = crypto.randomUUID();
+  const url = new URL(req.url);
 
-  // Always handle CORS preflight
+  // ✅ Always handle CORS
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const url = new URL(req.url);
-
-  // 👇 Handle /health BEFORE reading any body (fixes the JSON error)
-  if (url.pathname.endsWith("/health")) {
+  // ✅ Handle /health before touching body
+  if (url.pathname.includes("health")) {
     return new Response(
       JSON.stringify({
         ok: true,
         status: "healthy",
-        version: "2.2",
-        serverTime: new Date().toISOString(),
+        version: "2.3",
+        timestamp: new Date().toISOString(),
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 
   try {
-    // ---- Input normalization (support POST JSON and GET query) ----
-    let input: any = {};
-    const isJson = (req.headers.get("content-type") || "").toLowerCase().includes("application/json");
-
-    if (req.method === "POST" && isJson) {
-      // Parse only if there is a non-empty body
-      const contentLength = Number(req.headers.get("content-length") || "0");
-      input = contentLength > 0 ? await req.json() : {};
+    // 🔒 Parse input safely (POST JSON or GET params)
+    let body: any = {};
+    const contentType = req.headers.get("content-type") || "";
+    if (
+      req.method === "POST" &&
+      contentType.toLowerCase().includes("application/json")
+    ) {
+      const raw = await req.text();
+      body = raw ? JSON.parse(raw) : {};
     } else {
-      // GET (or non-JSON POST) via query params
-      input = {
-        channel: url.searchParams.get("channel") ?? undefined,
-        uid: url.searchParams.get("uid") ?? undefined,
-        role: url.searchParams.get("role") ?? undefined,
-        ttl: url.searchParams.get("ttl") ? Number(url.searchParams.get("ttl")) : undefined,
-        // Back-compat param
-        expireSeconds: url.searchParams.get("expireSeconds")
-          ? Number(url.searchParams.get("expireSeconds"))
-          : undefined,
-      };
+      body = Object.fromEntries(new URL(req.url).searchParams.entries());
     }
 
-    // Back-compat: accept expireSeconds or ttl
-    const { channel, uid, role = "publisher", ttl, expireSeconds } = input || {};
-    const ttlSeconds = Math.min(Math.max(Number(ttl ?? expireSeconds ?? 3600) || 3600, 60), 7200);
+    const { channel, uid, role = "publisher", ttl, expireSeconds } = body;
+    const ttlSeconds = Math.min(
+      Math.max(Number(ttl ?? expireSeconds ?? 3600), 60),
+      7200,
+    );
 
-    // ---- Validation ----
+    // 🧠 Validate required fields
     if (!channel || !/^[A-Za-z0-9_]{1,64}$/.test(channel)) {
-      return jsonErr(400, "Invalid channel (letters, numbers, underscores; 1–64 chars).", reqId);
+      return err(400, "Invalid or missing channel name.", reqId);
     }
-    if (!uid) {
-      return jsonErr(400, "Missing uid.", reqId);
-    }
-    const roleUpper = String(role).toUpperCase();
-    const rtcRole = (RtcRole as any)[roleUpper] ?? RtcRole.PUBLISHER; // publisher/subscriber
+    if (!uid) return err(400, "Missing uid.", reqId);
 
-    // ---- Env checks ----
+    // 🔑 Load environment
     const appId = Deno.env.get("AGORA_APP_ID")?.trim();
     const appCert = Deno.env.get("AGORA_APP_CERTIFICATE")?.trim();
-    if (!appId || !appCert) {
-      return jsonErr(500, "Missing AGORA_APP_ID or AGORA_APP_CERTIFICATE.", reqId);
-    }
+    if (!appId || !appCert)
+      return err(500, "Missing AGORA_APP_ID or AGORA_APP_CERTIFICATE.", reqId);
 
-    // ---- Build tokens ----
-    const rtcToken = RtcTokenBuilder.buildTokenWithUid(appId, appCert, channel, uid, rtcRole, ttlSeconds);
-
-    const rtmToken = RtmTokenBuilder.buildToken(appId, appCert, uid, RtmRole.Rtm_User, ttlSeconds);
-
-    const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
+    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
+      appId,
+      appCert,
+      channel,
+      uid,
+      (RtcRole as any)[role.toUpperCase()] ?? RtcRole.PUBLISHER,
+      ttlSeconds,
+    );
+    const rtmToken = RtmTokenBuilder.buildToken(
+      appId,
+      appCert,
+      uid,
+      RtmRole.Rtm_User,
+      ttlSeconds,
+    );
 
     return new Response(
       JSON.stringify({
@@ -89,22 +89,24 @@ Deno.serve(async (req) => {
         rtmToken,
         channel,
         uid,
-        role: roleUpper.toLowerCase(),
+        role,
         ttl: ttlSeconds,
-        expiresAt,
-        serverTime: Math.floor(Date.now() / 1000),
+        expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-  } catch (err) {
-    console.error("[agora-token] error", reqId, err);
-    return jsonErr(500, err?.message ?? "Unknown error", reqId);
+  } catch (error) {
+    console.error("[agora-token]", reqId, error);
+    return err(500, error.message, reqId);
   }
 });
 
-function jsonErr(status: number, message: string, reqId: string) {
-  return new Response(JSON.stringify({ ok: false, error: message, reqId }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+function err(status: number, message: string, reqId: string) {
+  return new Response(
+    JSON.stringify({ ok: false, error: message, reqId }),
+    {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
 }
