@@ -223,6 +223,29 @@ const App = () => <QueryClientProvider client={queryClient}>
                   <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
                   <Route path="/intake" element={<ProtectedRoute><PatientIntakeForm /></ProtectedRoute>} />
                   <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><PracticeOnlyRoute><SubscribeToVitaLuxePro /></PracticeOnlyRoute></ProtectedRoute>} />
+                  
+                  {/* ========================================== */}
+                  {/* VIDEO ROUTES - MUST BE BEFORE CATCH-ALL   */}
+                  {/* ========================================== */}
+                  <Route 
+                    path="/patient/video/:sessionId" 
+                    element={
+                      <ProtectedRoute>
+                        <PatientVideoRoom />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/practice/video/:sessionId" 
+                    element={
+                      <ProtectedRoute>
+                        <SubscriptionProtectedRoute>
+                          <VideoConsultationRoom />
+                        </SubscriptionProtectedRoute>
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
                    <Route path="/*" element={<ProtectedRoute>
                         <SidebarLayout>
                           <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
@@ -276,7 +299,6 @@ const App = () => <QueryClientProvider client={queryClient}>
                                       <Route path="/downline-performance" element={<DownlinePerformanceView />} />
                                       <Route path="/shipping" element={<PharmacyShipping />} />
                                        <Route path="/appointments" element={<PatientAppointments />} />
-                                       <Route path="/patient/video/:sessionId" element={<PatientVideoRoom />} />
                                        <Route path="/medical-vault" element={<PatientMedicalVault />} />
                                        <Route path="/documents" element={<PatientDocuments />} />
                                        <Route path="/patient-messages" element={<PatientMessages />} />
@@ -287,7 +309,6 @@ const App = () => <QueryClientProvider client={queryClient}>
                                        <Route path="/token-verification-test" element={<DeveloperRoute><TokenVerificationTest /></DeveloperRoute>} />
                                        <Route path="/dev/agora-smoke" element={<DeveloperRoute><AgoraSmokeTest /></DeveloperRoute>} />
                                        <Route path="/dev/agora" element={<DeveloperRoute><QuickAgoraTest /></DeveloperRoute>} /> {/* Dev only - quick 1:1 test */}
-                                       <Route path="/practice/video/:sessionId" element={<SubscriptionProtectedRoute><VideoConsultationRoom /></SubscriptionProtectedRoute>} />
                                        <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
                                       <Route path="/my-subscription" element={<MySubscription />} />
                                       <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />

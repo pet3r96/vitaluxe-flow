@@ -19,7 +19,15 @@ export default function VideoConsultationRoom() {
   const appId = import.meta.env.VITE_AGORA_APP_ID as string;
 
   /** FIX: Only compute channelName after sessionId exists */
-  const channelName = sessionId && sessionId.length > 0 ? `vlx_${sessionId.replace(/-/g, "_")}` : null;
+  const channelName = sessionId?.trim() 
+    ? `vlx_${sessionId.replace(/-/g, "_")}` 
+    : null;
+
+  console.log('[VideoConsultationRoom] Channel computed:', {
+    raw: sessionId,
+    channelName,
+    isValid: !!channelName
+  });
 
   useEffect(() => {
     const initialize = async () => {
