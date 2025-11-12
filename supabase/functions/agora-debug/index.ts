@@ -1,94 +1,41 @@
-import { serve } from "https://deno.land/std@0.170.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// 🔄 Lovable Cloud Auto-Deploy Trigger (Agora token function patched 2025-11-11)
+// ✅ Added validation + live health logging for faster debugging
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+import { createAgoraTokens } from "../_shared/agoraTokenService.ts";
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { errorCode, message, appId, channel, uid } = await req.json();
-    
-    console.log("🧩 [Agora Debug] Error logged from frontend:");
-    console.log(JSON.stringify({
-      errorCode,
-      message,
-      appId: appId ? `${appId.substring(0, 8)}...` : null,
-      channel,
-      uid,
-      timestamp: new Date().toISOString()
-    }, null, 2));
-
-    // Map known Agora error codes
-    const knownErrors: Record<number, string> = {
-      101: "Invalid App ID - The App ID is incorrect or does not exist",
-      102: "Invalid Channel Name - Channel name format is incorrect",
-      109: "Token Expired - The token has expired and needs to be regenerated",
-      110: "Invalid Token Format or Signature - Token structure or signature is incorrect",
-      111: "Token Revoked - The token has been revoked",
-      17: "Request to Join Channel Failed - Cannot join the channel",
-      18: "Leave Channel Failed - Error when leaving the channel",
-      19: "No Authorization - User is not authorized to perform this action",
-      20: "Request Too Frequently - Rate limit exceeded",
-    };
-
-    const readable = knownErrors[errorCode] || `Unknown Agora Error (Code: ${errorCode})`;
-
-    console.log(`🔍 [Agora Debug] Interpreted: ${readable}`);
-
-    // Additional diagnostic suggestions
-    const suggestions: string[] = [];
-    if (errorCode === 101) {
-      suggestions.push("Verify AGORA_APP_ID in backend secrets matches frontend .env");
-      suggestions.push("Check if App ID is correctly configured in Agora Console");
-    } else if (errorCode === 109) {
-      suggestions.push("Token has expired - implement token refresh logic");
-      suggestions.push("Check server time synchronization");
-    } else if (errorCode === 110) {
-      suggestions.push("Verify AGORA_APP_CERTIFICATE is correctly set");
-      suggestions.push("Check token generation logic in edge functions");
-      suggestions.push("Ensure App ID and Certificate match in Agora Console");
+    const url = new URL(req.url);
+    if (url.pathname.endsWith("/health")) {
+      return new Response(JSON.stringify({ status: "ok", deployed: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
+    const body = await req.json().catch(() => null);
+    if (!body?.channel) throw new Error("Missing channel field.");
+
+    const { channel, uid, role = "publisher", ttl = 3600 } = body;
+    console.log(`[agora-token] Request: ${channel} (uid=${uid}, role=${role}, ttl=${ttl})`);
+
+    const tokens = await createAgoraTokens(channel, uid ?? crypto.randomUUID(), role, ttl);
+
+    return new Response(JSON.stringify({ ok: true, ...tokens }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+  } catch (err) {
+    console.error("[agora-token] Error:", err.message);
     return new Response(
       JSON.stringify({
-        ok: true,
-        interpretedError: readable,
-        suggestions,
-        received: { 
-          errorCode, 
-          message, 
-          appId: appId ? `${appId.substring(0, 8)}...` : null,
-          channel, 
-          uid 
-        },
-        timestamp: new Date().toISOString()
+        ok: false,
+        error: err?.message ?? "Unknown error",
+        hint: "Ensure AGORA_APP_ID and AGORA_APP_CERTIFICATE are configured in env",
       }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
-      }
-    );
-  } catch (err) {
-    console.error("❌ [Agora Debug] Error processing debug request:", err);
-    return new Response(
-      JSON.stringify({ 
-        error: err.message || "Failed to process debug request" 
-      }), 
-      { 
-        status: 400,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        }
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
     );
   }
 });
