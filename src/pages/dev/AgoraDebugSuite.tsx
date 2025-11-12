@@ -139,7 +139,9 @@ export default function AgoraDebugSuite() {
 
     const audioContext = new AudioContext();
     const analyser = audioContext.createAnalyser();
-    const source = audioContext.createMediaStreamSource(localAudioTrack.getMediaStreamTrack().mediaStream);
+    const mediaStreamTrack = localAudioTrack.getMediaStreamTrack();
+    const mediaStream = new MediaStream([mediaStreamTrack]);
+    const source = audioContext.createMediaStreamSource(mediaStream);
     source.connect(analyser);
 
     const canvas = micMeterRef.current;
