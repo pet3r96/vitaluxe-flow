@@ -1,11 +1,10 @@
 // ✅ Agora Token Endpoint v2.3 — safe /health handler + clean JSON parsing
 import { corsHeaders } from "../_shared/cors.ts";
 import {
-  RtcRole,
-  RtmRole,
+  Role,
   RtcTokenBuilder,
   RtmTokenBuilder,
-} from "../_shared/agoraTokenService.ts";
+} from "../_shared/agoraTokenBuilder.ts";
 
 console.log("[agora-token] v2.3 initialized");
 
@@ -65,19 +64,21 @@ Deno.serve(async (req) => {
     if (!appId || !appCert)
       return err(500, "Missing AGORA_APP_ID or AGORA_APP_CERTIFICATE.", reqId);
 
-    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
+    const rtcRole = role.toUpperCase() === 'SUBSCRIBER' ? Role.SUBSCRIBER : Role.PUBLISHER;
+    
+    const rtcToken = await RtcTokenBuilder.buildTokenWithUid(
       appId,
       appCert,
       channel,
       uid,
-      (RtcRole as any)[role.toUpperCase()] ?? RtcRole.PUBLISHER,
+      rtcRole,
+      ttlSeconds,
       ttlSeconds,
     );
-    const rtmToken = RtmTokenBuilder.buildToken(
+    const rtmToken = await RtmTokenBuilder.buildToken(
       appId,
       appCert,
-      uid,
-      RtmRole.Rtm_User,
+      String(uid),
       ttlSeconds,
     );
 
