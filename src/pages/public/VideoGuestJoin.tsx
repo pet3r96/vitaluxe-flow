@@ -7,25 +7,23 @@ import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle, Clock, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { VideoDiagnostics } from "@/components/video/VideoDiagnostics";
-import { useVideoPreflight } from "@/hooks/useVideoPreflight";
-import { useVideoErrorLogger } from "@/hooks/useVideoErrorLogger";
 
 export default function VideoGuestJoin() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [sessionData, setSessionData] = useState<any>(null);
+  const [guestData, setGuestData] = useState<{ userId: string; sessionId: string; channelName: string } | null>(null);
   const [error, setError] = useState<{
     type: string;
     message: string;
   } | null>(null);
   const [showDeviceTest, setShowDeviceTest] = useState(false);
-  const { diagnostics, runPingTest, runHealthCheck, runJoinAttempt, clearDiagnostics } = useVideoPreflight();
-  const { logVideoError } = useVideoErrorLogger();
+  
+  const appId = import.meta.env.VITE_AGORA_APP_ID as string;
 
+  // 🧹 TODO AGORA REFACTOR: Validate guest link and extract session info
   useEffect(() => {
-    const validateAndJoin = async () => {
+    const validateGuestLink = async () => {
       if (!token) {
         setError({
           type: 'invalid',
@@ -35,69 +33,35 @@ export default function VideoGuestJoin() {
         return;
       }
 
-      clearDiagnostics();
-
       try {
-        // Step 1: Ping test
-        const pingSuccess = await runPingTest();
-        if (!pingSuccess) {
-          setError({
-            type: 'network',
-            message: 'Cannot reach backend servers. Please check your internet connection.',
-          });
-          setLoading(false);
-          return;
-        }
-
-        // Step 2: Health check
-        const { success: healthSuccess } = await runHealthCheck();
-        if (!healthSuccess) {
-          setError({
-            type: 'config',
-            message: 'Video system configuration error. Please contact your provider.',
-          });
-          setLoading(false);
-          return;
-        }
-
-        // Step 3: Validate guest link
-        const { success, data, error: joinError } = await runJoinAttempt(
+        // Validate guest link and get session details
+        const { data, error: validateError } = await supabase.functions.invoke(
           'validate-video-guest-link',
-          { token }
+          { body: { token } }
         );
 
-        if (!success || joinError) {
-          throw joinError || new Error('Failed to validate guest link');
+        if (validateError || data?.error) {
+          setError({
+            type: data?.error || 'error',
+            message: data?.message || validateError?.message || 'Failed to validate guest link',
+          });
+          setLoading(false);
+          return;
         }
 
-        if (data.error) {
-          setError({
-            type: data.error,
-            message: data.message,
-          });
-        } else {
-          setSessionData(data.sessionData);
-          setShowDeviceTest(true);
-        }
+        // Extract session info from validated data
+        const sessionId = data.sessionData?.sessionId;
+        const guestUserId = `guest_${token.substring(0, 8)}`;
+        const channelName = sessionId ? `vlx_${sessionId.replace(/-/g, '_')}` : '';
+
+        setGuestData({
+          userId: guestUserId,
+          sessionId,
+          channelName,
+        });
+        setShowDeviceTest(true);
       } catch (err: any) {
         console.error('Error validating guest link:', err);
-        
-        const errorDetails = {
-          sessionId: 'guest-link',
-          errorCode: err.code || 'GUEST_VALIDATION_ERROR',
-          errorMessage: err.message || 'Unknown error',
-          errorName: err.name || 'Error',
-          joinParams: {
-            appIdSample: 'guest',
-            channelName: 'guest',
-            uid: 'guest',
-            tokenPreview: token?.substring(0, 10) || 'none',
-            isProvider: false,
-          },
-        };
-
-        await logVideoError(errorDetails);
-
         setError({
           type: 'error',
           message: err.message || 'Failed to validate access link',
@@ -107,7 +71,7 @@ export default function VideoGuestJoin() {
       }
     };
 
-    validateAndJoin();
+    validateGuestLink();
   }, [token]);
 
   const handleLeave = () => {
@@ -158,7 +122,7 @@ export default function VideoGuestJoin() {
     );
   }
 
-  if (error || !sessionData) {
+  if (error || !guestData) {
     return (
       <div className="fixed inset-0 bg-background z-50 flex items-center justify-center p-4">
         <Card className="p-8 max-w-md w-full">
@@ -189,21 +153,9 @@ export default function VideoGuestJoin() {
               </Alert>
             )}
 
-            <div className="space-y-4 w-full">
-              {diagnostics.length > 0 && <VideoDiagnostics results={diagnostics} />}
-              
-              <div className="flex gap-2">
-                <Button onClick={async () => {
-                  clearDiagnostics();
-                  await runPingTest();
-                }} variant="outline" className="flex-1">
-                  Run Ping Test
-                </Button>
-                <Button onClick={() => navigate('/')} className="flex-1">
-                  Return Home
-                </Button>
-              </div>
-            </div>
+            <Button onClick={() => navigate('/')} className="w-full">
+              Return Home
+            </Button>
           </div>
         </Card>
       </div>
@@ -213,7 +165,7 @@ export default function VideoGuestJoin() {
   if (showDeviceTest) {
     return (
       <DeviceTestScreen
-        appId={sessionData.appId}
+        appId={appId}
         onComplete={() => setShowDeviceTest(false)}
       />
     );
@@ -229,17 +181,16 @@ export default function VideoGuestJoin() {
         </Card>
       </div>
       <AgoraVideoRoom
-        channelName={sessionData.channelName}
-        token={sessionData.token}
-        uid={sessionData.uid}
-        appId={sessionData.appId}
+        channelName={guestData.channelName}
+        token="" // 🧹 TODO AGORA REFACTOR: Hook fetches token automatically
+        uid={guestData.userId}
+        appId={appId}
         onLeave={handleLeave}
         isProvider={false}
-        sessionId={sessionData.sessionId}
-        rtmToken={sessionData.rtmToken}
-        rtmUid={sessionData.rtmUid}
+        sessionId={guestData.sessionId}
+        rtmToken="" // 🧹 TODO AGORA REFACTOR: RTM to be re-integrated
+        rtmUid=""
         userName="Guest"
-        tokenExpiry={sessionData.expiresAt}
       />
     </div>
   );
