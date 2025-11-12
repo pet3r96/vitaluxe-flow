@@ -21,6 +21,8 @@ import { VideoGuestLinkDialog } from "./VideoGuestLinkDialog";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { getProviderDisplayName } from "@/utils/providerNameUtils";
 import { createInstantMeeting } from "@/utils/createInstantMeeting";
+import { useProvidersAndStaff } from "@/hooks/useProvidersAndStaff";
+import { useMemo } from "react";
 
 interface ProviderVirtualWaitingRoomProps {
   practiceId: string;
@@ -174,7 +176,7 @@ export const ProviderVirtualWaitingRoom = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patient_accounts')
-        .select('id, first_name, last_name, email')
+        .select('id, first_name, last_name, email, primary_provider_id, provider_id')
         .eq('practice_id', practiceId)
         .order('last_name');
       
@@ -210,52 +212,29 @@ export const ProviderVirtualWaitingRoom = ({
     }
   }, [showCreateDialog, practiceId, queryClient]);
 
-  // Fetch providers and staff using unified approach
-  const { data: providers } = useQuery({
-    queryKey: ['providers-and-staff', practiceId],
-    queryFn: async () => {
-      if (!practiceId) return [];
+  // Fetch providers and staff using direct database query
+  const { data: allProviders, isLoading: providersLoading } = useProvidersAndStaff(practiceId);
 
-      console.info('[ProviderVirtualWaitingRoom] Fetching providers and staff');
-
-      // Fetch providers via edge function
-      const { data: providersResponse, error: provError } = await supabase.functions.invoke('list-providers', {
-        body: { practice_id: practiceId }
-      });
-
-      if (provError) throw provError;
-      const providersList = providersResponse?.providers || [];
-
-      // Fetch staff via edge function
-      const { data: staffResponse, error: staffError } = await supabase.functions.invoke('list-staff', {
-        body: { practice_id: practiceId }
-      });
-
-      if (staffError) throw staffError;
-      const staffList = staffResponse?.staff || [];
-
-      // Combine and add type indicator
-      const combined = [
-        ...providersList.map((p: any) => ({ ...p, type: 'provider' })),
-        ...staffList.map((s: any) => ({
-          id: s.id,
-          user_id: s.user_id,
-          profiles: s.profiles,
-          type: 'staff',
-          full_name: s.profiles?.full_name || s.profiles?.name || 'Staff Member',
-        }))
-      ];
-
-      console.info('[ProviderVirtualWaitingRoom] ✅ Providers and staff loaded:', {
-        providers: providersList.length,
-        staff: staffList.length,
-        total: combined.length
-      });
-
-      return combined;
-    },
-    enabled: showCreateDialog || showScheduleDialog || practiceId !== ''
-  });
+  // Filter providers based on selected patient
+  const filteredProviders = useMemo(() => {
+    if (!selectedPatientId || !allProviders) return allProviders || [];
+    
+    const selectedPatient = patients?.find(p => p.id === selectedPatientId);
+    if (!selectedPatient) return allProviders;
+    
+    // Filter to show only providers assigned to this patient
+    const assignedProviderIds = [
+      selectedPatient.primary_provider_id,
+      selectedPatient.provider_id
+    ].filter(Boolean);
+    
+    if (assignedProviderIds.length === 0) {
+      // No assigned providers, show all
+      return allProviders;
+    }
+    
+    return allProviders.filter(p => assignedProviderIds.includes(p.id));
+  }, [selectedPatientId, allProviders, patients]);
 
   // Helper function to check if a session is synthetic (not yet created in DB)
   const isSyntheticSession = (sessionId: string) => sessionId.startsWith('apt-');
@@ -874,18 +853,32 @@ export const ProviderVirtualWaitingRoom = ({
                     <SelectValue placeholder="Select provider" />
                   </SelectTrigger>
                   <SelectContent>
-                    {providers && providers.length > 0 ? (
-                      providers.map((provider: any) => {
+                    {!selectedPatientId ? (
+                      <SelectItem value="no-patient-selected" disabled>
+                        Please select a patient first
+                      </SelectItem>
+                    ) : filteredProviders && filteredProviders.length > 0 ? (
+                      filteredProviders.map((provider: any) => {
                         const displayName = getProviderDisplayName(provider);
                         return (
                           <SelectItem key={provider.id} value={provider.id}>
-                            {displayName}
+                            <div className="flex items-center justify-between w-full gap-2">
+                              <span>{displayName}</span>
+                              {provider.type && (
+                                <Badge 
+                                  variant={provider.type === 'provider' ? 'default' : 'secondary'}
+                                  className="ml-2 text-[10px] px-1.5 py-0"
+                                >
+                                  {provider.type === 'provider' ? 'Provider' : 'Staff'}
+                                </Badge>
+                              )}
+                            </div>
                           </SelectItem>
                         );
                       })
                     ) : (
                       <SelectItem value="no-providers-available" disabled>
-                        No providers found
+                        No providers assigned to this patient
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -930,7 +923,7 @@ export const ProviderVirtualWaitingRoom = ({
           open={showScheduleDialog}
           onOpenChange={setShowScheduleDialog}
           practiceId={practiceId}
-          providers={providers?.map(p => ({
+          providers={allProviders?.map(p => ({
             id: p.id,
             full_name: p.full_name || getProviderDisplayName(p),
             first_name: p.first_name || '',
@@ -1040,15 +1033,19 @@ export const ProviderVirtualWaitingRoom = ({
                       <SelectValue placeholder="Select provider" />
                     </SelectTrigger>
                     <SelectContent>
-                      {providers && providers.length > 0 ? (
-                        providers.map((provider: any) => {
+                      {!selectedPatientId ? (
+                        <SelectItem value="no-patient-selected" disabled>
+                          Please select a patient first
+                        </SelectItem>
+                      ) : filteredProviders && filteredProviders.length > 0 ? (
+                        filteredProviders.map((provider: any) => {
                           const displayName = getProviderDisplayName(provider);
                           return (
                             <SelectItem key={provider.id} value={provider.id}>
                               <div className="flex items-center justify-between w-full gap-2">
                                 <span>{displayName}</span>
                                 {provider.type && (
-                                  <Badge 
+                                  <Badge
                                     variant={provider.type === 'provider' ? 'default' : 'secondary'}
                                     className="ml-2 text-[10px] px-1.5 py-0"
                                   >
@@ -1352,7 +1349,7 @@ export const ProviderVirtualWaitingRoom = ({
         open={showScheduleDialog}
         onOpenChange={setShowScheduleDialog}
         practiceId={practiceId}
-        providers={providers?.map(p => ({
+        providers={allProviders?.map(p => ({
           id: p.id,
           display_name: getProviderDisplayName(p),
           full_name: getProviderDisplayName(p),
