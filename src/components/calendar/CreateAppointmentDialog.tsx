@@ -133,6 +133,30 @@ export function CreateAppointmentDialog({
     enabled: open,
   });
 
+  // Watch visitType to conditionally fetch rooms
+  const visitType = watch("visitType");
+
+  // Fetch rooms dynamically when visit type is in-person
+  const { data: fetchedRooms, isLoading: roomsLoading } = useQuery({
+    queryKey: ['practice-rooms', practiceId, visitType],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('practice_rooms')
+        .select('*')
+        .eq('practice_id', practiceId)
+        .eq('active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && visitType === 'in_person',
+  });
+
+  // Determine which rooms to display
+  const displayRooms = visitType === 'in_person' 
+    ? (fetchedRooms || rooms) 
+    : rooms;
+
   const createMutation = useMutation({
     mutationFn: async (values: any) => {
       const startDateTime = new Date(`${values.appointmentDate}T${values.startTime}`);
@@ -359,16 +383,49 @@ export function CreateAppointmentDialog({
                 )}
 
                 <div className={`space-y-2 ${isProviderAccount ? 'col-span-2' : ''}`}>
-                  <Label htmlFor="roomId">Room {watch("visitType") === 'video' && <span className="text-muted-foreground text-xs">(Not required for video)</span>}</Label>
-                  <Select value={watch("roomId")} onValueChange={(value) => setValue("roomId", value)}>
+                  <Label htmlFor="roomId">
+                    Room 
+                    {visitType === 'video' && (
+                      <span className="text-muted-foreground text-xs ml-1">
+                        (Not required for video)
+                      </span>
+                    )}
+                    {visitType === 'in_person' && !displayRooms?.length && (
+                      <span className="text-amber-500 text-xs ml-1">
+                        (No rooms configured)
+                      </span>
+                    )}
+                  </Label>
+                  <Select 
+                    value={watch("roomId")} 
+                    onValueChange={(value) => setValue("roomId", value)}
+                    disabled={roomsLoading}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select room (optional)" />
+                      <SelectValue placeholder={
+                        roomsLoading 
+                          ? "Loading rooms..." 
+                          : visitType === 'in_person' && displayRooms?.length 
+                            ? "Select room (optional)" 
+                            : "No room"
+                      } />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No room</SelectItem>
-                      {rooms.map((room) => (
+                      {displayRooms?.map((room) => (
                         <SelectItem key={room.id} value={room.id}>
-                          {room.name}
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: room.color }}
+                            />
+                            {room.name}
+                            {room.capacity && (
+                              <span className="text-xs text-muted-foreground">
+                                (Cap: {room.capacity})
+                              </span>
+                            )}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
