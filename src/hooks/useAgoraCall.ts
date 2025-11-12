@@ -26,9 +26,19 @@ export function useAgoraCall({
   // Fetch token from backend
   const fetchToken = useCallback(async () => {
     try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agora-token`,
-      {
+      // Validate environment variable
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      if (!SUPABASE_URL) {
+        throw new Error("Missing VITE_SUPABASE_URL environment variable");
+      }
+
+      const TOKEN_ENDPOINT = `${SUPABASE_URL}/functions/v1/agora-token`;
+      
+      // Debug logging
+      console.log("[TokenFetch] Requesting token from:", TOKEN_ENDPOINT);
+      console.log("[TokenFetch] Parameters:", { channel, userId, role: 'publisher', ttl: 3600 });
+
+      const response = await fetch(TOKEN_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -37,8 +47,7 @@ export function useAgoraCall({
           role: 'publisher',
           ttl: 3600,
         }),
-      }
-    );
+      });
 
       // Defensive: capture text first so we can parse or show it
       const text = await response.text();
@@ -60,6 +69,12 @@ export function useAgoraCall({
         console.error('❌ Missing rtcToken field:', data);
         throw new Error('Missing rtcToken field in token response');
       }
+
+      // Success logging
+      console.log("✅ Token fetched successfully:", {
+        rtcTokenPrefix: data.rtcToken.substring(0, 20) + '...',
+        expiresAt: data.expiresAt
+      });
 
       return data.rtcToken;
     } catch (err: any) {
