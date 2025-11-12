@@ -79,14 +79,12 @@ const VideoConsultationRoom = () => {
   return (
     <AgoraVideoRoom
       channelName={channelName!}
-      token={rtcToken}
-      uid={uid}
-      appId={import.meta.env.VITE_AGORA_APP_ID || ""}
-      sessionId={sessionId!}
+      rtcToken={rtcToken}
       rtmToken={rtmToken}
+      uid={uid}
       rtmUid={rtmUid}
-      isProvider={true}
-      onLeave={() => window.history.back()}
+      role="publisher"
+      userType="practice"
     />
   );
 };

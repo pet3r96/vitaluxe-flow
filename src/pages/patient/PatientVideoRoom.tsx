@@ -78,14 +78,12 @@ const PatientVideoRoom = () => {
   return (
     <AgoraVideoRoom
       channelName={channelName!}
-      token={rtcToken}
-      uid={uid}
-      appId={import.meta.env.VITE_AGORA_APP_ID || ""}
-      sessionId={sessionId!}
+      rtcToken={rtcToken}
       rtmToken={rtmToken}
+      uid={uid}
       rtmUid={rtmUid}
-      isProvider={false}
-      onLeave={() => window.history.back()}
+      role="subscriber"
+      userType="patient"
     />
   );
 };

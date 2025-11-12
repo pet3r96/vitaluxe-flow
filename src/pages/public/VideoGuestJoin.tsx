@@ -13,6 +13,8 @@ export default function VideoGuestJoin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [guestData, setGuestData] = useState<{ userId: string; sessionId: string; channelName: string } | null>(null);
+  const [rtcToken, setRtcToken] = useState<string>("");
+  const [rtmToken, setRtmToken] = useState<string>("");
   const [error, setError] = useState<{
     type: string;
     message: string;
@@ -21,7 +23,7 @@ export default function VideoGuestJoin() {
   
   const appId = import.meta.env.VITE_AGORA_APP_ID as string;
 
-  // 🧹 TODO AGORA REFACTOR: Validate guest link and extract session info
+  // Validate guest link and fetch Agora tokens
   useEffect(() => {
     const validateGuestLink = async () => {
       if (!token) {
@@ -59,6 +61,28 @@ export default function VideoGuestJoin() {
           sessionId,
           channelName,
         });
+
+        // Fetch Agora tokens
+        const { data: tokenData, error: tokenError } = await supabase.functions.invoke('agora-token', {
+          body: {
+            channel: channelName,
+            role: "subscriber",
+            ttl: 3600,
+          }
+        });
+
+        if (tokenError || !tokenData) {
+          console.error("[GuestJoin] Token error:", tokenError);
+          setError({
+            type: 'error',
+            message: 'Failed to generate video tokens',
+          });
+          setLoading(false);
+          return;
+        }
+
+        setRtcToken(tokenData.rtcToken);
+        setRtmToken(tokenData.rtmToken);
         setShowDeviceTest(true);
       } catch (err: any) {
         console.error('Error validating guest link:', err);
@@ -182,15 +206,12 @@ export default function VideoGuestJoin() {
       </div>
       <AgoraVideoRoom
         channelName={guestData.channelName}
-        token="" // 🧹 TODO AGORA REFACTOR: Hook fetches token automatically
+        rtcToken={rtcToken}
+        rtmToken={rtmToken}
         uid={guestData.userId}
-        appId={appId}
-        onLeave={handleLeave}
-        isProvider={false}
-        sessionId={guestData.sessionId}
-        rtmToken="" // 🧹 TODO AGORA REFACTOR: RTM to be re-integrated
-        rtmUid=""
-        userName="Guest"
+        rtmUid={guestData.userId}
+        role="subscriber"
+        userType="guest"
       />
     </div>
   );
