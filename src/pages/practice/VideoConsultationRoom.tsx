@@ -1,121 +1,99 @@
+import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
-import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
-import { useToast } from "@/hooks/use-toast";
-import { Card } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-export default function VideoConsultationRoom() {
-  const { sessionId } = useParams<{ sessionId: string }>();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+const VideoConsultationRoom = () => {
+  const { sessionId } = useParams();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [showDeviceTest, setShowDeviceTest] = useState(true);
+  const [rtcToken, setRtcToken] = useState<string | null>(null);
+  const [rtmToken, setRtmToken] = useState<string | null>(null);
+  const [uid, setUid] = useState<string | null>(null);
+  const [rtmUid, setRtmUid] = useState<string | null>(null);
 
-  const appId = import.meta.env.VITE_AGORA_APP_ID as string;
+  /** Safely compute channel name */
+  const channelName = sessionId?.trim() ? `vlx_${sessionId.replace(/-/g, "_")}` : null;
 
-  /** FIX: Only compute channelName after sessionId exists */
-  const channelName = sessionId?.trim() 
-    ? `vlx_${sessionId.replace(/-/g, "_")}` 
-    : null;
-
-  console.log('[VideoConsultationRoom] Channel computed:', {
+  console.log("[PracticeVideoRoom] Channel:", {
     raw: sessionId,
-    channelName,
-    isValid: !!channelName
+    formatted: channelName,
   });
 
   useEffect(() => {
-    const initialize = async () => {
-      if (!sessionId) {
-        setLoading(false);
-        toast({
-          title: "Error",
-          description: "Session ID is required",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!channelName || !user) {
+      console.error("[PracticeVideoRoom] Missing channel or user.");
+      return;
+    }
 
+    let isMounted = true;
+
+    const fetchToken = async () => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        setLoading(true);
+        console.log("[PracticeVideoRoom] Fetching Agora tokens...");
 
-        if (!user) {
-          toast({
-            title: "Authentication Required",
-            description: "Please log in to join the session",
-            variant: "destructive",
-          });
-          navigate("/auth");
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agora-token`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${user.access_token}`,
+          },
+          body: JSON.stringify({
+            channel: channelName,
+            role: "publisher",
+            ttl: 3600,
+          }),
+        });
+
+        const data = await res.json();
+        console.log("[PracticeVideoRoom] Token Response:", data);
+
+        if (!isMounted) return;
+
+        if (!data.ok) {
+          console.error("[PracticeVideoRoom] Token error:", data.error);
           return;
         }
 
-        setUserId(user.id);
-      } catch (err: any) {
-        console.error("Error initializing session:", err);
-        toast({
-          title: "Connection Error",
-          description: err.message,
-          variant: "destructive",
-        });
+        setRtcToken(data.rtcToken);
+        setRtmToken(data.rtmToken);
+        setUid(data.uid);
+        setRtmUid(data.rtmUid);
+      } catch (err) {
+        console.error("[PracticeVideoRoom] Fetch token failed:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
-    initialize();
-  }, [sessionId, navigate, toast]);
+    fetchToken();
 
-  const handleLeave = async () => {
-    if (sessionId) {
-      try {
-        await supabase.functions.invoke("end-video-session", {
-          body: { sessionId },
-        });
-      } catch (err) {
-        console.error("Error ending session:", err);
-      }
-    }
+    return () => {
+      isMounted = false;
+    };
+  }, [channelName, user]);
 
-    navigate("/practice-calendar");
-  };
-
-  /** FIX: Don’t render AgoraVideoRoom until everything is ready */
-  if (loading || !userId || !channelName) {
+  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid) {
     return (
-      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
-        <Card className="p-8">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Preparing video session...</p>
-          </div>
-        </Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading secure video room…</div>
       </div>
     );
   }
 
-  if (showDeviceTest) {
-    return <DeviceTestScreen appId={appId} onComplete={() => setShowDeviceTest(false)} />;
-  }
-
   return (
     <AgoraVideoRoom
-      channelName={channelName}
-      token=""
-      uid={userId}
-      appId={appId}
-      onLeave={handleLeave}
-      isProvider={true}
-      sessionId={sessionId!}
-      rtmToken=""
-      rtmUid=""
-      userName="Provider"
+      channelName={channelName!}
+      rtcToken={rtcToken}
+      rtmToken={rtmToken}
+      uid={uid}
+      rtmUid={rtmUid}
+      role="publisher"
+      userType="practice"
     />
   );
-}
+};
+
+export default VideoConsultationRoom;
