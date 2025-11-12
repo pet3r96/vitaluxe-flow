@@ -1,163 +1,98 @@
+import { useParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
-import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
-import { useToast } from "@/hooks/use-toast";
-import { Card } from "@/components/ui/card";
-import { Loader2, Video } from "lucide-react";
 
-export default function PatientVideoRoom() {
-  const { sessionId } = useParams<{ sessionId: string }>();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+const PatientVideoRoom = () => {
+  const { sessionId } = useParams();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [waitingForProvider, setWaitingForProvider] = useState(false);
-  const [showDeviceTest, setShowDeviceTest] = useState(false);
+  const [rtcToken, setRtcToken] = useState<string | null>(null);
+  const [rtmToken, setRtmToken] = useState<string | null>(null);
+  const [uid, setUid] = useState<string | null>(null);
+  const [rtmUid, setRtmUid] = useState<string | null>(null);
 
-  const appId = import.meta.env.VITE_AGORA_APP_ID as string;
+  /** Safe channel formatting */
+  const channelName = sessionId?.trim() ? `vlx_${sessionId.replace(/-/g, "_")}` : null;
 
-  /** FIX: compute channel only after sessionId exists */
-  const channelName = sessionId?.trim() 
-    ? `vlx_${sessionId.replace(/-/g, "_")}` 
-    : null;
-
-  console.log('[PatientVideoRoom] Channel computed:', {
+  console.log("[PatientVideoRoom] Channel:", {
     raw: sessionId,
-    channelName,
-    isValid: !!channelName
+    formatted: channelName,
   });
 
   useEffect(() => {
-    const initialize = async () => {
-      if (!sessionId) {
-        setLoading(false);
-        toast({
-          title: "Error",
-          description: "Session ID is required",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!user || !channelName) {
+      console.error("[PatientVideoRoom] Missing user or channel.");
+      return;
+    }
 
+    let isMounted = true;
+
+    const fetchToken = async () => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          toast({
-            title: "Authentication Required",
-            description: "Please log in to join the session",
-            variant: "destructive",
-          });
-          navigate("/auth");
+        setLoading(true);
+
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agora-token`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${user.access_token}`,
+          },
+          body: JSON.stringify({
+            channel: channelName,
+            role: "subscriber",
+            ttl: 3600,
+          }),
+        });
+
+        const data = await res.json();
+        console.log("[PatientVideoRoom] Token Response:", data);
+
+        if (!isMounted) return;
+
+        if (!data.ok) {
+          console.error("[PatientVideoRoom] Token error:", data.error);
           return;
         }
 
-        setUserId(user.id);
-
-        const { data: session } = await supabase.from("video_sessions").select("status").eq("id", sessionId).single();
-
-        if (session?.status === "waiting") {
-          setWaitingForProvider(true);
-        } else {
-          setShowDeviceTest(true);
-        }
-      } catch (err: any) {
-        console.error("Error initializing session:", err);
-        toast({
-          title: "Connection Error",
-          description: err.message,
-          variant: "destructive",
-        });
+        setRtcToken(data.rtcToken);
+        setRtmToken(data.rtmToken);
+        setUid(data.uid);
+        setRtmUid(data.rtmUid);
+      } catch (err) {
+        console.error("[PatientVideoRoom] Fetch token failed:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
-    initialize();
-  }, [sessionId, navigate, toast]);
-
-  useEffect(() => {
-    if (!sessionId) return;
-
-    const channel = supabase
-      .channel(`video_session_${sessionId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "video_sessions",
-          filter: `id=eq.${sessionId}`,
-        },
-        (payload) => {
-          if (payload.new.status === "active") {
-            setWaitingForProvider(false);
-            setShowDeviceTest(true);
-          }
-        },
-      )
-      .subscribe();
+    fetchToken();
 
     return () => {
-      supabase.removeChannel(channel).catch(console.error);
+      isMounted = false;
     };
-  }, [sessionId]);
+  }, [channelName, user]);
 
-  const handleLeave = () => {
-    navigate("/appointments");
-  };
-
-  /** FIX: ensure everything is ready */
-  if (loading || !userId || !channelName) {
+  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid) {
     return (
-      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
-        <Card className="p-8">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Preparing video session...</p>
-          </div>
-        </Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Connecting to your secure visit…</div>
       </div>
     );
-  }
-
-  if (waitingForProvider) {
-    return (
-      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
-        <Card className="p-8 max-w-md">
-          <div className="text-center space-y-4">
-            <Video className="h-16 w-16 mx-auto text-primary animate-pulse" />
-            <h2 className="text-xl font-semibold">Waiting for Provider</h2>
-            <p className="text-muted-foreground">Your provider will join the session shortly.</p>
-            <button onClick={handleLeave} className="btn btn-outline w-full">
-              Leave Session
-            </button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  if (showDeviceTest) {
-    return <DeviceTestScreen appId={appId} onComplete={() => setShowDeviceTest(false)} />;
   }
 
   return (
     <AgoraVideoRoom
-      channelName={channelName}
-      token=""
-      uid={userId}
-      appId={appId}
-      onLeave={handleLeave}
-      isProvider={false}
-      sessionId={sessionId!}
-      rtmToken=""
-      rtmUid=""
-      userName="Patient"
+      channelName={channelName!}
+      rtcToken={rtcToken}
+      rtmToken={rtmToken}
+      uid={uid}
+      rtmUid={rtmUid}
+      role="subscriber"
+      userType="patient"
     />
   );
-}
+};
+
+export default PatientVideoRoom;
