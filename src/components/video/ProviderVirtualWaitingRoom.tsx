@@ -735,11 +735,11 @@ export const ProviderVirtualWaitingRoom = ({
                 Virtual Waiting Room
               </CardTitle>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 relative z-10">
                 <Button 
                   onClick={() => setShowScheduleDialog(true)}
                   variant="secondary"
-                  className="gap-2 w-full"
+                  className="gap-2 w-full cursor-pointer"
                 >
                   <Calendar className="h-4 w-4" />
                   Schedule Video Appointment
@@ -747,7 +747,7 @@ export const ProviderVirtualWaitingRoom = ({
                 
                 <Button 
                   onClick={() => setShowCreateDialog(true)}
-                  className="gap-2 w-full"
+                  className="gap-2 w-full cursor-pointer"
                 >
                   <Plus className="h-4 w-4" />
                   Create Session with Patient
