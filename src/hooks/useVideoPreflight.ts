@@ -27,6 +27,8 @@ export const useVideoPreflight = () => {
     });
 
     try {
+      console.log('🔍 [Preflight] Starting edge-ping test...');
+      
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
 
@@ -36,9 +38,21 @@ export const useVideoPreflight = () => {
 
       clearTimeout(timeout);
 
-      if (error) throw error;
+      console.log('📥 [Preflight] edge-ping response:', { data, error });
+
+      if (error) {
+        console.error('❌ [Preflight] edge-ping error:', {
+          message: error.message,
+          name: error.name,
+          context: error.context,
+          status: error.status,
+          fullError: error
+        });
+        throw error;
+      }
 
       if (data?.ok) {
+        console.log('✅ [Preflight] edge-ping success:', data);
         addDiagnostic({
           name: 'Backend Ping',
           status: 'success',
@@ -50,13 +64,21 @@ export const useVideoPreflight = () => {
 
       throw new Error('Ping returned invalid response');
     } catch (err: any) {
+      console.error('❌ [Preflight] edge-ping catch block:', err);
+      
       addDiagnostic({
         name: 'Backend Ping',
         status: 'error',
         message: err.name === 'AbortError' 
           ? 'Backend timeout (>10s)' 
           : `Backend unreachable: ${err.message}`,
-        details: { error: err.message, name: err.name }
+        details: { 
+          error: err.message, 
+          name: err.name,
+          status: err.status,
+          context: err.context,
+          fullError: JSON.stringify(err, null, 2)
+        }
       });
       return false;
     }
