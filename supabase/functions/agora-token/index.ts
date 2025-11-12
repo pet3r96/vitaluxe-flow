@@ -1,11 +1,11 @@
-// ✅ Agora Token Endpoint v2.3 — safe /health handler + clean JSON parsing
+// ✅ Agora Token Endpoint v2.4 — hardened JSON parsing + defensive token generation
 import { corsHeaders } from "../_shared/cors.ts";
 import { Role, RtcTokenBuilder, RtmTokenBuilder } from "../_shared/agoraTokenBuilder.ts";
 
-console.log("[agora-token] v2.3 initialized");
+console.log("[agora-token] v2.4 initialized");
 
-// v2.3 trigger redeploy - added health check + debug logging
-console.log("[agora-token] 🌀 Auto-deploy trigger: v2.3");
+// v2.4 trigger redeploy - hardened JSON parsing, POST-only, defensive token generation
+console.log("[agora-token] 🌀 Auto-deploy trigger: v2.4");
 
 Deno.serve(async (req) => {
   const reqId = crypto.randomUUID();
@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         ok: true,
         status: "healthy",
-        version: "2.3",
+        version: "2.4",
         timestamp: new Date().toISOString(),
       }),
       {
@@ -32,14 +32,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 🔒 Parse input safely (POST JSON or GET params)
+    // 🔒 Parse POST JSON body only
     let body: any = {};
-    const contentType = req.headers.get("content-type") || "";
-    if (req.method === "POST" && contentType.toLowerCase().includes("application/json")) {
-      const raw = await req.text();
-      body = raw ? JSON.parse(raw) : {};
-    } else {
-      body = Object.fromEntries(new URL(req.url).searchParams.entries());
+    try {
+      if (req.method === "POST") {
+        body = await req.json();
+      } else {
+        return err(405, "Method not allowed. Use POST with JSON body.", reqId);
+      }
+    } catch (jsonError) {
+      return err(400, "Invalid JSON in request body.", reqId);
     }
 
     const { channel, uid, role = "publisher", ttl, expireSeconds } = body;
@@ -58,16 +60,25 @@ Deno.serve(async (req) => {
 
     const rtcRole = role.toUpperCase() === "SUBSCRIBER" ? Role.SUBSCRIBER : Role.PUBLISHER;
 
-    const rtcToken = await RtcTokenBuilder.buildTokenWithUid(
-      appId,
-      appCert,
-      channel,
-      uid,
-      rtcRole,
-      ttlSeconds,
-      ttlSeconds,
-    );
-    const rtmToken = await RtmTokenBuilder.buildToken(appId, appCert, String(uid), ttlSeconds);
+    // 🔑 Generate tokens with defensive error handling
+    let rtcToken: string;
+    let rtmToken: string;
+
+    try {
+      rtcToken = await RtcTokenBuilder.buildTokenWithUid(
+        appId,
+        appCert,
+        channel,
+        uid,
+        rtcRole,
+        ttlSeconds,
+        ttlSeconds,
+      );
+      rtmToken = await RtmTokenBuilder.buildToken(appId, appCert, String(uid), ttlSeconds);
+    } catch (tokenError) {
+      console.error("[agora-token] Token generation failed:", tokenError);
+      return err(500, `Token generation failed: ${tokenError.message}`, reqId);
+    }
 
     return new Response(
       JSON.stringify({
