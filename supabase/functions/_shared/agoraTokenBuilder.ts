@@ -209,13 +209,14 @@ class AccessToken2 {
   }
 
   async __signing(): Promise<string> {
+    // HMAC chaining: H(appCert, issueTs) -> signing; then H(signing, salt)
     let signing = await encodeHMac(
-      new ByteBuf().putUint32(this.issueTs).pack(),
-      this.appCertificate
+      this.appCertificate,
+      new ByteBuf().putUint32(this.issueTs).pack()
     );
     signing = await encodeHMac(
-      new ByteBuf().putUint32(this.salt).pack(),
-      signing
+      signing,
+      new ByteBuf().putUint32(this.salt).pack()
     );
     return signing;
   }

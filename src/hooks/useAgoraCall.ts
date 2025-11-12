@@ -25,14 +25,14 @@ export function useAgoraCall({
 
   // Fetch token from backend
   const fetchToken = useCallback(async () => {
-    const response = await fetch('/functions/v1/agora-token', {
+    const response = await fetch('/functions/v1/generate-agora-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         channel,
         uid: userId,
         role: 'publisher',
-        ttl: 3600
+        expireSeconds: 3600
       })
     });
 
