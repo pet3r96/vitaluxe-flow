@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Video, User, Clock, Circle, Plus, Loader2, Check, Calendar, Link2, X, Zap } from "lucide-react";
+import { Video, User, Clock, Circle, Plus, Loader2, Check, Calendar, Link2, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, isToday, differenceInMinutes } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -52,7 +52,6 @@ export const ProviderVirtualWaitingRoom = ({
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [appointmentToComplete, setAppointmentToComplete] = useState<string | null>(null);
   const [preparingSession, setPreparingSession] = useState<string | null>(null);
-  const [creatingInstantMeeting, setCreatingInstantMeeting] = useState(false);
 
   // Helper function to display patient names consistently
   const getPatientDisplay = (p: { first_name?: string; last_name?: string; email?: string; id: string }) => {
@@ -617,44 +616,6 @@ export const ProviderVirtualWaitingRoom = ({
     }
   };
 
-  const handleQuickStartMeeting = async () => {
-    setCreatingInstantMeeting(true);
-    
-    try {
-      // Get current user ID for provider
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('Not authenticated');
-      }
-
-      console.log('[ProviderVirtualWaitingRoom] Creating instant meeting for provider:', user.id);
-      
-      const meeting = await createInstantMeeting(user.id);
-      
-      console.log('[ProviderVirtualWaitingRoom] ✅ Instant meeting created:', {
-        channelId: meeting.channelId,
-        joinUrlProvider: meeting.joinUrlProvider,
-        joinUrlPatient: meeting.joinUrlPatient
-      });
-
-      toast({
-        title: "Meeting Ready",
-        description: "Instant video meeting created. Redirecting..."
-      });
-
-      // Redirect provider to video room
-      navigate(`/practice/video/${meeting.channelId}`);
-    } catch (error: any) {
-      console.error('[ProviderVirtualWaitingRoom] Failed to create instant meeting:', error);
-      toast({
-        title: "Failed to Create Meeting",
-        description: error.message || "Could not create instant meeting",
-        variant: "destructive"
-      });
-    } finally {
-      setCreatingInstantMeeting(false);
-    }
-  };
 
   const handleCreateInstantSession = async () => {
     if (!selectedPatientId || !selectedProviderId) {
@@ -950,36 +911,9 @@ export const ProviderVirtualWaitingRoom = ({
           </CardTitle>
 
               <div className="flex flex-col gap-2">
-                <Button 
-                  onClick={handleQuickStartMeeting}
-                  disabled={creatingInstantMeeting}
-                  className="gap-2 w-full"
-                >
-                  {creatingInstantMeeting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Starting...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="h-4 w-4" />
-                      Quick Start Meeting
-                    </>
-                  )}
-                </Button>
-
-                <Button 
-                  onClick={() => setShowScheduleDialog(true)}
-                  variant="secondary"
-                  className="gap-2 w-full"
-                >
-                  <Calendar className="h-4 w-4" />
-                  Schedule Video Appointment
-                </Button>
-                
                 <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="gap-2 w-full">
+                    <Button className="gap-2 w-full">
                       <Plus className="h-4 w-4" />
                       Create Session with Patient
                     </Button>
@@ -1097,6 +1031,15 @@ export const ProviderVirtualWaitingRoom = ({
               </div>
             </DialogContent>
           </Dialog>
+
+                <Button 
+                  onClick={() => setShowScheduleDialog(true)}
+                  variant="secondary"
+                  className="gap-2 w-full"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Schedule Video Appointment
+                </Button>
           </div>
         </div>
       </CardHeader>
@@ -1175,7 +1118,7 @@ export const ProviderVirtualWaitingRoom = ({
                           {preparingSession === session.id ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : (
-                            <Zap className="h-3 w-3" />
+                            <Video className="h-3 w-3" />
                           )}
                           Prepare Now
                         </Button>
