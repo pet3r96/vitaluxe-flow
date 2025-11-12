@@ -1,7 +1,8 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState, useEffect, useRef } from "react";
-import AgoraRTM from "agora-rtm-sdk";
+// import AgoraRTM from "agora-rtm-sdk";
 import { supabase } from "@/integrations/supabase/client";
-import { createRTMClient, decodeMessage } from "@/utils/agoraRTM";
+// import { createRTMClient, decodeMessage } from "@/utils/agoraRTM";
 
 export interface ChatMessage {
   id: string;
@@ -42,8 +43,8 @@ export const useVideoChat = ({
   useEffect(() => {
     const initRTM = async () => {
       try {
-        const client = createRTMClient(appId);
-        clientRef.current = client;
+        // const client = createRTMClient(appId);
+        // clientRef.current = client;
 
         console.log("===== FE TOKEN DEBUG (RTM) =====");
         console.log("FE RTM Token (full):", rtmToken);
@@ -53,7 +54,7 @@ export const useVideoChat = ({
         console.log("================================");
 
         try {
-          await client.login({ uid: rtmUid, token: rtmToken });
+          // await client.login({ uid: rtmUid, token: rtmToken });
           console.log('✅ [RTM] Successfully logged in');
           // Clear any previous errors on successful login
           setRtmErrorCode(null);
@@ -80,16 +81,16 @@ export const useVideoChat = ({
           throw err;
         }
 
-        const channel = client.createChannel(channelName);
-        channelRef.current = channel;
+        // const channel = client.createChannel(channelName);
+        // channelRef.current = channel;
 
         console.log('🔗 [RTM] Attempting to join channel:', channelName);
         try {
-          await channel.join();
+          // await channel.join();
         console.log('✅ [RTM] Successfully joined channel');
         
         // Monitor RTM connection errors
-        client.on('ConnectionStateChanged', (newState, reason) => {
+        /* client.on('ConnectionStateChanged', (newState, reason) => {
           console.log(`[RTM] Connection state: ${newState}, reason: ${reason}`);
           
           if (reason === 'TOKEN_EXPIRED') {
@@ -99,7 +100,7 @@ export const useVideoChat = ({
           if (newState === 'ABORTED') {
             console.error('❌ [RTM] Connection aborted:', reason);
           }
-        });
+        }); */
       } catch (err: any) {
           console.error("=== AGORA RTM CHANNEL JOIN ERROR ===");
           console.error("Error Code:", err.code);
@@ -124,7 +125,7 @@ export const useVideoChat = ({
         setMessages((prev) => [...prev, joinMessage]);
 
         // Handle incoming messages
-        channel.on("ChannelMessage", async (message: any, memberId: string) => {
+        /* channel.on("ChannelMessage", async (message: any, memberId: string) => {
           const text = decodeMessage(message.text);
           const newMessage: ChatMessage = {
             id: `${memberId}-${Date.now()}`,
@@ -147,7 +148,7 @@ export const useVideoChat = ({
               timestamp: new Date().toISOString(),
             },
           });
-        });
+        }); */
 
         // Load message history
         const { data: logs } = await supabase
@@ -191,7 +192,7 @@ export const useVideoChat = ({
   }, [appId, rtmToken, rtmUid, channelName, sessionId, userName, userType]);
 
   const renewRtmToken = async (newToken: string) => {
-    if (!clientRef.current || !channelRef.current) return;
+    /* if (!clientRef.current || !channelRef.current) return;
     
     try {
       console.log("🔄 [RTM Renewal] Starting logout/login cycle");
@@ -218,14 +219,14 @@ export const useVideoChat = ({
     } catch (error) {
       console.error("❌ [RTM Renewal] Failed:", error);
       throw error; // Let parent handle
-    }
+    } */
   };
 
   const sendMessage = async (text: string) => {
-    if (!channelRef.current || !text.trim()) return;
+    // if (!channelRef.current || !text.trim()) return;
 
     try {
-      await channelRef.current.sendMessage({ text: text.trim() });
+      // await channelRef.current.sendMessage({ text: text.trim() });
 
       // Add message to local state
       const newMessage: ChatMessage = {

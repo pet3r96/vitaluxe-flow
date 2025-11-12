@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 /**
  * Agora Token Builder - Official Port for Deno
  * Ported from: https://github.com/AgoraIO/Tools/tree/master/DynamicKey/AgoraDynamicKey/nodejs

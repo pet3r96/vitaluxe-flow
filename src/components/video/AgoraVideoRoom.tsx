@@ -1,10 +1,11 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState, useEffect, useRef } from "react";
-import AgoraRTC, {
+/* import AgoraRTC, {
   IAgoraRTCClient,
   ICameraVideoTrack,
   IMicrophoneAudioTrack,
   ILocalVideoTrack,
-} from "agora-rtc-sdk-ng";
+} from "agora-rtc-sdk-ng"; */
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -58,14 +59,14 @@ export const AgoraVideoRoom = ({
   tokenExpiry,
 }: AgoraVideoRoomProps) => {
   const { toast } = useToast();
-  const [client, setClient] = useState<IAgoraRTCClient | null>(null);
-  const [localVideoTrack, setLocalVideoTrack] = useState<ICameraVideoTrack | null>(null);
-  const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
+  const [client, setClient] = useState<any | null>(null); // IAgoraRTCClient | null
+  const [localVideoTrack, setLocalVideoTrack] = useState<any | null>(null); // ICameraVideoTrack | null
+  const [localAudioTrack, setLocalAudioTrack] = useState<any | null>(null); // IMicrophoneAudioTrack | null
   const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(0);
-  const [screenTrack, setScreenTrack] = useState<ILocalVideoTrack | null>(null);
+  const [screenTrack, setScreenTrack] = useState<any | null>(null); // ILocalVideoTrack | null
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState<'not_started' | 'starting' | 'active' | 'stopping' | 'stopped'>('not_started');
@@ -82,10 +83,10 @@ export const AgoraVideoRoom = ({
   const { logVideoError } = useVideoErrorLogger();
   const { validateConfig } = useValidateAgoraConfig();
   
-  const clientRef = useRef<IAgoraRTCClient | null>(null);
-  const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null);
-  const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
-  const screenTrackRef = useRef<ILocalVideoTrack | null>(null);
+  const clientRef = useRef<any | null>(null); // IAgoraRTCClient | null
+  const localVideoTrackRef = useRef<any | null>(null); // ICameraVideoTrack | null
+  const localAudioTrackRef = useRef<any | null>(null); // IMicrophoneAudioTrack | null
+  const screenTrackRef = useRef<any | null>(null); // ILocalVideoTrack | null
   const isComponentMountedRef = useRef(true);
 
   useEffect(() => {
@@ -204,7 +205,7 @@ export const AgoraVideoRoom = ({
 
       try {
         // Set detailed logging for diagnostics
-        AgoraRTC.setLogLevel(4);
+        // AgoraRTC.setLogLevel(4);
         
         console.log("=== FE AGORA DEBUG ===");
         console.log("AppID:", appId);
@@ -214,12 +215,12 @@ export const AgoraVideoRoom = ({
         console.log("Skip RTM:", skipRTM);
         console.log("=======================");
         
-        const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        /* const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         clientRef.current = agoraClient;
-        setClient(agoraClient);
+        setClient(agoraClient); */
 
         // Listen for token about to expire (30 seconds warning)
-        agoraClient.on("token-privilege-will-expire", async () => {
+        /* agoraClient.on("token-privilege-will-expire", async () => {
           console.log("⚠️ [RTC] Token expiring in 30 seconds - triggering immediate refresh");
           try {
             await manualRefresh();
@@ -244,9 +245,9 @@ export const AgoraVideoRoom = ({
             // Force disconnect and show error
             onLeave();
           }
-        });
+        }); */
 
-        agoraClient.on("user-published", async (user, mediaType) => {
+        /* agoraClient.on("user-published", async (user, mediaType) => {
           await agoraClient.subscribe(user, mediaType);
 
           if (mediaType === "video") {
@@ -272,7 +273,7 @@ export const AgoraVideoRoom = ({
 
         agoraClient.on("user-left", (user) => {
           setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
-        });
+        }); */
 
         // Join the channel with the token from backend
         // CRITICAL: Ensure UID is a string to match token generation
@@ -318,7 +319,7 @@ export const AgoraVideoRoom = ({
         console.log('✅ Validated channel name:', channelName);
         
         try {
-          await agoraClient.join(appId, channelName, token, joinUid);
+          // await agoraClient.join(appId, channelName, token, joinUid);
           console.log('✅ [AgoraVideoRoom] Successfully joined RTC channel');
           // Clear any previous errors on successful join
           setRtcErrorCode(null);
@@ -346,10 +347,10 @@ export const AgoraVideoRoom = ({
           throw err;
         }
 
-        const prefs = JSON.parse(localStorage.getItem("video.devicePrefs") || "{}");
+        /* const prefs = JSON.parse(localStorage.getItem("video.devicePrefs") || "{}");
         console.log("📱 Using device preferences:", prefs);
 
-        let audioTrack: IMicrophoneAudioTrack;
+        let audioTrack: any; // IMicrophoneAudioTrack
         try {
           audioTrack = await AgoraRTC.createMicrophoneAudioTrack(
             prefs?.micId ? { microphoneId: prefs.micId } : undefined
@@ -360,7 +361,7 @@ export const AgoraVideoRoom = ({
           audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
         }
 
-        let videoTrack: ICameraVideoTrack;
+        let videoTrack: any; // ICameraVideoTrack
         try {
           videoTrack = await AgoraRTC.createCameraVideoTrack(
             prefs?.cameraId ? { cameraId: prefs.cameraId } : undefined
@@ -388,7 +389,7 @@ export const AgoraVideoRoom = ({
             bitrateMin: 200,
             bitrateMax: 500,
           });
-        }
+        } */
 
         toast({
           title: "Connected",
@@ -451,12 +452,12 @@ export const AgoraVideoRoom = ({
             console.log("================================");
             
             console.log("[AgoraVideoRoom] Retrying with fresh token...");
-            await clientRef.current.join(
+            /* await clientRef.current.join(
               refreshData.appId,
               refreshData.channelName,
               refreshData.token,
               String(refreshData.uid)
-            );
+            ); */
             
             toast({
               title: "Reconnected",
@@ -640,7 +641,7 @@ export const AgoraVideoRoom = ({
 
   const startScreenShare = async () => {
     try {
-      if (!client) {
+      /* if (!client) {
         toast({
           title: "Not Connected",
           description: "Client not initialized",
@@ -655,7 +656,7 @@ export const AgoraVideoRoom = ({
           optimizationMode: "detail",
         },
         "auto"
-      );
+      ); */
 
       // Only unpublish if video track exists
       if (localVideoTrack) {

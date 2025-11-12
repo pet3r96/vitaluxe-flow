@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+// import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { Loader2 } from "lucide-react";
 
 export default function TokenVerificationTest() {

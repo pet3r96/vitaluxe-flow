@@ -1,5 +1,6 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState, useEffect } from "react";
-import { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+// import { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface NetworkQualityStats {
@@ -8,7 +9,7 @@ export interface NetworkQualityStats {
 }
 
 export const useNetworkQuality = (
-  client: IAgoraRTCClient | null,
+  client: any | null, // IAgoraRTCClient | null,
   sessionId: string | null
 ) => {
   const [quality, setQuality] = useState<NetworkQualityStats>({
@@ -29,7 +30,7 @@ export const useNetworkQuality = (
       });
     };
 
-    client.on("network-quality", handleNetworkQuality);
+    // client.on("network-quality", handleNetworkQuality);
 
     // Log quality metrics every 30 seconds
     const logInterval = setInterval(async () => {
@@ -52,7 +53,7 @@ export const useNetworkQuality = (
     }, 30000);
 
     return () => {
-      client.off("network-quality", handleNetworkQuality);
+      // client.off("network-quality", handleNetworkQuality);
       clearInterval(logInterval);
     };
   }, [client, sessionId, quality]);

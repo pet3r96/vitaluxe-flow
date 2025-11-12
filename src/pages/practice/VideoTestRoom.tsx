@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+// import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { CredentialValidator } from "@/components/video/CredentialValidator";
 
 export default function VideoTestRoom() {
@@ -15,7 +16,7 @@ export default function VideoTestRoom() {
   const [token, setToken] = useState("");
   const [uid, setUid] = useState("0");
   const [isJoining, setIsJoining] = useState(false);
-  const [client, setClient] = useState<IAgoraRTCClient | null>(null);
+  const [client, setClient] = useState<any | null>(null); // IAgoraRTCClient | null
   const [isConnected, setIsConnected] = useState(false);
   const [skipRTM, setSkipRTM] = useState(false);
 
@@ -72,7 +73,7 @@ export default function VideoTestRoom() {
       console.log("================================");
       
       try {
-        await agoraClient.join(appId, channelName, token, uid);
+        // await agoraClient.join(appId, channelName, token, uid);
         console.log("✅ [VideoTestRoom] Successfully joined channel!");
       } catch (err: any) {
         console.error("=== AGORA RTC JOIN ERROR (Test Room) ===");

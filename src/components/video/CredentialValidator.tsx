@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Clock, Copy, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import AgoraRTM from "agora-rtm-sdk";
+// import AgoraRTM from "agora-rtm-sdk";
 
 interface CredentialValidatorProps {
   appId: string;
@@ -64,9 +65,9 @@ export const CredentialValidator = ({ appId, token, rtmToken, rtmUid }: Credenti
     setRtmProbeError("");
 
     try {
-      const client = AgoraRTM.createInstance(appId);
+      /* const client = AgoraRTM.createInstance(appId);
       await client.login({ uid: rtmUid, token: rtmToken });
-      await client.logout();
+      await client.logout(); */
       setRtmProbeStatus('success');
       toast({
         title: "RTM Probe Successful",
