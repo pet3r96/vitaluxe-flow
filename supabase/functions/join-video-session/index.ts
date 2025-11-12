@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -13,9 +14,14 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    console.log('🔄 [join-video-session] Processing request...');
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    try {
+      console.log('🔄 [join-video-session] Processing request...');
+      console.warn('🚫 [join-video-session] Agora join disabled pending refactor');
+      return new Response(JSON.stringify({ error: 'Join video session temporarily disabled' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      /* const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Authenticate user
     const authHeader = req.headers.get('Authorization')!;
@@ -260,20 +266,20 @@ Deno.serve(async (req) => {
     console.log('  NOTE: Frontend should log IDENTICAL values when client.join() is called');
     console.log('=============================================');
 
-    return new Response(JSON.stringify({
-      success: true,
-      session: updatedSession,
-      token: tokenData.token,
-      channelName: tokenData.channelName,
-      uid: tokenData.uid,
-      appId: tokenData.appId,
-      rtmToken: tokenData.rtmToken,
-      rtmUid: tokenData.rtmUid
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
-  } catch (error) {
+      return new Response(JSON.stringify({
+        success: true,
+        session: updatedSession,
+        token: tokenData.token,
+        channelName: tokenData.channelName,
+        uid: tokenData.uid,
+        appId: tokenData.appId,
+        rtmToken: tokenData.rtmToken,
+        rtmUid: tokenData.rtmUid
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      */
+    } catch (error) {
     console.error('❌ [join-video-session] Unexpected error:', error);
     return new Response(JSON.stringify({ 
       error: error.message || 'Failed to join video session',

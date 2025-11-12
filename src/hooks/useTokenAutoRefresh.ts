@@ -1,10 +1,11 @@
+// 🧹 TODO AGORA REFACTOR
 import { useEffect, useRef, useCallback, useState } from "react";
-import { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+// import { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface UseTokenAutoRefreshProps {
-  client: IAgoraRTCClient | null;
+  client: any | null;
   sessionId: string;
   channelName: string;
   initialTokenExpiry?: number; // Unix timestamp in seconds
@@ -51,7 +52,8 @@ export const useTokenAutoRefresh = ({
     setStatus(prev => ({ ...prev, isRefreshing: true }));
     
     const refreshStartTime = Date.now() / 1000;
-    console.log("🔄 Refreshing Agora tokens...");
+    console.warn("🔄 [useTokenAutoRefresh] Agora auto-refresh disabled pending refactor");
+    /*
     console.log(`📊 Token Status Before Refresh:`);
     console.log(`   Current Time: ${new Date(refreshStartTime * 1000).toISOString()}`);
     console.log(`   Token Expires: ${new Date(tokenExpiryRef.current * 1000).toISOString()}`);
@@ -128,6 +130,9 @@ export const useTokenAutoRefresh = ({
     } finally {
       isRefreshingRef.current = false;
     }
+    */
+    setStatus(prev => ({ ...prev, isRefreshing: false }));
+    isRefreshingRef.current = false;
   }, [client, sessionId, enabled, onRtmTokenRefresh, toast]);
 
   const scheduleNextRefresh = useCallback(() => {

@@ -1,5 +1,6 @@
+// 🧹 TODO AGORA REFACTOR
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { buildRtcToken, buildRtmToken, Role } from '../_shared/agoraTokenBuilder.ts';
+// import { buildRtcToken, buildRtmToken, Role } from '../_shared/agoraTokenBuilder.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
+    console.warn('🚫 [validate-video-guest-link] Agora guest link validation disabled pending refactor');
+    return new Response(
+      JSON.stringify({ error: 'Guest link validation temporarily disabled' }),
+      { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+    /* const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
@@ -234,6 +240,7 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+    */
   } catch (error) {
     console.error('Error in validate-video-guest-link:', error);
     return new Response(

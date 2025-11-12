@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Clock, Copy, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import AgoraRTM from "agora-rtm-sdk";
+// import AgoraRTM from "agora-rtm-sdk";
 
 interface CredentialValidatorProps {
   appId: string;
@@ -53,7 +54,7 @@ export const CredentialValidator = ({ appId, token, rtmToken, rtmUid }: Credenti
     }
   };
 
-  const testRTMConnection = async () => {
+    const testRTMConnection = async () => {
     if (!rtmToken || !rtmUid) {
       setRtmProbeStatus('error');
       setRtmProbeError("No RTM credentials provided");
@@ -64,14 +65,22 @@ export const CredentialValidator = ({ appId, token, rtmToken, rtmUid }: Credenti
     setRtmProbeError("");
 
     try {
-      const client = AgoraRTM.createInstance(appId);
-      await client.login({ uid: rtmUid, token: rtmToken });
-      await client.logout();
-      setRtmProbeStatus('success');
-      toast({
-        title: "RTM Probe Successful",
-        description: "RTM connection validated successfully",
-      });
+        console.warn("[CredentialValidator] Agora RTM probe disabled pending refactor", {
+          appId,
+          rtmUid,
+        });
+        /*
+        const client = AgoraRTM.createInstance(appId);
+        await client.login({ uid: rtmUid, token: rtmToken });
+        await client.logout();
+        setRtmProbeStatus('success');
+        toast({
+          title: "RTM Probe Successful",
+          description: "RTM connection validated successfully",
+        });
+        */
+        setRtmProbeStatus('error');
+        setRtmProbeError("RTM probe unavailable during refactor");
     } catch (error: any) {
       console.error("RTM probe failed:", error);
       setRtmProbeStatus('error');

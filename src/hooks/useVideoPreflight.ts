@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -84,7 +85,7 @@ export const useVideoPreflight = () => {
     }
   };
 
-  const runHealthCheck = async (): Promise<{ success: boolean; data?: any }> => {
+    const runHealthCheck = async (): Promise<{ success: boolean; data?: any }> => {
     addDiagnostic({
       name: 'Agora Health Check',
       status: 'pending',
@@ -92,26 +93,30 @@ export const useVideoPreflight = () => {
     });
 
     try {
-      const { data, error } = await supabase.functions.invoke('agora-healthcheck');
+        console.warn('[useVideoPreflight] Agora health check disabled pending refactor');
+        /*
+        const { data, error } = await supabase.functions.invoke('agora-healthcheck');
 
-      if (error || !data?.healthy) {
-        const errorMsg = data?.error || error?.message || 'Invalid credentials';
+        if (error || !data?.healthy) {
+          const errorMsg = data?.error || error?.message || 'Invalid credentials';
+          addDiagnostic({
+            name: 'Agora Health Check',
+            status: 'error',
+            message: `Configuration error: ${errorMsg}`,
+            details: data || error
+          });
+          return { success: false };
+        }
+
         addDiagnostic({
           name: 'Agora Health Check',
-          status: 'error',
-          message: `Configuration error: ${errorMsg}`,
-          details: data || error
+          status: 'success',
+          message: 'Agora credentials valid',
+          details: data
         });
+        return { success: true, data };
+        */
         return { success: false };
-      }
-
-      addDiagnostic({
-        name: 'Agora Health Check',
-        status: 'success',
-        message: 'Agora credentials valid',
-        details: data
-      });
-      return { success: true, data };
     } catch (err: any) {
       addDiagnostic({
         name: 'Agora Health Check',
@@ -123,7 +128,7 @@ export const useVideoPreflight = () => {
     }
   };
 
-  const runJoinAttempt = async (
+    const runJoinAttempt = async (
     functionName: string,
     body: any
   ): Promise<{ success: boolean; data?: any; error?: any }> => {
@@ -135,41 +140,45 @@ export const useVideoPreflight = () => {
       message: `Calling ${functionName}...`
     });
 
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
+      try {
+        console.warn('[useVideoPreflight] Join attempt disabled pending Agora refactor', { functionName, body });
+        /*
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
 
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body,
-        signal: controller.signal
-      });
-
-      clearTimeout(timeout);
-      const elapsed = Date.now() - startTime;
-
-      if (error) {
-        const isAuthError = error.message?.includes('401') || error.message?.includes('Unauthorized');
-        
-        addDiagnostic({
-          name: 'Join Session',
-          status: 'error',
-          message: isAuthError 
-            ? 'Authentication required - please log in again'
-            : `Failed: ${error.message} (${elapsed}ms)`,
-          details: { error, elapsed }
+        const { data, error } = await supabase.functions.invoke(functionName, {
+          body,
+          signal: controller.signal
         });
 
-        return { success: false, error };
-      }
+        clearTimeout(timeout);
+        const elapsed = Date.now() - startTime;
 
-      addDiagnostic({
-        name: 'Join Session',
-        status: 'success',
-        message: `Session joined successfully (${elapsed}ms)`,
-        details: { data, elapsed }
-      });
+        if (error) {
+          const isAuthError = error.message?.includes('401') || error.message?.includes('Unauthorized');
+          
+          addDiagnostic({
+            name: 'Join Session',
+            status: 'error',
+            message: isAuthError 
+              ? 'Authentication required - please log in again'
+              : `Failed: ${error.message} (${elapsed}ms)`,
+            details: { error, elapsed }
+          });
 
-      return { success: true, data };
+          return { success: false, error };
+        }
+
+        addDiagnostic({
+          name: 'Join Session',
+          status: 'success',
+          message: `Session joined successfully (${elapsed}ms)`,
+          details: { data, elapsed }
+        });
+
+        return { success: true, data };
+        */
+        return { success: false };
     } catch (err: any) {
       const elapsed = Date.now() - startTime;
       const isTimeout = err.name === 'AbortError';

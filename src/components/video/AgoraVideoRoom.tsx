@@ -1,10 +1,11 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState, useEffect, useRef } from "react";
-import AgoraRTC, {
-  IAgoraRTCClient,
-  ICameraVideoTrack,
-  IMicrophoneAudioTrack,
-  ILocalVideoTrack,
-} from "agora-rtc-sdk-ng";
+// import AgoraRTC, {
+//   IAgoraRTCClient,
+//   ICameraVideoTrack,
+//   IMicrophoneAudioTrack,
+//   ILocalVideoTrack,
+// } from "agora-rtc-sdk-ng";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -58,14 +59,14 @@ export const AgoraVideoRoom = ({
   tokenExpiry,
 }: AgoraVideoRoomProps) => {
   const { toast } = useToast();
-  const [client, setClient] = useState<IAgoraRTCClient | null>(null);
-  const [localVideoTrack, setLocalVideoTrack] = useState<ICameraVideoTrack | null>(null);
-  const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
+  const [client, setClient] = useState<any | null>(null);
+  const [localVideoTrack, setLocalVideoTrack] = useState<any | null>(null);
+  const [localAudioTrack, setLocalAudioTrack] = useState<any | null>(null);
   const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(0);
-  const [screenTrack, setScreenTrack] = useState<ILocalVideoTrack | null>(null);
+  const [screenTrack, setScreenTrack] = useState<any | null>(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState<'not_started' | 'starting' | 'active' | 'stopping' | 'stopped'>('not_started');
@@ -82,10 +83,10 @@ export const AgoraVideoRoom = ({
   const { logVideoError } = useVideoErrorLogger();
   const { validateConfig } = useValidateAgoraConfig();
   
-  const clientRef = useRef<IAgoraRTCClient | null>(null);
-  const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null);
-  const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
-  const screenTrackRef = useRef<ILocalVideoTrack | null>(null);
+  const clientRef = useRef<any | null>(null);
+  const localVideoTrackRef = useRef<any | null>(null);
+  const localAudioTrackRef = useRef<any | null>(null);
+  const screenTrackRef = useRef<any | null>(null);
   const isComponentMountedRef = useRef(true);
 
   useEffect(() => {
@@ -202,198 +203,206 @@ export const AgoraVideoRoom = ({
 
       resetSessionState();
 
-      try {
-        // Set detailed logging for diagnostics
-        AgoraRTC.setLogLevel(4);
-        
-        console.log("=== FE AGORA DEBUG ===");
-        console.log("AppID:", appId);
-        console.log("Channel:", channelName);
-        console.log("UID:", uid);
-        console.log("Token10:", token.slice(0, 10));
-        console.log("Skip RTM:", skipRTM);
-        console.log("=======================");
-        
-        const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        clientRef.current = agoraClient;
-        setClient(agoraClient);
-
-        // Listen for token about to expire (30 seconds warning)
-        agoraClient.on("token-privilege-will-expire", async () => {
-          console.log("⚠️ [RTC] Token expiring in 30 seconds - triggering immediate refresh");
-          try {
-            await manualRefresh();
-          } catch (error) {
-            console.error("❌ [RTC] Emergency token refresh failed:", error);
-          }
-        });
-
-        // Listen for token already expired (failsafe)
-        agoraClient.on("token-privilege-did-expire", async () => {
-          console.error("❌ [RTC] Token expired! Attempting recovery...");
-          toast({
-            title: "Session Expired",
-            description: "Reconnecting with fresh credentials...",
-            variant: "destructive",
+        try {
+          console.warn("[AgoraVideoRoom] Agora RTC join disabled pending refactor", {
+            appId,
+            channelName,
+            uid,
+            skipRTM,
           });
+          /*
+          // Set detailed logging for diagnostics
+          AgoraRTC.setLogLevel(4);
           
-          try {
-            await manualRefresh();
-          } catch (error) {
-            console.error("❌ [RTC] Token expired recovery failed:", error);
-            // Force disconnect and show error
-            onLeave();
-          }
-        });
+          console.log("=== FE AGORA DEBUG ===");
+          console.log("AppID:", appId);
+          console.log("Channel:", channelName);
+          console.log("UID:", uid);
+          console.log("Token10:", token.slice(0, 10));
+          console.log("Skip RTM:", skipRTM);
+          console.log("=======================");
+          
+          const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+          clientRef.current = agoraClient;
+          setClient(agoraClient);
 
-        agoraClient.on("user-published", async (user, mediaType) => {
-          await agoraClient.subscribe(user, mediaType);
-
-          if (mediaType === "video") {
-            setRemoteUsers(prev => {
-              const existing = prev.find(u => u.uid === user.uid);
-              if (existing) {
-                return prev.map(u => u.uid === user.uid ? user : u);
-              }
-              return [...prev, user];
-            });
-          }
-
-          if (mediaType === "audio") {
-            user.audioTrack?.play();
-          }
-        });
-
-        agoraClient.on("user-unpublished", (user, mediaType) => {
-          if (mediaType === "video") {
-            setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
-          }
-        });
-
-        agoraClient.on("user-left", (user) => {
-          setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
-        });
-
-        // Join the channel with the token from backend
-        // CRITICAL: Ensure UID is a string to match token generation
-        const joinUid = String(uid);
-        
-        console.log("===== FE TOKEN DEBUG =====");
-        console.log("FE RTC Token (full):", token);
-        console.log("FE RTM Token (full):", rtmToken);
-        console.log("RTC Token length:", token?.length);
-        console.log("RTM Token length:", rtmToken?.length);
-        console.log("RTC Token prefix:", token?.substring(0, 20));
-        console.log("RTM Token prefix:", rtmToken?.substring(0, 20));
-        console.log("Agora Join Params:", {
-          appId,
-          channelName,
-          uid: joinUid,
-        });
-        console.log("================================");
-        
-        // Validate Agora App ID matches between frontend and backend
-        try {
-          await validateConfig(appId);
-        } catch (validationError: any) {
-          console.error('❌ Agora config validation failed:', validationError);
-          toast({
-            title: "Configuration Error",
-            description: "Agora App ID mismatch detected. Please contact support.",
-            variant: "destructive",
+          // Listen for token about to expire (30 seconds warning)
+          agoraClient.on("token-privilege-will-expire", async () => {
+            console.log("⚠️ [RTC] Token expiring in 30 seconds - triggering immediate refresh");
+            try {
+              await manualRefresh();
+            } catch (error) {
+              console.error("❌ [RTC] Emergency token refresh failed:", error);
+            }
           });
-          throw validationError;
-        }
-        
-        // Validate channel name before join
-        if (!channelName || channelName.trim() === '') {
-          throw new Error('Invalid channel name: empty or null');
-        }
 
-        if (channelName.includes('-')) {
-          console.warn('⚠️ Channel name contains hyphens, may cause issues:', channelName);
-          console.warn('   Expected format: vlx_<uuid_with_underscores>');
-        }
+          // Listen for token already expired (failsafe)
+          agoraClient.on("token-privilege-did-expire", async () => {
+            console.error("❌ [RTC] Token expired! Attempting recovery...");
+            toast({
+              title: "Session Expired",
+              description: "Reconnecting with fresh credentials...",
+              variant: "destructive",
+            });
+            
+            try {
+              await manualRefresh();
+            } catch (error) {
+              console.error("❌ [RTC] Token expired recovery failed:", error);
+              // Force disconnect and show error
+              onLeave();
+            }
+          });
 
-        console.log('✅ Validated channel name:', channelName);
-        
-        try {
-          await agoraClient.join(appId, channelName, token, joinUid);
-          console.log('✅ [AgoraVideoRoom] Successfully joined RTC channel');
-          // Clear any previous errors on successful join
-          setRtcErrorCode(null);
-          setRtcErrorMessage(null);
-        } catch (err: any) {
-          console.error("=== AGORA RTC JOIN ERROR ===", err);
-          console.error("Error Code:", err.code);
-          console.error("Error Name:", err.name);
-          console.error("Error Message:", err.message);
-          console.error("Full Error Object:", err);
-          console.error("Error Stack:", err.stack);
-          console.error("Parameters Used:", {
+          agoraClient.on("user-published", async (user, mediaType) => {
+            await agoraClient.subscribe(user, mediaType);
+
+            if (mediaType === "video") {
+              setRemoteUsers(prev => {
+                const existing = prev.find(u => u.uid === user.uid);
+                if (existing) {
+                  return prev.map(u => u.uid === user.uid ? user : u);
+                }
+                return [...prev, user];
+              });
+            }
+
+            if (mediaType === "audio") {
+              user.audioTrack?.play();
+            }
+          });
+
+          agoraClient.on("user-unpublished", (user, mediaType) => {
+            if (mediaType === "video") {
+              setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+            }
+          });
+
+          agoraClient.on("user-left", (user) => {
+            setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+          });
+
+          // Join the channel with the token from backend
+          // CRITICAL: Ensure UID is a string to match token generation
+          const joinUid = String(uid);
+          
+          console.log("===== FE TOKEN DEBUG =====");
+          console.log("FE RTC Token (full):", token);
+          console.log("FE RTM Token (full):", rtmToken);
+          console.log("RTC Token length:", token?.length);
+          console.log("RTM Token length:", rtmToken?.length);
+          console.log("RTC Token prefix:", token?.substring(0, 20));
+          console.log("RTM Token prefix:", rtmToken?.substring(0, 20));
+          console.log("Agora Join Params:", {
             appId,
             channelName,
             uid: joinUid,
-            tokenPrefix: token.substring(0, 20),
-            tokenLength: token.length,
           });
-          console.error("============================");
+          console.log("================================");
           
-          // Capture error for debug panel
-          setRtcErrorCode(err.code || null);
-          setRtcErrorMessage(err.message || String(err));
+          // Validate Agora App ID matches between frontend and backend
+          try {
+            await validateConfig(appId);
+          } catch (validationError: any) {
+            console.error('❌ Agora config validation failed:', validationError);
+            toast({
+              title: "Configuration Error",
+              description: "Agora App ID mismatch detected. Please contact support.",
+              variant: "destructive",
+            });
+            throw validationError;
+          }
           
-          throw err;
-        }
+          // Validate channel name before join
+          if (!channelName || channelName.trim() === '') {
+            throw new Error('Invalid channel name: empty or null');
+          }
 
-        const prefs = JSON.parse(localStorage.getItem("video.devicePrefs") || "{}");
-        console.log("📱 Using device preferences:", prefs);
+          if (channelName.includes('-')) {
+            console.warn('⚠️ Channel name contains hyphens, may cause issues:', channelName);
+            console.warn('   Expected format: vlx_<uuid_with_underscores>');
+          }
 
-        let audioTrack: IMicrophoneAudioTrack;
-        try {
-          audioTrack = await AgoraRTC.createMicrophoneAudioTrack(
-            prefs?.micId ? { microphoneId: prefs.micId } : undefined
-          );
-          console.log("✅ Audio track created with preferred device");
-        } catch (e) {
-          console.warn("⚠️ Mic create failed with chosen device, falling back:", e);
-          audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        }
+          console.log('✅ Validated channel name:', channelName);
+          
+          try {
+            await agoraClient.join(appId, channelName, token, joinUid);
+            console.log('✅ [AgoraVideoRoom] Successfully joined RTC channel');
+            // Clear any previous errors on successful join
+            setRtcErrorCode(null);
+            setRtcErrorMessage(null);
+          } catch (err: any) {
+            console.error("=== AGORA RTC JOIN ERROR ===", err);
+            console.error("Error Code:", err.code);
+            console.error("Error Name:", err.name);
+            console.error("Error Message:", err.message);
+            console.error("Full Error Object:", err);
+            console.error("Error Stack:", err.stack);
+            console.error("Parameters Used:", {
+              appId,
+              channelName,
+              uid: joinUid,
+              tokenPrefix: token.substring(0, 20),
+              tokenLength: token.length,
+            });
+            console.error("============================");
+            
+            // Capture error for debug panel
+            setRtcErrorCode(err.code || null);
+            setRtcErrorMessage(err.message || String(err));
+            
+            throw err;
+          }
 
-        let videoTrack: ICameraVideoTrack;
-        try {
-          videoTrack = await AgoraRTC.createCameraVideoTrack(
-            prefs?.cameraId ? { cameraId: prefs.cameraId } : undefined
-          );
-          console.log("✅ Video track created with preferred device");
-        } catch (e) {
-          console.warn("⚠️ Camera create failed with chosen device, falling back:", e);
-          videoTrack = await AgoraRTC.createCameraVideoTrack();
-        }
+          const prefs = JSON.parse(localStorage.getItem("video.devicePrefs") || "{}");
+          console.log("📱 Using device preferences:", prefs);
 
-        localAudioTrackRef.current = audioTrack;
-        localVideoTrackRef.current = videoTrack;
-        setLocalAudioTrack(audioTrack);
-        setLocalVideoTrack(videoTrack);
+          let audioTrack: IMicrophoneAudioTrack;
+          try {
+            audioTrack = await AgoraRTC.createMicrophoneAudioTrack(
+              prefs?.micId ? { microphoneId: prefs.micId } : undefined
+            );
+            console.log("✅ Audio track created with preferred device");
+          } catch (e) {
+            console.warn("⚠️ Mic create failed with chosen device, falling back:", e);
+            audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+          }
 
-        await agoraClient.publish([audioTrack, videoTrack]);
+          let videoTrack: ICameraVideoTrack;
+          try {
+            videoTrack = await AgoraRTC.createCameraVideoTrack(
+              prefs?.cameraId ? { cameraId: prefs.cameraId } : undefined
+            );
+            console.log("✅ Video track created with preferred device");
+          } catch (e) {
+            console.warn("⚠️ Camera create failed with chosen device, falling back:", e);
+            videoTrack = await AgoraRTC.createCameraVideoTrack();
+          }
 
-        videoTrack.play("local-player");
+          localAudioTrackRef.current = audioTrack;
+          localVideoTrackRef.current = videoTrack;
+          setLocalAudioTrack(audioTrack);
+          setLocalVideoTrack(videoTrack);
 
-        if (quality.downlinkQuality >= 3 && quality.downlinkQuality <= 6) {
-          videoTrack.setEncoderConfiguration({
-            width: 640,
-            height: 480,
-            frameRate: 15,
-            bitrateMin: 200,
-            bitrateMax: 500,
+          await agoraClient.publish([audioTrack, videoTrack]);
+
+          videoTrack.play("local-player");
+
+          if (quality.downlinkQuality >= 3 && quality.downlinkQuality <= 6) {
+            videoTrack.setEncoderConfiguration({
+              width: 640,
+              height: 480,
+              frameRate: 15,
+              bitrateMin: 200,
+              bitrateMax: 500,
+            });
+          }
+
+          toast({
+            title: "Connected",
+            description: "You have joined the video consultation"
           });
-        }
-
-        toast({
-          title: "Connected",
-          description: "You have joined the video consultation"
-        });
+          */
       } catch (error: any) {
         console.group("🔴 AGORA JOIN FAILURE");
         console.error("Error Object:", error);
@@ -638,74 +647,78 @@ export const AgoraVideoRoom = ({
     }
   };
 
-  const startScreenShare = async () => {
-    try {
-      if (!client) {
-        toast({
-          title: "Not Connected",
-          description: "Client not initialized",
-          variant: "destructive",
+    const startScreenShare = async () => {
+      console.warn("[AgoraVideoRoom] Screen share disabled pending refactor");
+      /*
+      try {
+        if (!client) {
+          toast({
+            title: "Not Connected",
+            description: "Client not initialized",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const screenVideoTrack = await AgoraRTC.createScreenVideoTrack(
+          {
+            encoderConfig: "1080p_1",
+            optimizationMode: "detail",
+          },
+          "auto"
+        );
+
+        // Only unpublish if video track exists
+        if (localVideoTrack) {
+          await localVideoTrack.setEnabled(false);
+          await client.unpublish([localVideoTrack]);
+        }
+        
+        await client.publish([screenVideoTrack as ILocalVideoTrack]);
+        const castedTrack = screenVideoTrack as ILocalVideoTrack;
+        screenTrackRef.current = castedTrack;
+        setScreenTrack(castedTrack);
+        setIsScreenSharing(true);
+
+        (screenVideoTrack as ILocalVideoTrack).on("track-ended", () => {
+          stopScreenShare();
         });
-        return;
+
+        await supabase.from("video_session_logs").insert({
+          session_id: sessionId,
+          event_type: "screen_share_started",
+          user_type: isProvider ? "provider" : "patient",
+          event_data: {
+            started_at: new Date().toISOString(),
+            resolution: "1920x1080",
+          },
+        });
+
+        toast({
+          title: "Screen Sharing",
+          description: "You are now sharing your screen",
+        });
+      } catch (error: any) {
+        console.error("Screen share error:", error);
+        setIsScreenSharing(false);
+        
+        if (error.message?.includes("Permission denied") || error.message?.includes("denied")) {
+          toast({
+            title: "Permission Denied",
+            description: "Screen sharing permission was denied",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Screen Share Failed",
+            description: "Failed to start screen sharing",
+            variant: "destructive",
+          });
+        }
       }
-
-      const screenVideoTrack = await AgoraRTC.createScreenVideoTrack(
-        {
-          encoderConfig: "1080p_1",
-          optimizationMode: "detail",
-        },
-        "auto"
-      );
-
-      // Only unpublish if video track exists
-      if (localVideoTrack) {
-        await localVideoTrack.setEnabled(false);
-        await client.unpublish([localVideoTrack]);
-      }
-      
-      await client.publish([screenVideoTrack as ILocalVideoTrack]);
-      const castedTrack = screenVideoTrack as ILocalVideoTrack;
-      screenTrackRef.current = castedTrack;
-      setScreenTrack(castedTrack);
-      setIsScreenSharing(true);
-
-      (screenVideoTrack as ILocalVideoTrack).on("track-ended", () => {
-        stopScreenShare();
-      });
-
-      await supabase.from("video_session_logs").insert({
-        session_id: sessionId,
-        event_type: "screen_share_started",
-        user_type: isProvider ? "provider" : "patient",
-        event_data: {
-          started_at: new Date().toISOString(),
-          resolution: "1920x1080",
-        },
-      });
-
-      toast({
-        title: "Screen Sharing",
-        description: "You are now sharing your screen",
-      });
-    } catch (error: any) {
-      console.error("Screen share error:", error);
+      */
       setIsScreenSharing(false);
-      
-      if (error.message?.includes("Permission denied") || error.message?.includes("denied")) {
-        toast({
-          title: "Permission Denied",
-          description: "Screen sharing permission was denied",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Screen Share Failed",
-          description: "Failed to start screen sharing",
-          variant: "destructive",
-        });
-      }
-    }
-  };
+    };
 
   const stopScreenShare = async () => {
     try {

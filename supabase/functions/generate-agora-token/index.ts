@@ -1,6 +1,7 @@
+// 🧹 TODO AGORA REFACTOR
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import { buildRtcToken, buildRtmToken, Role } from '../_shared/agoraTokenBuilder.ts';
+// import { buildRtcToken, buildRtmToken, Role } from '../_shared/agoraTokenBuilder.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -13,9 +14,14 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    console.log('🔄 [generate-agora-token] Processing request...');
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    try {
+      console.log('🔄 [generate-agora-token] Processing request...');
+      console.warn('🚫 [generate-agora-token] Agora token generation disabled pending refactor');
+      return new Response(JSON.stringify({ error: 'Agora token generation temporarily disabled' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      /* const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Authenticate user
     const authHeader = req.headers.get('Authorization')!;
@@ -260,19 +266,19 @@ Deno.serve(async (req) => {
       }
     });
 
-    return new Response(JSON.stringify({
-      token: tokens.rtcToken,
-      channelName,
-      uid: tokens.rtmUid,
-      appId,
-      expiresAt: tokens.expiresAt,
-      rtmToken: tokens.rtmToken,
-      rtmUid: tokens.rtmUid
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
-  } catch (error) {
+      return new Response(JSON.stringify({
+        token: tokens.rtcToken,
+        channelName,
+        uid: tokens.rtmUid,
+        appId,
+        expiresAt: tokens.expiresAt,
+        rtmToken: tokens.rtmToken,
+        rtmUid: tokens.rtmUid
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      */
+    } catch (error) {
     console.error('❌ [generate-agora-token] Error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,

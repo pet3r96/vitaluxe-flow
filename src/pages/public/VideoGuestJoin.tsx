@@ -1,7 +1,8 @@
+// 🧹 TODO AGORA REFACTOR
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
+// import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
 import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle, Clock, CheckCircle } from "lucide-react";
@@ -10,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { VideoDiagnostics } from "@/components/video/VideoDiagnostics";
 import { useVideoPreflight } from "@/hooks/useVideoPreflight";
 import { useVideoErrorLogger } from "@/hooks/useVideoErrorLogger";
+
+const AgoraVideoRoom = (_props: any) => null;
 
 export default function VideoGuestJoin() {
   const { token } = useParams<{ token: string }>();

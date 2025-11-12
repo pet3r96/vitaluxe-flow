@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -9,8 +10,13 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    try {
+      console.warn('[agora-healthcheck] Disabled pending Agora refactor');
+      return new Response(JSON.stringify({ healthy: false, error: 'Agora health check temporarily disabled' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      /* const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Authenticate user
     const authHeader = req.headers.get('Authorization');
@@ -78,28 +84,29 @@ Deno.serve(async (req) => {
 
     console.log('[agora-healthcheck] ✅ Health check passed');
 
-    return new Response(JSON.stringify({
-      healthy: true,
-      appId,
-      validation: {
-        appIdLength: appId.length,
-        certificateLength: appCertificate.length,
-        formatsValid: true,
-        trimmed: {
-          appIdTrimmed: rawAppId !== appId,
-          certificateTrimmed: rawAppCertificate !== appCertificate
-        }
-      },
-      samples: {
-        appIdSample: appId.substring(0, 6) + '...',
-        certificateSample: appCertificate.substring(0, 6) + '...'
-      },
-      timestamp: new Date().toISOString()
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+      return new Response(JSON.stringify({
+        healthy: true,
+        appId,
+        validation: {
+          appIdLength: appId.length,
+          certificateLength: appCertificate.length,
+          formatsValid: true,
+          trimmed: {
+            appIdTrimmed: rawAppId !== appId,
+            certificateTrimmed: rawAppCertificate !== appCertificate
+          }
+        },
+        samples: {
+          appIdSample: appId.substring(0, 6) + '...',
+          certificateSample: appCertificate.substring(0, 6) + '...'
+        },
+        timestamp: new Date().toISOString()
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      */
 
-  } catch (error) {
+    } catch (error) {
     console.error('[agora-healthcheck] Error:', error);
     return new Response(JSON.stringify({ 
       healthy: false,

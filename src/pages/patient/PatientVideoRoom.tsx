@@ -1,7 +1,8 @@
+// 🧹 TODO AGORA REFACTOR
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
+// import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
 import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,8 @@ import { VideoDiagnostics } from "@/components/video/VideoDiagnostics";
 import { useVideoPreflight } from "@/hooks/useVideoPreflight";
 import { useVideoErrorLogger } from "@/hooks/useVideoErrorLogger";
 import { Button } from "@/components/ui/button";
+
+const AgoraVideoRoom = (_props: any) => null;
 
 export default function PatientVideoRoom() {
   const { sessionId } = useParams<{ sessionId: string }>();

@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+// import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { CredentialValidator } from "@/components/video/CredentialValidator";
 
 export default function VideoTestRoom() {
@@ -15,11 +16,11 @@ export default function VideoTestRoom() {
   const [token, setToken] = useState("");
   const [uid, setUid] = useState("0");
   const [isJoining, setIsJoining] = useState(false);
-  const [client, setClient] = useState<IAgoraRTCClient | null>(null);
+  const [client, setClient] = useState<any | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [skipRTM, setSkipRTM] = useState(false);
 
-  const handleJoin = async () => {
+    const handleJoin = async () => {
     if (!appId || !token) {
       toast({
         title: "Missing Fields",
@@ -32,80 +33,88 @@ export default function VideoTestRoom() {
     setIsJoining(true);
 
     try {
-      console.group("🧪 TEST ROOM - Join Attempt");
-      console.log("App ID:", appId.substring(0, 8) + "...");
-      console.log("Channel:", channelName);
-      console.log("UID:", uid);
-      console.log("Token Preview:", token.substring(0, 30) + "...");
-      console.groupEnd();
-
-      // Enable detailed Agora logging
-      AgoraRTC.setLogLevel(4);
-
-      const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-      
-      agoraClient.on("connection-state-change", (curState, revState, reason) => {
-        console.log("🔄 Connection state:", curState, "Reason:", reason);
-      });
-
-      agoraClient.on("user-published", async (user, mediaType) => {
-        console.log("👤 User published:", user.uid, mediaType);
-        await agoraClient.subscribe(user, mediaType);
-        if (mediaType === "video") {
-          user.videoTrack?.play(`remote-player-${user.uid}`);
-        }
-        if (mediaType === "audio") {
-          user.audioTrack?.play();
-        }
-      });
-
-      // Join channel
-      console.log("===== FE TOKEN DEBUG (VideoTestRoom) =====");
-      console.log("FE RTC Token (full):", token);
-      console.log("RTC Token length:", token?.length);
-      console.log("RTC Token prefix:", token?.substring(0, 20));
-      console.log("Agora Join Params:", {
-        appId,
-        channelName,
-        uid,
-      });
-      console.log("================================");
-      
-      try {
-        await agoraClient.join(appId, channelName, token, uid);
-        console.log("✅ [VideoTestRoom] Successfully joined channel!");
-      } catch (err: any) {
-        console.error("=== AGORA RTC JOIN ERROR (Test Room) ===");
-        console.error("Error Code:", err.code);
-        console.error("Error Name:", err.name);
-        console.error("Error Message:", err.message);
-        console.error("Full Error Object:", err);
-        console.error("Error Stack:", err.stack);
-        console.error("Parameters Used:", {
+        console.warn("🧪 [VideoTestRoom] Agora join disabled pending refactor", {
           appId,
           channelName,
           uid,
-          tokenPrefix: token.substring(0, 20),
-          tokenLength: token.length,
         });
-        console.error("========================================");
-        throw err;
-      }
+        /*
+        console.group("🧪 TEST ROOM - Join Attempt");
+        console.log("App ID:", appId.substring(0, 8) + "...");
+        console.log("Channel:", channelName);
+        console.log("UID:", uid);
+        console.log("Token Preview:", token.substring(0, 30) + "...");
+        console.groupEnd();
 
-      // Create and publish local tracks
-      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      const videoTrack = await AgoraRTC.createCameraVideoTrack();
+        // Enable detailed Agora logging
+        AgoraRTC.setLogLevel(4);
 
-      await agoraClient.publish([audioTrack, videoTrack]);
-      videoTrack.play("local-test-player");
+        const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        
+        agoraClient.on("connection-state-change", (curState, revState, reason) => {
+          console.log("🔄 Connection state:", curState, "Reason:", reason);
+        });
 
-      setClient(agoraClient);
-      setIsConnected(true);
+        agoraClient.on("user-published", async (user, mediaType) => {
+          console.log("👤 User published:", user.uid, mediaType);
+          await agoraClient.subscribe(user, mediaType);
+          if (mediaType === "video") {
+            user.videoTrack?.play(`remote-player-${user.uid}`);
+          }
+          if (mediaType === "audio") {
+            user.audioTrack?.play();
+          }
+        });
 
-      toast({
-        title: "✅ Connected Successfully",
-        description: `Joined channel: ${channelName}`,
-      });
+        // Join channel
+        console.log("===== FE TOKEN DEBUG (VideoTestRoom) =====");
+        console.log("FE RTC Token (full):", token);
+        console.log("RTC Token length:", token?.length);
+        console.log("RTC Token prefix:", token?.substring(0, 20));
+        console.log("Agora Join Params:", {
+          appId,
+          channelName,
+          uid,
+        });
+        console.log("================================");
+        
+        try {
+          await agoraClient.join(appId, channelName, token, uid);
+          console.log("✅ [VideoTestRoom] Successfully joined channel!");
+        } catch (err: any) {
+          console.error("=== AGORA RTC JOIN ERROR (Test Room) ===");
+          console.error("Error Code:", err.code);
+          console.error("Error Name:", err.name);
+          console.error("Error Message:", err.message);
+          console.error("Full Error Object:", err);
+          console.error("Error Stack:", err.stack);
+          console.error("Parameters Used:", {
+            appId,
+            channelName,
+            uid,
+            tokenPrefix: token.substring(0, 20),
+            tokenLength: token.length,
+          });
+          console.error("========================================");
+          throw err;
+        }
+
+        // Create and publish local tracks
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        const videoTrack = await AgoraRTC.createCameraVideoTrack();
+
+        await agoraClient.publish([audioTrack, videoTrack]);
+        videoTrack.play("local-test-player");
+
+        setClient(agoraClient);
+        setIsConnected(true);
+
+        toast({
+          title: "✅ Connected Successfully",
+          description: `Joined channel: ${channelName}`,
+        });
+        */
+        setIsConnected(false);
     } catch (error: any) {
       console.group("❌ TEST ROOM - Join Failed");
       console.error("Error:", error);
@@ -133,18 +142,23 @@ export default function VideoTestRoom() {
     }
   };
 
-  const handleLeave = async () => {
-    if (client) {
-      await client.leave();
-      client.removeAllListeners();
+    const handleLeave = async () => {
+      console.warn("🛑 [VideoTestRoom] Agora leave disabled pending refactor", { client });
+      /*
+      if (client) {
+        await client.leave();
+        client.removeAllListeners();
+        setClient(null);
+        setIsConnected(false);
+        toast({
+          title: "Disconnected",
+          description: "Left the test channel",
+        });
+      }
+      */
       setClient(null);
       setIsConnected(false);
-      toast({
-        title: "Disconnected",
-        description: "Left the test channel",
-      });
-    }
-  };
+    };
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">

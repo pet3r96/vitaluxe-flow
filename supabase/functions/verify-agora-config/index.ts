@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { corsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
@@ -5,8 +6,13 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const body = await req.json();
+    try {
+      console.warn("🚫 [verify-agora-config] Disabled pending Agora refactor");
+      return new Response(JSON.stringify({ error: "Agora config verification temporarily disabled" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+      const body = await req.json();
     const frontendAppId = body.appId;
     const backendAppId = Deno.env.get("AGORA_APP_ID");
     const cert = Deno.env.get("AGORA_APP_CERTIFICATE");

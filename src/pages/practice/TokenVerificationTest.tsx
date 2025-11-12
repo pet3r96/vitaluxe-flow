@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+// import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { Loader2 } from "lucide-react";
 
 export default function TokenVerificationTest() {
@@ -13,7 +14,7 @@ export default function TokenVerificationTest() {
   const [loading, setLoading] = useState(false);
   const [joining, setJoining] = useState(false);
   const [tokenData, setTokenData] = useState<any>(null);
-  const [client, setClient] = useState<IAgoraRTCClient | null>(null);
+  const [client, setClient] = useState<any | null>(null);
   
   // Test parameters
   const [channelName, setChannelName] = useState("vlx-debug");
@@ -89,6 +90,8 @@ export default function TokenVerificationTest() {
 
     setJoining(true);
     try {
+      console.warn("[TokenVerificationTest] Agora backend token join disabled pending refactor", tokenData);
+      /*
       // Create Agora client
       const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       
@@ -127,6 +130,7 @@ export default function TokenVerificationTest() {
         title: "Join Successful!",
         description: "Backend token works correctly. Check console for verification.",
       });
+      */
     } catch (error: any) {
       console.error("❌ [TOKEN-TEST] Join failed:", error);
       console.error("Error details:", {
@@ -157,6 +161,12 @@ export default function TokenVerificationTest() {
 
     setJoining(true);
     try {
+      console.warn("[TokenVerificationTest] Agora manual token join disabled pending refactor", {
+        manualAppId,
+        manualChannel,
+        manualUid,
+      });
+      /*
       const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
       const appId = manualAppId; // EXACT appId
@@ -177,6 +187,7 @@ export default function TokenVerificationTest() {
       console.log("✅ [FE TEST] Joined successfully with pasted backend token");
       setClient(agoraClient);
       toast({ title: "Join Successful!", description: "Hardcoded token join worked." });
+      */
     } catch (error: any) {
       console.error("❌ [FE TEST] Join failed:", error);
       toast({ title: "Join Failed", description: `${error.code}: ${error.message}`, variant: "destructive" });
@@ -186,6 +197,8 @@ export default function TokenVerificationTest() {
   };
 
   const leaveChannel = async () => {
+    console.warn("[TokenVerificationTest] Agora leave disabled pending refactor", { client });
+    /*
     if (client) {
       await client.leave();
       setClient(null);
@@ -194,6 +207,8 @@ export default function TokenVerificationTest() {
         description: "Disconnected from Agora",
       });
     }
+    */
+    setClient(null);
   };
 
   return (

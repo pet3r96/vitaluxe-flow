@@ -1,6 +1,7 @@
+// 🧹 TODO AGORA REFACTOR
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { buildRtcToken, buildRtmToken, verifyTokenSignature, Role } from "../_shared/agoraTokenBuilder.ts";
+// import { buildRtcToken, buildRtmToken, verifyTokenSignature, Role } from "../_shared/agoraTokenBuilder.ts";
 
 console.log("Test Agora Token function started");
 
@@ -105,6 +106,11 @@ serve(async (req) => {
   }
 
   try {
+    console.warn("[Test Agora Token] Disabled pending Agora refactor");
+    return new Response(
+      JSON.stringify({ error: "Agora token test temporarily disabled" }),
+      { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
     const url = new URL(req.url);
     const deterministic = url.searchParams.get('deterministic') === 'true';
     // Raw bytes check for secrets

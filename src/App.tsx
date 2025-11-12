@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 // Deployment trigger - 2025-11-07 16:30
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -145,7 +146,8 @@ const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
 const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
-const TestAgoraToken = lazy(() => import("./pages/admin/TestAgoraToken"));
+// const TestAgoraToken = lazy(() => import("./pages/admin/TestAgoraToken"));
+const TestAgoraToken = () => null;
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
 
 // Loading fallback component

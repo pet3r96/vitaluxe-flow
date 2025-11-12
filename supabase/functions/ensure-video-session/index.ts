@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -9,8 +10,13 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    try {
+      console.warn('[ensure-video-session] Disabled pending Agora refactor');
+      return new Response(JSON.stringify({ error: 'Ensure video session temporarily disabled' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Authenticate user
     const authHeader = req.headers.get('Authorization')!;

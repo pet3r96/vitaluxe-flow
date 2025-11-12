@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { serve } from "https://deno.land/std@0.170.0/http/server.ts";
 
 const corsHeaders = {
@@ -11,8 +12,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const { errorCode, message, appId, channel, uid } = await req.json();
+    try {
+      console.warn("🚫 [Agora Debug] Disabled pending refactor");
+      return new Response(
+        JSON.stringify({ error: "Agora debug endpoint temporarily disabled" }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+      /* const { errorCode, message, appId, channel, uid } = await req.json();
     
     console.log("🧩 [Agora Debug] Error logged from frontend:");
     console.log(JSON.stringify({
@@ -75,7 +81,8 @@ serve(async (req) => {
           'Content-Type': 'application/json' 
         } 
       }
-    );
+      );
+      */
   } catch (err) {
     console.error("❌ [Agora Debug] Error processing debug request:", err);
     return new Response(

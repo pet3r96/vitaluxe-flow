@@ -1,9 +1,10 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Camera, Mic, Volume2, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
-import AgoraRTC from "agora-rtc-sdk-ng";
+// import AgoraRTC from "agora-rtc-sdk-ng";
 import { toast } from "sonner";
 
 interface DeviceTestScreenProps {
@@ -179,6 +180,8 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
     retryCountRef.current = { camera: 0, mic: 0 };
     
     try {
+      console.warn("[DeviceTestScreen] Agora device enumeration disabled pending refactor");
+      /*
       const devices = await AgoraRTC.getDevices();
       console.log("📱 Found devices:", devices.length);
       
@@ -250,6 +253,14 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
         persistPrefs(undefined, undefined, speakerDevices[0].deviceId);
         setSpeakerStatus("success");
       }
+      */
+      setCameras([]);
+      setMicrophones([]);
+      setSpeakers([]);
+      setCameraStatus("error");
+      setMicStatus("error");
+      setSpeakerStatus("error");
+      setIsRefreshing(false);
     } catch (error) {
       console.error("❌ Error enumerating devices:", error);
       toast.error("Failed to enumerate devices. Please check permissions.");
@@ -266,50 +277,53 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       }
     }, 5000);
 
-    try {
-      console.log(`📹 Testing camera${deviceId ? ` (${deviceId})` : ''}...`);
-      setCameraStatus("testing");
+  try {
+    console.warn("[DeviceTestScreen] Agora camera track creation disabled pending refactor", { deviceId });
+    /*
+    console.log(`📹 Testing camera${deviceId ? ` (${deviceId})` : ''}...`);
+    setCameraStatus("testing");
+    
+    const videoTrack = await AgoraRTC.createCameraVideoTrack(
+      deviceId ? { cameraId: deviceId } : undefined
+    );
+    
+    localVideoTrackRef.current = videoTrack;
+    console.log("✅ Video track created");
+    
+    // Wait for DOM to be ready and add retry logic
+    if (videoRef.current) {
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for DOM
       
-      const videoTrack = await AgoraRTC.createCameraVideoTrack(
-        deviceId ? { cameraId: deviceId } : undefined
-      );
-      
-      localVideoTrackRef.current = videoTrack;
-      console.log("✅ Video track created");
-      
-      // Wait for DOM to be ready and add retry logic
-      if (videoRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for DOM
+      try {
+        videoTrack.play(videoRef.current);
+        console.log("✅ Video playing in DOM");
         
-        try {
+        // Verify video is actually rendering
+        await new Promise(resolve => setTimeout(resolve, 200));
+        clearTimeout(timeoutId);
+        setCameraStatus("success");
+        retryCountRef.current.camera = 0;
+        toast.success("Camera ready", { duration: 1000 });
+      } catch (playError) {
+        console.warn("⚠️ First play attempt failed, retrying...", playError);
+        
+        // Retry once
+        if (!isRetry && retryCountRef.current.camera < 1) {
+          retryCountRef.current.camera++;
+          await new Promise(resolve => setTimeout(resolve, 500));
           videoTrack.play(videoRef.current);
-          console.log("✅ Video playing in DOM");
-          
-          // Verify video is actually rendering
-          await new Promise(resolve => setTimeout(resolve, 200));
           clearTimeout(timeoutId);
           setCameraStatus("success");
-          retryCountRef.current.camera = 0;
-          toast.success("Camera ready", { duration: 1000 });
-        } catch (playError) {
-          console.warn("⚠️ First play attempt failed, retrying...", playError);
-          
-          // Retry once
-          if (!isRetry && retryCountRef.current.camera < 1) {
-            retryCountRef.current.camera++;
-            await new Promise(resolve => setTimeout(resolve, 500));
-            videoTrack.play(videoRef.current);
-            clearTimeout(timeoutId);
-            setCameraStatus("success");
-            console.log("✅ Video playing after retry");
-          } else {
-            throw playError;
-          }
+          console.log("✅ Video playing after retry");
+        } else {
+          throw playError;
         }
-      } else {
-        throw new Error("Video container ref not available");
       }
-    } catch (error) {
+    } else {
+      throw new Error("Video container ref not available");
+    }
+    */
+  } catch (error) {
       clearTimeout(timeoutId);
       console.error("❌ Camera test failed:", error);
       setCameraStatus("error");
@@ -333,33 +347,36 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       }
     }, 5000);
 
-    try {
-      console.log(`🎤 Testing microphone${deviceId ? ` (${deviceId})` : ''}...`);
-      setMicStatus("testing");
-      
-      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack(
-        deviceId ? { microphoneId: deviceId } : undefined
-      );
-      
-      clearTimeout(timeoutId);
-      localAudioTrackRef.current = audioTrack;
-      console.log("✅ Audio track created");
-      setMicStatus("success");
-      retryCountRef.current.mic = 0;
-      toast.success("Microphone ready", { duration: 1000 });
+  try {
+    console.warn("[DeviceTestScreen] Agora microphone track creation disabled pending refactor", { deviceId });
+    /*
+    console.log(`🎤 Testing microphone${deviceId ? ` (${deviceId})` : ''}...`);
+    setMicStatus("testing");
+    
+    const audioTrack = await AgoraRTC.createMicrophoneAudioTrack(
+      deviceId ? { microphoneId: deviceId } : undefined
+    );
+    
+    clearTimeout(timeoutId);
+    localAudioTrackRef.current = audioTrack;
+    console.log("✅ Audio track created");
+    setMicStatus("success");
+    retryCountRef.current.mic = 0;
+    toast.success("Microphone ready", { duration: 1000 });
 
-      // Monitor audio levels
-      if (audioIntervalRef.current) {
-        clearInterval(audioIntervalRef.current);
+    // Monitor audio levels
+    if (audioIntervalRef.current) {
+      clearInterval(audioIntervalRef.current);
+    }
+    
+    audioIntervalRef.current = setInterval(() => {
+      if (localAudioTrackRef.current) {
+        const level = localAudioTrackRef.current.getVolumeLevel();
+        setAudioLevel(level);
       }
-      
-      audioIntervalRef.current = setInterval(() => {
-        if (localAudioTrackRef.current) {
-          const level = localAudioTrackRef.current.getVolumeLevel();
-          setAudioLevel(level);
-        }
-      }, 100);
-    } catch (error) {
+    }, 100);
+    */
+  } catch (error) {
       clearTimeout(timeoutId);
       console.error("❌ Microphone test failed:", error);
       setMicStatus("error");

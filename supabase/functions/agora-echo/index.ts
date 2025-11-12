@@ -1,3 +1,4 @@
+// 🧹 TODO AGORA REFACTOR
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -10,8 +11,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const appId = Deno.env.get('AGORA_APP_ID') || '';
+    try {
+      console.warn("[agora-echo] Disabled pending Agora refactor");
+      return new Response(
+        JSON.stringify({ error: 'Agora diagnostics temporarily disabled' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+      /* const appId = Deno.env.get('AGORA_APP_ID') || '';
     const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE') || '';
     
     if (!appId || !appCertificate) {
@@ -52,20 +58,21 @@ serve(async (req) => {
       }
     }
 
-    console.log("[agora-echo] Debug diagnostics");
+      console.log("[agora-echo] Debug diagnostics");
 
-    return new Response(
-      JSON.stringify({
-        appId,
-        appIdSample: appId.substring(0, 8) + '...',
-        cert8: appCertificate.substring(0, 8),
-        channelName,
-        uid,
-        timestamp: new Date().toISOString(),
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error: any) {
+      return new Response(
+        JSON.stringify({
+          appId,
+          appIdSample: appId.substring(0, 8) + '...',
+          cert8: appCertificate.substring(0, 8),
+          channelName,
+          uid,
+          timestamp: new Date().toISOString(),
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+      */
+    } catch (error: any) {
     console.error("[agora-echo] Error:", error);
     return new Response(
       JSON.stringify({ 
