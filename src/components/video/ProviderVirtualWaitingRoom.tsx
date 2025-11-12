@@ -746,11 +746,10 @@ export const ProviderVirtualWaitingRoom = ({
                 
                 <Button 
                   onClick={() => setShowCreateDialog(true)}
-                  variant="secondary"
                   className="gap-2 w-full"
                 >
                   <Plus className="h-4 w-4" />
-                  Create Instant Session
+                  Create Session with Patient
                 </Button>
               </div>
             </div>
