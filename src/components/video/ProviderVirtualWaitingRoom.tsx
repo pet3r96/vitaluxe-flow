@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { VideoSessionStatus } from "./VideoSessionStatus";
 import { AppointmentCountdown } from "./AppointmentCountdown";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointmentDialog";
 import { VideoGuestLinkDialog } from "./VideoGuestLinkDialog";
 import { realtimeManager } from "@/lib/realtimeManager";
@@ -174,7 +174,7 @@ export const ProviderVirtualWaitingRoom = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patient_accounts')
-        .select('id, first_name, last_name, email')
+        .select('id, first_name, last_name, email, primary_provider_id, provider_id')
         .eq('practice_id', practiceId)
         .order('last_name');
       
@@ -200,7 +200,7 @@ export const ProviderVirtualWaitingRoom = ({
         queryFn: async () => {
           const { data, error } = await supabase
             .from('patient_accounts')
-            .select('id, first_name, last_name, email')
+            .select('id, first_name, last_name, email, primary_provider_id, provider_id')
             .eq('practice_id', practiceId)
             .order('last_name');
           if (error) throw error;
@@ -256,6 +256,42 @@ export const ProviderVirtualWaitingRoom = ({
     },
     enabled: showCreateDialog || showScheduleDialog || practiceId !== ''
   });
+
+  // Filter providers based on selected patient
+  const filteredProviders = useMemo(() => {
+    if (!selectedPatientId || !patients || !providers) {
+      return providers || [];
+    }
+
+    const selectedPatient = patients.find(p => p.id === selectedPatientId);
+    if (!selectedPatient) {
+      return providers || [];
+    }
+
+    // Get provider IDs associated with this patient
+    const patientProviderIds = [
+      selectedPatient.primary_provider_id,
+      selectedPatient.provider_id
+    ].filter(Boolean);
+
+    // If no providers assigned, show all
+    if (patientProviderIds.length === 0) {
+      console.log('[ProviderVirtualWaitingRoom] No providers assigned to patient, showing all');
+      return providers || [];
+    }
+
+    // Filter providers to only those assigned to this patient
+    const filtered = providers.filter(p => patientProviderIds.includes(p.user_id));
+    
+    console.log('[ProviderVirtualWaitingRoom] Filtered providers for patient:', {
+      patientId: selectedPatientId,
+      patientProviderIds,
+      totalProviders: providers.length,
+      filteredCount: filtered.length
+    });
+
+    return filtered;
+  }, [selectedPatientId, patients, providers]);
 
   // Helper function to check if a session is synthetic (not yet created in DB)
   const isSyntheticSession = (sessionId: string) => sessionId.startsWith('apt-');
@@ -874,8 +910,12 @@ export const ProviderVirtualWaitingRoom = ({
                     <SelectValue placeholder="Select provider" />
                   </SelectTrigger>
                   <SelectContent>
-                    {providers && providers.length > 0 ? (
-                      providers.map((provider: any) => {
+                    {!selectedPatientId ? (
+                      <SelectItem value="select-patient-first" disabled>
+                        Please select a patient first
+                      </SelectItem>
+                    ) : filteredProviders && filteredProviders.length > 0 ? (
+                      filteredProviders.map((provider: any) => {
                         const displayName = getProviderDisplayName(provider);
                         return (
                           <SelectItem key={provider.id} value={provider.id}>
@@ -885,7 +925,7 @@ export const ProviderVirtualWaitingRoom = ({
                       })
                     ) : (
                       <SelectItem value="no-providers-available" disabled>
-                        No providers found
+                        No providers assigned to this patient
                       </SelectItem>
                     )}
                   </SelectContent>
