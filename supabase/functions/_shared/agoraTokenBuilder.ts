@@ -210,12 +210,12 @@ class AccessToken2 {
 
   async __signing(): Promise<string> {
     let signing = await encodeHMac(
-      this.appCertificate,
-      new ByteBuf().putUint32(this.issueTs).pack()
+      new ByteBuf().putUint32(this.issueTs).pack(),
+      this.appCertificate
     );
     signing = await encodeHMac(
-      signing,
-      new ByteBuf().putUint32(this.salt).pack()
+      new ByteBuf().putUint32(this.salt).pack(),
+      signing
     );
     return signing;
   }
