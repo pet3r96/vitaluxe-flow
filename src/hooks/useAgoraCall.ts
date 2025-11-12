@@ -25,28 +25,44 @@ export function useAgoraCall({
 
   // Fetch token from backend
   const fetchToken = useCallback(async () => {
-    const response = await fetch('/functions/v1/generate-agora-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        channel,
-        uid: userId,
-        role: 'publisher',
-        expireSeconds: 3600
-      })
-    });
+    try {
+      const response = await fetch('/functions/v1/agora-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel,
+          uid: userId,
+          role: 'publisher',
+          ttl: 3600,
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Token fetch failed: ${response.status} - ${errorText}`);
+      // Defensive: capture text first so we can parse or show it
+      const text = await response.text();
+
+      if (!response.ok) {
+        console.error(`❌ Token fetch failed (${response.status}):`, text);
+        throw new Error(`Token fetch failed: ${response.status} - ${text}`);
+      }
+
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('❌ Token fetch: invalid JSON payload', text);
+        throw new Error('Token fetch: invalid JSON payload');
+      }
+
+      if (!data.rtcToken) {
+        console.error('❌ Missing rtcToken field:', data);
+        throw new Error('Missing rtcToken field in token response');
+      }
+
+      return data.rtcToken;
+    } catch (err: any) {
+      console.error('❌ FetchToken error:', err);
+      throw err;
     }
-
-    const data = await response.json();
-    if (!data.rtcToken) {
-      throw new Error('No RTC token in response');
-    }
-
-    return data.rtcToken;
   }, [channel, userId]);
 
   // Join channel
