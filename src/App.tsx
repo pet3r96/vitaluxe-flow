@@ -26,58 +26,59 @@ import { realtimeManager } from "./lib/realtimeManager";
 import { ProGate } from "./components/subscription/ProGate";
 
 // Helper function to retry dynamic imports on failure
-const lazyWithRetry = (componentImport: () => Promise<any>, componentName: string = 'Component') => lazy(async () => {
-  const retryKey = 'vitaluxe-chunk-retry';
-  const hasRetried = window.sessionStorage.getItem(retryKey) === 'true';
-  try {
-    const component = await componentImport();
-    // Clear retry flag on successful load
-    window.sessionStorage.removeItem(retryKey);
-    return component;
-  } catch (error: any) {
-    const msg = error?.message || '';
-    const name = error?.name || '';
-    
-    // Comprehensive chunk error detection
-    const isChunkError = 
-      name === 'ChunkLoadError' ||
-      name === 'SyntaxError' ||
-      /Unexpected token/.test(msg) ||
-      /Failed to fetch dynamically imported module/.test(msg) ||
-      /error loading dynamically imported module/.test(msg) ||
-      /Importing a module script failed/.test(msg) ||
-      /'text\/html' is not a valid JavaScript MIME type/.test(msg) ||
-      /Failed to fetch/.test(msg) ||
-      /Loading chunk/.test(msg);
+const lazyWithRetry = (componentImport: () => Promise<any>, componentName: string = "Component") =>
+  lazy(async () => {
+    const retryKey = "vitaluxe-chunk-retry";
+    const hasRetried = window.sessionStorage.getItem(retryKey) === "true";
+    try {
+      const component = await componentImport();
+      // Clear retry flag on successful load
+      window.sessionStorage.removeItem(retryKey);
+      return component;
+    } catch (error: any) {
+      const msg = error?.message || "";
+      const name = error?.name || "";
 
-    if (isChunkError) {
-      console.warn(`[App] Chunk load error for ${componentName}, attempting auto-reload...`, {
-        errorName: name,
-        errorMessage: msg,
-        hasRetried,
-        componentName
-      });
-      
-      // Auto-reload once
-      if (!hasRetried) {
-        window.sessionStorage.setItem(retryKey, 'true');
-        setTimeout(() => {
-          window.location.href = window.location.pathname + '?v=' + Date.now();
-        }, 1000);
-        return new Promise(() => {}); // Prevent further execution
+      // Comprehensive chunk error detection
+      const isChunkError =
+        name === "ChunkLoadError" ||
+        name === "SyntaxError" ||
+        /Unexpected token/.test(msg) ||
+        /Failed to fetch dynamically imported module/.test(msg) ||
+        /error loading dynamically imported module/.test(msg) ||
+        /Importing a module script failed/.test(msg) ||
+        /'text\/html' is not a valid JavaScript MIME type/.test(msg) ||
+        /Failed to fetch/.test(msg) ||
+        /Loading chunk/.test(msg);
+
+      if (isChunkError) {
+        console.warn(`[App] Chunk load error for ${componentName}, attempting auto-reload...`, {
+          errorName: name,
+          errorMessage: msg,
+          hasRetried,
+          componentName,
+        });
+
+        // Auto-reload once
+        if (!hasRetried) {
+          window.sessionStorage.setItem(retryKey, "true");
+          setTimeout(() => {
+            window.location.href = window.location.pathname + "?v=" + Date.now();
+          }, 1000);
+          return new Promise(() => {}); // Prevent further execution
+        }
       }
+
+      console.error(`[App] Component load failed for ${componentName}:`, {
+        name,
+        message: msg,
+        isChunkError,
+        hasRetried,
+      });
+
+      throw error;
     }
-    
-    console.error(`[App] Component load failed for ${componentName}:`, {
-      name,
-      message: msg,
-      isChunkError,
-      hasRetried
-    });
-    
-    throw error;
-  }
-});
+  });
 
 // Lazy load all page components for better code splitting
 const Auth = lazy(() => import("./pages/Auth"));
@@ -127,7 +128,9 @@ const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
 const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
 const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
-const PatientMobileHeader = lazy(() => import("./components/patient/PatientMobileHeader").then(m => ({ default: m.PatientMobileHeader })));
+const PatientMobileHeader = lazy(() =>
+  import("./components/patient/PatientMobileHeader").then((m) => ({ default: m.PatientMobileHeader })),
+);
 const PatientVideoRoom = lazy(() => import("./pages/patient/PatientVideoRoom"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
 const VideoConsultationRoom = lazy(() => import("./pages/practice/VideoConsultationRoom"));
@@ -137,7 +140,10 @@ const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
 const PatientDetail = lazyWithRetry(() => import("./pages/PatientDetail"), "PatientDetail");
-const PracticePatientMedicalVault = lazyWithRetry(() => import("./pages/practice/PatientMedicalVault"), "PracticePatientMedicalVault");
+const PracticePatientMedicalVault = lazyWithRetry(
+  () => import("./pages/practice/PatientMedicalVault"),
+  "PracticePatientMedicalVault",
+);
 const PracticePatientIntakeForm = lazy(() => import("./pages/practice/PracticePatientIntakeForm"));
 const Support = lazy(() => import("./pages/Support"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
@@ -147,6 +153,15 @@ const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
 const AgoraDebugSuite = lazy(() => import("./pages/dev/AgoraDebugSuite"));
+
+<Route
+  path="/dev/agora-debug"
+  element={
+    <DeveloperRoute>
+      <AgoraDebugSuite />
+    </DeveloperRoute>
+  }
+/>;
 
 // Loading fallback component
 const PageLoader = () => (
@@ -168,9 +183,9 @@ const queryClient = new QueryClient({
       // Sync on tab return
       retry: 1,
       // Fast failure
-      retryDelay: 1000
-    }
-  }
+      retryDelay: 1000,
+    },
+  },
 });
 
 // Initialize realtime manager with React Query client for automatic cache invalidation
@@ -189,147 +204,264 @@ const SessionTimerWrapper = () => {
 const SidebarLayout = ({ children }: { children: React.ReactNode }) => {
   const { isMobile } = useResponsive();
   const defaultOpen = true; // Always start expanded (full length) by default
-  
-  return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      {children}
-    </SidebarProvider>
-  );
+
+  return <SidebarProvider defaultOpen={defaultOpen}>{children}</SidebarProvider>;
 };
 
-const App = () => <QueryClientProvider client={queryClient}>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <ErrorBoundary>
         <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
-          <AuthProvider>
-            <SubscriptionProvider>
-              <SessionTimerWrapper />
-              <GlobalImpersonationBanner>
-                <Global2FADialogs />
-                <GlobalIntakeDialog />
-                <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  {/* Public Routes */}
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/verify-email" element={<VerifyEmail />} />
-                  <Route path="/change-password" element={<ChangePassword />} />
-                  <Route path="/video-guest/:token" element={<VideoGuestJoin />} />
-                  <Route path="/accept-terms" element={<ProtectedRoute><AcceptTerms /></ProtectedRoute>} />
-                  <Route path="/patient-onboarding" element={<ProtectedRoute><PatientOnboarding /></ProtectedRoute>} />
-                  <Route path="/intake" element={<ProtectedRoute><PatientIntakeForm /></ProtectedRoute>} />
-                  <Route path="/subscribe-to-vitaluxepro" element={<ProtectedRoute><PracticeOnlyRoute><SubscribeToVitaLuxePro /></PracticeOnlyRoute></ProtectedRoute>} />
-                  
-                  {/* ========================================== */}
-                  {/* VIDEO ROUTES - MUST BE BEFORE CATCH-ALL   */}
-                  {/* ========================================== */}
-                  <Route 
-                    path="/patient/video/:sessionId" 
-                    element={
-                      <ProtectedRoute>
-                        <PatientVideoRoom />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/practice/video/:sessionId" 
-                    element={
-                      <ProtectedRoute>
-                        <SubscriptionProtectedRoute>
-                          <VideoConsultationRoom />
-                        </SubscriptionProtectedRoute>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                   <Route path="/*" element={<ProtectedRoute>
-                        <SidebarLayout>
-                          <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
-                            <AppSidebar />
-                            <main className="flex-1 flex flex-col overflow-y-auto">
-                              <PatientMobileHeader />
-                              <Topbar />
-                              <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 pt-14 md:pt-4 overflow-x-hidden relative bg-gray-100 dark:bg-stone-900 rounded-none">
-                                <div className="relative z-10">
-                                <Suspense fallback={<PageLoader />}>
-                                  <AnimatePresence mode="wait">
-                                    <Routes>
-                                      <Route path="/" element={<DashboardRouter />} />
-                                      <Route path="/dashboard" element={<DashboardRouter />} />
-                                      <Route path="/accounts" element={<Accounts />} />
-                                      <Route path="/practices" element={<Practices />} />
-                                      <Route path="/representatives" element={<Representatives />} />
-                                      <Route path="/patients" element={<Patients />} />
-                                      <Route path="/patients/:patientId" element={<PatientDetail />} />
-                                      <Route path="/patients/:patientId/intake" element={<PracticePatientIntakeForm />} />
-                                      <Route path="/practice/patients/:patientId/medical-vault" element={<PracticePatientMedicalVault />} />
-                                      <Route path="/providers" element={<Providers />} />
-                                      <Route path="/staff" element={<SubscriptionProtectedRoute><ProGate><Staff /></ProGate></SubscriptionProtectedRoute>} />
-                                      <Route path="/products" element={<Products />} />
-                                      <Route path="/orders" element={<Orders />} />
-                                      <Route path="/messages" element={<Messages />} />
-                                      <Route path="/pharmacies" element={<Pharmacies />} />
-                                      <Route path="/reports" element={<Reports />} />
-                                      <Route path="/cart" element={<Cart />} />
-                                      <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
-                                      <Route path="/checkout" element={<Checkout />} />
-                                      <Route path="/order-confirmation" element={<Checkout />} />
-                                      <Route path="/downlines" element={<MyDownlines />} />
-                                      <Route path="/med-spas" element={<MedSpas />} />
-                                      <Route path="/profile" element={<Profile />} />
-                                      <Route path="/admin-settings" element={<AdminSettings />} />
-                                      <Route path="/subscriptions" element={<Subscriptions />} />
-                      <Route path="/security" element={<Security />} />
-                      <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
-                      <Route path="/support" element={<Support />} />
-                      <Route path="/support-tickets" element={<SupportTickets />} />
-                      <Route path="/support-tickets/:ticketId" element={<SupportTicketThread />} />
-                      <Route path="/admin/terms" element={<AdminTermsManagement />} />
-                                       <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
-                                       <Route path="/admin/practice-audit" element={<PracticeAuditLog />} />
-                                       <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
-                                       <Route path="/admin/alerts" element={<AdminAlerts />} />
-                                       <Route path="/rep-reports" element={<RepProfitReports />} />
-                                      <Route path="/rep-productivity" element={<RepProductivityReport />} />
-                                      <Route path="/downline-performance" element={<DownlinePerformanceView />} />
-                                      <Route path="/shipping" element={<PharmacyShipping />} />
-                                       <Route path="/appointments" element={<PatientAppointments />} />
-                                       <Route path="/medical-vault" element={<PatientMedicalVault />} />
-                                       <Route path="/documents" element={<PatientDocuments />} />
-                                       <Route path="/patient-messages" element={<PatientMessages />} />
-                                       <Route path="/practice/patient-inbox" element={<SubscriptionProtectedRoute><PatientInbox /></SubscriptionProtectedRoute>} />
-                                       <Route path="/practice-calendar" element={<SubscriptionProtectedRoute><PracticeCalendar /></SubscriptionProtectedRoute>} />
-                                       <Route path="/video-consultations" element={<SubscriptionProtectedRoute><VideoConsultations /></SubscriptionProtectedRoute>} />
-                                       <Route path="/video-test" element={<DeveloperRoute><VideoTestRoom /></DeveloperRoute>} />
-                                       <Route path="/token-verification-test" element={<DeveloperRoute><TokenVerificationTest /></DeveloperRoute>} />
-                                       <Route path="/dev/agora-debug" element={<DeveloperRoute><AgoraDebugSuite /></DeveloperRoute>} />
-                                       <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
-                                      <Route path="/my-subscription" element={<MySubscription />} />
-                                      <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
-                                      <Route path="/internal-chat" element={<SubscriptionProtectedRoute><InternalChat /></SubscriptionProtectedRoute>} />
-                                      {/* Patient Inbox removed - now integrated into Messages */}
-                                      {/* Redirect old practice-patients route to new merged Patients page */}
-                                      <Route path="/practice-patients" element={<Navigate to="/patients" replace />} />
-                                      <Route path="*" element={<NotFound />} />
-                                    </Routes>
-                                  </AnimatePresence>
-                                </Suspense>
-                                </div>
+            <AuthProvider>
+              <SubscriptionProvider>
+                <SessionTimerWrapper />
+                <GlobalImpersonationBanner>
+                  <Global2FADialogs />
+                  <GlobalIntakeDialog />
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      {/* Public Routes */}
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/verify-email" element={<VerifyEmail />} />
+                      <Route path="/change-password" element={<ChangePassword />} />
+                      <Route path="/video-guest/:token" element={<VideoGuestJoin />} />
+                      <Route
+                        path="/accept-terms"
+                        element={
+                          <ProtectedRoute>
+                            <AcceptTerms />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/patient-onboarding"
+                        element={
+                          <ProtectedRoute>
+                            <PatientOnboarding />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/intake"
+                        element={
+                          <ProtectedRoute>
+                            <PatientIntakeForm />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/subscribe-to-vitaluxepro"
+                        element={
+                          <ProtectedRoute>
+                            <PracticeOnlyRoute>
+                              <SubscribeToVitaLuxePro />
+                            </PracticeOnlyRoute>
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      {/* ========================================== */}
+                      {/* VIDEO ROUTES - MUST BE BEFORE CATCH-ALL   */}
+                      {/* ========================================== */}
+                      <Route
+                        path="/patient/video/:sessionId"
+                        element={
+                          <ProtectedRoute>
+                            <PatientVideoRoom />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/practice/video/:sessionId"
+                        element={
+                          <ProtectedRoute>
+                            <SubscriptionProtectedRoute>
+                              <VideoConsultationRoom />
+                            </SubscriptionProtectedRoute>
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      <Route
+                        path="/*"
+                        element={
+                          <ProtectedRoute>
+                            <SidebarLayout>
+                              <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
+                                <AppSidebar />
+                                <main className="flex-1 flex flex-col overflow-y-auto">
+                                  <PatientMobileHeader />
+                                  <Topbar />
+                                  <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 pt-14 md:pt-4 overflow-x-hidden relative bg-gray-100 dark:bg-stone-900 rounded-none">
+                                    <div className="relative z-10">
+                                      <Suspense fallback={<PageLoader />}>
+                                        <AnimatePresence mode="wait">
+                                          <Routes>
+                                            <Route path="/" element={<DashboardRouter />} />
+                                            <Route path="/dashboard" element={<DashboardRouter />} />
+                                            <Route path="/accounts" element={<Accounts />} />
+                                            <Route path="/practices" element={<Practices />} />
+                                            <Route path="/representatives" element={<Representatives />} />
+                                            <Route path="/patients" element={<Patients />} />
+                                            <Route path="/patients/:patientId" element={<PatientDetail />} />
+                                            <Route
+                                              path="/patients/:patientId/intake"
+                                              element={<PracticePatientIntakeForm />}
+                                            />
+                                            <Route
+                                              path="/practice/patients/:patientId/medical-vault"
+                                              element={<PracticePatientMedicalVault />}
+                                            />
+                                            <Route path="/providers" element={<Providers />} />
+                                            <Route
+                                              path="/staff"
+                                              element={
+                                                <SubscriptionProtectedRoute>
+                                                  <ProGate>
+                                                    <Staff />
+                                                  </ProGate>
+                                                </SubscriptionProtectedRoute>
+                                              }
+                                            />
+                                            <Route path="/products" element={<Products />} />
+                                            <Route path="/orders" element={<Orders />} />
+                                            <Route path="/messages" element={<Messages />} />
+                                            <Route path="/pharmacies" element={<Pharmacies />} />
+                                            <Route path="/reports" element={<Reports />} />
+                                            <Route path="/cart" element={<Cart />} />
+                                            <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
+                                            <Route path="/checkout" element={<Checkout />} />
+                                            <Route path="/order-confirmation" element={<Checkout />} />
+                                            <Route path="/downlines" element={<MyDownlines />} />
+                                            <Route path="/med-spas" element={<MedSpas />} />
+                                            <Route path="/profile" element={<Profile />} />
+                                            <Route path="/admin-settings" element={<AdminSettings />} />
+                                            <Route path="/subscriptions" element={<Subscriptions />} />
+                                            <Route path="/security" element={<Security />} />
+                                            <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
+                                            <Route path="/support" element={<Support />} />
+                                            <Route path="/support-tickets" element={<SupportTickets />} />
+                                            <Route
+                                              path="/support-tickets/:ticketId"
+                                              element={<SupportTicketThread />}
+                                            />
+                                            <Route path="/admin/terms" element={<AdminTermsManagement />} />
+                                            <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
+                                            <Route path="/admin/practice-audit" element={<PracticeAuditLog />} />
+                                            <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
+                                            <Route path="/admin/alerts" element={<AdminAlerts />} />
+                                            <Route path="/rep-reports" element={<RepProfitReports />} />
+                                            <Route path="/rep-productivity" element={<RepProductivityReport />} />
+                                            <Route path="/downline-performance" element={<DownlinePerformanceView />} />
+                                            <Route path="/shipping" element={<PharmacyShipping />} />
+                                            <Route path="/appointments" element={<PatientAppointments />} />
+                                            <Route path="/medical-vault" element={<PatientMedicalVault />} />
+                                            <Route path="/documents" element={<PatientDocuments />} />
+                                            <Route path="/patient-messages" element={<PatientMessages />} />
+                                            <Route
+                                              path="/practice/patient-inbox"
+                                              element={
+                                                <SubscriptionProtectedRoute>
+                                                  <PatientInbox />
+                                                </SubscriptionProtectedRoute>
+                                              }
+                                            />
+                                            <Route
+                                              path="/practice-calendar"
+                                              element={
+                                                <SubscriptionProtectedRoute>
+                                                  <PracticeCalendar />
+                                                </SubscriptionProtectedRoute>
+                                              }
+                                            />
+                                            <Route
+                                              path="/video-consultations"
+                                              element={
+                                                <SubscriptionProtectedRoute>
+                                                  <VideoConsultations />
+                                                </SubscriptionProtectedRoute>
+                                              }
+                                            />
+                                            <Route
+                                              path="/video-test"
+                                              element={
+                                                <DeveloperRoute>
+                                                  <VideoTestRoom />
+                                                </DeveloperRoute>
+                                              }
+                                            />
+                                            <Route
+                                              path="/token-verification-test"
+                                              element={
+                                                <DeveloperRoute>
+                                                  <TokenVerificationTest />
+                                                </DeveloperRoute>
+                                              }
+                                            />
+                                            <Route
+                                              path="/dev/agora-debug"
+                                              element={
+                                                <DeveloperRoute>
+                                                  <AgoraDebugSuite />
+                                                </DeveloperRoute>
+                                              }
+                                            />
+                                            <Route
+                                              path="/document-center"
+                                              element={
+                                                <SubscriptionProtectedRoute>
+                                                  <DocumentCenter />
+                                                </SubscriptionProtectedRoute>
+                                              }
+                                            />
+                                            <Route path="/my-subscription" element={<MySubscription />} />
+                                            <Route
+                                              path="/practice-reporting"
+                                              element={
+                                                <SubscriptionProtectedRoute>
+                                                  <PracticeReporting />
+                                                </SubscriptionProtectedRoute>
+                                              }
+                                            />
+                                            <Route
+                                              path="/internal-chat"
+                                              element={
+                                                <SubscriptionProtectedRoute>
+                                                  <InternalChat />
+                                                </SubscriptionProtectedRoute>
+                                              }
+                                            />
+                                            {/* Patient Inbox removed - now integrated into Messages */}
+                                            {/* Redirect old practice-patients route to new merged Patients page */}
+                                            <Route
+                                              path="/practice-patients"
+                                              element={<Navigate to="/patients" replace />}
+                                            />
+                                            <Route path="*" element={<NotFound />} />
+                                          </Routes>
+                                        </AnimatePresence>
+                                      </Suspense>
+                                    </div>
+                                  </div>
+                                </main>
                               </div>
-                            </main>
-                          </div>
-                        </SidebarLayout>
-                      </ProtectedRoute>} />
-                </Routes>
-              </Suspense>
-              </GlobalImpersonationBanner>
-            </SubscriptionProvider>
-          </AuthProvider>
-        </BrowserRouter>
-    </TooltipProvider>
+                            </SidebarLayout>
+                          </ProtectedRoute>
+                        }
+                      />
+                    </Routes>
+                  </Suspense>
+                </GlobalImpersonationBanner>
+              </SubscriptionProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
       </ErrorBoundary>
     </ThemeProvider>
-  </QueryClientProvider>;
+  </QueryClientProvider>
+);
 export default App; // deploy trigger 2 - 2025-11-07 16:36
