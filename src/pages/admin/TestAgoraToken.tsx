@@ -17,7 +17,7 @@ export default function TestAgoraToken() {
     setTokenData(null);
     
     try {
-      const { data, error } = await supabase.functions.invoke('test-agora-token');
+      /* const { data, error } = await supabase.functions.invoke('test-agora-token');
       
       if (error) throw error;
       
@@ -25,7 +25,8 @@ export default function TestAgoraToken() {
       toast({
         title: "Token Generated",
         description: "Sample Agora token generated successfully",
-      });
+      }); */
+      setTokenData({ message: 'Agora token generation disabled' });
     } catch (error: any) {
       console.error("Error generating token:", error);
       toast({

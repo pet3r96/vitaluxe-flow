@@ -1,9 +1,10 @@
+// 🧹 TODO AGORA REFACTOR
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Camera, Mic, Volume2, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
-import AgoraRTC from "agora-rtc-sdk-ng";
+// import AgoraRTC from "agora-rtc-sdk-ng";
 import { toast } from "sonner";
 
 interface DeviceTestScreenProps {
@@ -179,7 +180,8 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
     retryCountRef.current = { camera: 0, mic: 0 };
     
     try {
-      const devices = await AgoraRTC.getDevices();
+      // const devices = await AgoraRTC.getDevices();
+      const devices: any[] = [];
       console.log("📱 Found devices:", devices.length);
       
       const cameraDevices = devices
@@ -270,9 +272,10 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       console.log(`📹 Testing camera${deviceId ? ` (${deviceId})` : ''}...`);
       setCameraStatus("testing");
       
-      const videoTrack = await AgoraRTC.createCameraVideoTrack(
+      /* const videoTrack = await AgoraRTC.createCameraVideoTrack(
         deviceId ? { cameraId: deviceId } : undefined
-      );
+      ); */
+      const videoTrack: any = null;
       
       localVideoTrackRef.current = videoTrack;
       console.log("✅ Video track created");
@@ -337,9 +340,10 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       console.log(`🎤 Testing microphone${deviceId ? ` (${deviceId})` : ''}...`);
       setMicStatus("testing");
       
-      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack(
+      /* const audioTrack = await AgoraRTC.createMicrophoneAudioTrack(
         deviceId ? { microphoneId: deviceId } : undefined
-      );
+      ); */
+      const audioTrack: any = null;
       
       clearTimeout(timeoutId);
       localAudioTrackRef.current = audioTrack;

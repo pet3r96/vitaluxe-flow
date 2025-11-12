@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 type IAgoraRTCClient = any;
 
 interface UseTokenAutoRefreshProps {
-  client: IAgoraRTCClient | null;
+  client: any | null; // IAgoraRTCClient | null;
   sessionId: string;
   channelName: string;
   initialTokenExpiry?: number; // Unix timestamp in seconds

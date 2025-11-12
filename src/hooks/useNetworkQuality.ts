@@ -12,7 +12,7 @@ export interface NetworkQualityStats {
 }
 
 export const useNetworkQuality = (
-  client: IAgoraRTCClient | null,
+  client: any | null, // IAgoraRTCClient | null,
   sessionId: string | null
 ) => {
   const [quality, setQuality] = useState<NetworkQualityStats>({

@@ -1,6 +1,7 @@
+// 🧹 TODO AGORA REFACTOR
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import { buildRtcToken, buildRtmToken, Role } from '../_shared/agoraTokenBuilder.ts';
+// import { buildRtcToken, buildRtmToken, Role } from '../_shared/agoraTokenBuilder.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -147,7 +148,7 @@ Deno.serve(async (req) => {
     }
 
     const uid = String(effectiveUserId);
-    const tokenRole = role === 'publisher' ? Role.PUBLISHER : Role.SUBSCRIBER;
+    // const tokenRole = role === 'publisher' ? Role.PUBLISHER : Role.SUBSCRIBER;
 
     console.log('🎫 [generate-agora-token] Generating tokens...', { channelName, uid, role });
 
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
     console.log('   Expire time:', expire);
     console.log('   TTL:', 3600, 'seconds');
 
-    const rtcToken = await buildRtcToken(
+    /* const rtcToken = await buildRtcToken(
       appId,
       appCertificate,
       channelName,
@@ -174,12 +175,12 @@ Deno.serve(async (req) => {
       appCertificate,
       uid,
       expire
-    );
+    ); */
 
     // Create tokens object in same format as before
     const tokens = {
-      rtcToken,
-      rtmToken,
+      rtcToken: 'PLACEHOLDER_RTC_TOKEN',
+      rtmToken: 'PLACEHOLDER_RTM_TOKEN',
       rtmUid: uid,
       expiresAt: expire,
       appId
