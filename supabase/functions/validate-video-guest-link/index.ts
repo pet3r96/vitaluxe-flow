@@ -134,7 +134,10 @@ Deno.serve(async (req) => {
     }
 
     // Generate tokens using Web Crypto API implementation
-    const expire = Math.floor(Date.now() / 1000) + 3600;
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const expire = currentTimestamp + 3600;
+    
+    console.log('🔧 [Guest Link] Using official Agora AccessToken2 port');
     
     const rtcToken = await buildRtcToken(
       appId,

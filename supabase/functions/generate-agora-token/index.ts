@@ -151,8 +151,14 @@ Deno.serve(async (req) => {
 
     console.log('🎫 [generate-agora-token] Generating tokens...', { channelName, uid, role });
 
-    // Generate tokens using Web Crypto API implementation
-    const expire = Math.floor(Date.now() / 1000) + 3600;
+    // Generate tokens using Official Agora Port (AccessToken2)
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const expire = currentTimestamp + 3600; // 1 hour from now
+
+    console.log('🔧 [Token Generation] Using official Agora AccessToken2 port');
+    console.log('   Current time:', currentTimestamp);
+    console.log('   Expire time:', expire);
+    console.log('   TTL:', 3600, 'seconds');
 
     const rtcToken = await buildRtcToken(
       appId,

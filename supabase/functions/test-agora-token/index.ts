@@ -139,8 +139,11 @@ serve(async (req) => {
       expiresInSeconds: 3600,
     });
     
-    // Generate tokens using Web Crypto API implementation
-    const expire = Math.floor(Date.now() / 1000) + 3600;
+    // Generate tokens using Official Agora Port
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const expire = currentTimestamp + 3600;
+    
+    console.log('🔧 [Test] Using official Agora AccessToken2 port');
     
     const rtcToken = await buildRtcToken(
       rawAppId,
