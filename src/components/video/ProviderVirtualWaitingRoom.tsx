@@ -970,7 +970,7 @@ export const ProviderVirtualWaitingRoom = ({
                   ) : (
                     <>
                       <Zap className="h-4 w-4" />
-                      Quick Start Meeting
+                      Create Instant Session
                     </>
                   )}
                 </Button>
