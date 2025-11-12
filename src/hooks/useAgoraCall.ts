@@ -25,19 +25,20 @@ export function useAgoraCall({
 
   // Fetch token from backend
   const fetchToken = useCallback(async () => {
-    const response = await fetch('/functions/v1/generate-agora-token', {
+    const response = await fetch('/functions/v1/agora-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         channel,
         uid: userId,
         role: 'publisher',
-        expireSeconds: 3600
+        ttl: 3600
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Token fetch failed: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Token fetch failed: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
