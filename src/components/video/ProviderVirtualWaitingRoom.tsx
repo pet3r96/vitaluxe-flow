@@ -20,6 +20,7 @@ import { CreateAppointmentDialog } from "@/components/calendar/CreateAppointment
 import { VideoGuestLinkDialog } from "./VideoGuestLinkDialog";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { getProviderDisplayName } from "@/utils/providerNameUtils";
+import { createInstantMeeting } from "@/utils/createInstantMeeting";
 
 interface ProviderVirtualWaitingRoomProps {
   practiceId: string;
@@ -49,6 +50,7 @@ export const ProviderVirtualWaitingRoom = ({
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [appointmentToComplete, setAppointmentToComplete] = useState<string | null>(null);
   const [preparingSession, setPreparingSession] = useState<string | null>(null);
+  const [creatingInstantMeeting, setCreatingInstantMeeting] = useState(false);
 
   // Helper function to display patient names consistently
   const getPatientDisplay = (p: { first_name?: string; last_name?: string; email?: string; id: string }) => {
@@ -636,6 +638,45 @@ export const ProviderVirtualWaitingRoom = ({
     }
   };
 
+  const handleQuickStartMeeting = async () => {
+    setCreatingInstantMeeting(true);
+    
+    try {
+      // Get current user ID for provider
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+
+      console.log('[ProviderVirtualWaitingRoom] Creating instant meeting for provider:', user.id);
+      
+      const meeting = await createInstantMeeting(user.id);
+      
+      console.log('[ProviderVirtualWaitingRoom] ✅ Instant meeting created:', {
+        channelId: meeting.channelId,
+        joinUrlProvider: meeting.joinUrlProvider,
+        joinUrlPatient: meeting.joinUrlPatient
+      });
+
+      toast({
+        title: "Meeting Ready",
+        description: "Instant video meeting created. Redirecting..."
+      });
+
+      // Redirect provider to video room
+      navigate(`/practice/video/${meeting.channelId}`);
+    } catch (error: any) {
+      console.error('[ProviderVirtualWaitingRoom] Failed to create instant meeting:', error);
+      toast({
+        title: "Failed to Create Meeting",
+        description: error.message || "Could not create instant meeting",
+        variant: "destructive"
+      });
+    } finally {
+      setCreatingInstantMeeting(false);
+    }
+  };
+
   const handleCreateInstantSession = async () => {
     if (!selectedPatientId || !selectedProviderId) {
       toast({
@@ -917,7 +958,26 @@ export const ProviderVirtualWaitingRoom = ({
 
               <div className="flex flex-col gap-2">
                 <Button 
+                  onClick={handleQuickStartMeeting}
+                  disabled={creatingInstantMeeting}
+                  className="gap-2 w-full"
+                >
+                  {creatingInstantMeeting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4" />
+                      Quick Start Meeting
+                    </>
+                  )}
+                </Button>
+
+                <Button 
                   onClick={() => setShowScheduleDialog(true)}
+                  variant="secondary"
                   className="gap-2 w-full"
                 >
                   <Calendar className="h-4 w-4" />
@@ -926,9 +986,9 @@ export const ProviderVirtualWaitingRoom = ({
                 
                 <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                   <DialogTrigger asChild>
-                    <Button variant="secondary" className="gap-2 w-full">
+                    <Button variant="outline" className="gap-2 w-full">
                       <Plus className="h-4 w-4" />
-                      Create Instant Session
+                      Create Session with Patient
                     </Button>
                   </DialogTrigger>
             <DialogContent>
