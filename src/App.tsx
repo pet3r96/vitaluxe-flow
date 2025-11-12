@@ -145,10 +145,7 @@ const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
 const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
-const TestAgoraToken = lazy(() => import("./pages/admin/TestAgoraToken"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
-const AgoraSmokeTest = lazy(() => import("./pages/dev/AgoraSmokeTest"));
-const QuickAgoraTest = lazy(() => import("./pages/dev/QuickAgoraTest")); // Dev only - quick 1:1 test
 
 // Loading fallback component
 const PageLoader = () => (
@@ -293,7 +290,6 @@ const App = () => <QueryClientProvider client={queryClient}>
                                        <Route path="/admin/practice-audit" element={<PracticeAuditLog />} />
                                        <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
                                        <Route path="/admin/alerts" element={<AdminAlerts />} />
-                                       <Route path="/admin/test-agora-token" element={<DeveloperRoute><TestAgoraToken /></DeveloperRoute>} />
                                        <Route path="/rep-reports" element={<RepProfitReports />} />
                                       <Route path="/rep-productivity" element={<RepProductivityReport />} />
                                       <Route path="/downline-performance" element={<DownlinePerformanceView />} />
@@ -307,8 +303,6 @@ const App = () => <QueryClientProvider client={queryClient}>
                                        <Route path="/video-consultations" element={<SubscriptionProtectedRoute><VideoConsultations /></SubscriptionProtectedRoute>} />
                                        <Route path="/video-test" element={<DeveloperRoute><VideoTestRoom /></DeveloperRoute>} />
                                        <Route path="/token-verification-test" element={<DeveloperRoute><TokenVerificationTest /></DeveloperRoute>} />
-                                       <Route path="/dev/agora-smoke" element={<DeveloperRoute><AgoraSmokeTest /></DeveloperRoute>} />
-                                       <Route path="/dev/agora" element={<DeveloperRoute><QuickAgoraTest /></DeveloperRoute>} /> {/* Dev only - quick 1:1 test */}
                                        <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
                                       <Route path="/my-subscription" element={<MySubscription />} />
                                       <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
