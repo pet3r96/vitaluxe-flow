@@ -26,7 +26,9 @@ export function useAgoraCall({
   // Fetch token from backend
   const fetchToken = useCallback(async () => {
     try {
-      const response = await fetch('/functions/v1/agora-token', {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agora-token`,
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -35,7 +37,8 @@ export function useAgoraCall({
           role: 'publisher',
           ttl: 3600,
         }),
-      });
+      }
+    );
 
       // Defensive: capture text first so we can parse or show it
       const text = await response.text();
