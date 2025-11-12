@@ -146,6 +146,7 @@ const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultation
 const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
+const AgoraDebugSuite = lazy(() => import("./pages/dev/AgoraDebugSuite"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -303,6 +304,7 @@ const App = () => <QueryClientProvider client={queryClient}>
                                        <Route path="/video-consultations" element={<SubscriptionProtectedRoute><VideoConsultations /></SubscriptionProtectedRoute>} />
                                        <Route path="/video-test" element={<DeveloperRoute><VideoTestRoom /></DeveloperRoute>} />
                                        <Route path="/token-verification-test" element={<DeveloperRoute><TokenVerificationTest /></DeveloperRoute>} />
+                                       <Route path="/dev/agora-debug" element={<DeveloperRoute><AgoraDebugSuite /></DeveloperRoute>} />
                                        <Route path="/document-center" element={<SubscriptionProtectedRoute><DocumentCenter /></SubscriptionProtectedRoute>} />
                                       <Route path="/my-subscription" element={<MySubscription />} />
                                       <Route path="/practice-reporting" element={<SubscriptionProtectedRoute><PracticeReporting /></SubscriptionProtectedRoute>} />
