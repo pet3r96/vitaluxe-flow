@@ -188,50 +188,12 @@ export default function PracticeCalendar() {
 
   // Initialize selected providers with all provider IDs on first load
   // IMPORTANT: Auto-select all providers for both practice owners AND staff
-  // For provider accounts, auto-select ONLY their provider record
   useEffect(() => {
     if (providers.length > 0 && selectedProviders.length === 0) {
-      if (isProviderAccount && effectiveUserId) {
-        // For provider accounts: auto-select ONLY their provider record
-        const currentProvider = providers.find((p: any) => p.user_id === effectiveUserId);
-        if (currentProvider) {
-          console.log(`🔧 Auto-selecting provider ${currentProvider.id} for logged-in provider account`);
-          setSelectedProviders([currentProvider.id]);
-          setDefaultProviderId(currentProvider.id);
-        } else {
-          console.warn('⚠️ Could not find provider record for logged-in provider');
-        }
-      } else {
-        // For practice owners and staff: auto-select ALL providers
-        console.log(`🔧 Auto-selecting all ${providers.length} providers for ${effectiveRole}`);
-        setSelectedProviders(providers.map((p: any) => p.id));
-      }
+      console.log(`🔧 Auto-selecting all ${providers.length} providers for ${effectiveRole}`);
+      setSelectedProviders(providers.map((p: any) => p.id));
     }
-  }, [providers, effectiveRole, isProviderAccount, effectiveUserId, selectedProviders.length]);
-
-  // Fallback: If provider account has empty providers list, fetch directly
-  useEffect(() => {
-    const fetchProviderDirectly = async () => {
-      if (isProviderAccount && effectiveUserId && providers.length === 0 && selectedProviders.length === 0) {
-        console.log('🔧 Providers list empty, fetching provider record directly');
-        const { data, error } = await supabase
-          .from('providers')
-          .select('id')
-          .eq('user_id', effectiveUserId)
-          .maybeSingle();
-        
-        if (data?.id) {
-          console.log(`🔧 Found provider ${data.id}, auto-selecting`);
-          setSelectedProviders([data.id]);
-          setDefaultProviderId(data.id);
-        } else if (error) {
-          console.error('⚠️ Error fetching provider directly:', error);
-        }
-      }
-    };
-    
-    fetchProviderDirectly();
-  }, [isProviderAccount, effectiveUserId, providers.length, selectedProviders.length]);
+  }, [providers, effectiveRole]);
 
   const handleProviderToggle = (providerId: string) => {
     setSelectedProviders((prev) =>

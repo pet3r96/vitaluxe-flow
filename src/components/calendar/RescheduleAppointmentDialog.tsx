@@ -1,4 +1,3 @@
-import { useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,24 +39,15 @@ export function RescheduleAppointmentDialog({
   onSuccess,
 }: RescheduleAppointmentDialogProps) {
   const queryClient = useQueryClient();
-  const { effectiveUserId, isProviderAccount } = useAuth();
+  const { effectiveUserId } = useAuth();
   const [createFollowUp, setCreateFollowUp] = useState(false);
-  
-  // Find current provider's record ID for auto-selection
-  const currentProviderId = useMemo(() => {
-    if (isProviderAccount && effectiveUserId) {
-      const currentProvider = providers.find((p: any) => p.user_id === effectiveUserId);
-      return currentProvider?.id;
-    }
-    return null;
-  }, [isProviderAccount, effectiveUserId, providers]);
   
   const appointmentDate = new Date(appointment.start_time);
   const duration = Math.max(1, Math.round((new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) / 60000));
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
-      providerId: appointment.provider_id || currentProviderId || "",
+      providerId: appointment.provider_id || "",
       roomId: appointment.room_id || "none",
       appointmentDate: format(appointmentDate, 'yyyy-MM-dd'),
       startTime: format(appointmentDate, 'HH:mm'),
@@ -68,28 +58,6 @@ export function RescheduleAppointmentDialog({
       notes: appointment.notes || "",
     },
   });
-
-  // Fallback: If provider account and providers list is empty, fetch provider ID directly
-  useEffect(() => {
-    const fetchProviderDirectly = async () => {
-      if (open && isProviderAccount && effectiveUserId && providers.length === 0) {
-        const currentValue = watch('providerId');
-        if (!currentValue) {
-          const { data } = await supabase
-            .from('providers')
-            .select('id')
-            .eq('user_id', effectiveUserId)
-            .maybeSingle();
-          
-          if (data?.id) {
-            setValue('providerId', data.id);
-          }
-        }
-      }
-    };
-    
-    fetchProviderDirectly();
-  }, [open, isProviderAccount, effectiveUserId, providers.length, watch, setValue]);
 
   // Fetch service types
   const { data: serviceTypes } = useQuery({
