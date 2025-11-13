@@ -15,6 +15,14 @@ import {
 } from "https://esm.sh/agora-token@2.0.4";
 
 // --------------------------------------------------------
+// 0. CORS Headers
+// --------------------------------------------------------
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// --------------------------------------------------------
 // 1. Central Channel Normalizer
 //    (MUST match frontend normalizeChannel.ts 1:1)
 // --------------------------------------------------------
@@ -76,6 +84,11 @@ function generateTokens(channel: string, uid: string, role: "publisher" | "subsc
 // 4. Main Handler
 // --------------------------------------------------------
 serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
     // Parse request body
     const body = await req.json();
@@ -107,7 +120,7 @@ serve(async (req) => {
           ok: false,
           error: "Missing AGORA_APP_ID or AGORA_APP_CERTIFICATE",
         }),
-        { status: 500 },
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
@@ -125,7 +138,7 @@ serve(async (req) => {
         appId: APP_ID,
         ...tokenPayload,
       }),
-      { status: 200 },
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
     console.error("[AGORA TOKEN] ERROR:", err);
@@ -135,7 +148,7 @@ serve(async (req) => {
         ok: false,
         error: err?.message || "Unknown error",
       }),
-      { status: 500 },
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
 });
