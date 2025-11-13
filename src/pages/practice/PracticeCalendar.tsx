@@ -312,6 +312,7 @@ export default function PracticeCalendar() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onAppointmentSelect={handleSearchResultClick}
+        defaultTab="filters"
       />
 
       {/* Main Content */}

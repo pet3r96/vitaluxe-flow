@@ -30,6 +30,7 @@ interface CalendarSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onAppointmentSelect?: (appointment: any) => void;
+  defaultTab?: 'appointments' | 'filters';
 }
 
 const STATUS_OPTIONS = [
@@ -55,7 +56,8 @@ export function CalendarSidebar({
   appointments = [],
   isOpen,
   onClose,
-  onAppointmentSelect
+  onAppointmentSelect,
+  defaultTab = 'appointments'
 }: CalendarSidebarProps) {
   const [providersExpanded, setProvidersExpanded] = useState(true);
   const [roomsExpanded, setRoomsExpanded] = useState(false);
@@ -127,7 +129,7 @@ export function CalendarSidebar({
         </div>
 
         {/* Tabs for Appointments vs Filters */}
-        <Tabs defaultValue="appointments" className="flex-1 flex flex-col overflow-hidden">
+        <Tabs defaultValue={defaultTab} className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="mx-3 sm:mx-4 mt-3 sm:mt-4 grid w-auto grid-cols-2">
             <TabsTrigger value="appointments" className="text-xs sm:text-sm">Appointments</TabsTrigger>
             <TabsTrigger value="filters" className="text-xs sm:text-sm">
