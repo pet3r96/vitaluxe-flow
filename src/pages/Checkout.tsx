@@ -104,7 +104,7 @@ export default function Checkout() {
 
       if (cartError) throw cartError;
 
-      if (!cartData) return { lines: [] };
+      if (!cartData) return null;
 
       const { data: linesRaw, error: linesError } = await supabase
         .from("cart_lines")
@@ -154,7 +154,7 @@ export default function Checkout() {
     }
     
     // Cart must be loaded to calculate
-    if (!cart?.lines) {
+    if (!cart || !cart.lines) {
       return 0;
     }
     
@@ -179,7 +179,7 @@ export default function Checkout() {
       .maybeSingle();
 
     if (cartError) throw cartError;
-    if (!cartData) return { id: undefined as unknown as string, lines: [] as any[] };
+    if (!cartData) return null;
 
     const { data: linesRaw, error: linesError } = await supabase
       .from("cart_lines")
@@ -313,7 +313,11 @@ export default function Checkout() {
       // Always ensure we have a usable cart snapshot at the moment of click
       const latestCart = (cart?.lines && cart.lines.length > 0) ? cart : await fetchCartSnapshot();
       
-      const linesAll = (latestCart?.lines as any[]) || [];
+      if (!latestCart || !latestCart.id) {
+        throw new Error("Cart is empty or unavailable");
+      }
+
+      const linesAll = (latestCart.lines as any[]) || [];
 
       // If there are any practice lines, make sure profile is loaded before proceeding
       const practiceLines = linesAll.filter((line) => line.patient_name === "Practice Order");
@@ -322,7 +326,7 @@ export default function Checkout() {
         throw new Error("Loading practice information... Please wait and try again.");
       }
 
-      if (!latestCart?.id || linesAll.length === 0) {
+      if (linesAll.length === 0) {
         throw new Error("Cart is empty");
       }
 
