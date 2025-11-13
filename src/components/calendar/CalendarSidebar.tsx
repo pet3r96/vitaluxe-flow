@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { X, ChevronDown, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { X, ChevronDown, ChevronRight, Calendar as CalendarIcon, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MiniCalendar } from "./MiniCalendar";
 import { ProviderAvatar } from "./ProviderAvatar";
 import { AppointmentSearchInput } from "./AppointmentSearchInput";
 import { AppointmentSearchResults } from "./AppointmentSearchResults";
+import { AppointmentsList } from "./AppointmentsList";
 import { useAppointmentSearch } from "@/hooks/useAppointmentSearch";
 import { cn } from "@/lib/utils";
 import { getProviderDisplayName } from "@/utils/providerNameUtils";
@@ -107,16 +109,13 @@ export function CalendarSidebar({
       {/* Sidebar */}
       <div 
         className={cn(
-          "fixed lg:relative inset-y-0 left-0 z-50 w-[280px] bg-card border-r flex flex-col transition-transform duration-300 lg:translate-x-0",
+          "fixed lg:relative inset-y-0 left-0 z-50 w-[320px] bg-card border-r flex flex-col transition-transform duration-300 lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold text-sm">Calendar</h2>
-          </div>
+          <h2 className="font-semibold text-lg">My Appointments</h2>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -127,8 +126,30 @@ export function CalendarSidebar({
           </Button>
         </div>
 
-        <ScrollArea className="flex-1">
-          <div className="p-4 space-y-6">
+        {/* Tabs for Appointments vs Filters */}
+        <Tabs defaultValue="appointments" className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="mx-4 mt-4 grid w-auto grid-cols-2">
+            <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            <TabsTrigger value="filters">
+              <Filter className="h-3 w-3 mr-1" />
+              Filters
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Appointments List Tab */}
+          <TabsContent value="appointments" className="flex-1 overflow-hidden mt-0">
+            <AppointmentsList
+              appointments={appointments}
+              currentDate={currentDate}
+              onAppointmentClick={handleSearchResultClick}
+              selectedAppointmentId={undefined}
+            />
+          </TabsContent>
+
+          {/* Filters Tab */}
+          <TabsContent value="filters" className="flex-1 overflow-hidden mt-0">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-6">
             {/* Search Section */}
             <div>
               <AppointmentSearchInput
@@ -305,8 +326,10 @@ export function CalendarSidebar({
             </div>
               </>
             )}
-          </div>
-        </ScrollArea>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </div>
     </>
   );

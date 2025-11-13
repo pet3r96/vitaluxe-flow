@@ -294,7 +294,7 @@ export default function PracticeCalendar() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
       <CalendarSidebar
         currentDate={currentDate}
@@ -315,9 +315,9 @@ export default function PracticeCalendar() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex-none p-4 lg:p-6 border-b bg-background">
-          <div className="flex items-start justify-between gap-4">
+        {/* Compact Header */}
+        <div className="flex-none px-4 py-3 border-b bg-background">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button 
                 variant="ghost" 
@@ -327,36 +327,33 @@ export default function PracticeCalendar() {
               >
                 <Menu className="h-5 w-5" />
               </Button>
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Practice Calendar</h1>
-                <p className="text-sm text-muted-foreground">Manage appointments and schedules</p>
+              <div className="flex items-center gap-4">
+                <h1 className="text-lg font-semibold">Practice Calendar</h1>
+                <div className="hidden md:flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setSettingsDialogOpen(true)}>
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setPrintDayOpen(true)}>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-3 lg:gap-4">
-              <div className="hidden lg:flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setSettingsDialogOpen(true)}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setPrintDayOpen(true)}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Print Day
-                </Button>
-              </div>
+            
+            {/* Quick Actions - Inline */}
+            <div className="hidden sm:block">
+              <CalendarQuickActions
+                onNewAppointment={handleCreateAppointment}
+                onWalkIn={handleWalkInAppointment}
+                onBlockTime={() => setBlockTimeOpen(true)}
+              />
             </div>
           </div>
-          
-          {/* Quick Actions - Above Calendar */}
-          <CalendarQuickActions
-            onNewAppointment={handleCreateAppointment}
-            onWalkIn={handleWalkInAppointment}
-            onBlockTime={() => setBlockTimeOpen(true)}
-          />
         </div>
 
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Calendar Section */}
-          <div className="flex-1 flex flex-col p-3 sm:p-4 lg:p-6 min-h-0">
+          <div className="flex-1 flex flex-col p-3 sm:p-4 min-h-0">
             <CalendarHeader
               currentDate={currentDate}
               view={view}
@@ -452,8 +449,8 @@ export default function PracticeCalendar() {
           </div>
 
           {/* Stacked Panels - Below Calendar */}
-          <div className="flex flex-col gap-4 px-3 sm:px-4 lg:px-6 py-4 border-t bg-background/50">
-            {/* Waiting Room Panel - Full Width */}
+          <div className="flex flex-col gap-3 px-3 sm:px-4 py-3 border-t bg-muted/20">
+            {/* Waiting Room Panel - Compact */}
             <WaitingRoomPanel
               practiceId={practiceId}
               providers={providers}
@@ -461,7 +458,7 @@ export default function PracticeCalendar() {
               currentDate={currentDate}
             />
 
-            {/* Being Treated Panel - Full Width */}
+            {/* Being Treated Panel - Compact */}
             <BeingTreatedPanel
               practiceId={practiceId}
               providers={providers}
