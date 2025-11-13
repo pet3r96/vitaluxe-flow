@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,22 +23,7 @@ Deno.serve(async (req) => {
   try {
     console.log('[get-patient-dashboard-data] 🚀 Starting batched dashboard fetch');
     
-    // Get authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Missing authorization header');
-    }
-
-    // Create Supabase client with user's auth
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
+    const supabaseClient = createAuthClient(req.headers.get('Authorization'));
 
     // Get user from JWT
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();

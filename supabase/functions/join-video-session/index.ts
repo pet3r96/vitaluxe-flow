@@ -1,8 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const agoraAppCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
 
 Deno.serve(async (req) => {
@@ -15,7 +13,7 @@ Deno.serve(async (req) => {
 
   try {
     console.log('🔄 [join-video-session] Processing request...');
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createAdminClient();
     
     // Authenticate user
     const authHeader = req.headers.get('Authorization')!;

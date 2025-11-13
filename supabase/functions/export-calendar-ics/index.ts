@@ -1,8 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 function formatDateToICS(date: string): string {
   const d = new Date(date);
@@ -23,9 +20,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: req.headers.get('Authorization')! } },
-    });
+    const supabaseClient = createAuthClient(req.headers.get('Authorization'));
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {

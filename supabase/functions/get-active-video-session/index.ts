@@ -1,9 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -25,7 +21,7 @@ Deno.serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     
     // Create admin client for database queries
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAdmin = createAdminClient();
 
     // Decode user ID from JWT (already verified by platform)
     let decodedUserId: string | null = null;
