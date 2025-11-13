@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { generateSecurePassword } from "../_shared/passwordGenerator.ts";
 import { validateFixOrphanedUsersRequest } from '../_shared/requestValidators.ts';
 
