@@ -78,9 +78,6 @@ verify_jwt = false
 [functions.check-follow-ups]
 verify_jwt = false
 
-[functions.cleanup-stale-sessions]
-verify_jwt = false
-
 [functions.cleanup-cart-lines]
 verify_jwt = false
 
