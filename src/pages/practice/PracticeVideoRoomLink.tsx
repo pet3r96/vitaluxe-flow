@@ -66,8 +66,8 @@ const PracticeVideoRoomLink = () => {
         console.log('[PracticeVideoRoomLink] Room resolved, redirecting to session:', data.sessionId);
 
         if (mounted) {
-          // Redirect to the provider video consultation room
-          navigate(`/practice/video/${data.sessionId}`, { replace: true });
+          // Redirect to the unified video room
+          navigate('/video/room', { replace: true });
         }
       } catch (e: any) {
         console.error('[PracticeVideoRoomLink] Error:', e);

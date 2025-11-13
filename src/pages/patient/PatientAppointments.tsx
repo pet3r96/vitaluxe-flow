@@ -294,8 +294,8 @@ export default function PatientAppointments() {
       if (sessionError) throw sessionError;
       if (!sessions) throw new Error("No video session found");
 
-      // Navigate to patient video room
-      navigate(`/patient/video/${sessions.id}`);
+      // Navigate to unified video room
+      navigate('/video/room');
     } catch (error: any) {
       console.error("Error joining video session:", error);
       toast.error(error.message || "Failed to join video session");

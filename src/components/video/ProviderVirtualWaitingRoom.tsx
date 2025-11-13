@@ -336,8 +336,8 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         description: "Patient has been notified via SMS",
       });
 
-      // Auto-join the provider to the video room after starting session
-      navigate(`/practice/video/${realSessionId}`);
+      // Auto-join the provider to the unified video room
+      navigate('/video/room');
     } catch (error: any) {
       console.timeEnd(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
       console.error("Error starting session:", error);
@@ -397,7 +397,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       }
     }
 
-    navigate(`/practice/video/${realSessionId}`);
+    navigate('/video/room');
   };
 
   const handleGenerateGuestLink = async (sessionId: string) => {
@@ -707,8 +707,8 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       await queryClient.invalidateQueries({ queryKey: ["provider-video-sessions", practiceId] });
       await queryClient.refetchQueries({ queryKey: ["provider-video-sessions", practiceId] });
 
-      // Navigate to the video room
-      navigate(`/practice/video/${(data as any).sessionId}`);
+      // Navigate to the unified video room
+      navigate('/video/room');
 
       // Close dialog and reset
       setShowCreateDialog(false);

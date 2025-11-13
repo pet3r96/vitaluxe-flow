@@ -131,10 +131,9 @@ const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm")
 const PatientMobileHeader = lazy(() =>
   import("./components/patient/PatientMobileHeader").then((m) => ({ default: m.PatientMobileHeader })),
 );
-const PatientVideoRoom = lazy(() => import("./pages/patient/PatientVideoRoom"));
+const VideoRoom = lazy(() => import("./pages/video/VideoRoom"));
 const VideoCallTest = lazy(() => import("./pages/VideoCallTest"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
-const VideoConsultationRoom = lazy(() => import("./pages/practice/VideoConsultationRoom"));
 const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
 const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
@@ -151,7 +150,6 @@ const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
 const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
-const PracticeVideoRoomLink = lazy(() => import("./pages/practice/PracticeVideoRoomLink"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
 const AgoraDebugSuite = lazy(() => import("./pages/dev/AgoraDebugSuite"));
@@ -278,30 +276,10 @@ const App = () => (
                         }
                       />
                       <Route
-                        path="/patient/video/:sessionId"
+                        path="/video/room"
                         element={
                           <ProtectedRoute>
-                            <PatientVideoRoom />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/practice/video/room/:roomKey"
-                        element={
-                          <ProtectedRoute>
-                            <SubscriptionProtectedRoute>
-                              <PracticeVideoRoomLink />
-                            </SubscriptionProtectedRoute>
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/practice/video/:sessionId"
-                        element={
-                          <ProtectedRoute>
-                            <SubscriptionProtectedRoute>
-                              <VideoConsultationRoom />
-                            </SubscriptionProtectedRoute>
+                            <VideoRoom />
                           </ProtectedRoute>
                         }
                       />
