@@ -7,6 +7,10 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { usePatientChartData } from "@/hooks/usePatientChartData";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -15,7 +19,10 @@ interface Props {
 }
 
 export default function PatientChartDrawer({ open, onClose, patientId }: Props) {
-  const { chart, loading } = usePatientChartData(patientId);
+  const { chart, loading, refresh } = usePatientChartData(patientId);
+  const { toast } = useToast();
+  const [noteText, setNoteText] = useState("");
+  const [saving, setSaving] = useState(false);
 
   if (loading) {
     return (
@@ -46,6 +53,70 @@ export default function PatientChartDrawer({ open, onClose, patientId }: Props) 
   const formatDate = (d: string | null) => {
     if (!d) return "—";
     return format(new Date(d), "MM/dd/yyyy");
+  };
+
+  const handleSaveNotes = async () => {
+    if (!noteText.trim()) {
+      toast({
+        title: "Empty Note",
+        description: "Please enter some text before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication Error",
+          description: "You must be logged in to save notes.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Fetch user profile to get name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, name, staff_role_type")
+        .eq("id", user.id)
+        .single();
+
+      const userName = profile?.full_name || profile?.name || "Provider";
+      const userRole = profile?.staff_role_type || "provider";
+
+      const { error } = await supabase
+        .from("patient_notes")
+        .insert({
+          patient_account_id: patientId,
+          note_content: noteText,
+          created_by_user_id: user.id,
+          created_by_role: userRole,
+          created_by_name: userName,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Note Saved",
+        description: "Provider note has been saved successfully.",
+      });
+
+      setNoteText("");
+      refresh();
+    } catch (error: any) {
+      console.error("Error saving note:", error);
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save note. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -256,12 +327,35 @@ export default function PatientChartDrawer({ open, onClose, patientId }: Props) 
 
             <Textarea
               placeholder="Write notes here…"
-              value={chart.notes?.[0]?.note_text ?? ""}
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
               className="mt-3"
               rows={6}
+              disabled={saving}
             />
 
-            <Button className="mt-2">Save Notes</Button>
+            <Button 
+              className="mt-2" 
+              onClick={handleSaveNotes}
+              disabled={saving || !noteText.trim()}
+            >
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {saving ? "Saving..." : "Save Note"}
+            </Button>
+
+            {chart.notes.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <h4 className="text-sm font-medium">Previous Notes:</h4>
+                {chart.notes.map((note: any) => (
+                  <div key={note.id} className="border rounded-md p-3 text-sm bg-muted/50">
+                    <p className="whitespace-pre-wrap">{note.note_content}</p>
+                    <p className="text-xs opacity-70 mt-2">
+                      {note.created_by_name} - {formatDate(note.created_at)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <div className="pb-16"></div>
