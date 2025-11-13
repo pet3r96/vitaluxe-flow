@@ -434,12 +434,24 @@ serve(async (req) => {
               line.order_id === order.id && line.assigned_pharmacy_id
             );
 
+            // Group order lines by pharmacy_id to batch API calls
+            const linesByPharmacy = new Map<string, any[]>();
             for (const line of pharmacyOrderLines) {
+              const pharmacyId = line.assigned_pharmacy_id;
+              if (!linesByPharmacy.has(pharmacyId)) {
+                linesByPharmacy.set(pharmacyId, []);
+              }
+              linesByPharmacy.get(pharmacyId)!.push(line);
+            }
+
+            // Send one batched call per pharmacy
+            for (const [pharmacyId, lines] of linesByPharmacy.entries()) {
+              console.log(`[place-order] Sending ${lines.length} order lines to pharmacy ${pharmacyId}`);
               await supabaseAdmin.functions.invoke("send-order-to-pharmacy", {
                 body: {
                   order_id: order.id,
-                  order_line_id: line.id,
-                  pharmacy_id: line.assigned_pharmacy_id,
+                  order_line_ids: lines.map(l => l.id),
+                  pharmacy_id: pharmacyId,
                 }
               });
             }

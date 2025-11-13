@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface SendOrderRequest {
   order_id: string;
-  order_line_id: string;
+  order_line_ids: string[]; // Now accepts array of order line IDs
   pharmacy_id: string;
 }
 
@@ -20,9 +20,9 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createAdminClient();
 
-    const { order_id, order_line_id, pharmacy_id }: SendOrderRequest = await req.json();
+    const { order_id, order_line_ids, pharmacy_id }: SendOrderRequest = await req.json();
 
-    console.log(`Sending order ${order_id} to pharmacy ${pharmacy_id}`);
+    console.log(`Sending order ${order_id} with ${order_line_ids.length} line(s) to pharmacy ${pharmacy_id}`);
 
     // Fetch pharmacy API configuration
     const { data: pharmacy, error: pharmacyError } = await supabaseAdmin
@@ -63,8 +63,8 @@ serve(async (req) => {
       throw new Error(`Order not found: ${orderError?.message}`);
     }
 
-    // Fetch order line data with provider credentials
-    const { data: orderLine, error: lineError } = await supabaseAdmin
+    // Fetch all order lines data with provider credentials
+    const { data: orderLines, error: linesError } = await supabaseAdmin
       .from("order_lines")
       .select(`
         *,
@@ -80,25 +80,27 @@ serve(async (req) => {
           )
         )
       `)
-      .eq("id", order_line_id)
-      .single();
+      .in("id", order_line_ids);
 
-    if (lineError || !orderLine) {
-      throw new Error(`Order line not found: ${lineError?.message}`);
+    if (linesError || !orderLines || orderLines.length === 0) {
+      throw new Error(`Order lines not found: ${linesError?.message}`);
     }
 
-    // Check if this order was already sent to the pharmacy
-    if (orderLine.pharmacy_order_id) {
-      console.log(`Order line ${order_line_id} already has pharmacy_order_id: ${orderLine.pharmacy_order_id}`);
+    // Filter out lines already sent to pharmacy
+    const unsent_lines = orderLines.filter(line => !line.pharmacy_order_id);
+    
+    if (unsent_lines.length === 0) {
+      console.log(`All order lines already sent to pharmacy`);
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "Order already sent to pharmacy",
-          pharmacy_order_id: orderLine.pharmacy_order_id
+          message: "All order lines already sent to pharmacy"
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
+
+    console.log(`Processing ${unsent_lines.length} unsent order line(s)`);
 
     // Fetch API credentials
     const { data: credentials } = await supabaseAdmin
@@ -106,50 +108,46 @@ serve(async (req) => {
       .select("*")
       .eq("pharmacy_id", pharmacy_id);
 
-    // Determine shipping address based on ship_to field
-    const shipToPractice = orderLine.ship_to === "practice";
-    const shippingAddress = shipToPractice 
-      ? (order.profiles?.shipping_address_formatted || order.profiles?.address_formatted || order.profiles?.address || "[PRACTICE ADDRESS NOT SET]")
-      : (orderLine.shipping_address || orderLine.patient_address || "[ENCRYPTED]");
-
-    // Build payload
+    // Build payload with all order lines
     const payload = {
       order_id: order.id,
-      order_line_id: orderLine.id,
       vitaluxe_order_number: order.order_number,
-      
-      // Patient info
-      patient_name: orderLine.patient_name,
-      patient_address: orderLine.patient_address || "[ENCRYPTED]",
-      patient_phone: orderLine.patient_phone || "[ENCRYPTED]",
-      patient_email: orderLine.patient_email || "[ENCRYPTED]",
-      
-      // Shipping info
-      ship_to: orderLine.ship_to || "patient",
-      shipping_address: shippingAddress,
-      
-      // Product info
-      product: {
-        name: orderLine.products?.name || "Unknown",
-        quantity: orderLine.quantity,
-        custom_sig: orderLine.custom_sig,
-        custom_dosage: orderLine.custom_dosage,
-        notes: orderLine.notes,
-      },
-      prescription_url: orderLine.prescription_url || null,
-      shipping_speed: orderLine.shipping_speed,
-      destination_state: orderLine.destination_state,
-      
-      // Provider credentials
-      provider: {
-        name: orderLine.providers?.profiles?.name || "Unknown",
-        npi: orderLine.providers?.profiles?.npi || null,
-        dea: orderLine.providers?.profiles?.dea || null,
-        address: orderLine.providers?.profiles?.address_formatted || orderLine.providers?.profiles?.address || null,
-        practice: order.profiles?.name || "Unknown",
-      },
-      
       created_at: order.created_at,
+      
+      // Array of order lines for batching
+      order_lines: unsent_lines.map(line => {
+        const shipToPractice = line.ship_to === "practice";
+        const shippingAddress = shipToPractice 
+          ? (order.profiles?.shipping_address_formatted || order.profiles?.address_formatted || order.profiles?.address || "[PRACTICE ADDRESS NOT SET]")
+          : (line.shipping_address || line.patient_address || "[ENCRYPTED]");
+
+        return {
+          order_line_id: line.id,
+          patient_name: line.patient_name,
+          patient_address: line.patient_address || "[ENCRYPTED]",
+          patient_phone: line.patient_phone || "[ENCRYPTED]",
+          patient_email: line.patient_email || "[ENCRYPTED]",
+          ship_to: line.ship_to || "patient",
+          shipping_address: shippingAddress,
+          product: {
+            name: line.products?.name || "Unknown",
+            quantity: line.quantity,
+            custom_sig: line.custom_sig,
+            custom_dosage: line.custom_dosage,
+            notes: line.notes,
+          },
+          prescription_url: line.prescription_url || null,
+          shipping_speed: line.shipping_speed,
+          destination_state: line.destination_state,
+          provider: {
+            name: line.providers?.profiles?.name || "Unknown",
+            npi: line.providers?.profiles?.npi || null,
+            dea: line.providers?.profiles?.dea || null,
+            address: line.providers?.profiles?.address_formatted || line.providers?.profiles?.address || null,
+            practice: order.profiles?.name || "Unknown",
+          },
+        };
+      }),
     };
 
     // Build auth headers
@@ -205,9 +203,9 @@ serve(async (req) => {
         }
 
         if (response.ok) {
-          console.log(`Successfully sent order to pharmacy (attempt ${attempt + 1})`);
+          console.log(`Successfully sent batched order to pharmacy (attempt ${attempt + 1})`);
           
-          // Extract pharmacy order ID from response
+          // Extract pharmacy order ID from response (could be single or array)
           const pharmacyOrderId =
             responseBody?.order_id ||
             responseBody?.pharmacy_order_id ||
@@ -215,33 +213,35 @@ serve(async (req) => {
             responseBody?.data?.order_id ||
             responseBody?.data?.id;
           
-          // Update order_line with pharmacy order ID
+          // Update all order_lines with pharmacy order ID
           if (pharmacyOrderId) {
             await supabaseAdmin
               .from("order_lines")
               .update({
-                pharmacy_order_id: pharmacyOrderId,
+                pharmacy_order_id: String(pharmacyOrderId),
                 pharmacy_order_metadata: responseBody
               })
-              .eq("id", order_line_id);
+              .in("id", unsent_lines.map(l => l.id));
             
-            console.log(`Stored pharmacy order ID: ${pharmacyOrderId} for order_line ${order_line_id}`);
+            console.log(`Stored pharmacy order ID: ${pharmacyOrderId} for ${unsent_lines.length} order line(s)`);
           }
           
-          // Log successful transmission
-          await supabaseAdmin.from("pharmacy_order_transmissions").insert({
-            order_id: order.id,
-            order_line_id: orderLine.id,
-            pharmacy_id: pharmacy.id,
-            transmission_type: "new_order",
-            api_endpoint: pharmacy.api_endpoint_url,
-            request_payload: payload,
-            response_status: responseStatus,
-            response_body: responseBody,
-            pharmacy_order_id: pharmacyOrderId,
-            success: true,
-            retry_count: attempt,
-          });
+          // Log successful transmission for each line
+          for (const line of unsent_lines) {
+            await supabaseAdmin.from("pharmacy_order_transmissions").insert({
+              order_id: order.id,
+              order_line_id: line.id,
+              pharmacy_id: pharmacy.id,
+              transmission_type: "new_order",
+              api_endpoint: pharmacy.api_endpoint_url,
+              request_payload: payload,
+              response_status: responseStatus,
+              response_body: responseBody,
+              pharmacy_order_id: pharmacyOrderId,
+              success: true,
+              retry_count: attempt,
+            });
+          }
 
           // Check for alerts after successful transmission
           try {
@@ -288,21 +288,23 @@ serve(async (req) => {
       }
     }
 
-    // All retries failed - log failure
-    await supabaseAdmin.from("pharmacy_order_transmissions").insert({
-      order_id: order.id,
-      order_line_id: orderLine.id,
-      pharmacy_id: pharmacy.id,
-      transmission_type: "new_order",
-      api_endpoint: pharmacy.api_endpoint_url,
-      request_payload: payload,
-      response_status: responseStatus,
-      response_body: responseBody,
-      pharmacy_order_id: null,
-      success: false,
-      error_message: lastError,
-      retry_count: maxRetries,
-    });
+    // All retries failed - log failure for each line
+    for (const line of unsent_lines) {
+      await supabaseAdmin.from("pharmacy_order_transmissions").insert({
+        order_id: order.id,
+        order_line_id: line.id,
+        pharmacy_id: pharmacy.id,
+        transmission_type: "new_order",
+        api_endpoint: pharmacy.api_endpoint_url,
+        request_payload: payload,
+        response_status: responseStatus,
+        response_body: responseBody,
+        pharmacy_order_id: null,
+        success: false,
+        error_message: lastError,
+        retry_count: maxRetries,
+      });
+    }
 
     // Check for alerts after failures
     try {
