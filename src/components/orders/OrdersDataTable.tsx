@@ -31,14 +31,7 @@ import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-interface OrderQueryMetadata {
-  hasRepRecord: boolean;
-  practiceCount: number;
-  practiceNames: string[];
-  isEmpty: boolean;
-  emptyReason: 'no_rep' | 'no_practices' | 'no_orders' | null;
-}
+import type { OrderQueryMetadata } from "@/types/domain/orders";
 
 export const OrdersDataTable = () => {
   const { effectiveRole, effectiveUserId, user } = useAuth();
