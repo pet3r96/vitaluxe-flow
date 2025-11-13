@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { usePatientChartData } from "@/hooks/usePatientChartData";
 import { MedicalChartDrawer } from "@/components/video/MedicalChartDrawer";
+import { emitEvent } from "@/lib/video/emitEvent";
 
 import {
   Mic,
@@ -123,6 +124,12 @@ export default function TelehealthRoom({ appId, channel, token, uid, isProvider,
       });
 
       await client.join(appId, channel, token, uid);
+
+      // CRITICAL: Emit patient_waiting event AFTER successful join
+      if (!isProvider) {
+        console.log("[Patient] Broadcasting patient_waiting event to provider");
+        await emitEvent(sessionId, "patient_waiting", String(uid));
+      }
 
       // Network quality
       client.on("network-quality", (stats: any) => {
