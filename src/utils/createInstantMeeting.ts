@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeChannel } from "@/lib/video/normalizeChannel";
 
 export interface InstantMeetingResult {
   channelId: string;
@@ -16,7 +17,7 @@ export async function createInstantMeeting(
   providerId: string
 ): Promise<InstantMeetingResult> {
   // Generate unique channel ID
-  const channelId = `vlx_instant_${crypto.randomUUID().replace(/-/g, '_')}`;
+  const channelId = normalizeChannel('instant', crypto.randomUUID());
   
   console.log('[createInstantMeeting] Creating instant meeting:', {
     channelId,

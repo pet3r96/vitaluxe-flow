@@ -44,11 +44,21 @@ export const AgoraVideoRoom = ({
         rtcClientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
         console.log("[AgoraRoom] 📞 Attempting RTC join...");
+        console.log('[AgoraVideoRoom] Joining channel with:', { channelName, uid });
+        
         await rtcClientRef.current.join(
           appId,
           channelName,
           rtcToken,
           uid
+        );
+
+        // Add connection state listeners
+        rtcClientRef.current.on('connection-state-change', (cur: string, prev: string) => 
+          console.log('[Agora Connection State]', { prev, cur })
+        );
+        rtcClientRef.current.on('exception', (e: any) => 
+          console.error('[Agora Exception]', e)
         );
 
         if (!mounted) return;

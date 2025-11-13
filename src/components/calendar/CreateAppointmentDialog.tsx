@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeChannel } from "@/lib/video/normalizeChannel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -186,7 +187,7 @@ export function CreateAppointmentDialog({
 
       // If this is a video appointment, create video session
       if (values.visitType === 'video') {
-        const channelName = `vlx_appt_${data.id.replace(/-/g, '_')}`;
+        const channelName = normalizeChannel('appt', data.id);
         
         console.log('[CreateAppointmentDialog] Creating video session:', {
           appointmentId: data.id,

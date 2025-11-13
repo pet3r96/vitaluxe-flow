@@ -23,9 +23,14 @@ serve(async (req) => {
   }
 
   try {
-    const { channel, role = "subscriber", ttl = 3600 } = await req.json();
+    const body = await req.json();
+    const rawChannel = body.channel;
+    const channel = rawChannel.replace(/-/g, '_').toLowerCase();
+    const role = body.role || "subscriber";
+    const ttl = body.ttl || 3600;
 
-    console.log("[Edge] Token request received:", { channel, role });
+    console.log("[Edge] Token request received:", { rawChannel, channel, role });
+    console.log('AGORA TOKEN CHANNEL (normalized):', channel);
 
     if (!channel || typeof channel !== "string" || !channel.trim()) {
       return new Response(
