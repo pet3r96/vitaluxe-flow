@@ -42,7 +42,7 @@ export default function VideoRoom() {
         // Get active session for this user
         const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
           'get-active-video-session',
-          { body: {} }
+          { body: {} , headers: { Authorization: `Bearer ${authSession.access_token}` } }
         );
 
         if (sessionError) throw sessionError;
