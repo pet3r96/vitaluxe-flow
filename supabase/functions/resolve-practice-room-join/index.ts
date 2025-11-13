@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { RtcTokenBuilder, RtcRole } from 'https://esm.sh/agora-token@2.0.4';
+import { createAgoraTokens } from '../_shared/agoraTokenService.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,6 +42,23 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check for impersonation
+    let effectiveUserId = user.id;
+    const { data: impersonationSession } = await supabase
+      .from('active_impersonation_sessions')
+      .select('target_user_id')
+      .eq('admin_user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (impersonationSession) {
+      effectiveUserId = impersonationSession.target_user_id;
+      console.log('[resolve-practice-room-join] Impersonation detected:', {
+        adminUserId: user.id,
+        effectiveUserId
+      });
+    }
+
     // Parse request
     const { roomKey }: ResolveRoomRequest = await req.json();
 
@@ -62,96 +79,83 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify user is provider in this practice
-    const { data: provider, error: providerError } = await supabase
+    // Verify user is provider/staff/owner in this practice
+    const isPracticeOwner = effectiveUserId === practiceRoom.practice_id;
+    const { data: provider } = await supabase
       .from('providers')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .eq('practice_id', practiceRoom.practice_id)
-      .single();
+      .maybeSingle();
 
-    if (providerError || !provider) {
-      console.error('[resolve-practice-room-join] Provider verification failed:', providerError);
+    const { data: staff } = await supabase
+      .from('practice_staff')
+      .select('id')
+      .eq('user_id', effectiveUserId)
+      .eq('practice_id', practiceRoom.practice_id)
+      .maybeSingle();
+
+    if (!isPracticeOwner && !provider && !staff) {
+      console.error('[resolve-practice-room-join] Unauthorized');
       return new Response(
         JSON.stringify({ error: 'Not authorized for this practice' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check for active session
-    let sessionId = practiceRoom.active_session_id;
+    // Check for existing live practice room session
+    const { data: existingSession } = await supabase
+      .from('video_sessions')
+      .select('*')
+      .eq('practice_id', practiceRoom.practice_id)
+      .eq('session_type', 'practice_room')
+      .eq('status', 'live')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let sessionId: string;
     let channelName = practiceRoom.channel_name;
 
-    if (sessionId) {
-      // Verify session is still live
-      const { data: session, error: sessionError } = await supabase
-        .from('video_sessions')
-        .select('*')
-        .eq('id', sessionId)
-        .single();
-
-      if (!session || session.status === 'ended' || session.status === 'cancelled') {
-        console.log('[resolve-practice-room-join] Session ended, creating new one');
-        sessionId = null;
-      } else {
-        console.log('[resolve-practice-room-join] Joining existing session:', sessionId);
-        channelName = session.channel_name;
-      }
-    }
-
-    // Create new session if none active
-    if (!sessionId) {
-      console.log('[resolve-practice-room-join] Creating new instant session');
+    if (existingSession) {
+      console.log('[resolve-practice-room-join] Joining existing session:', existingSession.id);
+      sessionId = existingSession.id;
+      channelName = existingSession.channel_name;
+    } else {
+      // Create new session if none active
+      console.log('[resolve-practice-room-join] Creating new practice room session');
 
       const { data: newSession, error: createError } = await supabase
         .from('video_sessions')
         .insert({
           practice_id: practiceRoom.practice_id,
-          provider_id: provider.id,
+          provider_id: provider?.id || null,
           channel_name: channelName,
           session_type: 'practice_room',
           status: 'live',
           actual_start: new Date().toISOString(),
+          created_by_user_id: effectiveUserId
         })
         .select()
         .single();
 
-      if (createError || !newSession) {
-        console.error('[resolve-practice-room-join] Failed to create session:', createError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to create session', details: createError }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (createError) {
+        console.error('[resolve-practice-room-join] Session creation error:', createError);
+        throw createError;
       }
 
       sessionId = newSession.id;
-
-      // Update practice room with active session
-      await supabase
-        .from('practice_video_rooms')
-        .update({ active_session_id: sessionId })
-        .eq('id', practiceRoom.id);
-
       console.log('[resolve-practice-room-join] New session created:', sessionId);
     }
 
-    // Generate Agora tokens
-    const appId = Deno.env.get('VITE_AGORA_APP_ID')!;
-    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE') || '';
-    const uid = Math.floor(Math.random() * 1000000);
-    const ttl = 3600; // 1 hour
-
-    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
-      appId,
-      appCertificate,
+    // Generate Agora tokens using shared service
+    const uid = Math.floor(Math.random() * 1000000).toString();
+    const tokens = await createAgoraTokens(
       channelName,
       uid,
-      RtcRole.PUBLISHER,
-      Math.floor(Date.now() / 1000) + ttl
+      'publisher',
+      3600
     );
-
-    const rtmUid = `${uid}`;
-    const rtmToken = rtcToken;
 
     console.log('[resolve-practice-room-join] Tokens generated successfully');
 
@@ -160,13 +164,11 @@ Deno.serve(async (req) => {
         success: true,
         sessionId,
         channelName,
-        credentials: {
-          rtcToken,
-          rtmToken,
-          uid: uid.toString(),
-          rtmUid,
-          appId,
-        },
+        appId: Deno.env.get('AGORA_APP_ID'),
+        rtcToken: tokens.rtcToken,
+        rtmToken: tokens.rtmToken,
+        uid,
+        rtmUid: uid,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
