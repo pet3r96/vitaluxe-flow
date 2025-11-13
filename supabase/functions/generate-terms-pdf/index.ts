@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGenerateTermsRequest } from '../_shared/requestValidators.ts';
@@ -52,7 +51,7 @@ async function fetchLogoAsBase64(url: string): Promise<string | null> {
   }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
