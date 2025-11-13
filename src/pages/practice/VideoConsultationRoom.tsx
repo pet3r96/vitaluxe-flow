@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeChannel } from "@/lib/video/normalizeChannel";
+import { PreCallTestPrompt } from "@/components/video/PreCallTestPrompt";
 
 const VideoConsultationRoom = () => {
   const { sessionId } = useParams();
@@ -30,64 +31,40 @@ const VideoConsultationRoom = () => {
       try {
         setLoading(true);
 
-        // Fetch channel name from video_sessions table
-        console.log("[PracticeVideoRoom] Fetching video session...");
+        // Fetch channel name + patient ID
         const { data: session, error: sessionError } = await supabase
-          .from('video_sessions')
-          .select('channel_name, status, patient_id')
-          .eq('id', sessionId)
+          .from("video_sessions")
+          .select("channel_name, status, patient_id")
+          .eq("id", sessionId)
           .single();
 
         if (!isMounted) return;
 
         if (sessionError || !session) {
-          const errorMsg = sessionError 
+          const errorMsg = sessionError
             ? `Database error: ${sessionError.message} (Code: ${sessionError.code})`
-            : 'Session not found';
-          console.error("[PracticeVideoRoom] Session fetch error:", {
-            error: sessionError,
-            errorMessage: sessionError?.message,
-            errorCode: sessionError?.code,
-            errorDetails: sessionError?.details,
-            sessionId
-          });
+            : "Session not found";
           setError(errorMsg);
           return;
         }
 
-        console.log("[PracticeVideoRoom] Session found:", session);
-        console.log('[VideoConsultationRoom] Raw channel from DB:', session?.channel_name);
-        
         const normalized = normalizeChannel(session.channel_name);
-        
-        console.log('[VideoConsultationRoom] Normalized channel:', normalized);
         setChannelName(normalized);
         setPatientId(session.patient_id);
 
         // Fetch Agora tokens
-        console.log("[PracticeVideoRoom] Fetching Agora tokens for channel:", normalized);
-
-        const { data, error } = await supabase.functions.invoke('agora-token', {
+        const { data, error } = await supabase.functions.invoke("agora-token", {
           body: {
             channel: normalized,
             role: "publisher",
             ttl: 3600,
-          }
+          },
         });
-
-        console.log("[PracticeVideoRoom] Token Response:", data);
 
         if (!isMounted) return;
 
         if (error || !data) {
-          const errorMsg = error 
-            ? `Token generation failed: ${error.message}`
-            : 'No token data received';
-          console.error("[PracticeVideoRoom] Token error:", {
-            error,
-            errorMessage: error?.message,
-            data
-          });
+          const errorMsg = error ? `Token generation failed: ${error.message}` : "No token data received";
           setError(errorMsg);
           return;
         }
@@ -97,12 +74,7 @@ const VideoConsultationRoom = () => {
         setUid(data.uid);
         setRtmUid(data.rtmUid);
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
-        console.error("[PracticeVideoRoom] Initialization failed:", {
-          error: err,
-          message: errorMsg,
-          stack: err instanceof Error ? err.stack : undefined
-        });
+        const errorMsg = err instanceof Error ? err.message : "Unknown error";
         setError(errorMsg);
       } finally {
         if (isMounted) setLoading(false);
@@ -121,8 +93,8 @@ const VideoConsultationRoom = () => {
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
         <div className="text-destructive text-lg font-semibold">Failed to Join Video Session</div>
         <div className="text-muted-foreground text-sm max-w-md text-center">{error}</div>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
         >
           Try Again
@@ -140,17 +112,23 @@ const VideoConsultationRoom = () => {
   }
 
   return (
-    <AgoraVideoRoom
-      channelName={channelName!}
-      rtcToken={rtcToken}
-      rtmToken={rtmToken}
-      uid={uid}
-      rtmUid={rtmUid}
-      role="publisher"
-      userType="practice"
-      sessionId={sessionId!}
-      patientId={patientId!}
-    />
+    <>
+      {/* Pre-call test prompt (top center) */}
+      <PreCallTestPrompt sessionId={sessionId!} />
+
+      {/* Actual video room */}
+      <AgoraVideoRoom
+        channelName={channelName!}
+        rtcToken={rtcToken}
+        rtmToken={rtmToken}
+        uid={uid}
+        rtmUid={rtmUid}
+        role="publisher"
+        userType="practice"
+        sessionId={sessionId!}
+        patientId={patientId!}
+      />
+    </>
   );
 };
 
