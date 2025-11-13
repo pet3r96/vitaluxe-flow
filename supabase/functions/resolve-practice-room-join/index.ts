@@ -24,11 +24,11 @@ Deno.serve(async (req) => {
   try {
     console.log('[resolve-practice-room-join] Request received');
 
-    // Get Supabase client
+    // Get Supabase client (use service role for impersonation checks)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const authHeader = req.headers.get('Authorization')!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
@@ -133,7 +133,6 @@ Deno.serve(async (req) => {
           channel_name: channelName,
           session_type: 'practice_room',
           status: 'live',
-          actual_start: new Date().toISOString(),
           created_by_user_id: effectiveUserId
         })
         .select()
