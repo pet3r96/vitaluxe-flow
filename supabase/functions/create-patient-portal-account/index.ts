@@ -2,6 +2,7 @@ import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { generateSecurePassword } from '../_shared/passwordGenerator.ts';
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
 interface CreatePortalAccountRequest {
   patientId: string;
@@ -60,6 +61,17 @@ Deno.serve(async (req) => {
           code: 'unauthorized_role',
           error: 'Only practice owners, providers, staff, or admins can create portal accounts' 
         }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate CSRF token
+    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const { valid, error: csrfError } = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
+    if (!valid) {
+      console.error('CSRF validation failed:', csrfError);
+      return new Response(
+        JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

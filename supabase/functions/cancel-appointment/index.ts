@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
 const normalizePhoneToE164 = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
@@ -22,6 +23,14 @@ Deno.serve(async (req) => {
 
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
+
+    // Validate CSRF token
+    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const { valid, error: csrfError } = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
+    if (!valid) {
+      console.error('CSRF validation failed:', csrfError);
+      return errorResponse(csrfError || 'Invalid CSRF token', 403);
+    }
 
     const { appointmentId } = await req.json();
     console.log('🔍 [cancel-appointment] Starting cancellation:', { appointmentId, authUserId: user.id });

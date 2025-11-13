@@ -1,6 +1,7 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
 interface StartImpersonationRequest {
   role: string;
@@ -43,6 +44,14 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'You are not authorized to use impersonation' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Validate CSRF token
+    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const { valid, error: csrfError } = await validateCSRFToken(db, user.id, csrfToken);
+    if (!valid) {
+      console.error('CSRF validation failed:', csrfError);
+      return errorResponse(csrfError || 'Invalid CSRF token', 403);
     }
 
     const { role, userId, userName, targetEmail }: StartImpersonationRequest = await req.json();
