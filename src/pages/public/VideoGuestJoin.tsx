@@ -234,6 +234,7 @@ export default function VideoGuestJoin() {
         rtmUid={guestData.userId}
         role="subscriber"
         userType="guest"
+        sessionId={guestData.sessionId}
       />
     </div>
   );

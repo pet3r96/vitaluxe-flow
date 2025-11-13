@@ -10,12 +10,17 @@ interface AgoraVideoRoomProps {
   userType: "patient" | "practice" | "guest";
 }
 
+interface ExtendedAgoraVideoRoomProps extends AgoraVideoRoomProps {
+  sessionId: string;
+}
+
 export function AgoraVideoRoom({ 
   channelName, 
   rtcToken, 
   uid, 
-  userType 
-}: AgoraVideoRoomProps) {
+  userType,
+  sessionId 
+}: ExtendedAgoraVideoRoomProps) {
   const appId = import.meta.env.VITE_AGORA_APP_ID;
   const isProvider = userType === "practice";
 
@@ -26,6 +31,7 @@ export function AgoraVideoRoom({
       token={rtcToken}
       uid={uid}
       isProvider={isProvider}
+      sessionId={sessionId}
     />
   );
 }

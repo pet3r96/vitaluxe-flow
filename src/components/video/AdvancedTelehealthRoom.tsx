@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { emitEvent } from "@/lib/video/emitEvent";
 import {
   Mic,
   MicOff,
@@ -29,9 +31,10 @@ interface Props {
   token: string;
   uid: string | number;
   isProvider: boolean;
+  sessionId: string;
 }
 
-export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isProvider }: Props) {
+export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isProvider, sessionId }: Props) {
   // ---------------------------------------------------------
   // STATE
   // ---------------------------------------------------------
@@ -55,7 +58,7 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
   const [chatInput, setChatInput] = useState("");
 
   // Waiting room & provider dashboard
-  const [waitingRoom, setWaitingRoom] = useState(true);
+  const [waitingRoom, setWaitingRoom] = useState(!isProvider);
   const [waitingPatients, setWaitingPatients] = useState<any[]>([]);
   const [patientAdmitted, setPatientAdmitted] = useState(false);
   const [roomLocked, setRoomLocked] = useState(false);
@@ -80,6 +83,71 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
   const timerRef = useRef<any>(null);
 
   // ---------------------------------------------------------
+  // REALTIME SUBSCRIPTIONS
+  // ---------------------------------------------------------
+  useEffect(() => {
+    console.log(`[Realtime] Subscribing to session: ${sessionId}`);
+    
+    const channelEvents = supabase
+      .channel(`video-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "video_session_events",
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          console.log("[Realtime] Event received:", payload);
+          const { event_type, user_uid } = payload.new as any;
+
+          if (isProvider && event_type === "patient_waiting") {
+            console.log(`[Provider] Patient ${user_uid} is waiting`);
+            setWaitingPatients((prev) => {
+              // Prevent duplicates
+              if (prev.find((p) => p.uid === user_uid)) return prev;
+              return [...prev, { uid: user_uid }];
+            });
+          }
+
+          if (!isProvider && event_type === "patient_admitted" && user_uid === String(uid)) {
+            console.log(`[Patient] Admitted by provider`);
+            setPatientAdmitted(true);
+            setWaitingRoom(false);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log("[Realtime] Unsubscribing");
+      supabase.removeChannel(channelEvents);
+    };
+  }, [sessionId, isProvider, uid]);
+
+  // ---------------------------------------------------------
+  // PATIENT BROADCAST ON JOIN
+  // ---------------------------------------------------------
+  useEffect(() => {
+    if (!isProvider) {
+      console.log(`[Patient] Broadcasting waiting status: ${uid}`);
+      emitEvent(sessionId, "patient_waiting", String(uid));
+    }
+  }, [isProvider, sessionId, uid]);
+
+  // ---------------------------------------------------------
+  // ADMIT FUNCTION (Provider only)
+  // ---------------------------------------------------------
+  const admitPatient = async (patientUid: string) => {
+    console.log(`[Provider] Admitting patient: ${patientUid}`);
+    await emitEvent(sessionId, "patient_admitted", patientUid);
+
+    // Remove from queue
+    setWaitingPatients((prev) => prev.filter((p) => p.uid !== patientUid));
+  };
+
+  // ---------------------------------------------------------
   // JOIN ROOM
   // ---------------------------------------------------------
 
@@ -92,7 +160,7 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
 
       const client = clientRef.current;
 
-      client.on("user-published", async (user, mediaType) => {
+      client.on("user-published", async (user: any, mediaType: any) => {
         await client.subscribe(user, mediaType);
 
         if (mediaType === "video") {
@@ -105,7 +173,7 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
         setRemoteUsers((prev) => [...prev, user]);
       });
 
-      client.on("user-unpublished", (user) => {
+      client.on("user-unpublished", (user: any) => {
         setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
       });
 
@@ -113,23 +181,19 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
       await client.join(appId, channel, token, uid);
 
       // Network quality listener
-      client.on("network-quality", (stats) => {
+      client.on("network-quality", (stats: any) => {
         const quality = Math.min(stats.uplinkNetworkQuality, stats.downlinkNetworkQuality);
         setConnectionQuality(quality);
       });
 
-      // Waiting room logic
-      if (!isProvider) {
-        setWaitingRoom(true);
-
-        // Patient must wait until admitted
+      // PATIENT WAITING — DO NOT PUBLISH TRACKS
+      if (!isProvider && !patientAdmitted) {
+        console.log("[Patient] Waiting for admission, not publishing tracks");
         return;
       }
 
-      // Provider enters immediately, no waiting
-      setWaitingRoom(false);
-
-      // Provider publishes tracks
+      // PROVIDER OR ADMITTED PATIENT — publish tracks
+      console.log("[Join] Publishing audio/video tracks");
       localAudioTrackRef.current = await AgoraRTC.createMicrophoneAudioTrack();
       localVideoTrackRef.current = await AgoraRTC.createCameraVideoTrack({
         encoderConfig: { width: 1280, height: 720 },
@@ -149,7 +213,7 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
   useEffect(() => {
     joinRoom();
     return () => clearInterval(timerRef.current);
-  }, []);
+  }, [patientAdmitted]);
 
   // ---------------------------------------------------------
   // CONTROLS
@@ -182,16 +246,6 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
     setBlur(!blur);
   };
 
-  const admitPatient = async () => {
-    setWaitingRoom(false);
-    setPatientAdmitted(true);
-
-    // Patient now publishes their tracks
-    if (!isProvider) return;
-
-    // Publish provider tracks (already done)
-  };
-
   const endCall = async () => {
     try {
       await clientRef.current.leave();
@@ -213,13 +267,33 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
 
   return (
     <div className={cn("flex h-screen w-full bg-background text-foreground overflow-hidden")}>
+      {/* PROVIDER WAITING LIST SIDEBAR */}
+      {isProvider && (
+        <div className="absolute left-4 top-20 z-40 bg-secondary/90 backdrop-blur-md border border-border rounded-lg p-4 w-72 shadow-lg">
+          <h2 className="text-lg font-semibold mb-3">Waiting Patients</h2>
+
+          {waitingPatients.length === 0 && <p className="text-sm opacity-70">No patients waiting...</p>}
+
+          <ScrollArea className="max-h-96">
+            {waitingPatients.map((p) => (
+              <div key={p.uid} className="flex justify-between items-center p-2 border rounded mb-2 bg-background">
+                <span className="text-sm">Patient {p.uid}</span>
+                <Button size="sm" onClick={() => admitPatient(p.uid)}>
+                  Admit
+                </Button>
+              </div>
+            ))}
+          </ScrollArea>
+        </div>
+      )}
+
       {/* MAIN VIDEO GRID */}
       <div className="flex-1 relative grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
         {/* PiP */}
         <div
           id="local-preview"
           className={cn(
-            "absolute bottom-6 right-6 w-48 h-32 rounded-xl overflow-hidden shadow-lg bg-black border border-border z-40",
+            "absolute bottom-6 right-6 w-48 h-32 rounded-xl overflow-hidden shadow-lg bg-black border border-border z-40"
           )}
         />
 

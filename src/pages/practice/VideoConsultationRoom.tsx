@@ -146,6 +146,7 @@ const VideoConsultationRoom = () => {
       rtmUid={rtmUid}
       role="publisher"
       userType="practice"
+      sessionId={sessionId!}
     />
   );
 };

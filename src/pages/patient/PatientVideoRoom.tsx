@@ -106,6 +106,7 @@ const PatientVideoRoom = () => {
       rtmUid={rtmUid}
       role="subscriber"
       userType="patient"
+      sessionId={sessionId!}
     />
   );
 };

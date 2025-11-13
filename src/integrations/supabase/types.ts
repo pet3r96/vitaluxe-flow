@@ -8368,6 +8368,30 @@ export type Database = {
           },
         ]
       }
+      video_session_events: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          session_id: string
+          user_uid: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          session_id: string
+          user_uid: string
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          session_id?: string
+          user_uid?: string
+        }
+        Relationships: []
+      }
       video_session_guest_links: {
         Row: {
           access_count: number | null
