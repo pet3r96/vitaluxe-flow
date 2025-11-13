@@ -1,112 +1,108 @@
 import { useEffect, useRef, useState } from "react";
-import AgoraRTC from "agora-rtc-sdk-ng";
-import AgoraRTM from "agora-rtm-sdk";
+import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from "agora-rtc-sdk-ng";
+import { Button } from "@/components/ui/button";
+import { Mic, MicOff, Camera, CameraOff, PhoneOff } from "lucide-react";
 
-export const AgoraVideoRoom = ({
-  channelName,
-  rtcToken,
-  rtmToken,
-  uid,
-  rtmUid,
-  role = "subscriber",
-  userType = "patient"
-}) => {
-  const rtcClientRef = useRef<any>(null);
-  const rtmClientRef = useRef<any>(null);
-  const [joined, setJoined] = useState(false);
+export function AgoraVideoRoom({ channelName, appId, token, uid }) {
+  const clientRef = useRef<IAgoraRTCClient | null>(null);
+  const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null);
+  const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
+
+  const [remoteUsers, setRemoteUsers] = useState([]);
+
+  const [micOn, setMicOn] = useState(true);
+  const [cameraOn, setCameraOn] = useState(true);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-
     const start = async () => {
-      try {
-        // HARDCODED App ID for testing - matches backend secret
-        const HARDCODED_APP_ID = "2443c37d5f97424c8b7e1c08e3a3032e";
-        const appId = HARDCODED_APP_ID;
-        
-        console.log("[AgoraRoom] 🔧 Using HARDCODED App ID for testing");
-        console.log("[AgoraRoom] Initializing…", {
-          appId,
-          appIdLength: appId?.length,
-          channelName,
-          uid,
-          rtmUid,
-          role,
-          rtcTokenPreview: rtcToken?.substring(0, 20) + '...',
-          rtmTokenPreview: rtmToken?.substring(0, 20) + '...'
-        });
+      const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+      clientRef.current = client;
 
-        if (!appId) {
-          throw new Error('CRITICAL: App ID is not set');
-        }
+      client.on("user-published", async (user, mediaType) => {
+        await client.subscribe(user, mediaType);
+        setRemoteUsers(Array.from(client.remoteUsers));
+      });
 
-        // 1. Initialize RTC
-        rtcClientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+      client.on("user-unpublished", () => {
+        setRemoteUsers(Array.from(client.remoteUsers));
+      });
 
-        console.log("[AgoraRoom] 📞 Attempting RTC join...");
-        console.log('[AgoraVideoRoom] Joining channel with:', { channelName, uid });
-        
-        await rtcClientRef.current.join(
-          appId,
-          channelName,
-          rtcToken,
-          uid
-        );
+      const [micTrack, camTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+      localAudioTrackRef.current = micTrack;
+      localVideoTrackRef.current = camTrack;
 
-        // Add connection state listeners
-        rtcClientRef.current.on('connection-state-change', (cur: string, prev: string) => 
-          console.log('[Agora Connection State]', { prev, cur })
-        );
-        rtcClientRef.current.on('exception', (e: any) => 
-          console.error('[Agora Exception]', e)
-        );
+      const localVideoContainer = document.getElementById("local-video");
+      camTrack.play(localVideoContainer);
 
-        if (!mounted) return;
+      await client.join(appId, channelName, token, uid);
 
-        console.log("[AgoraRoom] RTC joined successfully, initializing RTM...");
+      await client.publish([micTrack, camTrack]);
 
-        // 2. Initialize RTM
-        rtmClientRef.current = AgoraRTM.createInstance(appId);
-        await rtmClientRef.current.login({ uid: rtmUid, token: rtmToken });
-
-        if (!mounted) return;
-
-        setJoined(true);
-        console.log("[AgoraRoom] ✅ RTC + RTM JOINED SUCCESSFULLY");
-      } catch (err) {
-        console.error("[AgoraRoom] ❌ JOIN ERROR:", err);
-        console.error("[AgoraRoom] Error details:", {
-          name: err?.name,
-          code: err?.code,
-          message: err?.message
-        });
-      }
+      setConnected(true);
     };
 
     start();
 
     return () => {
-      mounted = false;
-      try {
-        rtcClientRef.current?.leave();
-      } catch {}
-      try {
-        rtmClientRef.current?.logout();
-      } catch {}
+      if (clientRef.current) {
+        clientRef.current.leave();
+      }
+      localAudioTrackRef.current?.close();
+      localVideoTrackRef.current?.close();
     };
-  }, [channelName, rtcToken, rtmToken, uid, rtmUid]);
-
-  if (!joined) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div>Connecting to secure video…</div>
-      </div>
-    );
-  }
+  }, []);
 
   return (
-    <div className="w-full h-full bg-black text-white flex items-center justify-center">
-      <div>Video Call Connected ✔️</div>
+    <div className="w-full h-full flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 flex-1">
+        <div id="local-video" className="w-full h-full bg-black rounded-md" />
+
+        {remoteUsers.map((user) => (
+          <div
+            key={user.uid}
+            id={`remote-${user.uid}`}
+            className="w-full h-full bg-black rounded-md"
+            ref={(el) => {
+              if (el && user.videoTrack) {
+                user.videoTrack.play(el);
+              }
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="flex justify-center gap-4 mt-4">
+        <Button
+          onClick={() => {
+            if (!localAudioTrackRef.current) return;
+            micOn ? localAudioTrackRef.current.setEnabled(false) : localAudioTrackRef.current.setEnabled(true);
+            setMicOn(!micOn);
+          }}
+        >
+          {micOn ? <Mic /> : <MicOff />}
+        </Button>
+
+        <Button
+          onClick={() => {
+            if (!localVideoTrackRef.current) return;
+            cameraOn ? localVideoTrackRef.current.setEnabled(false) : localVideoTrackRef.current.setEnabled(true);
+            setCameraOn(!cameraOn);
+          }}
+        >
+          {cameraOn ? <Camera /> : <CameraOff />}
+        </Button>
+
+        <Button
+          variant="destructive"
+          onClick={() => {
+            clientRef.current?.leave();
+            window.history.back();
+          }}
+        >
+          <PhoneOff />
+        </Button>
+      </div>
     </div>
   );
-};
+}
