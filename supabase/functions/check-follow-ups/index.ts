@@ -5,7 +5,7 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createAdminClient();
 
     // Call the database function to check and create notifications
     const { error } = await supabase.rpc('notify_due_follow_ups');
