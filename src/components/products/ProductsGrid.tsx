@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProducts } from "@/hooks/useProducts";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -72,68 +73,8 @@ export const ProductsGrid = () => {
   // Check RX ordering privileges
   const { canOrderRx, hasProviders, providerCount, providersWithNpiCount, isLoading: isLoadingRxPrivileges } = usePracticeRxPrivileges();
 
-  const { data: products, isLoading, refetch } = useQuery({
-    queryKey: ["products", effectiveUserId, effectiveRole],
-    staleTime: 600000, // 10 minutes - products are relatively static
-    queryFn: async () => {
-      let query = supabase
-        .from("products")
-        .select(`
-          *,
-          product_types(id, name),
-          product_pharmacies (
-            pharmacy:pharmacies (
-              id,
-              name,
-              states_serviced,
-              priority_map,
-              active
-            )
-          )
-        `)
-        .order("created_at", { ascending: false });
-
-      // Non-admins should only see active products
-      // Admins see all products to manage status
-      if (!viewingAsAdmin) {
-        query = query.eq('active', true);
-      }
-
-      // For toplines, impersonated views, or non-admin users, filter by visibility
-      if (isImpersonating || !viewingAsAdmin) {
-        try {
-          const { data: visibleProducts, error: visError } = await supabase.rpc(
-            'get_visible_products_for_effective_user' as any,
-            { p_effective_user_id: effectiveUserId }
-          ) as { data: Array<{ id: string }> | null; error: any };
-          
-          if (visError) {
-            import('@/lib/logger').then(({ logger }) => {
-              logger.error('Visibility RPC error', visError);
-            });
-            toast.error('Could not determine product visibility');
-            return [];
-          } else if (visibleProducts && visibleProducts.length > 0) {
-            const visibleProductIds = visibleProducts.map((p) => p.id);
-            query = query.in('id', visibleProductIds);
-          } else {
-            // No visible products found
-            return [];
-          }
-        } catch (error) {
-          import('@/lib/logger').then(({ logger }) => {
-            logger.error('Error checking product visibility', error);
-          });
-          toast.error('Could not determine product visibility');
-          return [];
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Use service layer hook for fetching products
+  const { data: products, isLoading, refetch } = useProducts();
 
   // Fetch visibility settings for topline rep to show hidden status
   const { data: visibilitySettings } = useQuery({
