@@ -3067,6 +3067,7 @@ export type Database = {
           status: string
           treatment_started_at: string | null
           updated_at: string
+          video_session_id: string | null
           visit_summary_url: string | null
           visit_type: string | null
         }
@@ -3099,6 +3100,7 @@ export type Database = {
           status?: string
           treatment_started_at?: string | null
           updated_at?: string
+          video_session_id?: string | null
           visit_summary_url?: string | null
           visit_type?: string | null
         }
@@ -3131,10 +3133,18 @@ export type Database = {
           status?: string
           treatment_started_at?: string | null
           updated_at?: string
+          video_session_id?: string | null
           visit_summary_url?: string | null
           visit_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_video_session"
+            columns: ["video_session_id"]
+            isOneToOne: false
+            referencedRelation: "video_sessions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patient_appointments_patient_id_fkey"
             columns: ["patient_id"]

@@ -11,30 +11,47 @@ const PatientVideoRoom = () => {
   const [rtmToken, setRtmToken] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
   const [rtmUid, setRtmUid] = useState<string | null>(null);
+  const [channelName, setChannelName] = useState<string | null>(null);
 
-  /** Safe channel formatting */
-  const channelName = sessionId?.trim() ? `vlx_${sessionId.replace(/-/g, "_")}` : null;
-
-  console.log("[PatientVideoRoom] Channel:", {
-    raw: sessionId,
-    formatted: channelName,
-  });
+  console.log("[PatientVideoRoom] Session ID:", sessionId);
 
   useEffect(() => {
-    if (!channelName) {
-      console.error("[PatientVideoRoom] Missing channel.");
+    if (!sessionId) {
+      console.error("[PatientVideoRoom] Missing session ID.");
       return;
     }
 
     let isMounted = true;
 
-    const fetchToken = async () => {
+    const initializeSession = async () => {
       try {
         setLoading(true);
 
+        // Fetch channel name from video_sessions table
+        console.log("[PatientVideoRoom] Fetching video session...");
+        const { data: session, error: sessionError } = await supabase
+          .from('video_sessions')
+          .select('channel_name, status')
+          .eq('id', sessionId)
+          .single();
+
+        if (!isMounted) return;
+
+        if (sessionError || !session) {
+          console.error("[PatientVideoRoom] Session fetch error:", sessionError);
+          return;
+        }
+
+        console.log("[PatientVideoRoom] Session found:", session);
+        const fetchedChannelName = session.channel_name;
+        setChannelName(fetchedChannelName);
+
+        // Fetch Agora tokens
+        console.log("[PatientVideoRoom] Fetching Agora tokens for channel:", fetchedChannelName);
+
         const { data, error } = await supabase.functions.invoke('agora-token', {
           body: {
-            channel: channelName,
+            channel: fetchedChannelName,
             role: "subscriber",
             ttl: 3600,
           }
@@ -54,18 +71,18 @@ const PatientVideoRoom = () => {
         setUid(data.uid);
         setRtmUid(data.rtmUid);
       } catch (err) {
-        console.error("[PatientVideoRoom] Fetch token failed:", err);
+        console.error("[PatientVideoRoom] Initialization failed:", err);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
-    fetchToken();
+    initializeSession();
 
     return () => {
       isMounted = false;
     };
-  }, [channelName]);
+  }, [sessionId]);
 
   if (loading || !rtcToken || !rtmToken || !uid || !rtmUid) {
     return (

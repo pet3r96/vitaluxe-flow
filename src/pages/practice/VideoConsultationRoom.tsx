@@ -11,31 +11,47 @@ const VideoConsultationRoom = () => {
   const [rtmToken, setRtmToken] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
   const [rtmUid, setRtmUid] = useState<string | null>(null);
+  const [channelName, setChannelName] = useState<string | null>(null);
 
-  /** Safely compute channel name */
-  const channelName = sessionId?.trim() ? `vlx_${sessionId.replace(/-/g, "_")}` : null;
-
-  console.log("[PracticeVideoRoom] Channel:", {
-    raw: sessionId,
-    formatted: channelName,
-  });
+  console.log("[PracticeVideoRoom] Session ID:", sessionId);
 
   useEffect(() => {
-    if (!channelName) {
-      console.error("[PracticeVideoRoom] Missing channel.");
+    if (!sessionId) {
+      console.error("[PracticeVideoRoom] Missing session ID.");
       return;
     }
 
     let isMounted = true;
 
-    const fetchToken = async () => {
+    const initializeSession = async () => {
       try {
         setLoading(true);
-        console.log("[PracticeVideoRoom] Fetching Agora tokens...");
+
+        // Fetch channel name from video_sessions table
+        console.log("[PracticeVideoRoom] Fetching video session...");
+        const { data: session, error: sessionError } = await supabase
+          .from('video_sessions')
+          .select('channel_name, status')
+          .eq('id', sessionId)
+          .single();
+
+        if (!isMounted) return;
+
+        if (sessionError || !session) {
+          console.error("[PracticeVideoRoom] Session fetch error:", sessionError);
+          return;
+        }
+
+        console.log("[PracticeVideoRoom] Session found:", session);
+        const fetchedChannelName = session.channel_name;
+        setChannelName(fetchedChannelName);
+
+        // Fetch Agora tokens
+        console.log("[PracticeVideoRoom] Fetching Agora tokens for channel:", fetchedChannelName);
 
         const { data, error } = await supabase.functions.invoke('agora-token', {
           body: {
-            channel: channelName,
+            channel: fetchedChannelName,
             role: "publisher",
             ttl: 3600,
           }
@@ -55,18 +71,18 @@ const VideoConsultationRoom = () => {
         setUid(data.uid);
         setRtmUid(data.rtmUid);
       } catch (err) {
-        console.error("[PracticeVideoRoom] Fetch token failed:", err);
+        console.error("[PracticeVideoRoom] Initialization failed:", err);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
-    fetchToken();
+    initializeSession();
 
     return () => {
       isMounted = false;
     };
-  }, [channelName]);
+  }, [sessionId]);
 
   if (loading || !rtcToken || !rtmToken || !uid || !rtmUid) {
     return (

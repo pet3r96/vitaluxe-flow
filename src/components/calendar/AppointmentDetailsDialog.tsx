@@ -22,6 +22,7 @@ import { CreateFollowUpFromAppointmentDialog } from "./CreateFollowUpFromAppoint
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatPatientEmail } from "@/lib/emailUtils";
+import { JoinVideoButton } from "@/components/appointments/JoinVideoButton";
 
 interface AppointmentDetailsDialogProps {
   open: boolean;
@@ -51,6 +52,7 @@ export function AppointmentDetailsDialog({
 }: AppointmentDetailsDialogProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { userRole } = useAuth();
   const [status, setStatus] = useState(appointment?.status);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [followUpOpen, setFollowUpOpen] = useState(false);
@@ -456,14 +458,24 @@ export function AppointmentDetailsDialog({
 
             {/* Actions */}
             <div className="flex justify-between flex-wrap gap-2">
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-              >
-                Delete Appointment
-              </Button>
               <div className="flex gap-2 flex-wrap">
+                {appointment.visit_type === 'video' && appointment.video_session_id && (
+                  <JoinVideoButton
+                    videoSessionId={appointment.video_session_id}
+                    userType={userRole === 'patient' ? 'patient' : 'provider'}
+                    status={appointment.status}
+                    startTime={appointment.start_time}
+                  />
+                )}
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                >
+                  Delete Appointment
+                </Button>
                 {status === "pending" && (
                   <Button
                     onClick={() => handleStatusChange("confirmed")}

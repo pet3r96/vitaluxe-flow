@@ -184,6 +184,51 @@ export function CreateAppointmentDialog({
 
       if (error) throw error;
 
+      // If this is a video appointment, create video session
+      if (values.visitType === 'video') {
+        const channelName = `vlx_appt_${data.id.replace(/-/g, '_')}`;
+        
+        console.log('[CreateAppointmentDialog] Creating video session:', {
+          appointmentId: data.id,
+          channelName
+        });
+
+        const { data: videoSession, error: videoError } = await supabase
+          .from('video_sessions')
+          .insert({
+            appointment_id: data.id,
+            patient_id: selectedPatientId,
+            provider_id: values.providerId,
+            practice_id: practiceId,
+            channel_name: channelName,
+            scheduled_start_time: startDateTime.toISOString(),
+            status: 'scheduled'
+          })
+          .select('id')
+          .single();
+
+        if (videoError) {
+          console.error('[CreateAppointmentDialog] Error creating video session:', videoError);
+          throw videoError;
+        }
+
+        console.log('[CreateAppointmentDialog] Video session created:', videoSession);
+
+        // Link video session to appointment
+        const { error: updateError } = await supabase
+          .from('patient_appointments')
+          .update({ video_session_id: videoSession.id })
+          .eq('id', data.id);
+
+        if (updateError) {
+          console.error('[CreateAppointmentDialog] Error linking video session:', updateError);
+          throw updateError;
+        }
+
+        // Return appointment with video_session_id
+        data.video_session_id = videoSession.id;
+      }
+
       // Create follow-up if requested
       if (createFollowUp && data && effectiveUserId) {
         const followUpDate = new Date(startDateTime);
@@ -227,9 +272,27 @@ export function CreateAppointmentDialog({
           const isVideo = data.visit_type === 'video';
           const title = isVideo ? 'Video Appointment Scheduled' : 'Appointment Scheduled';
           
+          // Generate join URLs for video appointments
+          let providerJoinUrl: string | undefined;
+          let patientJoinUrl: string | undefined;
+
+          if (isVideo && data.video_session_id) {
+            const baseUrl = window.location.origin;
+            providerJoinUrl = `${baseUrl}/practice/video/${data.video_session_id}`;
+            patientJoinUrl = `${baseUrl}/patient/video/${data.video_session_id}`;
+            
+            console.log('[CreateAppointmentDialog] Video join URLs generated:', {
+              provider: providerJoinUrl,
+              patient: patientJoinUrl
+            });
+          }
+          
           let message;
           if (isVideo) {
-            message = `Your appointment is scheduled for a video appointment on ${formattedDate} at ${formattedTime}.`;
+            message = `Your video appointment is scheduled for ${formattedDate} at ${formattedTime}.`;
+            if (patientJoinUrl) {
+              message += `\n\nJoin here: ${patientJoinUrl}`;
+            }
           } else {
             const address = practice 
               ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
@@ -247,7 +310,14 @@ export function CreateAppointmentDialog({
                 appointmentId: data.id,
                 appointmentDate: formattedDate,
                 appointmentTime: formattedTime,
-                visitType: data.visit_type
+                visitType: data.visit_type,
+                ...(isVideo && data.video_session_id && {
+                  videoSessionId: data.video_session_id,
+                  join_links: {
+                    provider: providerJoinUrl,
+                    patient: patientJoinUrl
+                  }
+                })
               },
               entity_type: 'appointment',
               entity_id: data.id

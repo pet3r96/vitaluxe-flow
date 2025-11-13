@@ -237,7 +237,7 @@ serve(async (req) => {
         subject: emailSubject,
         title: payload.title,
         message: payload.message,
-        actionUrl: payload.action_url
+        actionUrl: payload.metadata?.join_links?.patient || payload.action_url
       });
 
       if (emailResult.success) {
@@ -265,7 +265,13 @@ serve(async (req) => {
       const normalizedPhone = normalizePhoneToE164(userPhone);
       console.log(`[handleNotifications] Sending SMS to ${normalizedPhone.substring(0, 5)}***`);
       
-      const smsMessage = `${payload.title}\n\n${payload.message}\n\nView in portal: https://app.vitaluxeservices.com`;
+      // Format SMS message with join link for video appointments
+      let smsMessage = `${payload.title}\n\n${payload.message}`;
+      if (payload.metadata?.join_links?.patient) {
+        smsMessage += `\n\nJoin video call: ${payload.metadata.join_links.patient}`;
+      } else {
+        smsMessage += `\n\nView in portal: https://app.vitaluxeservices.com`;
+      }
 
       const smsResult = await sendNotificationSms({
         phoneNumber: normalizedPhone,
