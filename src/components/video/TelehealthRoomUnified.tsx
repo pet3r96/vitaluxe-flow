@@ -23,6 +23,8 @@ interface Props {
   isProvider: boolean;
   sessionId: string;
   patientId: string;
+  isGuest?: boolean;
+  sessionType?: "instant" | "scheduled" | "practice_room";
 }
 
 export default function TelehealthRoomUnified({
@@ -33,6 +35,8 @@ export default function TelehealthRoomUnified({
   isProvider,
   sessionId,
   patientId,
+  isGuest = false,
+  sessionType,
 }: Props) {
   const navigate = useNavigate();
 
@@ -44,8 +48,8 @@ export default function TelehealthRoomUnified({
 
   // UI state
   const [showChat, setShowChat] = useState(false);
-  const [showChart, setShowChart] = useState(isProvider);
-  const [isWaiting, setIsWaiting] = useState(!isProvider);
+  const [showChart, setShowChart] = useState(isProvider && !isGuest);
+  const [isWaiting, setIsWaiting] = useState(!isProvider && !isGuest);
 
   // ============================================================================
   // JOIN & LEAVE LOGIC
@@ -59,8 +63,12 @@ export default function TelehealthRoomUnified({
         await agora.join(channel, token, String(uid));
         timer.start();
 
-        // Provider: publish tracks immediately
-        if (isProvider) {
+        // Guest: auto-join without publishing or waiting
+        if (isGuest) {
+          console.log("[TelehealthRoom] Guest joining - view-only mode");
+          // Guests don't publish tracks or emit events
+        } else if (isProvider) {
+          // Provider: publish tracks immediately
           console.log("[TelehealthRoom] Provider joining - publishing tracks");
           await agora.publishTracks();
         } else {
@@ -124,7 +132,16 @@ export default function TelehealthRoomUnified({
   return (
     <VideoRoomLayout
       leftPanel={
-        isProvider ? (
+        isGuest ? (
+          <div className="p-4 flex items-center justify-center h-full">
+            <div className="text-center space-y-2">
+              <div className="inline-block px-3 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-sm font-medium">
+                Guest
+              </div>
+              <p className="text-sm text-muted-foreground">View-only access</p>
+            </div>
+          </div>
+        ) : isProvider ? (
           <WaitingRoomPanel
             waitingPatients={events.waitingPatients}
             onAdmitPatient={handleAdmitPatient}
@@ -157,7 +174,7 @@ export default function TelehealthRoomUnified({
         </>
       }
       rightPanel={
-        isProvider && showChart ? (
+        isProvider && showChart && !isGuest ? (
           <PatientChartPanel
             patientId={patientId}
             chart={chart.chart}
@@ -167,23 +184,33 @@ export default function TelehealthRoomUnified({
         ) : null
       }
       controlBar={
-        <ControlBar>
-          <MediaControls
-            isMicMuted={agora.localAudioTrack ? !agora.localAudioTrack.enabled : true}
-            isCameraOff={agora.localVideoTrack ? !agora.localVideoTrack.enabled : true}
-            onToggleMic={agora.toggleMic}
-            onToggleCamera={agora.toggleCamera}
-          />
-          <CommunicationControls
-            onOpenChat={handleToggleChat}
-            onOpenParticipants={() => console.log("Open participants")}
-          />
-          <ActionControls
-            onToggleChart={handleToggleChart}
-            onEndCall={handleEndCall}
-            callDuration={timer.formattedDuration}
-          />
-        </ControlBar>
+        isGuest ? (
+          <ControlBar>
+            <div className="flex items-center gap-2 px-4 text-sm text-muted-foreground">
+              <span>Guest Mode - View Only</span>
+              <span className="text-muted-foreground/50">•</span>
+              <span>{timer.formattedDuration}</span>
+            </div>
+          </ControlBar>
+        ) : (
+          <ControlBar>
+            <MediaControls
+              isMicMuted={agora.localAudioTrack ? !agora.localAudioTrack.enabled : true}
+              isCameraOff={agora.localVideoTrack ? !agora.localVideoTrack.enabled : true}
+              onToggleMic={agora.toggleMic}
+              onToggleCamera={agora.toggleCamera}
+            />
+            <CommunicationControls
+              onOpenChat={handleToggleChat}
+              onOpenParticipants={() => console.log("Open participants")}
+            />
+            <ActionControls
+              onToggleChart={handleToggleChart}
+              onEndCall={handleEndCall}
+              callDuration={timer.formattedDuration}
+            />
+          </ControlBar>
+        )
       }
       showLeftPanel={true}
       showRightPanel={isProvider && showChart}

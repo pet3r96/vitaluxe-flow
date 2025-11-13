@@ -132,6 +132,7 @@ const VideoGuestJoin = () => {
         uid={sessionData.uid}
         isProvider={false}
         patientId="" // Guest has no patient ID
+        isGuest={true}
       />
     </div>
   );

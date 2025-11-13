@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ProviderVirtualWaitingRoom } from "@/components/video/ProviderVirtualWaitingRoom";
 import { RecordedSessionsList } from "@/components/video/RecordedSessionsList";
+import { PracticeRoomLinkCard } from "@/components/video/PracticeRoomLinkCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -103,6 +104,9 @@ const VideoConsultations = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Practice Room Link */}
+      <PracticeRoomLinkCard practiceId={practiceId} />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
