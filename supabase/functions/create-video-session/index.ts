@@ -47,6 +47,23 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check for impersonation session
+    let effectiveUserId = user.id;
+    const { data: impersonationSession } = await supabase
+      .from('active_impersonation_sessions')
+      .select('target_user_id')
+      .eq('admin_user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (impersonationSession) {
+      effectiveUserId = impersonationSession.target_user_id;
+      console.log('[create-video-session] Impersonation detected:', {
+        adminUserId: user.id,
+        effectiveUserId
+      });
+    }
+
     // Parse request body
     const body: CreateSessionRequest = await req.json();
     const { practiceId, providerId, patientId, sessionType, scheduledStart, scheduledEnd } = body;
@@ -60,28 +77,34 @@ Deno.serve(async (req) => {
     });
 
     // Verify user has access to this practice
-    // Check if user is the practice owner (doctor role)
-    const isPracticeOwner = user.id === practiceId;
+    // Check if effective user is the practice owner (doctor role)
+    const isPracticeOwner = effectiveUserId === practiceId;
     
-    // Check if user is a provider in this practice
+    // Check if effective user is a provider in this practice
     const { data: provider } = await supabase
       .from('providers')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .eq('practice_id', practiceId)
       .maybeSingle();
 
-    // Check if user is staff in this practice (if staff table exists)
+    // Check if effective user is staff in this practice (if staff table exists)
     const { data: staff } = await supabase
       .from('practice_staff')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .eq('practice_id', practiceId)
       .maybeSingle();
 
     // Allow if user is practice owner, provider, or staff
     if (!isPracticeOwner && !provider && !staff) {
-      console.error('[create-video-session] Authorization failed - user not associated with practice');
+      console.error('[create-video-session] Authorization failed:', {
+        effectiveUserId,
+        practiceId,
+        isPracticeOwner,
+        hasProvider: !!provider,
+        hasStaff: !!staff
+      });
       return new Response(
         JSON.stringify({ error: 'Not authorized for this practice' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -89,6 +112,7 @@ Deno.serve(async (req) => {
     }
 
     console.log('[create-video-session] Authorization successful:', {
+      effectiveUserId,
       isPracticeOwner,
       isProvider: !!provider,
       isStaff: !!staff
