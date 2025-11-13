@@ -237,7 +237,7 @@ export function TreatmentPlanDetailsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">

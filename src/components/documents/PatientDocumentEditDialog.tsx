@@ -115,7 +115,7 @@ const handleSave = async () => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Document</DialogTitle>
         </DialogHeader>

@@ -74,7 +74,7 @@ export function CreatePatientNoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-w-[95vw] sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create Patient Note</DialogTitle>
         </DialogHeader>

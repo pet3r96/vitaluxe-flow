@@ -240,7 +240,7 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="max-w-[95vw] sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>🔒 Mandatory 2FA Setup</DialogTitle>
           <DialogDescription>

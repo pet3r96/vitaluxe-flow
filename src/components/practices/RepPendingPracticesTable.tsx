@@ -212,7 +212,7 @@ export function RepPendingPracticesTable() {
       </Tabs>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Practice Request Details</DialogTitle>
             <DialogDescription>

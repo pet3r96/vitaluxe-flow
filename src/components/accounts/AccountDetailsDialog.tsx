@@ -261,7 +261,7 @@ export const AccountDetailsDialog = ({
       if (!open) setIsEditing(false);
       onOpenChange(open);
     }}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>

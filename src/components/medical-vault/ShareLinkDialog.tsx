@@ -64,7 +64,7 @@ export function ShareLinkDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-[95vw] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Share Medical Vault</DialogTitle>
           <DialogDescription>

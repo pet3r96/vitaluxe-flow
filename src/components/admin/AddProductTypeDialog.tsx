@@ -65,7 +65,7 @@ export const AddProductTypeDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-[95vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add Product Type</DialogTitle>
           <DialogDescription>

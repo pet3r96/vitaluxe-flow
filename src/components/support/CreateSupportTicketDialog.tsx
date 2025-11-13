@@ -101,7 +101,7 @@ export function CreateSupportTicketDialog() {
           Create Ticket
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="max-w-[95vw] sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>Create Support Ticket</DialogTitle>
           <DialogDescription>

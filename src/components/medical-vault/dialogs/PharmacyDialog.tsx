@@ -178,7 +178,7 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card dark:bg-card border-border">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-card dark:bg-card border-border">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
             {mode === "add" ? "Add Pharmacy" : mode === "edit" ? "Edit Pharmacy" : "View Pharmacy"}

@@ -86,7 +86,7 @@ export function RoomDialog({ open, onOpenChange, practiceId, room, onSuccess }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{room ? "Edit Room" : "Add Room"}</DialogTitle>
           <DialogDescription>

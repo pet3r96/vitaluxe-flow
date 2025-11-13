@@ -126,7 +126,7 @@ export function CreateFollowUpFromAppointmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             Create Follow-Up for {appointment.patient_accounts?.first_name}{' '}

@@ -239,7 +239,7 @@ export function CreateInternalMessageDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>New Internal Message</DialogTitle>
           <DialogDescription>

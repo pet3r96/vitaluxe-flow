@@ -123,7 +123,7 @@ export function CreatePatientMessageDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh]">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>New Patient Message</DialogTitle>
           <DialogDescription>

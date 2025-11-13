@@ -24,7 +24,7 @@ export function ErrorAlertDialog({
 }: ErrorAlertDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
         <AlertDialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">

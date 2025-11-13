@@ -77,7 +77,7 @@ export const DataSyncButton = ({ onSyncComplete }: DataSyncButtonProps) => {
       </Button>
 
       <Dialog open={showResults} onOpenChange={setShowResults}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-500" />

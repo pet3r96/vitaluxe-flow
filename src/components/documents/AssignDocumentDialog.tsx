@@ -46,7 +46,7 @@ export function AssignDocumentDialog({ documentId, open, onOpenChange }: AssignD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-[95vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Assign Document to Patient</DialogTitle>
         </DialogHeader>

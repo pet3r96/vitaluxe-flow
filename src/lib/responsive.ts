@@ -60,14 +60,19 @@ export const getResponsivePageWrapper = (): string => {
 };
 
 /**
- * Responsive dialog width
+ * Responsive dialog width - Updated for mobile optimization
+ * All dialogs should use max-w-[95vw] sm:max-w-* pattern for mobile
  */
-export const getResponsiveDialogWidth = (size: 'sm' | 'md' | 'lg' | 'xl' = 'md'): string => {
+export const getResponsiveDialogWidth = (size: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '6xl' = 'md'): string => {
   const sizes = {
-    sm: 'w-[calc(100vw-2rem)] max-w-sm sm:max-w-md sm:w-full mx-4 sm:mx-0',
-    md: 'w-[calc(100vw-2rem)] max-w-md sm:max-w-lg sm:w-full mx-4 sm:mx-0',
-    lg: 'w-[calc(100vw-2rem)] max-w-lg sm:max-w-2xl sm:w-full mx-4 sm:mx-0',
-    xl: 'w-[calc(100vw-2rem)] max-w-xl sm:max-w-3xl lg:max-w-4xl sm:w-full mx-4 sm:mx-0'
+    sm: 'max-w-[95vw] sm:max-w-sm',
+    md: 'max-w-[95vw] sm:max-w-md',
+    lg: 'max-w-[95vw] sm:max-w-lg',
+    xl: 'max-w-[95vw] sm:max-w-xl',
+    '2xl': 'max-w-[95vw] sm:max-w-2xl',
+    '3xl': 'max-w-[95vw] sm:max-w-3xl',
+    '4xl': 'max-w-[95vw] sm:max-w-4xl',
+    '6xl': 'max-w-[95vw] sm:max-w-6xl'
   };
   return sizes[size];
 };

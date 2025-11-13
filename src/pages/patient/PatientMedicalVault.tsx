@@ -342,7 +342,7 @@ export default function PatientMedicalVault() {
           setPdfPreviewUrl(null);
         }
       }}>
-        <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-[95vw] sm:max-w-6xl h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-6 pb-4 border-b">
             <DialogTitle>Medical Vault Preview</DialogTitle>
           </DialogHeader>

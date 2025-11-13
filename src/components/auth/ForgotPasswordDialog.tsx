@@ -58,7 +58,7 @@ export default function ForgotPasswordDialog({ open, onOpenChange }: ForgotPassw
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-md">
         <DialogHeader>
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
             <Mail className="w-6 h-6 text-primary" />

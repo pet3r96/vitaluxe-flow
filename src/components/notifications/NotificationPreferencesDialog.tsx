@@ -272,7 +272,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Notification Preferences</DialogTitle>
           <DialogDescription>
