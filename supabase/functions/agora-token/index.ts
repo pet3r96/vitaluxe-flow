@@ -7,7 +7,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// redeploy-trigger
+
+//redeploy trigger: 
+--- a/supabase/functions/agora-token/index.ts
++++ b/supabase/functions/agora-token/index.ts
+@@
++// redeploy-trigger: forcing latest build after bundle timeout
 
 serve(async (req) => {
   // Handle CORS preflight requests
