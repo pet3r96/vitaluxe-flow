@@ -11,23 +11,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Create authenticated client with forwarded auth header
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    );
 
-    // Get authenticated user
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('[list-providers] No authorization header');
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
     if (userError || !user) {
       console.error('[list-providers] Auth error:', userError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -39,7 +35,7 @@ Deno.serve(async (req) => {
     console.log('[list-providers] User:', user.id);
 
     // Get user's role and practice
-    const { data: userRoles } = await supabase
+    const { data: userRoles } = await supabaseClient
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id);
@@ -74,7 +70,7 @@ Deno.serve(async (req) => {
       practiceIdSource = 'computed-doctor';
     } else if (roles.includes('staff')) {
       // Staff: look up their practice_id
-      const { data: staffData } = await supabase
+      const { data: staffData } = await supabaseClient
         .from('practice_staff')
         .select('practice_id')
         .eq('user_id', user.id)
@@ -98,7 +94,7 @@ Deno.serve(async (req) => {
       practiceIdSource = 'computed-staff';
     } else if (roles.includes('provider')) {
       // Provider: can only see themselves
-      const { data: providerData } = await supabase
+      const { data: providerData } = await supabaseClient
         .from('providers')
         .select(`
           id,
@@ -153,7 +149,7 @@ Deno.serve(async (req) => {
     }
 
     // Fetch providers only (role_type = 'provider')
-    let providersQuery = supabase
+    let providersQuery = supabaseClient
       .from('providers')
       .select(`
         id,
