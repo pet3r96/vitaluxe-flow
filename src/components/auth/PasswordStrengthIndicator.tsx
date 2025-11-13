@@ -1,7 +1,7 @@
 import { Check, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import type { PasswordValidationResult } from "@/lib/passwordStrength";
+import type { PasswordValidationResult } from "@/lib/passwordValidation";
 
 interface PasswordStrengthIndicatorProps {
   validation: PasswordValidationResult;
