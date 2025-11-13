@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
 const corsHeaders = {

@@ -1,11 +1,8 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 
 Deno.serve(async (req) => {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createAdminClient();
 
     // Call the database function to check and create notifications
     const { error } = await supabase.rpc('notify_due_follow_ups');

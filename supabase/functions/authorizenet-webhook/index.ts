@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { validateWebhookRequest } from '../_shared/requestValidators.ts';
 import { validateAuthorizenetWebhookSignature, validateWebhookPayload } from '../_shared/webhookValidator.ts';
 import { handleError, createErrorResponse } from '../_shared/errorHandler.ts';
@@ -14,10 +14,7 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-  );
+  const supabase = createAdminClient();
 
   try {
     // Get webhook signature from headers

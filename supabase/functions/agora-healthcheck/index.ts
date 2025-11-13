@@ -2,11 +2,8 @@
 // ✅ Verifies Supabase auth and Agora credentials (AGORA_APP_ID / AGORA_APP_CERTIFICATE)
 // ✅ Supports ?ping endpoint for quick, unauthenticated deployment checks
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { createAdminClient } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,7 +28,7 @@ Deno.serve(async (req) => {
     }
 
     // 🔹 Authenticated mode (requires Supabase Bearer token)
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createAdminClient();
     const authHeader = req.headers.get("Authorization");
 
     if (!authHeader) {
