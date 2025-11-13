@@ -3,7 +3,7 @@
 // Returns permanent practice room link or creates one if it doesn't exist
 // ============================================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,13 +19,8 @@ Deno.serve(async (req) => {
   try {
     console.log('[get-or-create-practice-room] Request received');
 
-    // Get Supabase client (use service role for impersonation checks)
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const authHeader = req.headers.get('Authorization')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const supabase = createAuthClient(req.headers.get('Authorization'));
+    const supabaseAdmin = createAdminClient();
 
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -37,9 +32,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check for impersonation
+    // Check for impersonation using admin client
     let effectiveUserId = user.id;
-    const { data: impersonationSession } = await supabase
+    const { data: impersonationSession } = await supabaseAdmin
       .from('active_impersonation_sessions')
       .select('target_user_id')
       .eq('admin_user_id', user.id)
@@ -64,23 +59,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[get-or-create-practice-room] Practice ID:', practice_id);
+    console.log('[get-or-create-practice-room] Practice ID:', practice_id, 'Effective User:', effectiveUserId);
 
-    // Verify user has access to this practice
+    // Verify user has access to this practice using admin client
     const isPracticeOwner = effectiveUserId === practice_id;
-    const { data: provider } = await supabase
+    const { data: provider } = await supabaseAdmin
       .from('providers')
       .select('id')
       .eq('user_id', effectiveUserId)
       .eq('practice_id', practice_id)
       .maybeSingle();
 
-    const { data: staff } = await supabase
+    const { data: staff } = await supabaseAdmin
       .from('practice_staff')
       .select('id')
       .eq('user_id', effectiveUserId)
       .eq('practice_id', practice_id)
       .maybeSingle();
+
+    console.log('[get-or-create-practice-room] Authorization check:', {
+      isPracticeOwner,
+      hasProvider: !!provider,
+      hasStaff: !!staff
+    });
 
     if (!isPracticeOwner && !provider && !staff) {
       console.error('[get-or-create-practice-room] Unauthorized');
@@ -92,8 +93,8 @@ Deno.serve(async (req) => {
 
     const practiceId = practice_id;
 
-    // Check if practice room exists
-    const { data: existingRoom, error: roomError } = await supabase
+    // Check if practice room exists using admin client
+    const { data: existingRoom, error: roomError } = await supabaseAdmin
       .from('practice_video_rooms')
       .select('*')
       .eq('practice_id', practiceId)
@@ -121,7 +122,7 @@ Deno.serve(async (req) => {
     const channelName = `practice_${practiceId}`;
     
     // Generate room key using DB function
-    const { data: roomKeyData, error: roomKeyError } = await supabase
+    const { data: roomKeyData, error: roomKeyError } = await supabaseAdmin
       .rpc('generate_room_key');
 
     if (roomKeyError || !roomKeyData) {
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
     }
 
     // Insert new practice room
-    const { data: newRoom, error: insertError } = await supabase
+    const { data: newRoom, error: insertError } = await supabaseAdmin
       .from('practice_video_rooms')
       .insert({
         practice_id: practiceId,

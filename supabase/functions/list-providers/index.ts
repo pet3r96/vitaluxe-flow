@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
 
     // Defensive logging: Verify caller's practice_staff membership for staff users
     if (roles.includes('staff') && practiceId) {
-      const { data: staffMembership } = await supabase
+      const { data: staffMembership } = await supabaseClient
         .from('practice_staff')
         .select('id, active')
         .eq('user_id', user.id)
@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { data: userProfiles, error: userProfilesError } = await supabase
+    const { data: userProfiles, error: userProfilesError } = await supabaseClient
       .from('profiles')
       .select('id, name, full_name, prescriber_name, email, phone, address, npi, dea, license_number')
       .in('id', userIds);
@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
     }
 
     // Step 3: Fetch practice profiles
-    const { data: practiceProfiles, error: practiceProfilesError } = await supabase
+    const { data: practiceProfiles, error: practiceProfilesError } = await supabaseClient
       .from('profiles')
       .select('id, name, company')
       .in('id', practiceIds);
