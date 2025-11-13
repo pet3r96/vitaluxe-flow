@@ -480,10 +480,8 @@ serve(async (req) => {
     // Increment discount code usage if all payments succeeded
     if (failedPayments.length === 0 && discount_code && createdOrders.length > 0) {
       try {
-        await supabaseAdmin.rpc('increment_discount_usage' as any, { 
-          p_code: discount_code,
-          p_user_id: user.id,
-          p_order_id: createdOrders[0].id
+        await supabaseAdmin.rpc('increment_discount_usage', { 
+          p_code: discount_code
         });
       } catch (error) {
         console.error("[place-order] Failed to increment discount usage:", error);

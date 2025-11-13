@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCart } from "@/hooks/useCart";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -93,54 +94,8 @@ export default function Checkout() {
     return calculateSubtotal() - calculateDiscountAmount() + calculateShipping() + merchantFeeAmount;
   };
 
-  const { data: cart, isLoading} = useQuery({
-    queryKey: ["cart", effectiveUserId],
-    queryFn: async () => {
-      const { data: cartData, error: cartError } = await supabase
-        .from("cart")
-        .select("id")
-        .eq("doctor_id", effectiveUserId)
-        .maybeSingle();
-
-      if (cartError) throw cartError;
-
-      if (!cartData) return null;
-
-      const { data: linesRaw, error: linesError } = await supabase
-        .from("cart_lines")
-        .select(`
-          *,
-          product:products(name, dosage, sig, image_url, base_price, requires_prescription)
-        `)
-        .eq("cart_id", cartData.id)
-        .gte("expires_at", new Date().toISOString());
-
-      if (linesError) throw linesError;
-
-      const lines = (linesRaw || []) as any[];
-
-      // Manually hydrate patient data from patient_accounts table
-      const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
-      if (patientIds.length > 0) {
-        const { data: patients, error: patientsError } = await supabase
-          .from('patient_accounts')
-          .select('id, name, first_name, last_name, address_street, address_city, address_state, address_zip, address_formatted')
-          .in('id', patientIds);
-        
-        if (!patientsError && patients) {
-          const patientMap = new Map(patients.map((p: any) => [p.id, p]));
-          for (const line of lines) {
-            if (line.patient_id) {
-              const patient = patientMap.get(line.patient_id) || null;
-              line.patient = patient;
-              line.patient_name = patient?.name || line.patient_name; // Preserve patient_name for validation
-            }
-          }
-        }
-      }
-
-      return { id: cartData.id, lines: lines || [] };
-    },
+  const { data: cart, isLoading} = useCart(effectiveUserId, {
+    hydratePatients: true,
     enabled: !!effectiveUserId,
     staleTime: 5000,
     refetchOnWindowFocus: false,

@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "@/hooks/useCart";
 import { DiscountCodeInput } from "@/components/orders/DiscountCodeInput";
 import { ShippingSpeedSelector } from "@/components/cart/ShippingSpeedSelector";
 import { Separator } from "@/components/ui/separator";
@@ -70,40 +71,12 @@ export default function Cart() {
   const showStaffLoading = checkingPrivileges && isStaffAccount;
   const showStaffNoAccess = isStaffAccount && !canOrder && !checkingPrivileges;
 
-  const { data: cart, isLoading } = useQuery({
-    queryKey: ["cart", effectiveUserId],
-    queryFn: async () => {
-      const { data: cartData, error: cartError } = await supabase
-        .from("cart")
-        .select("id")
-        .eq("doctor_id", effectiveUserId)
-        .maybeSingle();
-
-      if (cartError) throw cartError;
-
-      if (!cartData) return { lines: [] };
-
-      const { data: lines, error: linesError } = await supabase
-        .from("cart_lines")
-        .select(`
-        *,
-        product:products(name, dosage, image_url),
-        pharmacy:pharmacies(name),
-        provider:providers(
-          id,
-          user_id,
-          profiles!providers_user_id_fkey(name, npi, dea)
-        )
-        `)
-        .eq("cart_id", cartData.id)
-        .gte("expires_at", new Date().toISOString());
-
-      if (linesError) throw linesError;
-
-      return { id: cartData.id, lines: lines || [] };
-    },
+  const { data: cart, isLoading } = useCart(effectiveUserId, {
+    productFields: "name, dosage, image_url",
+    includePharmacy: true,
+    includeProvider: true,
     enabled: !!effectiveUserId && !showStaffLoading,
-    staleTime: 0, // Always fresh - we rely on realtime updates
+    staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
