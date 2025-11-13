@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Calendar, Building, Loader2, AlertCircle, CheckCircle, Info, ChevronDown, Video as VideoIcon } from "lucide-react";
+import { Calendar, Building, Loader2, AlertCircle, CheckCircle, Info, ChevronDown } from "lucide-react";
 import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
 
 interface AppointmentBookingDialogProps {
@@ -31,7 +31,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
   const [practiceSubscription, setPracticeSubscription] = useState<any>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [debugOpen, setDebugOpen] = useState(false);
-  const [visitType, setVisitType] = useState<'in_person' | 'video'>('in_person');
+  const [visitType, setVisitType] = useState<'in_person'>('in_person');
 
   // Fetch patient's assigned practice
   const { data: patientAccount } = useQuery({
@@ -366,20 +366,9 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
                     <span>In-Person Visit</span>
                   </div>
                 </SelectItem>
-                <SelectItem value="video">
-                  <div className="flex items-center gap-2">
-                    <VideoIcon className="h-4 w-4" />
-                    <span>Video Consultation</span>
-                  </div>
-                </SelectItem>
               </SelectContent>
             </Select>
-            {visitType === 'video' && (
-              <p className="text-xs text-muted-foreground">
-                You'll receive a link to join 15 minutes before your appointment
-              </p>
-            )}
-            {visitType === 'in_person' && patientAccount && (
+            {patientAccount && (
               <p className="text-xs text-muted-foreground">
                 {Array.isArray(patientAccount.practice) 
                   ? `${patientAccount.practice[0]?.address_city}, ${patientAccount.practice[0]?.address_state}` 
