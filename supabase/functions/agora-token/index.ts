@@ -3,41 +3,40 @@ import { Role, RtcTokenBuilder, RtmTokenBuilder } from "../_shared/agoraTokenBui
 
 // Agora token generation with channel normalization
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// redeploy-trigger
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   const url = new URL(req.url);
-  
+
   // Health check endpoint
-  if (url.pathname.endsWith('/health')) {
-    return new Response(
-      JSON.stringify({ ok: true, status: "healthy", service: "agora-token" }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  if (url.pathname.endsWith("/health")) {
+    return new Response(JSON.stringify({ ok: true, status: "healthy", service: "agora-token" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
     const body = await req.json();
     const rawChannel = body.channel;
-    const channel = rawChannel.replace(/-/g, '_').toLowerCase();
+    const channel = rawChannel.replace(/-/g, "_").toLowerCase();
     const role = body.role || "subscriber";
     const ttl = body.ttl || 3600;
 
     console.log("[Edge] Token request received:", { rawChannel, channel, role });
-    console.log('AGORA TOKEN CHANNEL (normalized):', channel);
+    console.log("AGORA TOKEN CHANNEL (normalized):", channel);
 
     if (!channel || typeof channel !== "string" || !channel.trim()) {
-      return new Response(
-        JSON.stringify({ ok: false, error: "Invalid or missing channel name." }),
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ ok: false, error: "Invalid or missing channel name." }), { status: 400 });
     }
 
     const appId = Deno.env.get("AGORA_APP_ID");
@@ -50,22 +49,9 @@ serve(async (req) => {
 
     const expire = ttl;
 
-    const rtcToken = await RtcTokenBuilder.buildTokenWithUid(
-      appId,
-      appCert,
-      channel,
-      uid,
-      rtcRole,
-      expire,
-      expire
-    );
+    const rtcToken = await RtcTokenBuilder.buildTokenWithUid(appId, appCert, channel, uid, rtcRole, expire, expire);
 
-    const rtmToken = await RtmTokenBuilder.buildToken(
-      appId,
-      appCert,
-      rtmUid,
-      expire
-    );
+    const rtmToken = await RtmTokenBuilder.buildToken(appId, appCert, rtmUid, expire);
 
     return new Response(
       JSON.stringify({
@@ -75,15 +61,15 @@ serve(async (req) => {
         uid,
         rtmUid,
         ttl,
-        expiresAt: new Date(Date.now() + ttl * 1000).toISOString()
+        expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
     console.error("[Edge] ERROR:", err);
     return new Response(JSON.stringify({ ok: false, error: "Internal error" }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
