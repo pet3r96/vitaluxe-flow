@@ -132,6 +132,7 @@ const PatientMobileHeader = lazy(() =>
   import("./components/patient/PatientMobileHeader").then((m) => ({ default: m.PatientMobileHeader })),
 );
 const PatientVideoRoom = lazy(() => import("./pages/patient/PatientVideoRoom"));
+const VideoCallTest = lazy(() => import("./pages/VideoCallTest"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
 const VideoConsultationRoom = lazy(() => import("./pages/practice/VideoConsultationRoom"));
 const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
@@ -267,6 +268,14 @@ const App = () => (
                       {/* ========================================== */}
                       {/* VIDEO ROUTES - MUST BE BEFORE CATCH-ALL   */}
                       {/* ========================================== */}
+                      <Route
+                        path="/video/test"
+                        element={
+                          <ProtectedRoute>
+                            <VideoCallTest />
+                          </ProtectedRoute>
+                        }
+                      />
                       <Route
                         path="/patient/video/:sessionId"
                         element={

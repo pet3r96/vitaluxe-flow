@@ -6,6 +6,8 @@
 - Patient account credentials
 - A valid video session ID
 
+**TIP**: Before testing, both users should run the pre-call test at `/video/test` to verify their camera, microphone, and network are working correctly.
+
 ## Testing Steps
 
 ### Step 1: Open Provider View
