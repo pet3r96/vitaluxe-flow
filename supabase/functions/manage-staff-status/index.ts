@@ -1,8 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-csrf-token',
 };
 
 Deno.serve(async (req) => {
@@ -11,21 +12,27 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { persistSession: false } }
-    );
+    const supabase = createAuthClient(req.headers.get('Authorization'));
+    const supabaseAdmin = createAdminClient();
 
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       console.error('Authentication error:', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate CSRF token
+    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
+    if (!valid) {
+      console.error('CSRF validation failed:', csrfError);
+      return new Response(
+        JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -101,7 +108,7 @@ Deno.serve(async (req) => {
     if (canOrder !== undefined) updateData.can_order = canOrder;
 
     // Attempt update by user_id first
-    let { data, error } = await supabase
+    let { data, error } = await supabaseAdmin
       .from('practice_staff')
       .update(updateData)
       .eq('user_id', staffId)
@@ -111,7 +118,7 @@ Deno.serve(async (req) => {
     // Fallback: try by id if no rows affected
     if (!data && !error) {
       console.log(`[manage-staff-status] No rows updated by user_id, trying by id`);
-      const fallback = await supabase
+      const fallback = await supabaseAdmin
         .from('practice_staff')
         .update(updateData)
         .eq('id', staffId)

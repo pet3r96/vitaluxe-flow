@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -9,20 +10,25 @@ serve(async (req) => {
   }
 
   try {
+    const supabase = createAuthClient(req.headers.get('Authorization'));
     const supabaseClient = createAdminClient();
 
-    // Verify caller is admin
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Missing authorization header');
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
       console.error('Auth error:', userError);
       throw new Error('Invalid authorization token');
+    }
+
+    // Validate CSRF token
+    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
+    if (!valid) {
+      console.error('CSRF validation failed:', csrfError);
+      return new Response(
+        JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Check if user is admin

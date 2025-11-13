@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -9,19 +10,28 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createAdminClient();
+    const supabase = createAuthClient(req.headers.get('Authorization'));
+    const supabaseAdmin = createAdminClient();
 
-    // Get authenticated user
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       throw new Error('Unauthorized');
     }
 
+    // Validate CSRF token
+    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
+    if (!valid) {
+      console.error('CSRF validation failed:', csrfError);
+      return new Response(
+        JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verify user is admin
-    const { data: roles, error: roleError } = await supabase
+    const { data: roles, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
@@ -42,18 +52,18 @@ serve(async (req) => {
     }
 
     // Get target user info
-    const { data: targetUser, error: targetUserError } = await supabase.auth.admin.getUserById(targetUserId);
+    const { data: targetUser, error: targetUserError } = await supabaseAdmin.auth.admin.getUserById(targetUserId);
     
     if (targetUserError || !targetUser) {
       throw new Error('Target user not found');
     }
 
     // Get admin user email
-    const { data: adminUser } = await supabase.auth.admin.getUserById(user.id);
+    const { data: adminUser } = await supabaseAdmin.auth.admin.getUserById(user.id);
     const adminEmail = adminUser?.user?.email || 'unknown';
 
     // Get current 2FA settings to log previous phone number
-    const { data: currentSettings } = await supabase
+    const { data: currentSettings } = await supabaseAdmin
       .from('user_2fa_settings')
       .select('phone_number')
       .eq('user_id', targetUserId)
@@ -62,7 +72,7 @@ serve(async (req) => {
     const previousPhoneNumber = currentSettings?.phone_number || null;
 
     // Log the reset action
-    const { error: logError } = await supabase
+    const { error: logError } = await supabaseAdmin
       .from('two_fa_reset_logs')
       .insert({
         target_user_id: targetUserId,
@@ -80,7 +90,7 @@ serve(async (req) => {
 
     // Reset 2FA settings
     const now = new Date().toISOString();
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('user_2fa_settings')
       .update({
         is_enrolled: false,
