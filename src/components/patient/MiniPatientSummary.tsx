@@ -6,17 +6,17 @@ export default function MiniPatientSummary({ chart }: { chart: any }) {
   const p = chart.patient;
 
   return (
-    <Card className="p-3 text-sm bg-secondary border-border shadow-sm">
-      <div className="font-semibold text-base mb-1">
-        {p.first_name} {p.last_name}
+    <Card className="p-3 text-sm bg-secondary border-border shadow-sm w-64">
+      <div className="font-semibold text-base mb-2">
+        {p.fullName}
       </div>
 
-      <div className="space-y-1 opacity-80">
-        {p.birth_date && (
-          <div>DOB: {new Date(p.birth_date).toLocaleDateString()}</div>
+      <div className="space-y-1 text-xs opacity-80">
+        {p.dob && (
+          <div>DOB: {new Date(p.dob).toLocaleDateString()}</div>
         )}
 
-        {p.gender_at_birth && <div>Gender: {p.gender_at_birth}</div>}
+        {p.gender && <div>Gender: {p.gender}</div>}
 
         {p.email && <div>Email: {p.email}</div>}
 

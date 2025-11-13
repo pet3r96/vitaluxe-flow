@@ -1,4 +1,4 @@
-import AdvancedTelehealthRoom from "./AdvancedTelehealthRoom";
+import TelehealthRoomUnified from "./TelehealthRoomUnified";
 
 interface AgoraVideoRoomProps {
   channelName: string;
@@ -27,7 +27,7 @@ export function AgoraVideoRoom({
   const isProvider = userType === "practice";
 
   return (
-    <AdvancedTelehealthRoom
+    <TelehealthRoomUnified
       appId={appId}
       channel={channelName}
       token={rtcToken}
