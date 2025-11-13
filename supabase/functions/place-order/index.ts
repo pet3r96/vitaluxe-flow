@@ -68,16 +68,27 @@ serve(async (req) => {
 
     console.log("[place-order] Request params:", { cart_id, payment_method_id, user_id: user.id });
 
-    // Validate CSRF token
-    const { data: csrfValidation, error: csrfError } = await supabaseAdmin.rpc(
-      'validate_csrf_token' as any,
-      { p_user_id: user.id, p_token: csrf_token }
-    );
-
-    if (csrfError || !csrfValidation) {
-      console.error("[place-order] CSRF validation failed");
+    // Validate CSRF token using shared validator
+    if (!csrf_token) {
+      console.error("[place-order] CSRF token missing");
       return new Response(
-        JSON.stringify({ error: "Invalid CSRF token" }),
+        JSON.stringify({ error: "CSRF token is required" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: csrfData, error: csrfError } = await supabaseAdmin
+      .from('user_sessions')
+      .select('csrf_token')
+      .eq('user_id', user.id)
+      .eq('csrf_token', csrf_token)
+      .gte('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (csrfError || !csrfData) {
+      console.error("[place-order] CSRF validation failed:", csrfError);
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired CSRF token" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
