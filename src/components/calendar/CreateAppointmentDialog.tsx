@@ -146,6 +146,28 @@ export function CreateAppointmentDialog({
   // Watch visitType to conditionally fetch rooms
   const visitType = watch("visitType");
 
+  // Fallback: If provider account and providers list is empty, fetch provider ID directly
+  useEffect(() => {
+    const fetchProviderDirectly = async () => {
+      if (open && isProviderAccount && effectiveUserId && providers.length === 0) {
+        const currentValue = watch('providerId');
+        if (!currentValue) {
+          const { data } = await supabase
+            .from('providers')
+            .select('id')
+            .eq('user_id', effectiveUserId)
+            .maybeSingle();
+          
+          if (data?.id) {
+            setValue('providerId', data.id);
+          }
+        }
+      }
+    };
+    
+    fetchProviderDirectly();
+  }, [open, isProviderAccount, effectiveUserId, providers.length, watch, setValue]);
+
   // Fetch rooms dynamically when visit type is in-person
   const { data: fetchedRooms, isLoading: roomsLoading } = useQuery({
     queryKey: ['practice-rooms', practiceId, visitType],

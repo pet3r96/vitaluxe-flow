@@ -197,6 +197,7 @@ export default function PracticeCalendar() {
         if (currentProvider) {
           console.log(`🔧 Auto-selecting provider ${currentProvider.id} for logged-in provider account`);
           setSelectedProviders([currentProvider.id]);
+          setDefaultProviderId(currentProvider.id);
         } else {
           console.warn('⚠️ Could not find provider record for logged-in provider');
         }
@@ -207,6 +208,30 @@ export default function PracticeCalendar() {
       }
     }
   }, [providers, effectiveRole, isProviderAccount, effectiveUserId, selectedProviders.length]);
+
+  // Fallback: If provider account has empty providers list, fetch directly
+  useEffect(() => {
+    const fetchProviderDirectly = async () => {
+      if (isProviderAccount && effectiveUserId && providers.length === 0 && selectedProviders.length === 0) {
+        console.log('🔧 Providers list empty, fetching provider record directly');
+        const { data, error } = await supabase
+          .from('providers')
+          .select('id')
+          .eq('user_id', effectiveUserId)
+          .maybeSingle();
+        
+        if (data?.id) {
+          console.log(`🔧 Found provider ${data.id}, auto-selecting`);
+          setSelectedProviders([data.id]);
+          setDefaultProviderId(data.id);
+        } else if (error) {
+          console.error('⚠️ Error fetching provider directly:', error);
+        }
+      }
+    };
+    
+    fetchProviderDirectly();
+  }, [isProviderAccount, effectiveUserId, providers.length, selectedProviders.length]);
 
   const handleProviderToggle = (providerId: string) => {
     setSelectedProviders((prev) =>

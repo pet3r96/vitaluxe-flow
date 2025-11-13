@@ -419,11 +419,22 @@ export default function Checkout() {
 
       if (error) {
         logger.error('Edge function invocation failed', error instanceof Error ? error : new Error(String(error)), {});
-        throw error;
+        
+        // Surface detailed error information
+        const errorMessage = error.message || String(error);
+        const errorDetails = (error as any).details || '';
+        
+        if (errorMessage.toLowerCase().includes('csrf') || errorMessage.toLowerCase().includes('token')) {
+          throw new Error('Your session has expired. Please refresh the page and try again.');
+        }
+        
+        throw new Error(errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage);
       }
 
       if (!data?.success) {
-        throw new Error(data?.error || "Order placement failed");
+        const errorMsg = data?.error || "Order placement failed";
+        const errorDetails = data?.details || '';
+        throw new Error(errorDetails ? `${errorMsg}: ${errorDetails}` : errorMsg);
       }
 
       return {

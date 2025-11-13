@@ -108,21 +108,16 @@ Deno.serve(async (req) => {
           can_order,
           active,
           created_at,
-          profiles!providers_user_id_fkey!inner(
+          profiles:providers_user_id_fkey(
             id,
             name,
             full_name,
             prescriber_name,
-            email,
-            phone,
-            address,
-            npi,
-            dea,
-            license_number
+            email
           )
         `)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (providerData) {
         console.log('[list-providers] Provider role: returning own record only');
