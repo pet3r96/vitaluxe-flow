@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeChannelName } from "@/lib/video/normalizeChannelName";
+import { normalizeChannel } from "@/lib/video/normalizeChannel";
 
 const VideoConsultationRoom = () => {
   const { sessionId } = useParams();
@@ -57,7 +57,7 @@ const VideoConsultationRoom = () => {
         console.log("[PracticeVideoRoom] Session found:", session);
         console.log('[VideoConsultationRoom] Raw channel from DB:', session?.channel_name);
         
-        const normalized = normalizeChannelName(session.channel_name);
+        const normalized = normalizeChannel(session.channel_name);
         
         console.log('[VideoConsultationRoom] Normalized channel:', normalized);
         setChannelName(normalized);

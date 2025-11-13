@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
 import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
-import { normalizeChannelName } from "@/lib/video/normalizeChannelName";
+import { normalizeChannel } from "@/lib/video/normalizeChannel";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle, Clock, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -75,7 +75,7 @@ export default function VideoGuestJoin() {
         }
 
         console.log("[GuestJoin] DB Channel:", session.channel_name);
-        const normalized = normalizeChannelName(session.channel_name);
+        const normalized = normalizeChannel(session.channel_name);
         console.log("[GuestJoin] Normalized Channel:", normalized);
 
         setGuestData({
