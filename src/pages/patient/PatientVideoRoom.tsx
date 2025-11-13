@@ -15,6 +15,7 @@ const PatientVideoRoom = () => {
   const [uid, setUid] = useState<string | null>(null);
   const [rtmUid, setRtmUid] = useState<string | null>(null);
   const [channelName, setChannelName] = useState<string | null>(null);
+  const [patientId, setPatientId] = useState<string | null>(null);
 
   console.log("[PatientVideoRoom] Session ID:", sessionId);
 
@@ -32,7 +33,7 @@ const PatientVideoRoom = () => {
 
         const { data: session, error: sessionError } = await supabase
           .from("video_sessions")
-          .select("channel_name")
+          .select("channel_name, patient_id")
           .eq("id", sessionId)
           .single();
 
@@ -45,6 +46,7 @@ const PatientVideoRoom = () => {
 
         const normalized = normalizeChannel(session.channel_name);
         setChannelName(normalized);
+        setPatientId(session.patient_id);
 
         // Patient always joins as audience, not publisher
         const { data, error } = await supabase.functions.invoke("agora-token", {
@@ -95,7 +97,7 @@ const PatientVideoRoom = () => {
     );
   }
 
-  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid) {
+  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid || !patientId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>Joining secure patient video room…</div>
@@ -114,9 +116,10 @@ const PatientVideoRoom = () => {
         rtmToken={rtmToken}
         uid={uid}
         rtmUid={rtmUid}
-        role="audience"
+        role="subscriber"
         userType="patient"
         sessionId={sessionId!}
+        patientId={patientId!}
       />
     </>
   );
