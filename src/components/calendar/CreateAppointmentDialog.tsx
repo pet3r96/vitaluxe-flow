@@ -185,28 +185,23 @@ export function CreateAppointmentDialog({
 
       if (error) throw error;
 
-      // If this is a video appointment, create video session
+      // If this is a video appointment, create video session via edge function
       if (values.visitType === 'video') {
-        const channelName = normalizeChannel(`appt_${data.id}`);
-        
-        console.log('[CreateAppointmentDialog] Creating video session:', {
-          appointmentId: data.id,
-          channelName
-        });
+        console.log('[CreateAppointmentDialog] Creating video session via edge function');
 
-        const { data: videoSession, error: videoError } = await supabase
-          .from('video_sessions')
-          .insert({
-            appointment_id: data.id,
-            patient_id: selectedPatientId,
-            provider_id: values.providerId,
-            practice_id: practiceId,
-            channel_name: channelName,
-            scheduled_start_time: startDateTime.toISOString(),
-            status: 'scheduled'
-          })
-          .select('id')
-          .single();
+        const { data: videoSession, error: videoError } = await supabase.functions.invoke(
+          'create-video-session',
+          {
+            body: {
+              practiceId: practiceId,
+              providerId: values.providerId,
+              patientId: selectedPatientId,
+              sessionType: 'scheduled',
+              scheduledStart: startDateTime.toISOString(),
+              scheduledEnd: endDateTime.toISOString()
+            }
+          }
+        );
 
         if (videoError) {
           console.error('[CreateAppointmentDialog] Error creating video session:', videoError);
@@ -216,18 +211,20 @@ export function CreateAppointmentDialog({
         console.log('[CreateAppointmentDialog] Video session created:', videoSession);
 
         // Link video session to appointment
-        const { error: updateError } = await supabase
-          .from('patient_appointments')
-          .update({ video_session_id: videoSession.id })
-          .eq('id', data.id);
+        const sessionId = videoSession?.session?.id;
+        if (sessionId) {
+          const { error: updateError } = await supabase
+            .from('patient_appointments')
+            .update({ video_session_id: sessionId })
+            .eq('id', data.id);
 
-        if (updateError) {
-          console.error('[CreateAppointmentDialog] Error linking video session:', updateError);
-          throw updateError;
+          if (updateError) {
+            console.error('[CreateAppointmentDialog] Error linking video session:', updateError);
+            throw updateError;
+          }
+
+          data.video_session_id = sessionId;
         }
-
-        // Return appointment with video_session_id
-        data.video_session_id = videoSession.id;
       }
 
       // Create follow-up if requested
