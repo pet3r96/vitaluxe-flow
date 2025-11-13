@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       // Patient: find sessions where they are the patient
       sessionQuery = sessionQuery.eq('patient_id', patientData.id);
     } else {
-      // No provider or patient record - check if they're practice staff
+      // No provider or patient record - check if they're practice staff or practice owner
       const { data: staffData } = await supabaseAdmin
         .from('practice_staff')
         .select('practice_id')
@@ -115,11 +115,8 @@ Deno.serve(async (req) => {
       if (staffData) {
         sessionQuery = sessionQuery.eq('practice_id', staffData.practice_id);
       } else {
-        // No authorized role
-        return new Response(
-          JSON.stringify({ session: null, message: 'No active video session found' }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        // Fallback: practice owner where practice_id equals user id
+        sessionQuery = sessionQuery.eq('practice_id', effectiveUserId);
       }
     }
 
@@ -149,7 +146,16 @@ Deno.serve(async (req) => {
       role = 'provider';
     } else if (patientData && session.patient_id === patientData.id) {
       role = 'patient';
-    } else if (providerData || (await supabaseAdmin.from('practice_staff').select('id').eq('user_id', effectiveUserId).eq('practice_id', session.practice_id).maybeSingle()).data) {
+    } else if (
+      providerData ||
+      (await supabaseAdmin
+        .from('practice_staff')
+        .select('id')
+        .eq('user_id', effectiveUserId)
+        .eq('practice_id', session.practice_id)
+        .maybeSingle()).data ||
+      session.practice_id === effectiveUserId
+    ) {
       role = 'staff';
     }
 
@@ -162,7 +168,7 @@ Deno.serve(async (req) => {
           providerId: session.provider_id,
           patientId: session.patient_id,
           status: session.status,
-          scheduledStart: session.scheduled_start,
+          scheduledStart: session.scheduled_start_time,
         },
         role,
         userId: effectiveUserId,
