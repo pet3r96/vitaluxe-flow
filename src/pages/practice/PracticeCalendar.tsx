@@ -188,12 +188,25 @@ export default function PracticeCalendar() {
 
   // Initialize selected providers with all provider IDs on first load
   // IMPORTANT: Auto-select all providers for both practice owners AND staff
+  // For provider accounts, auto-select ONLY their provider record
   useEffect(() => {
     if (providers.length > 0 && selectedProviders.length === 0) {
-      console.log(`🔧 Auto-selecting all ${providers.length} providers for ${effectiveRole}`);
-      setSelectedProviders(providers.map((p: any) => p.id));
+      if (isProviderAccount && effectiveUserId) {
+        // For provider accounts: auto-select ONLY their provider record
+        const currentProvider = providers.find((p: any) => p.user_id === effectiveUserId);
+        if (currentProvider) {
+          console.log(`🔧 Auto-selecting provider ${currentProvider.id} for logged-in provider account`);
+          setSelectedProviders([currentProvider.id]);
+        } else {
+          console.warn('⚠️ Could not find provider record for logged-in provider');
+        }
+      } else {
+        // For practice owners and staff: auto-select ALL providers
+        console.log(`🔧 Auto-selecting all ${providers.length} providers for ${effectiveRole}`);
+        setSelectedProviders(providers.map((p: any) => p.id));
+      }
     }
-  }, [providers, effectiveRole]);
+  }, [providers, effectiveRole, isProviderAccount, effectiveUserId, selectedProviders.length]);
 
   const handleProviderToggle = (providerId: string) => {
     setSelectedProviders((prev) =>

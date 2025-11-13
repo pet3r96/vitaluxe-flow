@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,9 +89,18 @@ export function CreateAppointmentDialog({
   
   const walkInDate = isWalkIn ? getCurrentTimeRounded() : (defaultDate || new Date());
   
+  // Find current provider's record ID for auto-selection
+  const currentProviderId = useMemo(() => {
+    if (isProviderAccount && effectiveUserId) {
+      const currentProvider = providers.find((p: any) => p.user_id === effectiveUserId);
+      return currentProvider?.id;
+    }
+    return null;
+  }, [isProviderAccount, effectiveUserId, providers]);
+
   const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
-      providerId: defaultProviderId || (isProviderAccount && providers.length === 1 ? providers[0].id : ""),
+      providerId: defaultProviderId || currentProviderId || "",
       roomId: "",
       appointmentDate: format(walkInDate, 'yyyy-MM-dd'),
       startTime: format(walkInDate, 'HH:mm'),

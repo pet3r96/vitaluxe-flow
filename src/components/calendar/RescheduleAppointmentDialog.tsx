@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,15 +40,24 @@ export function RescheduleAppointmentDialog({
   onSuccess,
 }: RescheduleAppointmentDialogProps) {
   const queryClient = useQueryClient();
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, isProviderAccount } = useAuth();
   const [createFollowUp, setCreateFollowUp] = useState(false);
+  
+  // Find current provider's record ID for auto-selection
+  const currentProviderId = useMemo(() => {
+    if (isProviderAccount && effectiveUserId) {
+      const currentProvider = providers.find((p: any) => p.user_id === effectiveUserId);
+      return currentProvider?.id;
+    }
+    return null;
+  }, [isProviderAccount, effectiveUserId, providers]);
   
   const appointmentDate = new Date(appointment.start_time);
   const duration = Math.max(1, Math.round((new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) / 60000));
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
-      providerId: appointment.provider_id || "",
+      providerId: appointment.provider_id || currentProviderId || "",
       roomId: appointment.room_id || "none",
       appointmentDate: format(appointmentDate, 'yyyy-MM-dd'),
       startTime: format(appointmentDate, 'HH:mm'),
