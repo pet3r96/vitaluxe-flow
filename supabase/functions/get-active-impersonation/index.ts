@@ -1,4 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
@@ -13,36 +14,18 @@ Deno.serve(async (req) => {
     
     // If no token provided, return no active session (not an error - just means not authenticated)
     if (!token) {
-      return new Response(
-        JSON.stringify({ session: null }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return successResponse({ session: null });
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
+    const db = createAuthClient(authHeader);
 
     // Verify user is authenticated using the raw JWT token
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: userError } = await db.auth.getUser(token);
     if (userError || !user) {
       console.error('[get-active-impersonation] Authentication failed:', userError);
       // Return no session instead of 401 - invalid token just means no active impersonation
-      return new Response(
-        JSON.stringify({ session: null }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return successResponse({ session: null });
     }
-
-    // Create authenticated DB client for RLS-compliant queries
-    const db = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: { headers: { Authorization: `Bearer ${token}` } }
-      }
-    );
 
     // Get active session for this admin
     const { data: session, error: sessionError } = await db
@@ -92,16 +75,10 @@ Deno.serve(async (req) => {
 
     console.log('[get-active-impersonation] Success:', { hasSession: !!session });
 
-    return new Response(
-      JSON.stringify({ session }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return successResponse({ session });
 
   } catch (error) {
     console.error('[get-active-impersonation] Unexpected error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse('Internal server error', 500);
   }
 });

@@ -1,9 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.10';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
+import { corsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,29 +8,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const authHeader = req.headers.get('Authorization');
 
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Missing authorization header', 401);
     }
 
-    // Create client with user's auth token
-    const supabaseClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
+    const supabaseClient = createAuthClient(authHeader);
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
       console.error('Auth error:', userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Unauthorized', 401);
     }
 
     // Verify caller is admin
@@ -46,24 +31,18 @@ Deno.serve(async (req) => {
 
     if (roleError || !roles) {
       console.error('Admin check failed:', roleError);
-      return new Response(
-        JSON.stringify({ error: 'Forbidden: admin role required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Forbidden: admin role required', 403);
     }
 
     const { target_user_id } = await req.json();
     if (!target_user_id) {
-      return new Response(
-        JSON.stringify({ error: 'target_user_id is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('target_user_id is required', 400);
     }
 
     console.log(`Admin ${user.id} requesting password status for user ${target_user_id}`);
 
     // Use service role to read both user_password_status and profiles (bypasses RLS)
-    const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseService = createAdminClient();
     
     const [statusResult, profileResult] = await Promise.all([
       supabaseService

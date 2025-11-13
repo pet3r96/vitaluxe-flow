@@ -1,9 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
+import { corsHeaders } from '../_shared/cors.ts';
 
 interface StartImpersonationRequest {
   role: string;
@@ -23,35 +20,17 @@ Deno.serve(async (req) => {
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
     
     if (!token) {
-      return new Response(
-        JSON.stringify({ error: 'Missing or invalid authorization token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Missing or invalid authorization token', 401);
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
+    const db = createAuthClient(authHeader);
 
     // Verify user is authenticated using the raw JWT token
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: userError } = await db.auth.getUser(token);
     if (userError || !user) {
       console.error('[start-impersonation] Authentication failed:', userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Unauthorized', 401);
     }
-
-    // Create authenticated DB client for RLS-compliant queries
-    const db = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: { headers: { Authorization: `Bearer ${token}` } }
-      }
-    );
 
     // Check impersonation permissions
     const { data: canImpersonate } = await db.rpc('can_user_impersonate', { 
