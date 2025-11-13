@@ -11,6 +11,17 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const url = new URL(req.url);
+  
+  // Health check endpoint
+  if (url.pathname.endsWith('/health')) {
+    return new Response(
+      JSON.stringify({ ok: true, status: "healthy", service: "agora-token" }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     const { channel, role = "subscriber", ttl = 3600 } = await req.json();
 
