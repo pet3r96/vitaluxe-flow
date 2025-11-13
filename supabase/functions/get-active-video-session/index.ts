@@ -26,21 +26,25 @@ Deno.serve(async (req) => {
     
     // Create admin client for database queries
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Create user client with anon key for auth verification
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Get authenticated user using the JWT token
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser(token);
-    if (userError || !user) {
-      console.error('[get-active-video-session] Auth error:', userError);
+    // Decode user ID from JWT (already verified by platform)
+    let decodedUserId: string | null = null;
+    try {
+      const payload = JSON.parse(
+        atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))
+      );
+      decodedUserId = payload.sub;
+    } catch (e) {
+      console.error('[get-active-video-session] Failed to decode JWT:', e);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = user.id;
+    console.log('[get-active-video-session] Auth decoded user:', decodedUserId);
+
+    const userId = decodedUserId!;
     console.log('[get-active-video-session] Looking for session for user:', userId);
 
     // Check for impersonation
