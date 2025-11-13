@@ -354,9 +354,9 @@ export default function PracticeCalendar() {
           />
         </div>
 
-        <div className="flex-1 overflow-y-auto flex flex-col">
+        <div className="flex-1 overflow-y-auto flex flex-col pb-4">
           {/* Calendar Section */}
-          <div className="flex-1 p-4 lg:p-6 flex flex-col overflow-hidden">
+          <div className="p-3 sm:p-4 lg:p-6 flex flex-col min-h-0">
             <CalendarHeader
               currentDate={currentDate}
               view={view}
@@ -385,7 +385,7 @@ export default function PracticeCalendar() {
             )}
 
             <div className={cn(
-              "flex-1 mt-4",
+              "mt-4 h-[500px] sm:h-[600px] lg:h-[700px]",
               view === 'agenda' ? "overflow-y-auto" : "overflow-hidden"
             )}>
               {view === 'week' && (
@@ -451,9 +451,9 @@ export default function PracticeCalendar() {
             </div>
           </div>
 
-          {/* Side-by-Side Panels - Below Calendar */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 lg:px-6 pb-4 lg:pb-6">
-            {/* Waiting Room Panel - Left Side */}
+          {/* Stacked Panels - Below Calendar, Always Visible */}
+          <div className="flex flex-col gap-4 px-3 sm:px-4 lg:px-6 pb-4 lg:pb-6 mt-4">
+            {/* Waiting Room Panel - Full Width */}
             <WaitingRoomPanel
               practiceId={practiceId}
               providers={providers}
@@ -461,7 +461,7 @@ export default function PracticeCalendar() {
               currentDate={currentDate}
             />
 
-            {/* Being Treated Panel - Right Side */}
+            {/* Being Treated Panel - Full Width */}
             <BeingTreatedPanel
               practiceId={practiceId}
               providers={providers}
