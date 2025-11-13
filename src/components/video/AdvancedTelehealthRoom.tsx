@@ -65,7 +65,7 @@ export default function TelehealthRoom({ appId, channel, token, uid, isProvider,
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Real-time patient chart data
-  const chart = usePatientChartData(patientId);
+  const { chart, loading: chartLoading } = usePatientChartData(patientId);
 
   // -------------------------------------------------------------
   // REALTIME SESSION EVENT SUBSCRIPTIONS
@@ -196,10 +196,10 @@ export default function TelehealthRoom({ appId, channel, token, uid, isProvider,
             <strong>DOB:</strong> {chart?.patient?.dob}
           </div>
           <div>
-            <strong>Allergies:</strong> {chart?.allergies?.map((a) => a.name).join(", ") || "None"}
+            <strong>Allergies:</strong> {chart?.allergies?.map((a: any) => a.allergen).join(", ") || "None"}
           </div>
           <div>
-            <strong>Conditions:</strong> {chart?.conditions?.map((c) => c.name).join(", ") || "None"}
+            <strong>Conditions:</strong> {chart?.conditions?.map((c: any) => c.condition_name).join(", ") || "None"}
           </div>
         </div>
 

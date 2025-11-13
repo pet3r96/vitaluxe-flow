@@ -13,6 +13,7 @@ const PatientVideoRoom = () => {
   const [uid, setUid] = useState<string | null>(null);
   const [rtmUid, setRtmUid] = useState<string | null>(null);
   const [channelName, setChannelName] = useState<string | null>(null);
+  const [patientId, setPatientId] = useState<string | null>(null);
 
   console.log("[PatientVideoRoom] Session ID:", sessionId);
 
@@ -32,7 +33,7 @@ const PatientVideoRoom = () => {
         console.log("[PatientVideoRoom] Fetching video session...");
         const { data: session, error: sessionError } = await supabase
           .from('video_sessions')
-          .select('channel_name, status')
+          .select('channel_name, status, patient_id')
           .eq('id', sessionId)
           .single();
 
@@ -50,6 +51,7 @@ const PatientVideoRoom = () => {
         
         console.log('[PatientVideoRoom] Normalized channel:', normalized);
         setChannelName(normalized);
+        setPatientId(session.patient_id);
 
         // Fetch Agora tokens
         console.log("[PatientVideoRoom] Fetching Agora tokens for channel:", normalized);
@@ -89,7 +91,7 @@ const PatientVideoRoom = () => {
     };
   }, [sessionId]);
 
-  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid) {
+  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid || !patientId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>Connecting to your secure visit…</div>
@@ -107,6 +109,7 @@ const PatientVideoRoom = () => {
       role="subscriber"
       userType="patient"
       sessionId={sessionId!}
+      patientId={patientId!}
     />
   );
 };

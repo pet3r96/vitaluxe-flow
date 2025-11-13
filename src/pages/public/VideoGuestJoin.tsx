@@ -13,7 +13,7 @@ export default function VideoGuestJoin() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [guestData, setGuestData] = useState<{ userId: string; sessionId: string; channelName: string } | null>(null);
+  const [guestData, setGuestData] = useState<{ userId: string; sessionId: string; channelName: string; patientId: string } | null>(null);
   const [rtcToken, setRtcToken] = useState<string>("");
   const [rtmToken, setRtmToken] = useState<string>("");
   const [error, setError] = useState<{
@@ -60,7 +60,7 @@ export default function VideoGuestJoin() {
         console.log("[GuestJoin] Fetching video session for sessionId:", sessionId);
         const { data: session, error: dbError } = await supabase
           .from("video_sessions")
-          .select("channel_name")
+          .select("channel_name, patient_id")
           .eq("id", sessionId)
           .single();
 
@@ -82,6 +82,7 @@ export default function VideoGuestJoin() {
           userId: guestUserId,
           sessionId,
           channelName: normalized,
+          patientId: session.patient_id,
         });
 
         // Fetch Agora tokens
@@ -235,6 +236,7 @@ export default function VideoGuestJoin() {
         role="subscriber"
         userType="guest"
         sessionId={guestData.sessionId}
+        patientId={guestData.patientId}
       />
     </div>
   );
