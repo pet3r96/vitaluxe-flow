@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { useVideoDevices } from "@/hooks/video/useVideoDevices";
+import { DeviceSelector } from "@/components/video/precall/DeviceSelector";
 import {
   CheckCircle2,
   XCircle,
@@ -15,6 +17,7 @@ import {
   Monitor,
   Loader2,
   ChevronRight,
+  Volume2,
 } from "lucide-react";
 
 type TestStatus = "pending" | "testing" | "passed" | "failed" | "warning";
@@ -30,15 +33,20 @@ export default function VideoCallTest() {
   const videoRef = useRef<HTMLDivElement>(null);
   const localTrackRef = useRef<any>(null);
   const audioTrackRef = useRef<any>(null);
+  const testAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const devices = useVideoDevices();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [cameraTest, setCameraTest] = useState<TestResult>({ status: "pending", message: "" });
   const [micTest, setMicTest] = useState<TestResult>({ status: "pending", message: "" });
   const [networkTest, setNetworkTest] = useState<TestResult>({ status: "pending", message: "" });
   const [browserTest, setBrowserTest] = useState<TestResult>({ status: "pending", message: "" });
+  const [speakerTest, setSpeakerTest] = useState<TestResult>({ status: "pending", message: "" });
   const [audioLevel, setAudioLevel] = useState(0);
   const [networkSpeed, setNetworkSpeed] = useState<number | null>(null);
   const [allTestsPassed, setAllTestsPassed] = useState(false);
+  const [isPlayingTestSound, setIsPlayingTestSound] = useState(false);
 
   // ============================================================================
   // BROWSER COMPATIBILITY TEST
@@ -271,6 +279,79 @@ export default function VideoCallTest() {
   };
 
   // ============================================================================
+  // SPEAKER TEST
+  // ============================================================================
+  const testSpeaker = () => {
+    setSpeakerTest({ status: "testing", message: "Playing test sound..." });
+    setIsPlayingTestSound(true);
+
+    // Create test audio element
+    if (!testAudioRef.current) {
+      testAudioRef.current = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYHGGS66+OcTgwPUKXh8bllHQU2jdXyzn0vBSJ1xe/glEILElyx6OyrWBUIQ5zd8sFuIwUte8vv2oo5BxdluOrhmU8MDEui3+26aB8GM4zS8tGBMAYgccPu3Y9DCxFYrebo7a1eFwdBmdryu3AiBSl7yO3ajj8HE2S25+Gbk");
+    }
+
+    testAudioRef.current.play()
+      .then(() => {
+        setSpeakerTest({
+          status: "passed",
+          message: "Speaker working",
+          details: "If you heard the sound, your speakers are working correctly",
+        });
+      })
+      .catch((error) => {
+        setSpeakerTest({
+          status: "failed",
+          message: "Speaker test failed",
+          details: error.message,
+        });
+      })
+      .finally(() => {
+        setIsPlayingTestSound(false);
+      });
+  };
+
+  // ============================================================================
+  // SAVE PREFERENCES
+  // ============================================================================
+  const savePreferences = () => {
+    if (devices.selectedCamera) {
+      localStorage.setItem("preferred-camera", devices.selectedCamera);
+    }
+    if (devices.selectedMicrophone) {
+      localStorage.setItem("preferred-microphone", devices.selectedMicrophone);
+    }
+    if (devices.selectedSpeaker) {
+      localStorage.setItem("preferred-speaker", devices.selectedSpeaker);
+    }
+    console.log("[VideoCallTest] Preferences saved");
+  };
+
+  // ============================================================================
+  // AUTO-RETURN LOGIC
+  // ============================================================================
+  useEffect(() => {
+    if (allTestsPassed) {
+      savePreferences();
+      
+      const returnUrl = sessionStorage.getItem("video-test-return-url");
+      if (returnUrl) {
+        console.log("[VideoCallTest] Auto-returning to:", returnUrl);
+        setTimeout(() => {
+          navigate(returnUrl);
+          sessionStorage.removeItem("video-test-return-url");
+        }, 2000);
+      }
+    }
+  }, [allTestsPassed, navigate]);
+
+  // ============================================================================
+  // REQUEST PERMISSIONS ON MOUNT
+  // ============================================================================
+  useEffect(() => {
+    devices.requestPermissions();
+  }, []);
+
+  // ============================================================================
   // CLEANUP
   // ============================================================================
   useEffect(() => {
@@ -282,6 +363,10 @@ export default function VideoCallTest() {
       if (audioTrackRef.current) {
         audioTrackRef.current.stop();
         audioTrackRef.current.close();
+      }
+      if (testAudioRef.current) {
+        testAudioRef.current.pause();
+        testAudioRef.current = null;
       }
     };
   }, []);
@@ -327,6 +412,34 @@ export default function VideoCallTest() {
                 <span>{Math.round((currentStep / 4) * 100)}%</span>
               </div>
               <Progress value={(currentStep / 4) * 100} />
+            </div>
+          </Card>
+        )}
+
+        {/* Device Selection */}
+        {devices.hasPermissions && (
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Device Settings</h2>
+            <div className="space-y-4">
+              <DeviceSelector
+                deviceType="camera"
+                devices={devices.cameras}
+                selectedDevice={devices.selectedCamera}
+                onSelect={devices.selectCamera}
+              />
+              <DeviceSelector
+                deviceType="microphone"
+                devices={devices.microphones}
+                selectedDevice={devices.selectedMicrophone}
+                onSelect={devices.selectMicrophone}
+              />
+              <DeviceSelector
+                deviceType="speaker"
+                devices={devices.speakers}
+                selectedDevice={devices.selectedSpeaker}
+                onSelect={devices.selectSpeaker}
+                onTest={testSpeaker}
+              />
             </div>
           </Card>
         )}
@@ -446,6 +559,25 @@ export default function VideoCallTest() {
                 </div>
                 {networkTest.details && (
                   <p className="text-xs text-muted-foreground mt-1">{networkTest.details}</p>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Speaker Test */}
+            <div className="flex items-start gap-3">
+              <StatusIcon status={speakerTest.status} />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="w-4 h-4" />
+                    <span className="font-medium">Speakers</span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">{speakerTest.message}</span>
+                </div>
+                {speakerTest.details && (
+                  <p className="text-xs text-muted-foreground mt-1">{speakerTest.details}</p>
                 )}
               </div>
             </div>
