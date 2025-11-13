@@ -21,11 +21,7 @@ export const usePatientChartData = (patientId: string) => {
     setLoading(true);
 
     // Patient Identity
-    const { data: patientData } = await supabase
-      .from("patient_accounts")
-      .select("*")
-      .eq("id", patientId)
-      .single();
+    const { data: patientData } = await supabase.from("patient_accounts").select("*").eq("id", patientId).single();
 
     const identity: PatientIdentity | null = patientData
       ? {
@@ -86,7 +82,7 @@ export const usePatientChartData = (patientId: string) => {
 
   // realtime updates
   useEffect(() => {
-    const channels = [];
+    const channels: any[] = [];
 
     const tables = [
       "patient_accounts",
@@ -102,6 +98,8 @@ export const usePatientChartData = (patientId: string) => {
     ];
 
     for (const table of tables) {
+      const filterField = table === "patient_accounts" ? "id" : "patient_account_id";
+
       const channel = supabase
         .channel(`${table}-${patientId}`)
         .on(
@@ -109,13 +107,13 @@ export const usePatientChartData = (patientId: string) => {
           {
             event: "*",
             schema: "public",
-            table: table as any,
-            filter: `patient_account_id=eq.${patientId}`,
+            table,
+            filter: `${filterField}=eq.${patientId}`,
           },
           () => {
             console.log(`[Realtime Update] ${table} changed → refreshing chart`);
             loadChart();
-          }
+          },
         )
         .subscribe();
 
