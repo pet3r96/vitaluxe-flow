@@ -21,16 +21,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Extract JWT token from Bearer header
+    const token = authHeader.replace('Bearer ', '');
+    
     // Create admin client for database queries
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Create user client with anon key + auth header for auth.getUser()
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    // Create user client with anon key for auth verification
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Get authenticated user
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    // Get authenticated user using the JWT token
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser(token);
     if (userError || !user) {
       console.error('[get-active-video-session] Auth error:', userError);
       return new Response(
