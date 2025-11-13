@@ -151,6 +151,7 @@ const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
 const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
+const PracticeVideoRoomLink = lazy(() => import("./pages/practice/PracticeVideoRoomLink"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
 const AgoraDebugSuite = lazy(() => import("./pages/dev/AgoraDebugSuite"));
@@ -281,6 +282,16 @@ const App = () => (
                         element={
                           <ProtectedRoute>
                             <PatientVideoRoom />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/practice/video/room/:roomKey"
+                        element={
+                          <ProtectedRoute>
+                            <SubscriptionProtectedRoute>
+                              <PracticeVideoRoomLink />
+                            </SubscriptionProtectedRoute>
                           </ProtectedRoute>
                         }
                       />
