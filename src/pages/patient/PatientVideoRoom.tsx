@@ -3,17 +3,18 @@ import { useEffect, useState } from "react";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeChannel } from "@/lib/video/normalizeChannel";
+import { PreCallTestPrompt } from "@/components/video/PreCallTestPrompt";
 
 const PatientVideoRoom = () => {
   const { sessionId } = useParams();
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [rtcToken, setRtcToken] = useState<string | null>(null);
   const [rtmToken, setRtmToken] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
   const [rtmUid, setRtmUid] = useState<string | null>(null);
   const [channelName, setChannelName] = useState<string | null>(null);
-  const [patientId, setPatientId] = useState<string | null>(null);
 
   console.log("[PatientVideoRoom] Session ID:", sessionId);
 
@@ -23,53 +24,41 @@ const PatientVideoRoom = () => {
       return;
     }
 
-    let isMounted = true;
+    let mounted = true;
 
-    const initializeSession = async () => {
+    const init = async () => {
       try {
         setLoading(true);
 
-        // Fetch channel name from video_sessions table
-        console.log("[PatientVideoRoom] Fetching video session...");
         const { data: session, error: sessionError } = await supabase
-          .from('video_sessions')
-          .select('channel_name, status, patient_id')
-          .eq('id', sessionId)
+          .from("video_sessions")
+          .select("channel_name")
+          .eq("id", sessionId)
           .single();
 
-        if (!isMounted) return;
+        if (!mounted) return;
 
         if (sessionError || !session) {
-          console.error("[PatientVideoRoom] Session fetch error:", sessionError);
+          setError(sessionError?.message ?? "Video session not found.");
           return;
         }
 
-        console.log("[PatientVideoRoom] Session found:", session);
-        console.log('[PatientVideoRoom] Raw channel from DB:', session?.channel_name);
-        
         const normalized = normalizeChannel(session.channel_name);
-        
-        console.log('[PatientVideoRoom] Normalized channel:', normalized);
         setChannelName(normalized);
-        setPatientId(session.patient_id);
 
-        // Fetch Agora tokens
-        console.log("[PatientVideoRoom] Fetching Agora tokens for channel:", normalized);
-
-        const { data, error } = await supabase.functions.invoke('agora-token', {
+        // Patient always joins as audience, not publisher
+        const { data, error } = await supabase.functions.invoke("agora-token", {
           body: {
             channel: normalized,
-            role: "subscriber",
+            role: "audience",
             ttl: 3600,
-          }
+          },
         });
 
-        console.log("[PatientVideoRoom] Token Response:", data);
-
-        if (!isMounted) return;
+        if (!mounted) return;
 
         if (error || !data) {
-          console.error("[PatientVideoRoom] Token error:", error);
+          setError(error?.message ?? "Failed to fetch video credentials.");
           return;
         }
 
@@ -77,40 +66,59 @@ const PatientVideoRoom = () => {
         setRtmToken(data.rtmToken);
         setUid(data.uid);
         setRtmUid(data.rtmUid);
-      } catch (err) {
-        console.error("[PatientVideoRoom] Initialization failed:", err);
+      } catch (e: any) {
+        setError(e?.message ?? "Unexpected error occurred.");
       } finally {
-        if (isMounted) setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
-    initializeSession();
+    init();
 
     return () => {
-      isMounted = false;
+      mounted = false;
     };
   }, [sessionId]);
 
-  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid || !patientId) {
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
+        <div className="text-destructive text-lg font-semibold">Unable to Join Video Session</div>
+        <p className="text-muted-foreground text-sm max-w-md text-center">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div>Connecting to your secure visit…</div>
+        <div>Joining secure patient video room…</div>
       </div>
     );
   }
 
   return (
-    <AgoraVideoRoom
-      channelName={channelName!}
-      rtcToken={rtcToken}
-      rtmToken={rtmToken}
-      uid={uid}
-      rtmUid={rtmUid}
-      role="subscriber"
-      userType="patient"
-      sessionId={sessionId!}
-      patientId={patientId!}
-    />
+    <>
+      {/* Pre-call test prompt */}
+      <PreCallTestPrompt sessionId={sessionId!} />
+
+      <AgoraVideoRoom
+        channelName={channelName!}
+        rtcToken={rtcToken}
+        rtmToken={rtmToken}
+        uid={uid}
+        rtmUid={rtmUid}
+        role="audience"
+        userType="patient"
+        sessionId={sessionId!}
+      />
+    </>
   );
 };
 
