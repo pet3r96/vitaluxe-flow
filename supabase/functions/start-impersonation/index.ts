@@ -33,15 +33,15 @@ Deno.serve(async (req) => {
       return errorResponse('Unauthorized', 401);
     }
 
-    // Check impersonation permissions
-    const { data: canImpersonate } = await db.rpc('can_user_impersonate', { 
-      _user_id: user.id 
+    // Check if user is super_admin
+    const { data: isSuperAdmin } = await db.rpc('is_super_admin', { 
+      check_user_id: user.id 
     });
 
-    if (!canImpersonate) {
-      console.warn('[start-impersonation] User lacks impersonation permission:', user.id);
+    if (!isSuperAdmin) {
+      console.warn('[start-impersonation] User is not super_admin:', user.id);
       return new Response(
-        JSON.stringify({ error: 'You are not authorized to use impersonation' }),
+        JSON.stringify({ error: 'Only super_admin users can impersonate others' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
