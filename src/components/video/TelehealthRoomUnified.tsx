@@ -128,10 +128,16 @@ export default function TelehealthRoomUnified({
   }, [sessionId, uid, isProvider]);
 
   // -------------------------------------------------------------------------
-  // AGORA: JOIN ROOM
+  // AGORA: JOIN ROOM (ONCE)
   // -------------------------------------------------------------------------
   const joinRoom = async () => {
     try {
+      console.log("[Agora] Initializing client with appId:", appId?.substring(0, 8) + "...");
+      
+      if (!appId || appId === "undefined") {
+        throw new Error("VITE_AGORA_APP_ID is not configured");
+      }
+
       clientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       const client = clientRef.current;
 
@@ -157,28 +163,63 @@ export default function TelehealthRoomUnified({
         setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
       });
 
-      // Join channel
-      await client.join(appId, channel, token, uid);
-
-      // CRITICAL: Emit patient_waiting event AFTER successful join
-      if (!isProvider) {
-        console.log("[Patient] Broadcasting patient_waiting event");
-        await emitEvent(sessionId, "patient_waiting", String(uid));
-      }
-
       // Network quality monitoring
       client.on("network-quality", (stats: any) => {
         // Quality indicator logic here
       });
 
-      // WAIT FOR ADMISSION (patients only)
-      if (!isProvider && !patientAdmitted) {
-        console.log("[Patient] Waiting for provider to admit...");
+      // Join channel
+      console.log("[Agora] Joining channel:", channel, "with uid:", uid);
+      await client.join(appId, channel, token, uid);
+      console.log("[Agora] Successfully joined channel");
+
+      // CRITICAL: Emit patient_waiting event AFTER successful join
+      if (!isProvider) {
+        console.log("[Patient] Broadcasting patient_waiting event");
+        await emitEvent(sessionId, "patient_waiting", String(uid));
+        setWaitingRoom(true); // Show waiting room overlay
+      } else {
+        // Provider publishes immediately
+        await publishTracks();
+      }
+
+      // Start call timer
+      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
+    } catch (error: any) {
+      console.error("[Agora] Join failed:", error);
+      
+      // Map Agora error codes to user-friendly messages
+      let errorMessage = "Failed to join video session";
+      if (error.code === 101) {
+        errorMessage = "Invalid Agora App ID";
+      } else if (error.code === 109) {
+        errorMessage = "Token expired";
+      } else if (error.code === 110) {
+        errorMessage = "Invalid token";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error("[Agora] Error details:", { code: error.code, message: errorMessage });
+      // Don't auto-retry on critical errors
+      if (error.code !== 101 && error.code !== 110) {
+        setTimeout(joinRoom, 2000);
+      }
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // PUBLISH TRACKS (Separate from joining)
+  // -------------------------------------------------------------------------
+  const publishTracks = async () => {
+    try {
+      const client = clientRef.current;
+      if (!client) {
+        console.error("[Agora] Client not initialized");
         return;
       }
 
-      // PUBLISH TRACKS (provider or admitted patient)
-      console.log("[Video] Publishing local tracks...");
+      console.log("[Agora] Creating and publishing local tracks...");
       localAudioTrackRef.current = await AgoraRTC.createMicrophoneAudioTrack();
       localVideoTrackRef.current = await AgoraRTC.createCameraVideoTrack({
         encoderConfig: { width: 1280, height: 720 },
@@ -186,22 +227,41 @@ export default function TelehealthRoomUnified({
 
       localVideoTrackRef.current.play("local-preview");
       await client.publish([localAudioTrackRef.current, localVideoTrackRef.current]);
-
-      // Start call timer
-      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
+      console.log("[Agora] Tracks published successfully");
     } catch (error) {
-      console.error("[Agora] Join failed:", error);
-      setTimeout(joinRoom, 1500); // Auto-retry
+      console.error("[Agora] Failed to publish tracks:", error);
     }
   };
 
+  // -------------------------------------------------------------------------
+  // MOUNT: Join room once
+  // -------------------------------------------------------------------------
   useEffect(() => {
     joinRoom();
     return () => {
       clearInterval(timerRef.current);
+      if (localAudioTrackRef.current) {
+        localAudioTrackRef.current.stop();
+        localAudioTrackRef.current.close();
+      }
+      if (localVideoTrackRef.current) {
+        localVideoTrackRef.current.stop();
+        localVideoTrackRef.current.close();
+      }
       clientRef.current?.leave();
     };
-  }, [patientAdmitted]);
+  }, []); // Only run once on mount
+
+  // -------------------------------------------------------------------------
+  // PATIENT ADMISSION: Publish tracks when admitted
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!isProvider && patientAdmitted && clientRef.current) {
+      console.log("[Patient] Admitted! Publishing tracks...");
+      setWaitingRoom(false);
+      publishTracks();
+    }
+  }, [patientAdmitted, isProvider]);
 
   // -------------------------------------------------------------------------
   // CONTROLS
