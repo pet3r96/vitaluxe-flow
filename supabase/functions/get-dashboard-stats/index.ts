@@ -113,6 +113,8 @@ Deno.serve(async (req) => {
             count = uniqueOrderIds.length;
           }
         } else if (role === 'staff') {
+          let practiceId: string | null = null;
+
           const { data: staffData } = await supabase
             .from('practice_staff')
             .select('practice_id')
@@ -121,12 +123,28 @@ Deno.serve(async (req) => {
             .maybeSingle();
           
           if (staffData?.practice_id) {
+            practiceId = staffData.practice_id;
+          } else {
+            const { data: providerStaff } = await supabase
+              .from('providers')
+              .select('practice_id')
+              .eq('user_id', targetUserId)
+              .eq('active', true)
+              .like('role_type', 'staff_%')
+              .maybeSingle();
+
+            if (providerStaff?.practice_id) {
+              practiceId = providerStaff.practice_id;
+            }
+          }
+
+          if (practiceId) {
             const { count: orderCount } = await supabase
               .from('orders')
               .select('*', { count: 'exact', head: true })
               .neq('status', 'cancelled')
               .neq('payment_status', 'payment_failed')
-              .eq('doctor_id', staffData.practice_id);
+              .eq('doctor_id', practiceId);
             count = orderCount || 0;
           }
         } else if (role === 'admin') {
@@ -274,6 +292,8 @@ Deno.serve(async (req) => {
               sum + (Number(line.price || 0) * Number(line.quantity || 1)), 0) || 0;
           }
         } else if (role === 'staff') {
+          let practiceId: string | null = null;
+
           const { data: staffData } = await supabase
             .from('practice_staff')
             .select('practice_id')
@@ -282,12 +302,28 @@ Deno.serve(async (req) => {
             .maybeSingle();
           
           if (staffData?.practice_id) {
+            practiceId = staffData.practice_id;
+          } else {
+            const { data: providerStaff } = await supabase
+              .from('providers')
+              .select('practice_id')
+              .eq('user_id', targetUserId)
+              .eq('active', true)
+              .like('role_type', 'staff_%')
+              .maybeSingle();
+
+            if (providerStaff?.practice_id) {
+              practiceId = providerStaff.practice_id;
+            }
+          }
+
+          if (practiceId) {
             const { data: orders } = await supabase
               .from('orders')
               .select('total_amount')
               .neq('status', 'cancelled')
               .neq('payment_status', 'payment_failed')
-              .eq('doctor_id', staffData.practice_id)
+              .eq('doctor_id', practiceId)
               .eq('status', 'pending');
             
             revenue = orders?.reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
