@@ -390,6 +390,24 @@ verify_jwt = false
 [functions.agora-token]
 verify_jwt = false
 
+[functions.create-video-session]
+verify_jwt = true
+
+[functions.get-or-create-practice-room]
+verify_jwt = true
+
+[functions.resolve-practice-room-join]
+verify_jwt = true
+
+[functions.generate-guest-link]
+verify_jwt = true
+
+[functions.validate-guest-token]
+verify_jwt = false
+
+[functions.create-instant-video-session]
+verify_jwt = true
+
 [functions.upgrade-trial-to-active]
 verify_jwt = true
 [functions.pharmacy-api-diagnostics]

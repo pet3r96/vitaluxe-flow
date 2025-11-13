@@ -5760,6 +5760,58 @@ export type Database = {
           },
         ]
       }
+      practice_video_rooms: {
+        Row: {
+          active_session_id: string | null
+          channel_name: string
+          created_at: string
+          id: string
+          practice_id: string
+          room_key: string
+          updated_at: string
+        }
+        Insert: {
+          active_session_id?: string | null
+          channel_name: string
+          created_at?: string
+          id?: string
+          practice_id: string
+          room_key: string
+          updated_at?: string
+        }
+        Update: {
+          active_session_id?: string | null
+          channel_name?: string
+          created_at?: string
+          id?: string
+          practice_id?: string
+          room_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_video_rooms_active_session_id_fkey"
+            columns: ["active_session_id"]
+            isOneToOne: false
+            referencedRelation: "video_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_video_rooms_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_video_rooms_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prescription_refills: {
         Row: {
           created_at: string | null
@@ -8368,6 +8420,50 @@ export type Database = {
           },
         ]
       }
+      video_guest_tokens: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          guest_email: string | null
+          guest_name: string | null
+          id: string
+          session_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          guest_email?: string | null
+          guest_name?: string | null
+          id?: string
+          session_id: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          guest_email?: string | null
+          guest_name?: string | null
+          id?: string
+          session_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_guest_tokens_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "video_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       video_session_events: {
         Row: {
           created_at: string | null
@@ -9306,6 +9402,8 @@ export type Database = {
       }
       disable_auth_user: { Args: { p_user_id: string }; Returns: undefined }
       encrypt_plaid_token: { Args: { p_token: string }; Returns: string }
+      generate_guest_token: { Args: never; Returns: string }
+      generate_room_key: { Args: never; Returns: string }
       generate_ticket_number: { Args: never; Returns: string }
       get_appointments_during_blocked_time: {
         Args: {
