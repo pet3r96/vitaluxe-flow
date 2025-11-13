@@ -101,7 +101,7 @@ export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName, pat
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh]">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[80vh]">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">

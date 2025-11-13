@@ -35,7 +35,7 @@ export function IntakeCompletionDialog({
         handleDismiss();
       }
     }}>
-      <DialogContent className="sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      <DialogContent className="max-w-[95vw] sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="text-2xl">Complete Your Medical Intake</DialogTitle>
           <DialogDescription>

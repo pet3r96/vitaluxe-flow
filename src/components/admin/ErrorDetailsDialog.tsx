@@ -49,7 +49,7 @@ export const ErrorDetailsDialog = ({ error, open, onOpenChange }: ErrorDetailsDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh]">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[85vh]">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Error Details</DialogTitle>

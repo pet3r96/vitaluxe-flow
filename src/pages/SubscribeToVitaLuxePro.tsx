@@ -462,7 +462,7 @@ export default function SubscribeToVitaLuxePro() {
       />
 
       <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>VitaLuxePro Practice Development Terms</DialogTitle>
             <DialogDescription>

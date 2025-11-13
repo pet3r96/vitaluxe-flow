@@ -225,7 +225,7 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">Edit Demographics</DialogTitle>
           </DialogHeader>

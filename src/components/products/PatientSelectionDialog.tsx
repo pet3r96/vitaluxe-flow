@@ -79,7 +79,7 @@ export const PatientSelectionDialog = ({
   if (product?.requires_prescription && !canOrderRx) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-destructive" />
@@ -519,7 +519,7 @@ export const PatientSelectionDialog = ({
   if (noActiveProviders) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>No Active Providers</DialogTitle>
             <DialogDescription>
@@ -553,7 +553,7 @@ export const PatientSelectionDialog = ({
   if (showNoPatientWarning) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>No Patients Found</DialogTitle>
             <DialogDescription>
@@ -586,7 +586,7 @@ export const PatientSelectionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
             {currentStep === 'details' ? 'Add Product to Cart' : 'Prescription Details'}

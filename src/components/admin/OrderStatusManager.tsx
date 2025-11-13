@@ -189,7 +189,7 @@ export const OrderStatusManager = () => {
               Add Status
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingStatus ? "Edit" : "Create"} Order Status</DialogTitle>
               <DialogDescription>

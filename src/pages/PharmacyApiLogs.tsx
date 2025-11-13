@@ -326,7 +326,7 @@ const PharmacyApiLogs = () => {
 
       {/* Details Dialog */}
       <Dialog open={!!detailsDialog} onOpenChange={() => setDetailsDialog(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Transmission Details</DialogTitle>
             <DialogDescription>Order {detailsDialog?.order_id.slice(0, 13)}</DialogDescription>

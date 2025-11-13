@@ -72,7 +72,7 @@ export const PaymentWithTermsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
+      <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Payment & Terms Agreement</DialogTitle>
           <DialogDescription>

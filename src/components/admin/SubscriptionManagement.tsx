@@ -397,7 +397,7 @@ export function SubscriptionManagement() {
                             Payments
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
+                        <DialogContent className="max-w-[95vw] sm:max-w-3xl">
                           <DialogHeader>
                             <DialogTitle>Payment History</DialogTitle>
                             <DialogDescription>
