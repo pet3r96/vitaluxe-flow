@@ -345,6 +345,13 @@ export default function PracticeCalendar() {
               </div>
             </div>
           </div>
+          
+          {/* Quick Actions - Above Calendar */}
+          <CalendarQuickActions
+            onNewAppointment={handleCreateAppointment}
+            onWalkIn={handleWalkInAppointment}
+            onBlockTime={() => setBlockTimeOpen(true)}
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto flex flex-col">
@@ -466,13 +473,6 @@ export default function PracticeCalendar() {
           </div>
         </div>
       </div>
-
-      {/* Quick Actions FAB */}
-      <CalendarQuickActions
-        onNewAppointment={handleCreateAppointment}
-        onWalkIn={handleWalkInAppointment}
-        onBlockTime={() => setBlockTimeOpen(true)}
-      />
 
       <CreateAppointmentDialog
         open={createDialogOpen}
