@@ -84,10 +84,10 @@ serve(async (req) => {
 
     // Fetch cart with all lines using admin client (bypasses RLS for efficiency)
     const { data: cart, error: cartError } = await supabaseAdmin
-      .from("carts")
+      .from("cart")
       .select(`
         id,
-        user_id,
+        doctor_id,
         lines:cart_lines(
           id,
           product_id,
@@ -121,7 +121,7 @@ serve(async (req) => {
     }
 
     // Verify cart belongs to user
-    if (cart.user_id !== user.id) {
+    if (cart.doctor_id !== user.id) {
       console.error("[place-order] Cart ownership mismatch");
       return new Response(
         JSON.stringify({ error: "Unauthorized access to cart" }),
