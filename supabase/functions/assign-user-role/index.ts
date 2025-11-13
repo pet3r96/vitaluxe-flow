@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { validatePhone, validateNPI, validateDEA, generateSecurePassword } from '../_shared/validators.ts';
 import { validateCreateAccountRequest } from '../_shared/requestValidators.ts';
 import { RateLimiter, RATE_LIMITS, getClientIP } from '../_shared/rateLimiter.ts';
@@ -77,16 +78,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    // Create admin client with service role key
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    const supabaseAdmin = createAdminClient();
 
     // Rate limiting to prevent abuse
     const limiter = new RateLimiter();
