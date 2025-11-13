@@ -3201,6 +3201,13 @@ export type Database = {
             referencedRelation: "practice_rooms"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "patient_appointments_video_session_id_fkey"
+            columns: ["video_session_id"]
+            isOneToOne: false
+            referencedRelation: "video_sessions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       patient_conditions: {
@@ -8453,7 +8460,7 @@ export type Database = {
         Row: {
           actual_start_time: string | null
           agora_channel_id: string | null
-          appointment_id: string
+          appointment_id: string | null
           channel_name: string
           connection_quality: Json | null
           created_at: string | null
@@ -8484,7 +8491,7 @@ export type Database = {
         Insert: {
           actual_start_time?: string | null
           agora_channel_id?: string | null
-          appointment_id: string
+          appointment_id?: string | null
           channel_name: string
           connection_quality?: Json | null
           created_at?: string | null
@@ -8515,7 +8522,7 @@ export type Database = {
         Update: {
           actual_start_time?: string | null
           agora_channel_id?: string | null
-          appointment_id?: string
+          appointment_id?: string | null
           channel_name?: string
           connection_quality?: Json | null
           created_at?: string | null
