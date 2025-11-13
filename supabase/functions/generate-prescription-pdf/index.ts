@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGeneratePrescriptionRequest } from '../_shared/requestValidators.ts';
 import { handleError, createErrorResponse } from '../_shared/errorHandler.ts';
@@ -14,10 +15,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Declare variables outside try block for error handler access
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createAdminClient();
   let requestData: any;
 
   try {
