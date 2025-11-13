@@ -59,21 +59,40 @@ Deno.serve(async (req) => {
       scheduledStart,
     });
 
-    // Verify user is a provider in this practice
-    const { data: provider, error: providerError } = await supabase
+    // Verify user has access to this practice
+    // Check if user is the practice owner (doctor role)
+    const isPracticeOwner = user.id === practiceId;
+    
+    // Check if user is a provider in this practice
+    const { data: provider } = await supabase
       .from('providers')
       .select('id')
       .eq('user_id', user.id)
       .eq('practice_id', practiceId)
-      .single();
+      .maybeSingle();
 
-    if (providerError || !provider) {
-      console.error('[create-video-session] Provider verification failed:', providerError);
+    // Check if user is staff in this practice (if staff table exists)
+    const { data: staff } = await supabase
+      .from('practice_staff')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('practice_id', practiceId)
+      .maybeSingle();
+
+    // Allow if user is practice owner, provider, or staff
+    if (!isPracticeOwner && !provider && !staff) {
+      console.error('[create-video-session] Authorization failed - user not associated with practice');
       return new Response(
         JSON.stringify({ error: 'Not authorized for this practice' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('[create-video-session] Authorization successful:', {
+      isPracticeOwner,
+      isProvider: !!provider,
+      isStaff: !!staff
+    });
 
     // Generate unique channel name
     const channelName = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -81,12 +100,15 @@ Deno.serve(async (req) => {
     // Determine initial status
     const status = sessionType === 'scheduled' && scheduledStart ? 'scheduled' : 'live';
 
+    // Determine the effective provider ID
+    const effectiveProviderId = providerId || (provider ? provider.id : null);
+
     // Create video session
     const { data: session, error: sessionError } = await supabase
       .from('video_sessions')
       .insert({
         practice_id: practiceId,
-        provider_id: providerId || provider.id,
+        provider_id: effectiveProviderId,
         patient_id: patientId,
         channel_name: channelName,
         session_type: sessionType,
