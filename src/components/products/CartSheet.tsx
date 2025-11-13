@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "@/hooks/useCart";
 import {
   Sheet,
   SheetContent,
@@ -27,44 +28,12 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: cartData, isLoading } = useQuery({
-    queryKey: ["cart", effectiveUserId],
-    queryFn: async () => {
-      if (!effectiveUserId) return null;
-
-      const { data: cart } = await supabase
-        .from("cart")
-        .select("id")
-        .eq("doctor_id", effectiveUserId)
-        .single();
-
-      if (!cart) return null;
-
-      const { data: cartLines, error } = await supabase
-        .from("cart_lines")
-        .select(`
-          *,
-          product:products (
-            id,
-            name,
-            dosage,
-            image_url
-          )
-        `)
-        .eq("cart_id", cart.id)
-        .gte("expires_at", new Date().toISOString());
-
-      if (error) throw error;
-
-      return {
-        id: cart.id,
-        lines: cartLines || [],
-      };
-    },
+  const { data: cartData, isLoading } = useCart(effectiveUserId, {
+    productFields: "id, name, dosage, image_url",
     enabled: !!effectiveUserId && open,
-    staleTime: 0, // Always fetch fresh data for immediate sync
+    staleTime: 0,
     refetchOnMount: true,
-    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    refetchOnWindowFocus: true,
   });
 
   const updateQuantityMutation = useMutation({
