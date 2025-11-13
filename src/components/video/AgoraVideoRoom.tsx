@@ -3,7 +3,25 @@ import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } f
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Camera, CameraOff, PhoneOff } from "lucide-react";
 
-export function AgoraVideoRoom({ channelName, appId, token, uid }) {
+interface AgoraVideoRoomProps {
+  channelName: string;
+  rtcToken: string;
+  rtmToken: string;
+  uid: string;
+  rtmUid: string;
+  role: "publisher" | "subscriber";
+  userType: "patient" | "practice" | "guest";
+}
+
+export function AgoraVideoRoom({ 
+  channelName, 
+  rtcToken, 
+  rtmToken, 
+  uid, 
+  rtmUid, 
+  role, 
+  userType 
+}: AgoraVideoRoomProps) {
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null);
   const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
@@ -35,7 +53,11 @@ export function AgoraVideoRoom({ channelName, appId, token, uid }) {
       const localVideoContainer = document.getElementById("local-video");
       camTrack.play(localVideoContainer);
 
-      await client.join(appId, channelName, token, uid);
+      const appId = import.meta.env.VITE_AGORA_APP_ID;
+      
+      console.log("[AgoraVideoRoom] Joining with:", { appId, channelName, uid, role, userType });
+      
+      await client.join(appId, channelName, rtcToken, Number(uid));
 
       await client.publish([micTrack, camTrack]);
 
