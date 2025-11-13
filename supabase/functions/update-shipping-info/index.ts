@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { validateUpdateShippingRequest } from "../_shared/requestValidators.ts";
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
@@ -71,22 +71,10 @@ serve(async (req: Request) => {
       throw new Error('Missing authorization header');
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader }
-        }
-      }
-    );
+    const supabase = createAuthClient(authHeader);
 
     // Get current user
-    const token = authHeader.replace('Bearer', '').trim();
-    if (!token) {
-      throw new Error('Missing bearer token');
-    }
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError) {
       console.error('Auth error:', userError);
       throw new Error(`Authentication failed: ${userError.message}`);

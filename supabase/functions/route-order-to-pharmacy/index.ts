@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { validateRouteOrderRequest } from '../_shared/requestValidators.ts';
 
 const corsHeaders = {
@@ -270,11 +270,8 @@ Deno.serve(async (req) => {
 
   try {
     // Use service role key to bypass RLS for system tables (product_pharmacies, pharmacy_rep_assignments)
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      // No Authorization header needed - service role bypasses RLS
-    );
+    const supabaseClient = createAdminClient();
+    // No Authorization header needed - service role bypasses RLS
 
     // Parse and validate JSON
     let requestData;
