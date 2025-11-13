@@ -3,7 +3,8 @@
 // Creates instant or scheduled video consultation sessions
 // ============================================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { RtcTokenBuilder, RtcRole } from 'https://esm.sh/agora-token@2.0.4';
 
 const corsHeaders = {
@@ -30,12 +31,7 @@ Deno.serve(async (req) => {
     console.log('[create-video-session] Request received');
 
     // Get Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const authHeader = req.headers.get('Authorization')!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const supabase = createAuthClient(req.headers.get('Authorization'));
 
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();

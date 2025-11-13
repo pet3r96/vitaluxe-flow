@@ -1,4 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,23 +22,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const jwt = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : authHeader;
-
-    // Use anon client for auth check with Authorization header
-    const supabaseAuth = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
+    const supabaseAuth = createAuthClient(authHeader);
 
     const {
       data: { user },
       error: userError,
-    } = await supabaseAuth.auth.getUser(jwt);
+    } = await supabaseAuth.auth.getUser();
 
     if (userError || !user) {
       console.error('❌ [complete-video-appointment] Auth failed:', userError);
@@ -50,10 +40,7 @@ Deno.serve(async (req) => {
     console.log('✅ [complete-video-appointment] Authenticated user:', user.id);
 
     // Use service role client for database operations (bypass RLS)
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseClient = createAdminClient();
 
     const { appointmentId } = await req.json();
 
