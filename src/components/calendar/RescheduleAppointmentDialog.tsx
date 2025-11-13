@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,6 +68,28 @@ export function RescheduleAppointmentDialog({
       notes: appointment.notes || "",
     },
   });
+
+  // Fallback: If provider account and providers list is empty, fetch provider ID directly
+  useEffect(() => {
+    const fetchProviderDirectly = async () => {
+      if (open && isProviderAccount && effectiveUserId && providers.length === 0) {
+        const currentValue = watch('providerId');
+        if (!currentValue) {
+          const { data } = await supabase
+            .from('providers')
+            .select('id')
+            .eq('user_id', effectiveUserId)
+            .maybeSingle();
+          
+          if (data?.id) {
+            setValue('providerId', data.id);
+          }
+        }
+      }
+    };
+    
+    fetchProviderDirectly();
+  }, [open, isProviderAccount, effectiveUserId, providers.length, watch, setValue]);
 
   // Fetch service types
   const { data: serviceTypes } = useQuery({
