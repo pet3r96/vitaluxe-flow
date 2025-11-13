@@ -36,7 +36,7 @@ export function ImpersonationBanner() {
     : roleLabels[impersonatedRole] || impersonatedRole;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-600 dark:bg-amber-700 shadow-lg border-b border-amber-700 dark:border-amber-800">
+    <div className="fixed top-0 left-0 right-0 z-[100] bg-gradient-to-r from-gold1/90 to-gold2/90 backdrop-blur-sm shadow-lg border-b border-gold1/30">
       <div className="container mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-3 max-w-full">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <Eye className="h-4 w-4 flex-shrink-0 text-white" />
