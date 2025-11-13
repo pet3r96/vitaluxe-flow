@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { getCSRFToken } from "@/lib/csrf";
 
 /**
  * Impersonation Service
@@ -20,10 +21,20 @@ export async function startImpersonation(
   targetUserId: string
 ): Promise<ImpersonationSession | null> {
   try {
+    // Get CSRF token for security
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) {
+      logger.error("[ImpersonationService] CSRF token not found");
+      throw new Error("Security token missing. Please refresh the page.");
+    }
+
     const { data, error } = await supabase.functions.invoke(
       "start-impersonation",
       {
         body: { targetUserId },
+        headers: {
+          'x-csrf-token': csrfToken
+        }
       }
     );
 
