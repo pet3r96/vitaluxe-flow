@@ -13,7 +13,7 @@ import { useTheme } from "next-themes";
 import logoLight from "@/assets/vitaluxe-logo-light.png";
 import logoDark from "@/assets/vitaluxe-logo-dark-bg.png";
 import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
-import { validatePasswordStrength } from "@/lib/passwordStrength";
+import { validatePasswordStrength } from "@/lib/passwordValidation";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Mail, CheckCircle2, AlertCircle } from "lucide-react";

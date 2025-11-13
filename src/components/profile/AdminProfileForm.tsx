@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { NotificationPreferencesDialog } from "@/components/notifications/NotificationPreferencesDialog";
 import { useToast } from "@/hooks/use-toast";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
-import { validatePasswordStrength } from "@/lib/passwordStrength";
+import { validatePasswordStrength } from "@/lib/passwordValidation";
 import { SignedAgreementSection } from "./SignedAgreementSection";
 import { useAuth } from "@/contexts/AuthContext";
 
