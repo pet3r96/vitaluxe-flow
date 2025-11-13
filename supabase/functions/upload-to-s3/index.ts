@@ -1,11 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.485.0";
+import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { handleError, mapExternalApiError } from '../_shared/errorHandler.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-csrf-token',
 };
 
 serve(async (req) => {
@@ -14,24 +15,26 @@ serve(async (req) => {
   }
 
   // Declare variables outside try block for error handler access
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createAuthClient(req.headers.get('Authorization'));
   let fileName: string = 'unknown';
   let contentType: string = 'unknown';
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       throw new Error('Unauthorized');
+    }
+
+    // Validate CSRF token
+    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
+    if (!valid) {
+      console.error('CSRF validation failed:', csrfError);
+      return new Response(
+        JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const requestBody = await req.json();
