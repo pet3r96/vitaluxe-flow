@@ -230,6 +230,29 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
           </Button>
 
           <Button
+            variant="outline"
+            size="icon"
+            onClick={async () => {
+              try {
+                const testCam = await AgoraRTC.createCameraVideoTrack();
+                const testMic = await AgoraRTC.createMicrophoneAudioTrack();
+
+                testCam.play("local-preview");
+                testMic.play();
+
+                console.log("[Video Test] Camera + mic OK");
+
+                setTimeout(() => testCam.stop(), 3000); // auto stop after 3s
+              } catch (err) {
+                console.error("[Video Test] Error initializing devices", err);
+              }
+            }}
+            className="rounded-full h-14 w-14"
+          >
+            <Signal />
+          </Button>
+
+          <Button
             onClick={() => setSidePanel(sidePanel === "chat" ? null : "chat")}
             variant="outline"
             size="icon"
