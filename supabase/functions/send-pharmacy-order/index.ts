@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from "../_shared/cors.ts";
 
 /**
@@ -52,11 +52,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // Initialize Supabase admin client
+    const supabase = createAdminClient();
 
     // Fetch order with order lines and patient/provider info
     const { data: order, error } = await supabase

@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { validateManageProviderStatusRequest } from "../_shared/requestValidators.ts";
 
 const corsHeaders = {
@@ -43,19 +43,13 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
     const authHeader = req.headers.get('Authorization')!;
     
     // Client for RLS-based operations
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    const supabaseClient = createAuthClient(authHeader);
     
     // Admin client for auth operations
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+    const supabaseAdmin = createAdminClient();
 
     const { data: { user } } = await supabaseClient.auth.getUser();
     

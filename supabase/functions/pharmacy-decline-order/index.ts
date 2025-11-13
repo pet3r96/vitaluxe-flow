@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,15 +24,7 @@ serve(async (req) => {
       throw new Error('order_id and decline_reason are required');
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
+    const supabase = createAuthClient(req.headers.get('Authorization'));
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
