@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { generateCSRFToken, clearCSRFToken } from "@/lib/csrf";
+import { generateCSRFToken, clearCSRFToken, getCSRFToken } from "@/lib/csrf";
 import { logger } from "@/lib/logger";
 // Idle timeout system removed - now using simple 60-minute hard session timeout
 import { authService } from "@/lib/authService";
@@ -1447,6 +1447,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
             
             const token = authSession.access_token;
+            const csrfToken = getCSRFToken();
+            if (!csrfToken) {
+              toast.error("Security token missing. Please refresh the page.");
+              return;
+            }
             const options: any = {
               body: { 
                 role, 
@@ -1454,8 +1459,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 userName: userName || null,
                 targetEmail: targetEmail || null
               },
+              headers: { 'x-csrf-token': csrfToken }
             };
-            if (token) options.headers = { Authorization: `Bearer ${token}` };
+            if (token) options.headers.Authorization = `Bearer ${token}`;
             const { data, error: sessionError } = await supabase.functions.invoke('start-impersonation', options);
             if (sessionError) {
               logger.error('Error creating server-side impersonation session', sessionError);
