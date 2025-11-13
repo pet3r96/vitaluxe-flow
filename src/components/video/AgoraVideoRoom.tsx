@@ -20,31 +20,30 @@ export const AgoraVideoRoom = ({
 
     const start = async () => {
       try {
-        const appId = import.meta.env.VITE_AGORA_APP_ID;
+        // HARDCODED App ID for testing - matches backend secret
+        const HARDCODED_APP_ID = "2443c37d5f97424c8b7e1c08e3a3032e";
+        const appId = HARDCODED_APP_ID;
         
+        console.log("[AgoraRoom] 🔧 Using HARDCODED App ID for testing");
         console.log("[AgoraRoom] Initializing…", {
           appId,
           appIdLength: appId?.length,
-          appIdType: typeof appId,
           channelName,
           uid,
           rtmUid,
           role,
-          rtcTokenPreview: rtcToken?.substring(0, 20) + '...'
+          rtcTokenPreview: rtcToken?.substring(0, 20) + '...',
+          rtmTokenPreview: rtmToken?.substring(0, 20) + '...'
         });
 
-        if (!appId || appId === 'undefined' || appId === '') {
-          const errorMsg = 'CRITICAL: VITE_AGORA_APP_ID is not configured in environment';
-          console.error(`[AgoraRoom] ${errorMsg}`, {
-            envValue: appId,
-            allEnvKeys: Object.keys(import.meta.env)
-          });
-          throw new Error(errorMsg);
+        if (!appId) {
+          throw new Error('CRITICAL: App ID is not set');
         }
 
         // 1. Initialize RTC
         rtcClientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
+        console.log("[AgoraRoom] 📞 Attempting RTC join...");
         await rtcClientRef.current.join(
           appId,
           channelName,
