@@ -7,11 +7,7 @@ import {
   serve,
 } from "https://deno.land/std@0.177.0/http/server.ts";
 
-import {
-  RtcRole,
-  RtcTokenBuilder,
-  RtmTokenBuilder,
-} from "https://esm.sh/agora-token@2.0.4";
+import { createAgoraTokens } from "../_shared/agoraTokenService.ts";
 
 // --------------------------------------------------------
 // 0. CORS Headers
@@ -44,40 +40,8 @@ const APP_CERT = Deno.env.get("AGORA_APP_CERTIFICATE");
 // --------------------------------------------------------
 // 3. Token Generator
 // --------------------------------------------------------
-function generateTokens(channel: string, uid: string, role: "publisher" | "subscriber") {
-  const expirationSeconds = 3600;
-  const current = Math.floor(Date.now() / 1000);
-  const expireAt = current + expirationSeconds;
-
-  const rtcRole = role === "publisher" ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
-  const rtmRole = 1; // Rtm_User
-
-  const rtcToken = RtcTokenBuilder.buildTokenWithUid(
-    APP_ID,
-    APP_CERT,
-    channel,
-    Number(uid),
-    rtcRole,
-    expireAt,
-  );
-
-  const rtmToken = RtmTokenBuilder.buildToken(
-    APP_ID,
-    APP_CERT,
-    `rtm_${uid}`,
-    rtmRole,
-    expireAt,
-  );
-
-  return {
-    rtcToken,
-    rtmToken,
-    uid,
-    rtmUid: `rtm_${uid}`,
-    ttl: expirationSeconds,
-    expiresAt: new Date(expireAt * 1000).toISOString(),
-  };
-}
+// Token generation moved to shared service (agoraTokenService.ts)
+// See createAgoraTokens(channel, uid, role, expireSeconds)
 
 // --------------------------------------------------------
 // 4. Main Handler
@@ -123,19 +87,29 @@ serve(async (req) => {
       );
     }
 
-    // Generate tokens
-    const tokenPayload = generateTokens(channel, uid, role);
+    // Generate tokens via shared service (Web Crypto compatible)
+    const { rtcToken, rtmToken, expiresAt } = await createAgoraTokens(
+      channel,
+      String(uid),
+      role,
+      3600
+    );
 
     console.log("[AGORA TOKEN] Tokens generated OK for:", {
       normalizedChannel: channel,
-      uid: tokenPayload.uid,
+      uid: String(uid),
     });
 
     return new Response(
       JSON.stringify({
         ok: true,
         appId: APP_ID,
-        ...tokenPayload,
+        rtcToken,
+        rtmToken,
+        uid: String(uid),
+        rtmUid: String(uid),
+        ttl: 3600,
+        expiresAt
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
