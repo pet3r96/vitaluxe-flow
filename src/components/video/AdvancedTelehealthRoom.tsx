@@ -11,15 +11,17 @@ import {
   Signal,
   Layers,
   MessageCircle,
-  MonitorUp,
   Lock,
   LockOpen,
   Timer,
   CircleDot,
+  ClipboardList,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Props {
   appId: string;
@@ -30,39 +32,76 @@ interface Props {
 }
 
 export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isProvider }: Props) {
+  // ---------------------------------------------------------
+  // STATE
+  // ---------------------------------------------------------
+
+  // Agora engine
   const clientRef = useRef<any>(null);
   const localAudioTrackRef = useRef<any>(null);
   const localVideoTrackRef = useRef<any>(null);
 
   const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
+
+  // Toggles
   const [mic, setMic] = useState(true);
   const [camera, setCamera] = useState(true);
-  const [sidePanel, setSidePanel] = useState<"chat" | "participants" | null>(null);
+
+  // Sidebar: chat | participants | providerDash
+  const [sidePanel, setSidePanel] = useState<"chat" | "participants" | "providerDash" | null>(null);
+
+  // Chat
   const [chat, setChat] = useState<{ from: string; message: string }[]>([]);
   const [chatInput, setChatInput] = useState("");
+
+  // Waiting room & provider dashboard
   const [waitingRoom, setWaitingRoom] = useState(true);
+  const [waitingPatients, setWaitingPatients] = useState<any[]>([]);
+  const [patientAdmitted, setPatientAdmitted] = useState(false);
   const [roomLocked, setRoomLocked] = useState(false);
+
+  // Timer + recording
   const [duration, setDuration] = useState(0);
   const [recording, setRecording] = useState(false);
   const [connectionQuality, setConnectionQuality] = useState(5);
+
+  // Effects
   const [blur, setBlur] = useState(false);
+
+  // Provider Dashboard notes/vitals
+  const [providerNotes, setProviderNotes] = useState("");
+  const [vitals, setVitals] = useState({
+    height: "",
+    weight: "",
+    bloodPressure: "",
+    meds: "",
+  });
+
   const timerRef = useRef<any>(null);
 
-  // Auto-retry
+  // ---------------------------------------------------------
+  // JOIN ROOM
+  // ---------------------------------------------------------
+
   const joinRoom = async () => {
     try {
-      clientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+      clientRef.current = AgoraRTC.createClient({
+        mode: "rtc",
+        codec: "vp8",
+      });
+
       const client = clientRef.current;
 
       client.on("user-published", async (user, mediaType) => {
         await client.subscribe(user, mediaType);
+
         if (mediaType === "video") {
-          const remoteVideoTrack = user.videoTrack;
-          remoteVideoTrack.play(`remote-${user.uid}`);
+          user.videoTrack.play(`remote-${user.uid}`);
         }
         if (mediaType === "audio") {
           user.audioTrack.play();
         }
+
         setRemoteUsers((prev) => [...prev, user]);
       });
 
@@ -70,38 +109,36 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
         setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
       });
 
+      // Join Agora channel
       await client.join(appId, channel, token, uid);
 
+      // Network quality listener
       client.on("network-quality", (stats) => {
-        // stats.uplinkNetworkQuality and stats.downlinkNetworkQuality are 0–5
-        // Pick the worse of the two
         const quality = Math.min(stats.uplinkNetworkQuality, stats.downlinkNetworkQuality);
-
-        console.log("[Connection Quality]", {
-          uplink: stats.uplinkNetworkQuality,
-          downlink: stats.downlinkNetworkQuality,
-          selected: quality,
-        });
-
         setConnectionQuality(quality);
       });
 
       // Waiting room logic
       if (!isProvider) {
-        await new Promise((r) => setTimeout(r, 800));
-        if (roomLocked) return;
+        setWaitingRoom(true);
+
+        // Patient must wait until admitted
+        return;
       }
+
+      // Provider enters immediately, no waiting
       setWaitingRoom(false);
 
+      // Provider publishes tracks
       localAudioTrackRef.current = await AgoraRTC.createMicrophoneAudioTrack();
       localVideoTrackRef.current = await AgoraRTC.createCameraVideoTrack({
         encoderConfig: { width: 1280, height: 720 },
       });
 
       localVideoTrackRef.current.play("local-preview");
+
       await client.publish([localAudioTrackRef.current, localVideoTrackRef.current]);
 
-      // Start call duration timer
       timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
     } catch (err) {
       console.error("[Retry Join] Failed, retrying...", err);
@@ -114,22 +151,25 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
     return () => clearInterval(timerRef.current);
   }, []);
 
+  // ---------------------------------------------------------
+  // CONTROLS
+  // ---------------------------------------------------------
+
   const toggleMic = () => {
     if (!localAudioTrackRef.current) return;
-    if (mic) localAudioTrackRef.current.setEnabled(false);
-    else localAudioTrackRef.current.setEnabled(true);
+    localAudioTrackRef.current.setEnabled(!mic);
     setMic(!mic);
   };
 
   const toggleCamera = () => {
     if (!localVideoTrackRef.current) return;
-    if (camera) localVideoTrackRef.current.setEnabled(false);
-    else localVideoTrackRef.current.setEnabled(true);
+    localVideoTrackRef.current.setEnabled(!camera);
     setCamera(!camera);
   };
 
   const toggleBlur = async () => {
     if (!localVideoTrackRef.current) return;
+
     if (!blur) {
       localVideoTrackRef.current.setProcessor({
         type: "background",
@@ -140,6 +180,16 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
       localVideoTrackRef.current.setProcessor(null);
     }
     setBlur(!blur);
+  };
+
+  const admitPatient = async () => {
+    setWaitingRoom(false);
+    setPatientAdmitted(true);
+
+    // Patient now publishes their tracks
+    if (!isProvider) return;
+
+    // Publish provider tracks (already done)
   };
 
   const endCall = async () => {
@@ -157,20 +207,23 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
     return `${m}:${s}`;
   };
 
+  // ---------------------------------------------------------
+  // RENDER
+  // ---------------------------------------------------------
+
   return (
     <div className={cn("flex h-screen w-full bg-background text-foreground overflow-hidden")}>
       {/* MAIN VIDEO GRID */}
       <div className="flex-1 relative grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
-        {/* Local Floating PiP */}
+        {/* PiP */}
         <div
           id="local-preview"
           className={cn(
-            "absolute bottom-6 right-6 w-48 h-32 rounded-xl overflow-hidden shadow-lg bg-black cursor-move border",
-            "border-border z-40",
+            "absolute bottom-6 right-6 w-48 h-32 rounded-xl overflow-hidden shadow-lg bg-black border border-border z-40",
           )}
         />
 
-        {/* Remote Videos */}
+        {/* Remote Streams */}
         {remoteUsers.map((user) => (
           <div key={user.uid} className="relative rounded-xl bg-black h-full border border-border overflow-hidden">
             <div id={`remote-${user.uid}`} className="w-full h-full" />
@@ -179,37 +232,78 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
 
         {waitingRoom && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-white text-xl font-semibold z-50">
-            Waiting for provider to start the video session...
+            {isProvider ? "Patient in waiting room" : "Waiting for provider to admit you..."}
           </div>
         )}
       </div>
 
-      {/* RIGHT SIDEBAR (Chat / Participants) */}
+      {/* SIDEBAR */}
       {sidePanel && (
         <div className="w-80 h-full border-l border-border flex flex-col bg-secondary z-30">
-          {/* Header */}
           <div className="p-4 font-semibold border-b border-border">
-            {sidePanel === "chat" ? "Chat" : "Participants"}
+            {sidePanel === "chat" && "Chat"}
+            {sidePanel === "participants" && "Participants"}
+            {sidePanel === "providerDash" && "Provider Dashboard"}
           </div>
 
-          {/* Content */}
           <ScrollArea className="flex-1 p-4">
-            {sidePanel === "chat"
-              ? chat.map((c, i) => (
-                  <div key={i} className="mb-3">
-                    <div className="text-sm font-medium">{c.from}</div>
-                    <div className="text-sm opacity-80">{c.message}</div>
-                  </div>
-                ))
-              : remoteUsers.map((user) => (
-                  <div key={user.uid} className="mb-3 flex items-center gap-3">
-                    <Users className="w-4 h-4" />
-                    <span>User {user.uid}</span>
-                  </div>
-                ))}
+            {sidePanel === "chat" &&
+              chat.map((c, i) => (
+                <div key={i} className="mb-3">
+                  <div className="text-sm font-medium">{c.from}</div>
+                  <div className="text-sm opacity-80">{c.message}</div>
+                </div>
+              ))}
+
+            {sidePanel === "participants" &&
+              remoteUsers.map((user) => (
+                <div key={user.uid} className="mb-3 flex items-center gap-3">
+                  <Users className="w-4 h-4" />
+                  <span>User {user.uid}</span>
+                </div>
+              ))}
+
+            {sidePanel === "providerDash" && isProvider && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Vitals</h3>
+
+                <Input
+                  placeholder="Height"
+                  value={vitals.height}
+                  onChange={(e) => setVitals((v) => ({ ...v, height: e.target.value }))}
+                />
+                <Input
+                  placeholder="Weight"
+                  value={vitals.weight}
+                  onChange={(e) => setVitals((v) => ({ ...v, weight: e.target.value }))}
+                />
+                <Input
+                  placeholder="Blood Pressure"
+                  value={vitals.bloodPressure}
+                  onChange={(e) =>
+                    setVitals((v) => ({
+                      ...v,
+                      bloodPressure: e.target.value,
+                    }))
+                  }
+                />
+                <Input
+                  placeholder="Medications"
+                  value={vitals.meds}
+                  onChange={(e) => setVitals((v) => ({ ...v, meds: e.target.value }))}
+                />
+
+                <h3 className="text-sm font-semibold pt-4">Provider Notes</h3>
+                <Textarea
+                  placeholder="Notes..."
+                  value={providerNotes}
+                  onChange={(e) => setProviderNotes(e.target.value)}
+                />
+              </div>
+            )}
           </ScrollArea>
 
-          {/* Chat Input */}
+          {/* Chat input */}
           {sidePanel === "chat" && (
             <div className="p-4 border-t border-border">
               <Input placeholder="Type message…" value={chatInput} onChange={(e) => setChatInput(e.target.value)} />
@@ -230,29 +324,6 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
           </Button>
 
           <Button
-            variant="outline"
-            size="icon"
-            onClick={async () => {
-              try {
-                const testCam = await AgoraRTC.createCameraVideoTrack();
-                const testMic = await AgoraRTC.createMicrophoneAudioTrack();
-
-                testCam.play("local-preview");
-                testMic.play();
-
-                console.log("[Video Test] Camera + mic OK");
-
-                setTimeout(() => testCam.stop(), 3000); // auto stop after 3s
-              } catch (err) {
-                console.error("[Video Test] Error initializing devices", err);
-              }
-            }}
-            className="rounded-full h-14 w-14"
-          >
-            <Signal />
-          </Button>
-
-          <Button
             onClick={() => setSidePanel(sidePanel === "chat" ? null : "chat")}
             variant="outline"
             size="icon"
@@ -269,6 +340,17 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
           >
             <Users />
           </Button>
+
+          {isProvider && (
+            <Button
+              onClick={() => setSidePanel(sidePanel === "providerDash" ? null : "providerDash")}
+              variant="outline"
+              size="icon"
+              className="rounded-full h-14 w-14"
+            >
+              <ClipboardList />
+            </Button>
+          )}
 
           <Button onClick={toggleBlur} variant="outline" size="icon" className="rounded-full h-14 w-14">
             <Layers />
@@ -309,7 +391,7 @@ export default function AdvancedTelehealthRoom({ appId, channel, token, uid, isP
         {["Poor", "Low", "Fair", "Good", "Great", "Excellent"][connectionQuality]}
       </div>
 
-      {/* LOCK ROOM (provider only) */}
+      {/* LOCK ROOM */}
       {isProvider && (
         <div className="absolute top-6 left-6">
           <Button onClick={() => setRoomLocked(!roomLocked)} variant="outline" size="sm">
