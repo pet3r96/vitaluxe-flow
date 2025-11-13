@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { downloadPdfFromBase64, generateScheduleFilename } from "@/lib/pdfGenerator";
 import { cn } from "@/lib/utils";
+import { getProviderDisplayName } from "@/utils/providerNameUtils";
 
 interface PrintDayDialogProps {
   open: boolean;
@@ -45,7 +46,7 @@ export function PrintDayDialog({
 
   const effectiveProviderName = isProviderAccount ? currentProviderName :
                                 selectedProvider === "all" ? "All Providers" :
-                                providers.find(p => p.id === selectedProvider)?.full_name || "Selected Provider";
+                                getProviderDisplayName(providers.find(p => p.id === selectedProvider)) || "Selected Provider";
 
   // Load preview count
   const loadPreview = async () => {
@@ -218,7 +219,7 @@ export function PrintDayDialog({
                   <div key={provider.id} className="flex items-center space-x-2">
                     <RadioGroupItem value={provider.id} id={provider.id} />
                     <Label htmlFor={provider.id} className="font-normal cursor-pointer">
-                      {provider.full_name}
+                      {getProviderDisplayName(provider)}
                     </Label>
                   </div>
                 ))}
