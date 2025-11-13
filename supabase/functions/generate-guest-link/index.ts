@@ -27,12 +27,7 @@ Deno.serve(async (req) => {
     console.log('[generate-guest-link] Request received');
 
     // Get Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const authHeader = req.headers.get('Authorization')!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const supabase = createAuthClient(req.headers.get('Authorization'));
 
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();

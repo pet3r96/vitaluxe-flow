@@ -34,10 +34,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!
-    );
+    const supabase = createAdminClient();
 
     // Validate token and get user
     const { data: tokenData, error: tokenError } = await supabase

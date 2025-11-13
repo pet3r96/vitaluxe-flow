@@ -14,16 +14,7 @@ serve(async (req) => {
   try {
     console.log('Fixing admin email from admin@vitaluxeservice.com to info@vitaluxeservices.com');
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const supabaseAdmin = createAdminClient();
 
     const ADMIN_USER_ID = '28807c7e-5296-4860-b3a1-93c883dff39d';
     const OLD_EMAIL = 'admin@vitaluxeservice.com';
