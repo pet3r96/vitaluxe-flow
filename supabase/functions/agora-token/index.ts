@@ -10,7 +10,6 @@ import {
 import {
   RtcRole,
   RtcTokenBuilder,
-  RtmRole,
   RtmTokenBuilder,
 } from "https://esm.sh/agora-token@2.0.4";
 
@@ -51,7 +50,7 @@ function generateTokens(channel: string, uid: string, role: "publisher" | "subsc
   const expireAt = current + expirationSeconds;
 
   const rtcRole = role === "publisher" ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
-  const rtmRole = RtmRole.Rtm_User;
+  const rtmRole = 1; // Rtm_User
 
   const rtcToken = RtcTokenBuilder.buildTokenWithUid(
     APP_ID,
