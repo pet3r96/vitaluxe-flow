@@ -53,12 +53,12 @@ Deno.serve(async (req) => {
     // Check for active impersonation session
     const { data: impersonationData } = await supabase
       .from('active_impersonation_sessions')
-      .select('target_user_id')
+      .select('impersonated_user_id')
       .eq('admin_user_id', user.id)
       .eq('is_active', true)
       .maybeSingle();
 
-    const effectiveUserId = impersonationData?.target_user_id || user.id;
+    const effectiveUserId = impersonationData?.impersonated_user_id || user.id;
 
     console.log('Generating guest link for session:', sessionId, 'by user:', effectiveUserId);
 

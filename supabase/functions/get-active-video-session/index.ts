@@ -45,13 +45,13 @@ Deno.serve(async (req) => {
 
     // Check for impersonation
     const { data: impersonationData } = await supabaseAdmin
-      .from('impersonation_sessions')
-      .select('target_user_id')
-      .eq('impersonator_user_id', userId)
-      .eq('active', true)
-      .single();
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
 
-    const effectiveUserId = impersonationData?.target_user_id || userId;
+    const effectiveUserId = impersonationData?.impersonated_user_id || userId;
     console.log('[get-active-video-session] Effective user ID:', effectiveUserId);
 
     // Get user's profile to determine their practice
