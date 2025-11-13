@@ -46,13 +46,13 @@ Deno.serve(async (req) => {
     let effectiveUserId = user.id;
     const { data: impersonationSession } = await supabase
       .from('active_impersonation_sessions')
-      .select('target_user_id')
+      .select('impersonated_user_id')
       .eq('admin_user_id', user.id)
       .eq('is_active', true)
       .maybeSingle();
 
     if (impersonationSession) {
-      effectiveUserId = impersonationSession.target_user_id;
+      effectiveUserId = impersonationSession.impersonated_user_id;
       console.log('[resolve-practice-room-join] Impersonation detected:', {
         adminUserId: user.id,
         effectiveUserId
