@@ -1,10 +1,8 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { validateApprovePendingProductRequest } from '../_shared/requestValidators.ts';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,7 +10,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAdmin = createAdminClient();
     const authHeader = req.headers.get('Authorization');
     const token = authHeader?.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token || '');
