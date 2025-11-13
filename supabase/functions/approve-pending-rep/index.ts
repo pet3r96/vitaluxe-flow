@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validatePhone, generateSecurePassword } from '../_shared/validators.ts';
 import { validateApprovePendingRepRequest } from '../_shared/requestValidators.ts';

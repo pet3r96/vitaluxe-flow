@@ -8,7 +8,7 @@
  * - Response format remains compatible
  */
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createAgoraTokens, type AgoraRole } from "../_shared/agoraTokenService.ts";
 
 const corsHeaders = {

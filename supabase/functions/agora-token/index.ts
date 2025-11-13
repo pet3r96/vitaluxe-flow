@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { Role, RtcTokenBuilder, RtmTokenBuilder } from "../_shared/agoraTokenBuilder.ts";
 
 // Agora token generation with channel normalization

@@ -1,6 +1,6 @@
 // 🔄 Lovable Cloud Auto-Deploy Trigger (Agora token function patched 2025-11-11)
 // ✅ Added validation + live health logging for faster debugging
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createAgoraTokens } from "../_shared/agoraTokenService.ts";
 
