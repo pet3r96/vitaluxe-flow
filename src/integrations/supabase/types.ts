@@ -8584,6 +8584,7 @@ export type Database = {
           channel_name: string
           connection_quality: Json | null
           created_at: string | null
+          created_by_user_id: string | null
           duration_seconds: number | null
           end_time: string | null
           id: string
@@ -8605,6 +8606,7 @@ export type Database = {
           recording_storage_cost: number | null
           recording_url: string | null
           scheduled_start_time: string
+          session_type: string | null
           status: string | null
           updated_at: string | null
         }
@@ -8615,6 +8617,7 @@ export type Database = {
           channel_name: string
           connection_quality?: Json | null
           created_at?: string | null
+          created_by_user_id?: string | null
           duration_seconds?: number | null
           end_time?: string | null
           id?: string
@@ -8636,6 +8639,7 @@ export type Database = {
           recording_storage_cost?: number | null
           recording_url?: string | null
           scheduled_start_time: string
+          session_type?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -8646,6 +8650,7 @@ export type Database = {
           channel_name?: string
           connection_quality?: Json | null
           created_at?: string | null
+          created_by_user_id?: string | null
           duration_seconds?: number | null
           end_time?: string | null
           id?: string
@@ -8667,6 +8672,7 @@ export type Database = {
           recording_storage_cost?: number | null
           recording_url?: string | null
           scheduled_start_time?: string
+          session_type?: string | null
           status?: string | null
           updated_at?: string | null
         }
