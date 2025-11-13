@@ -122,6 +122,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         ok: true,
+        appId: APP_ID,
         ...tokenPayload,
       }),
       { status: 200 },

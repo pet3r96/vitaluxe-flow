@@ -16,6 +16,7 @@ const VideoConsultationRoom = () => {
   const [rtmUid, setRtmUid] = useState<string | null>(null);
   const [channelName, setChannelName] = useState<string | null>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
+  const [appId, setAppId] = useState<string | null>(null);
 
   console.log("[PracticeVideoRoom] Session ID:", sessionId);
 
@@ -69,6 +70,7 @@ const VideoConsultationRoom = () => {
           return;
         }
 
+        setAppId(data.appId);
         setRtcToken(data.rtcToken);
         setRtmToken(data.rtmToken);
         setUid(data.uid);
@@ -118,6 +120,7 @@ const VideoConsultationRoom = () => {
 
       {/* Actual video room */}
       <AgoraVideoRoom
+        appId={appId}
         channelName={channelName!}
         rtcToken={rtcToken}
         rtmToken={rtmToken}

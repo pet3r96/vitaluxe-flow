@@ -16,6 +16,7 @@ const PatientVideoRoom = () => {
   const [rtmUid, setRtmUid] = useState<string | null>(null);
   const [channelName, setChannelName] = useState<string | null>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
+  const [appId, setAppId] = useState<string | null>(null);
 
   console.log("[PatientVideoRoom] Session ID:", sessionId);
 
@@ -64,6 +65,7 @@ const PatientVideoRoom = () => {
           return;
         }
 
+        setAppId(data.appId);
         setRtcToken(data.rtcToken);
         setRtmToken(data.rtmToken);
         setUid(data.uid);
@@ -97,7 +99,7 @@ const PatientVideoRoom = () => {
     );
   }
 
-  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid || !patientId) {
+  if (loading || !appId || !rtcToken || !rtmToken || !uid || !rtmUid || !patientId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>Joining secure patient video room…</div>
@@ -111,6 +113,7 @@ const PatientVideoRoom = () => {
       <PreCallTestPrompt sessionId={sessionId!} />
 
       <AgoraVideoRoom
+        appId={appId!}
         channelName={channelName!}
         rtcToken={rtcToken}
         rtmToken={rtmToken}

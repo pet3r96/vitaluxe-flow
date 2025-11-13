@@ -1,6 +1,7 @@
 import TelehealthRoomUnified from "./TelehealthRoomUnified";
 
 interface AgoraVideoRoomProps {
+  appId: string;
   channelName: string;
   rtcToken: string;
   rtmToken: string;
@@ -16,6 +17,7 @@ interface ExtendedAgoraVideoRoomProps extends AgoraVideoRoomProps {
 }
 
 export function AgoraVideoRoom({ 
+  appId,
   channelName, 
   rtcToken, 
   uid, 
@@ -23,7 +25,6 @@ export function AgoraVideoRoom({
   sessionId,
   patientId
 }: ExtendedAgoraVideoRoomProps) {
-  const appId = import.meta.env.VITE_AGORA_APP_ID;
   const isProvider = userType === "practice";
 
   return (
