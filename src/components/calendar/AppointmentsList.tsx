@@ -87,9 +87,9 @@ export function AppointmentsList({
 
   if (sortedGroups.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full p-8 text-center">
+      <div className="flex items-center justify-center h-full p-6 sm:p-8 text-center">
         <div className="text-muted-foreground">
-          <p className="text-sm">No appointments scheduled</p>
+          <p className="text-xs sm:text-sm">No appointments scheduled</p>
         </div>
       </div>
     );
@@ -97,10 +97,10 @@ export function AppointmentsList({
 
   return (
     <ScrollArea className="h-full">
-      <div className="space-y-6 p-4">
+      <div className="space-y-4 sm:space-y-6 p-3 sm:p-4">
         {sortedGroups.map((group: any) => (
           <div key={group.date.toISOString()}>
-            <h3 className="text-sm font-semibold text-foreground mb-3">
+            <h3 className="text-xs sm:text-sm font-semibold text-foreground mb-2 sm:mb-3 sticky top-0 bg-card/95 backdrop-blur py-1">
               {getDateLabel(group.date)}, {format(group.date, "MMMM d")}
             </h3>
             <div className="space-y-2">
@@ -115,37 +115,37 @@ export function AppointmentsList({
                     key={apt.id}
                     onClick={() => onAppointmentClick(apt)}
                     className={cn(
-                      "w-full text-left rounded-lg border bg-card hover:bg-accent/50 transition-colors p-3 space-y-2",
+                      "w-full text-left rounded-lg border bg-card hover:bg-accent/50 active:bg-accent/70 transition-colors p-2.5 sm:p-3 space-y-2 touch-manipulation",
                       selectedAppointmentId === apt.id && "ring-2 ring-primary"
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <Avatar className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0">
                         <AvatarImage src={apt.patient_accounts?.profiles?.avatar_url} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm">
                           {getPatientInitials(patientName)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm truncate">{patientName}</p>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <p className="font-medium text-xs sm:text-sm truncate">{patientName}</p>
+                          <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                         </div>
-                        <p className="text-xs text-muted-foreground">View profile</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">View profile</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">
                         {format(startTime, "h:mm a")} – {format(endTime, "h:mm a")} ({duration}m)
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                       {getAppointmentTypeBadge(apt)}
                       {apt.status === 'pending' && (
-                        <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">
                           Urgent
                         </Badge>
                       )}

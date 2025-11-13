@@ -572,3 +572,64 @@
     @apply bg-yellow-500/20 text-yellow-500 border border-yellow-500/30;
   }
 }
+
+/* Mobile and Touch Optimizations */
+@layer base {
+  /* Smooth scrolling for all scrollable elements */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Better scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+
+  /* Mobile-specific improvements */
+  @media (max-width: 768px) {
+    /* Hide scrollbar on mobile for cleaner look */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    /* Better touch targets */
+    button, 
+    a,
+    input[type="checkbox"],
+    input[type="radio"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Prevent text selection on tap */
+    .touch-manipulation {
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+  }
+
+  /* Improve text readability on mobile */
+  @media (max-width: 640px) {
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+  }
+}
+

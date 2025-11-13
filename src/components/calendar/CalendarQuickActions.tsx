@@ -16,66 +16,33 @@ export function CalendarQuickActions({
   className
 }: CalendarQuickActionsProps) {
   return (
-    <div className={cn("flex items-center gap-2 px-4 py-3 border-t bg-muted/30", className)}>
-      {/* Mobile: Horizontal Buttons */}
-      <div className="flex gap-2 w-full lg:hidden">
-        <Button
-          size="sm"
-          onClick={onNewAppointment}
-          className="flex-1"
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          <span className="hidden xs:inline">New Appointment</span>
-          <span className="xs:hidden">New</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={onWalkIn}
-          className="flex-1"
-        >
-          <Clock className="h-4 w-4 mr-1.5" />
-          <span className="hidden xs:inline">Walk-in</span>
-          <span className="xs:hidden">Walk</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onBlockTime}
-          className="flex-1"
-        >
-          <Ban className="h-4 w-4 mr-1.5" />
-          <span className="hidden xs:inline">Block Time</span>
-          <span className="xs:hidden">Block</span>
-        </Button>
-      </div>
-
-      {/* Desktop: Horizontal Buttons */}
-      <div className="hidden lg:flex gap-2">
-        <Button
-          size="sm"
-          onClick={onNewAppointment}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Appointment
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={onWalkIn}
-        >
-          <Clock className="h-4 w-4 mr-2" />
-          Walk-in
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onBlockTime}
-        >
-          <Ban className="h-4 w-4 mr-2" />
-          Block Time
-        </Button>
-      </div>
+    <div className={cn("flex items-center gap-2", className)}>
+      <Button
+        size="sm"
+        onClick={onNewAppointment}
+        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+      >
+        <Plus className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline">New Appointment</span>
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={onWalkIn}
+        className="bg-muted hover:bg-muted/80"
+      >
+        <Clock className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline">Walk-in</span>
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={onBlockTime}
+        className="hidden md:flex"
+      >
+        <Ban className="h-4 w-4 mr-2" />
+        Block Time
+      </Button>
     </div>
   );
 }

@@ -29,6 +29,7 @@ import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDi
 import { BlockTimeDialog } from "@/components/calendar/BlockTimeDialog";
 import { PrintDayDialog } from "@/components/calendar/PrintDayDialog";
 import { Menu } from "lucide-react";
+import { MobileCalendarFAB } from "@/components/calendar/MobileCalendarFAB";
 
 export default function PracticeCalendar() {
   const navigate = useNavigate();
@@ -316,44 +317,43 @@ export default function PracticeCalendar() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Compact Header */}
-        <div className="flex-none px-4 py-3 border-b bg-background">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="flex-none px-3 sm:px-4 py-2.5 sm:py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="lg:hidden"
+                className="lg:hidden flex-shrink-0 h-9 w-9"
                 onClick={() => setSidebarOpen(true)}
               >
                 <Menu className="h-5 w-5" />
               </Button>
-              <div className="flex items-center gap-4">
-                <h1 className="text-lg font-semibold">Practice Calendar</h1>
-                <div className="hidden md:flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setSettingsDialogOpen(true)}>
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setPrintDayOpen(true)}>
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
+              <h1 className="text-base sm:text-lg font-semibold truncate">Practice Calendar</h1>
+              <div className="hidden xl:flex gap-2 ml-2">
+                <Button variant="outline" size="sm" onClick={() => setSettingsDialogOpen(true)}>
+                  <Settings className="h-4 w-4 mr-1.5" />
+                  Settings
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setPrintDayOpen(true)}>
+                  <Download className="h-4 w-4 mr-1.5" />
+                  Print
+                </Button>
               </div>
             </div>
             
-            {/* Quick Actions - Inline */}
-            <div className="hidden sm:block">
-              <CalendarQuickActions
-                onNewAppointment={handleCreateAppointment}
-                onWalkIn={handleWalkInAppointment}
-                onBlockTime={() => setBlockTimeOpen(true)}
-              />
-            </div>
+            {/* Quick Actions */}
+            <CalendarQuickActions
+              onNewAppointment={handleCreateAppointment}
+              onWalkIn={handleWalkInAppointment}
+              onBlockTime={() => setBlockTimeOpen(true)}
+              className="flex-shrink-0"
+            />
           </div>
         </div>
 
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Calendar Section - Scrollable */}
-          <div className="flex-1 flex flex-col p-3 sm:p-4 overflow-y-auto min-h-0">
+          <div className="flex-1 flex flex-col p-2 sm:p-3 md:p-4 overflow-y-auto min-h-0">
             <CalendarHeader
               currentDate={currentDate}
               view={view}
@@ -363,17 +363,17 @@ export default function PracticeCalendar() {
 
             {/* Pending Appointments Alert */}
             {pendingAppointments.length > 0 && (
-              <div className="mt-4 p-3 bg-gold1/10 border border-gold1/30 rounded-lg flex items-center justify-between">
+              <div className="mt-3 p-2.5 sm:p-3 bg-gold1/10 border border-gold1/30 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-gold1" />
-                  <p className="text-sm font-medium text-gold1">
-                    You have {pendingAppointments.length} appointment request{pendingAppointments.length > 1 ? 's' : ''} awaiting review
+                  <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-gold1" />
+                  <p className="text-xs sm:text-sm font-medium text-gold1">
+                    {pendingAppointments.length} appointment request{pendingAppointments.length > 1 ? 's' : ''} awaiting review
                   </p>
                 </div>
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="border-amber-300 dark:border-amber-700"
+                  className="border-amber-300 dark:border-amber-700 w-full sm:w-auto"
                   onClick={() => navigate('/dashboard')}
                 >
                   Review Now
@@ -381,7 +381,7 @@ export default function PracticeCalendar() {
               </div>
             )}
 
-            <div className="mt-4 flex-shrink-0">
+            <div className="mt-3 sm:mt-4 flex-shrink-0">
               {view === 'week' && (
                 <WeekViewByTime
                   currentDate={currentDate}
@@ -446,7 +446,7 @@ export default function PracticeCalendar() {
           </div>
 
           {/* Stacked Panels - Always Visible at Bottom, Collapsed by Default */}
-          <div className="flex-none flex flex-col gap-3 px-3 sm:px-4 py-3 border-t bg-muted/20 max-h-[40vh] overflow-y-auto">
+          <div className="flex-none flex flex-col gap-2 sm:gap-3 px-2 sm:px-3 md:px-4 py-2 sm:py-3 border-t bg-muted/20 max-h-[35vh] sm:max-h-[40vh] overflow-y-auto">
             {/* Waiting Room Panel - Collapsed by Default */}
             <WaitingRoomPanel
               practiceId={practiceId}
@@ -530,6 +530,9 @@ export default function PracticeCalendar() {
           setCompleteDialogOpen(false);
         }}
       />
+
+      {/* Mobile FAB for Quick Appointment Creation */}
+      <MobileCalendarFAB onClick={handleCreateAppointment} />
     </div>
   );
 }

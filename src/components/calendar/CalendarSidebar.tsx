@@ -109,17 +109,17 @@ export function CalendarSidebar({
       {/* Sidebar */}
       <div 
         className={cn(
-          "fixed lg:relative inset-y-0 left-0 z-50 w-[320px] bg-card border-r flex flex-col transition-transform duration-300 lg:translate-x-0",
+          "fixed lg:relative inset-y-0 left-0 z-50 w-[300px] sm:w-[320px] bg-card border-r flex flex-col transition-transform duration-300 lg:translate-x-0 shadow-lg lg:shadow-none",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="font-semibold text-lg">My Appointments</h2>
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b bg-background/95 backdrop-blur">
+          <h2 className="font-semibold text-base sm:text-lg">My Appointments</h2>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="lg:hidden h-6 w-6"
+            className="lg:hidden h-8 w-8"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
@@ -128,9 +128,9 @@ export function CalendarSidebar({
 
         {/* Tabs for Appointments vs Filters */}
         <Tabs defaultValue="appointments" className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="mx-4 mt-4 grid w-auto grid-cols-2">
-            <TabsTrigger value="appointments">Appointments</TabsTrigger>
-            <TabsTrigger value="filters">
+          <TabsList className="mx-3 sm:mx-4 mt-3 sm:mt-4 grid w-auto grid-cols-2">
+            <TabsTrigger value="appointments" className="text-xs sm:text-sm">Appointments</TabsTrigger>
+            <TabsTrigger value="filters" className="text-xs sm:text-sm">
               <Filter className="h-3 w-3 mr-1" />
               Filters
             </TabsTrigger>
