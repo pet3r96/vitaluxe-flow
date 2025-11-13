@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeChannel } from "@/lib/video/normalizeChannel";
+import { normalizeChannelName } from "@/lib/video/normalizeChannelName";
 
 const VideoConsultationRoom = () => {
   const { sessionId } = useParams();
@@ -57,20 +57,17 @@ const VideoConsultationRoom = () => {
         console.log("[PracticeVideoRoom] Session found:", session);
         console.log('[VideoConsultationRoom] Raw channel from DB:', session?.channel_name);
         
-        const finalChannel = session?.channel_name
-          ? session.channel_name.replace(/-/g, '_').toLowerCase()
-          : normalizeChannel('appt', sessionId);
+        const normalized = normalizeChannelName(session.channel_name);
         
-        console.log('[VideoConsultationRoom] Final normalized channel:', finalChannel);
-        const fetchedChannelName = finalChannel;
-        setChannelName(fetchedChannelName);
+        console.log('[VideoConsultationRoom] Normalized channel:', normalized);
+        setChannelName(normalized);
 
         // Fetch Agora tokens
-        console.log("[PracticeVideoRoom] Fetching Agora tokens for channel:", fetchedChannelName);
+        console.log("[PracticeVideoRoom] Fetching Agora tokens for channel:", normalized);
 
         const { data, error } = await supabase.functions.invoke('agora-token', {
           body: {
-            channel: fetchedChannelName,
+            channel: normalized,
             role: "publisher",
             ttl: 3600,
           }

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
 import { DeviceTestScreen } from "@/components/video/DeviceTestScreen";
+import { normalizeChannelName } from "@/lib/video/normalizeChannelName";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle, Clock, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -54,18 +55,39 @@ export default function VideoGuestJoin() {
         // Extract session info from validated data
         const sessionId = data.sessionData?.sessionId;
         const guestUserId = `guest_${token.substring(0, 8)}`;
-        const channelName = sessionId ? `vlx_${sessionId.replace(/-/g, '_')}` : '';
+        
+        // Fetch channel name from database
+        console.log("[GuestJoin] Fetching video session for sessionId:", sessionId);
+        const { data: session, error: dbError } = await supabase
+          .from("video_sessions")
+          .select("channel_name")
+          .eq("id", sessionId)
+          .single();
+
+        if (dbError || !session) {
+          console.error("[GuestJoin] Error fetching session:", dbError);
+          setError({
+            type: 'error',
+            message: 'Video session not found',
+          });
+          setLoading(false);
+          return;
+        }
+
+        console.log("[GuestJoin] DB Channel:", session.channel_name);
+        const normalized = normalizeChannelName(session.channel_name);
+        console.log("[GuestJoin] Normalized Channel:", normalized);
 
         setGuestData({
           userId: guestUserId,
           sessionId,
-          channelName,
+          channelName: normalized,
         });
 
         // Fetch Agora tokens
         const { data: tokenData, error: tokenError } = await supabase.functions.invoke('agora-token', {
           body: {
-            channel: channelName,
+            channel: normalized,
             role: "subscriber",
             ttl: 3600,
           }
