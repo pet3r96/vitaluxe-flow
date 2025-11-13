@@ -7,6 +7,7 @@ const VideoConsultationRoom = () => {
   const { sessionId } = useParams();
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [rtcToken, setRtcToken] = useState<string | null>(null);
   const [rtmToken, setRtmToken] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
@@ -38,7 +39,17 @@ const VideoConsultationRoom = () => {
         if (!isMounted) return;
 
         if (sessionError || !session) {
-          console.error("[PracticeVideoRoom] Session fetch error:", sessionError);
+          const errorMsg = sessionError 
+            ? `Database error: ${sessionError.message} (Code: ${sessionError.code})`
+            : 'Session not found';
+          console.error("[PracticeVideoRoom] Session fetch error:", {
+            error: sessionError,
+            errorMessage: sessionError?.message,
+            errorCode: sessionError?.code,
+            errorDetails: sessionError?.details,
+            sessionId
+          });
+          setError(errorMsg);
           return;
         }
 
@@ -62,7 +73,15 @@ const VideoConsultationRoom = () => {
         if (!isMounted) return;
 
         if (error || !data) {
-          console.error("[PracticeVideoRoom] Token error:", error);
+          const errorMsg = error 
+            ? `Token generation failed: ${error.message}`
+            : 'No token data received';
+          console.error("[PracticeVideoRoom] Token error:", {
+            error,
+            errorMessage: error?.message,
+            data
+          });
+          setError(errorMsg);
           return;
         }
 
@@ -71,7 +90,13 @@ const VideoConsultationRoom = () => {
         setUid(data.uid);
         setRtmUid(data.rtmUid);
       } catch (err) {
-        console.error("[PracticeVideoRoom] Initialization failed:", err);
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
+        console.error("[PracticeVideoRoom] Initialization failed:", {
+          error: err,
+          message: errorMsg,
+          stack: err instanceof Error ? err.stack : undefined
+        });
+        setError(errorMsg);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -83,6 +108,21 @@ const VideoConsultationRoom = () => {
       isMounted = false;
     };
   }, [sessionId]);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
+        <div className="text-destructive text-lg font-semibold">Failed to Join Video Session</div>
+        <div className="text-muted-foreground text-sm max-w-md text-center">{error}</div>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   if (loading || !rtcToken || !rtmToken || !uid || !rtmUid) {
     return (
