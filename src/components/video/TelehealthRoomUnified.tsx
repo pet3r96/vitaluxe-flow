@@ -90,6 +90,13 @@ export default function TelehealthRoomUnified({
   // REALTIME: SESSION EVENT SUBSCRIPTIONS
   // -------------------------------------------------------------------------
   useEffect(() => {
+    console.log("🔄 [Realtime] Setting up subscription", {
+      sessionId,
+      uid,
+      isProvider,
+      channel: `video-${sessionId}`
+    });
+
     const channelSub = supabase
       .channel(`video-${sessionId}`)
       .on(
@@ -101,28 +108,37 @@ export default function TelehealthRoomUnified({
           filter: `session_id=eq.${sessionId}`,
         },
         (payload) => {
+          console.log("📩 [Realtime] Event received:", payload);
           const { event_type, user_uid } = payload.new as any;
 
           // Provider: Listen for patients joining waiting room
           if (isProvider && event_type === "patient_waiting") {
-            setWaitingPatients((prev) =>
-              prev.find((p) => p.uid === user_uid)
-                ? prev
-                : [...prev, { uid: user_uid }]
-            );
+            console.log("👤 [Provider] Patient joined waiting room:", user_uid);
+            setWaitingPatients((prev) => {
+              const exists = prev.find((p) => p.uid === user_uid);
+              if (exists) {
+                console.log("⚠️ [Provider] Patient already in list:", user_uid);
+                return prev;
+              }
+              console.log("✅ [Provider] Adding patient to waiting list:", user_uid);
+              return [...prev, { uid: user_uid }];
+            });
           }
 
           // Patient: Listen for admission event
           if (!isProvider && event_type === "patient_admitted" && user_uid === String(uid)) {
-            console.log("[Patient] Admitted by provider");
+            console.log("🎉 [Patient] Admitted by provider!");
             setPatientAdmitted(true);
             setWaitingRoom(false);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("📡 [Realtime] Subscription status:", status);
+      });
 
     return () => {
+      console.log("🔌 [Realtime] Cleaning up subscription");
       supabase.removeChannel(channelSub);
     };
   }, [sessionId, uid, isProvider]);
@@ -284,9 +300,14 @@ export default function TelehealthRoomUnified({
   };
 
   const admitPatient = async (patientUid: string) => {
-    console.log("[Provider] Admitting patient:", patientUid);
-    await emitEvent(sessionId, "patient_admitted", patientUid);
-    setWaitingPatients((prev) => prev.filter((p) => p.uid !== patientUid));
+    console.log("✅ [Provider] Admitting patient:", patientUid);
+    try {
+      await emitEvent(sessionId, "patient_admitted", patientUid);
+      console.log("📤 [Provider] Admission event sent successfully");
+      setWaitingPatients((prev) => prev.filter((p) => p.uid !== patientUid));
+    } catch (error) {
+      console.error("❌ [Provider] Failed to admit patient:", error);
+    }
   };
 
   const formatTime = (sec: number) => {
