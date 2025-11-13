@@ -17,7 +17,7 @@ export async function createInstantMeeting(
   providerId: string
 ): Promise<InstantMeetingResult> {
   // Generate unique channel ID
-  const channelId = normalizeChannel('instant', crypto.randomUUID());
+  const channelId = normalizeChannel(`instant_${crypto.randomUUID()}`);
   
   console.log('[createInstantMeeting] Creating instant meeting:', {
     channelId,

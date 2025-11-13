@@ -187,7 +187,7 @@ export function CreateAppointmentDialog({
 
       // If this is a video appointment, create video session
       if (values.visitType === 'video') {
-        const channelName = normalizeChannel('appt', data.id);
+        const channelName = normalizeChannel(`appt_${data.id}`);
         
         console.log('[CreateAppointmentDialog] Creating video session:', {
           appointmentId: data.id,
