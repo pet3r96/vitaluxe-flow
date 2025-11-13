@@ -11,35 +11,26 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const startTime = Date.now();
     const authHeader = req.headers.get('Authorization');
     
     if (!authHeader) {
-      console.error('❌ [generate-video-guest-link] No auth header. Duration:', Date.now() - startTime, 'ms');
+      console.error('❌ [generate-video-guest-link] No auth header');
       return new Response(
         JSON.stringify({ error: 'Unauthorized: missing auth header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const jwt = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : authHeader;
+    // Use service role client for all operations (including impersonation checks)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    // Use anon client for auth check with Authorization header
-    const supabaseAuth = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseAuth.auth.getUser(jwt);
-
+    // Verify authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
     if (authError || !user) {
       console.error('❌ [generate-video-guest-link] Auth failed:', authError);
       return new Response(
@@ -49,12 +40,6 @@ Deno.serve(async (req) => {
     }
 
     console.log('✅ [generate-video-guest-link] Authenticated user:', user.id);
-
-    // Use service role client for database operations (bypass RLS)
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
 
     const { sessionId, expirationHours = 1, guestName } = await req.json(); // Default 1 hour
 
@@ -66,7 +51,7 @@ Deno.serve(async (req) => {
     }
 
     // Check for active impersonation session
-    const { data: impersonationData } = await supabaseClient
+    const { data: impersonationData } = await supabase
       .from('active_impersonation_sessions')
       .select('target_user_id')
       .eq('admin_user_id', user.id)
@@ -78,7 +63,7 @@ Deno.serve(async (req) => {
     console.log('Generating guest link for session:', sessionId, 'by user:', effectiveUserId);
 
     // Verify user has access to this session
-    const { data: session, error: sessionError } = await supabaseClient
+    const { data: session, error: sessionError } = await supabase
       .from('video_sessions')
       .select('id, practice_id, provider_id, patient_id, status')
       .eq('id', sessionId)
@@ -93,14 +78,14 @@ Deno.serve(async (req) => {
 
     // Check if user is authorized (provider, staff, or practice owner)
     const isPracticeOwner = session.practice_id === effectiveUserId;
-    const { data: provider } = await supabaseClient
+    const { data: provider } = await supabase
       .from('providers')
       .select('id')
       .eq('user_id', effectiveUserId)
       .eq('practice_id', session.practice_id)
       .maybeSingle();
 
-    const { data: staff } = await supabaseClient
+    const { data: staff } = await supabase
       .from('practice_staff')
       .select('id')
       .eq('user_id', effectiveUserId)
@@ -127,7 +112,7 @@ Deno.serve(async (req) => {
     expiresAt.setHours(expiresAt.getHours() + expiryHours);
 
     // Generate guest token using DB function
-    const { data: tokenData, error: tokenGenError } = await supabaseClient
+    const { data: tokenData, error: tokenGenError } = await supabase
       .rpc('generate_guest_token');
 
     if (tokenGenError || !tokenData) {
@@ -139,7 +124,7 @@ Deno.serve(async (req) => {
     }
 
     // Insert guest token
-    const { data: guestLink, error: insertError } = await supabaseClient
+    const { data: guestLink, error: insertError } = await supabase
       .from('video_guest_tokens')
       .insert({
         session_id: sessionId,
