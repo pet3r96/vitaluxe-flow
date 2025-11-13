@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
     let sessionQuery = supabaseAdmin
       .from('video_sessions')
       .select('*')
-      .in('status', ['live', 'scheduled'])
+      .in('status', ['live', 'scheduled', 'waiting', 'active', 'created'])
       .order('created_at', { ascending: false });
 
     // Filter based on role
