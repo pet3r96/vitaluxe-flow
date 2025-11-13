@@ -8,12 +8,6 @@ const corsHeaders = {
 };
 
 
-//redeploy trigger: 
---- a/supabase/functions/agora-token/index.ts
-+++ b/supabase/functions/agora-token/index.ts
-@@
-+// redeploy-trigger: forcing latest build after bundle timeout
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
