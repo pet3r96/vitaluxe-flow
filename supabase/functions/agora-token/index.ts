@@ -1,74 +1,140 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { Role, RtcTokenBuilder, RtmTokenBuilder } from "../_shared/agoraTokenBuilder.ts";
+// supabase/functions/agora-token/index.ts
+// --------------------------------------------------------
+// VITALUXE — AGORA TOKEN SERVICE (FULL PATCHED VERSION)
+// --------------------------------------------------------
 
-// Agora token generation with channel normalization
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import {
+  serve,
+} from "https://deno.land/std@0.177.0/http/server.ts";
 
+import {
+  RtcRole,
+  RtcTokenBuilder,
+  RtmRole,
+  RtmTokenBuilder,
+} from "https://esm.sh/agora-token@2.0.4";
 
+// --------------------------------------------------------
+// 1. Central Channel Normalizer
+//    (MUST match frontend normalizeChannel.ts 1:1)
+// --------------------------------------------------------
+function normalizeChannel(raw: string): string {
+  if (!raw) return "vlx_invalid";
+
+  const cleaned = raw.toLowerCase().replace(/[^a-z0-9]/g, "_");
+
+  if (cleaned.startsWith("vlx_")) return cleaned;
+
+  return `vlx_${cleaned}`;
+}
+
+// --------------------------------------------------------
+// 2. Secrets (App ID + Certificate)
+// --------------------------------------------------------
+const APP_ID = Deno.env.get("AGORA_APP_ID");
+const APP_CERT = Deno.env.get("AGORA_APP_CERTIFICATE");
+
+// --------------------------------------------------------
+// 3. Token Generator
+// --------------------------------------------------------
+function generateTokens(channel: string, uid: string, role: "publisher" | "subscriber") {
+  const expirationSeconds = 3600;
+  const current = Math.floor(Date.now() / 1000);
+  const expireAt = current + expirationSeconds;
+
+  const rtcRole = role === "publisher" ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
+  const rtmRole = RtmRole.Rtm_User;
+
+  const rtcToken = RtcTokenBuilder.buildTokenWithUid(
+    APP_ID,
+    APP_CERT,
+    channel,
+    Number(uid),
+    rtcRole,
+    expireAt,
+  );
+
+  const rtmToken = RtmTokenBuilder.buildToken(
+    APP_ID,
+    APP_CERT,
+    `rtm_${uid}`,
+    rtmRole,
+    expireAt,
+  );
+
+  return {
+    rtcToken,
+    rtmToken,
+    uid,
+    rtmUid: `rtm_${uid}`,
+    ttl: expirationSeconds,
+    expiresAt: new Date(expireAt * 1000).toISOString(),
+  };
+}
+
+// --------------------------------------------------------
+// 4. Main Handler
+// --------------------------------------------------------
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  const url = new URL(req.url);
-
-  // Health check endpoint
-  if (url.pathname.endsWith("/health")) {
-    return new Response(JSON.stringify({ ok: true, status: "healthy", service: "agora-token" }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
   try {
+    // Parse request body
     const body = await req.json();
-    const rawChannel = body.channel;
-    const channel = rawChannel.replace(/-/g, "_").toLowerCase();
-    const role = body.role || "subscriber";
-    const ttl = body.ttl || 3600;
 
-    console.log("[Edge] Token request received:", { rawChannel, channel, role });
-    console.log("AGORA TOKEN CHANNEL (normalized):", channel);
+    const rawChannel = body.channel || "";
+    const role = body.role || "publisher";
+    const uid = body.uid || Math.floor(Math.random() * 9_000_000 + 1_000_000).toString();
 
-    if (!channel || typeof channel !== "string" || !channel.trim()) {
-      return new Response(JSON.stringify({ ok: false, error: "Invalid or missing channel name." }), { status: 400 });
+    // ----------------------------------------------------
+    // Normalize channel BEFORE token generation
+    // ----------------------------------------------------
+    const channel = normalizeChannel(rawChannel);
+
+    // ----------------------------------------------------
+    // DEBUG LOGGING (appears in Supabase Edge Logs)
+    // ----------------------------------------------------
+    console.log("[AGORA TOKEN] Incoming request:", {
+      rawChannel,
+      normalizedChannel: channel,
+      role,
+      uid,
+    });
+
+    // Missing App ID / Cert error
+    if (!APP_ID || !APP_CERT) {
+      console.error("[AGORA TOKEN ERROR] Missing Agora credentials.");
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Missing AGORA_APP_ID or AGORA_APP_CERTIFICATE",
+        }),
+        { status: 500 },
+      );
     }
 
-    const appId = Deno.env.get("AGORA_APP_ID");
-    const appCert = Deno.env.get("AGORA_APP_CERTIFICATE");
+    // Generate tokens
+    const tokenPayload = generateTokens(channel, uid, role);
 
-    const uid = Math.floor(Math.random() * 99999999).toString();
-    const rtmUid = `rtm_${uid}`;
-
-    const rtcRole = role === "publisher" ? Role.PUBLISHER : Role.SUBSCRIBER;
-
-    const expire = ttl;
-
-    const rtcToken = await RtcTokenBuilder.buildTokenWithUid(appId, appCert, channel, uid, rtcRole, expire, expire);
-
-    const rtmToken = await RtmTokenBuilder.buildToken(appId, appCert, rtmUid, expire);
+    console.log("[AGORA TOKEN] Tokens generated OK for:", {
+      normalizedChannel: channel,
+      uid: tokenPayload.uid,
+    });
 
     return new Response(
       JSON.stringify({
         ok: true,
-        rtcToken,
-        rtmToken,
-        uid,
-        rtmUid,
-        ttl,
-        expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
+        ...tokenPayload,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 200 },
     );
   } catch (err) {
-    console.error("[Edge] ERROR:", err);
-    return new Response(JSON.stringify({ ok: false, error: "Internal error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[AGORA TOKEN] ERROR:", err);
+
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: err?.message || "Unknown error",
+      }),
+      { status: 500 },
+    );
   }
 });
