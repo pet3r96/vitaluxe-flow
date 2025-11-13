@@ -34,7 +34,7 @@ export function WaitingRoomPanel({
   onAppointmentClick,
   currentDate,
 }: WaitingRoomPanelProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const queryClient = useQueryClient();
 
   // Fetch video sessions (real sessions with video_sessions records)

@@ -33,7 +33,7 @@ export function BeingTreatedPanel({
   onAppointmentClick,
   currentDate,
 }: BeingTreatedPanelProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const startOfDay = new Date(currentDate);
   startOfDay.setHours(0, 0, 0, 0);

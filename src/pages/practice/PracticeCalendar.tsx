@@ -445,9 +445,9 @@ export default function PracticeCalendar() {
             </div>
           </div>
 
-          {/* Stacked Panels - Always Visible at Bottom */}
-          <div className="flex-none flex flex-col gap-3 px-3 sm:px-4 py-3 border-t bg-muted/20">
-            {/* Waiting Room Panel - Compact */}
+          {/* Stacked Panels - Always Visible at Bottom, Collapsed by Default */}
+          <div className="flex-none flex flex-col gap-3 px-3 sm:px-4 py-3 border-t bg-muted/20 max-h-[40vh] overflow-y-auto">
+            {/* Waiting Room Panel - Collapsed by Default */}
             <WaitingRoomPanel
               practiceId={practiceId}
               providers={providers}
@@ -455,7 +455,7 @@ export default function PracticeCalendar() {
               currentDate={currentDate}
             />
 
-            {/* Being Treated Panel - Compact */}
+            {/* Being Treated Panel - Collapsed by Default */}
             <BeingTreatedPanel
               practiceId={practiceId}
               providers={providers}
