@@ -27,10 +27,7 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     
     // Create admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseAdmin = createAdminClient();
 
     // Verify caller
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);

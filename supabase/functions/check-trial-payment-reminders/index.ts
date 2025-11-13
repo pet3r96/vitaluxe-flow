@@ -12,10 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabaseClient = createAdminClient();
 
     const now = new Date();
     const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);

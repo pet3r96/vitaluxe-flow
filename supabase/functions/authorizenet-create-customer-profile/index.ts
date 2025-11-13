@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,15 +39,7 @@ Deno.serve(async (req) => {
   try {
     const requestData: CreateProfileRequest = await req.json();
     
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
+    const supabase = createAuthClient(req.headers.get('Authorization'));
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
