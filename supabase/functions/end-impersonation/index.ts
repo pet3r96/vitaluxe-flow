@@ -1,9 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
+import { corsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -16,35 +13,17 @@ Deno.serve(async (req) => {
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
     
     if (!token) {
-      return new Response(
-        JSON.stringify({ error: 'Missing or invalid authorization token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Missing or invalid authorization token', 401);
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
+    const db = createAuthClient(authHeader);
 
     // Verify user is authenticated using the raw JWT token
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: userError } = await db.auth.getUser(token);
     if (userError || !user) {
       console.error('[end-impersonation] Authentication failed:', userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Unauthorized', 401);
     }
-
-    // Create authenticated DB client for RLS-compliant queries
-    const db = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: { headers: { Authorization: `Bearer ${token}` } }
-      }
-    );
 
     console.log('[end-impersonation] Request from admin:', user.id);
 
@@ -101,16 +80,10 @@ Deno.serve(async (req) => {
 
     console.log('[end-impersonation] Success');
 
-    return new Response(
-      JSON.stringify({ success: true }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return successResponse({});
 
   } catch (error) {
     console.error('[end-impersonation] Unexpected error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse('Internal server error', 500);
   }
 });

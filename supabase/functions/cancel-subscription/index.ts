@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
+import { corsHeaders } from '../_shared/cors.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,16 +9,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const supabaseAdmin = createAdminClient();
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -32,10 +20,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Unauthorized', 401);
     }
 
     const { reason, feedback } = await req.json();
@@ -104,20 +89,13 @@ serve(async (req) => {
 
     console.log(`Subscription cancelled for user ${user.id} (${profile?.email})`);
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Subscription cancelled successfully',
-        cancelled_at: new Date().toISOString(),
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return successResponse({ 
+      message: 'Subscription cancelled successfully',
+      cancelled_at: new Date().toISOString(),
+    });
 
   } catch (error) {
     console.error('Error in cancel-subscription:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse(error instanceof Error ? error.message : String(error), 500);
   }
 });

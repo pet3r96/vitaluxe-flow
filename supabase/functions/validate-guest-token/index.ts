@@ -3,7 +3,8 @@
 // Validates guest access token and returns session info
 // ============================================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { RtcTokenBuilder, RtcRole } from 'https://esm.sh/agora-token@2.0.4';
 
 const corsHeaders = {
@@ -25,9 +26,7 @@ Deno.serve(async (req) => {
     console.log('[validate-guest-token] Request received');
 
     // Get Supabase client (use service role for guest validation)
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createAdminClient();
 
     // Parse request
     const { token }: ValidateTokenRequest = await req.json();
