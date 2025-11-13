@@ -68,7 +68,7 @@ export default function Cart() {
 
   // Staff without ordering privileges cannot access cart - compute flags only (avoid early return before hooks)
   const showStaffLoading = checkingPrivileges && isStaffAccount;
-  const showStaffNoAccess = isStaffAccount && !canOrder;
+  const showStaffNoAccess = isStaffAccount && !canOrder && !checkingPrivileges;
 
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", effectiveUserId],
@@ -102,7 +102,7 @@ export default function Cart() {
 
       return { id: cartData.id, lines: lines || [] };
     },
-    enabled: !!effectiveUserId,
+    enabled: !!effectiveUserId && !showStaffLoading,
     staleTime: 0, // Always fresh - we rely on realtime updates
     refetchOnMount: true,
     refetchOnWindowFocus: true,

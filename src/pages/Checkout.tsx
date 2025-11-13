@@ -236,6 +236,27 @@ export default function Checkout() {
     enabled: !!practiceIdForShipping,
   });
 
+  // Fetch staff user's provider record for provider_id (needed for RLS on order_lines)
+  const { data: staffProviderRecord } = useQuery({
+    queryKey: ["staff-provider-record", effectiveUserId],
+    queryFn: async () => {
+      if (!isStaffAccount) return null;
+      
+      const { data, error } = await supabase
+        .from("providers")
+        .select("id, user_id, practice_id, role_type, can_order")
+        .eq("user_id", effectiveUserId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching staff provider record:", error);
+        return null;
+      }
+      return data;
+    },
+    enabled: isStaffAccount && !!effectiveUserId,
+  });
+
   // Fetch payment methods (credit cards only) - include both practice and personal cards for staff
   const { data: paymentMethods } = useQuery({
     queryKey: ["payment-methods", practiceIdForPayment, user?.id],
@@ -534,6 +555,12 @@ export default function Checkout() {
           
           // Create ONE order_line for this order
           const discountedPrice = line.price_snapshot * (1 - discountPercentage / 100);
+          
+          // For staff users, use their provider_id from the staff provider record
+          const providerIdForOrderLine = isStaffAccount && staffProviderRecord?.id 
+            ? staffProviderRecord.id 
+            : line.provider_id;
+          
           const orderLine = {
             order_id: practiceOrder.id,
             product_id: line.product_id,
@@ -551,7 +578,7 @@ export default function Checkout() {
             patient_address: line.patient_address,
             gender_at_birth: line.gender_at_birth || null,
             prescription_url: line.prescription_url,
-            provider_id: line.provider_id,
+            provider_id: providerIdForOrderLine,
             assigned_pharmacy_id: assignedPharmacyId,
             destination_state: destinationState,
             status: "pending" as const,
@@ -640,6 +667,12 @@ export default function Checkout() {
           
           // Create ONE order_line for this order
           const discountedPrice = line.price_snapshot * (1 - discountPercentage / 100);
+          
+          // For staff users, use their provider_id from the staff provider record
+          const providerIdForOrderLine = isStaffAccount && staffProviderRecord?.id 
+            ? staffProviderRecord.id 
+            : line.provider_id;
+          
           const orderLine = {
             order_id: patientOrder.id,
             product_id: line.product_id,
@@ -657,7 +690,7 @@ export default function Checkout() {
             patient_address: line.patient_address,
             gender_at_birth: line.gender_at_birth || null,
             prescription_url: line.prescription_url,
-            provider_id: line.provider_id,
+            provider_id: providerIdForOrderLine,
             assigned_pharmacy_id: assignedPharmacyId,
             destination_state: destinationState,
             status: "pending" as const,
