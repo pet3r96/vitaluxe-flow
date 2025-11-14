@@ -19,79 +19,98 @@ export function TabbedCommunicationsWidget() {
   const { user, effectiveRole, effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
 
-  // Unread Patient Messages Query
+  // Optimized: Count only initially, lazy-load subjects
   const { data: unreadMessages } = useQuery({
     queryKey: ["unread-patient-messages-dashboard", user?.id, effectivePracticeId],
     queryFn: async () => {
       if (!user?.id || !effectivePracticeId) return { count: 0, subjects: [] };
       
       try {
+        // First: Get count only (fast)
+        const { count, error: countError } = await supabase
+          .from("patient_messages")
+          .select('*', { count: 'exact', head: true })
+          .eq("practice_id", effectivePracticeId)
+          .eq("sender_type", "patient")
+          .is("read_at", null)
+          .eq("resolved", false);
+
+        if (countError) throw countError;
+
+        // If count is 0, skip fetching subjects
+        if (!count || count === 0) {
+          return { count: 0, subjects: [] };
+        }
+
+        // Second: Fetch minimal data for preview (only top 5)
         const { data: messages, error } = await supabase
           .from("patient_messages")
           .select(`
             id,
             thread_id,
             subject,
-            message_body,
-            created_at,
-            sender_type,
             patient:patient_accounts(first_name, last_name)
           `)
           .eq("practice_id", effectivePracticeId)
           .eq("sender_type", "patient")
           .is("read_at", null)
           .eq("resolved", false)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(5);
 
         if (error) throw error;
 
-        const threadsMap = new Map();
-        (messages || []).forEach((msg: any) => {
-          const threadId = msg.thread_id || msg.id;
-          if (!threadsMap.has(threadId)) {
-            threadsMap.set(threadId, msg);
-          }
+        const subjects = (messages || []).map((msg: any) => {
+          const patientName = msg.patient 
+            ? `${msg.patient.first_name} ${msg.patient.last_name}`
+            : 'Unknown Patient';
+          return `${msg.subject} - ${patientName}`;
         });
 
-        const uniqueThreads = Array.from(threadsMap.values());
-
-        return {
-          count: uniqueThreads.length,
-          subjects: uniqueThreads.slice(0, 5).map((msg: any) => {
-            const patientName = msg.patient 
-              ? `${msg.patient.first_name} ${msg.patient.last_name}`
-              : 'Unknown Patient';
-            return `${msg.subject} - ${patientName}`;
-          })
-        };
+        return { count: count || 0, subjects };
       } catch (error) {
         console.error("Failed to fetch patient messages:", error);
         return { count: 0, subjects: [] };
       }
     },
-    staleTime: 60000,
-    // Removed refetchInterval - using realtime instead
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
-  // Unread Internal Chat Query
+  // Optimized: Count only for badge
   const { data: unreadInternalChat } = useQuery({
     queryKey: ["unread-internal-chat", user?.id, effectiveRole, effectivePracticeId],
     queryFn: async () => {
       if (!user?.id || !effectivePracticeId) return { count: 0, senders: [] };
 
       try {
+        // First: Get count only (fast)
+        const { count, error: countError } = await supabase
+          .from("internal_messages")
+          .select('*', { count: 'exact', head: true })
+          .eq("practice_id", effectivePracticeId)
+          .eq("completed", false)
+          .neq("created_by", user.id);
+
+        if (countError) throw countError;
+
+        if (!count || count === 0) {
+          return { count: 0, senders: [] };
+        }
+
+        // Second: Fetch minimal preview data (only top 3)
         const { data: messages, error } = await supabase
           .from("internal_messages")
-          .select("id, subject, created_by, completed")
+          .select("id, subject, created_by")
           .eq("practice_id", effectivePracticeId)
           .eq("completed", false)
           .neq("created_by", user.id)
           .order("created_at", { ascending: false })
-          .limit(5);
+          .limit(3);
 
         if (error) throw error;
         if (!messages || messages.length === 0) {
-          return { count: 0, senders: [] };
+          return { count: count || 0, senders: [] };
         }
 
         const creatorIds = [...new Set(messages.map(m => m.created_by))];

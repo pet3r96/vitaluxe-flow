@@ -17,29 +17,50 @@ export function WaitingRoomWidget() {
   const queryClient = useQueryClient();
   const [selectedPatient, setSelectedPatient] = useState<{ id: string; name: string } | null>(null);
 
-  const { data: waitingPatients, isLoading } = useQuery({
-    queryKey: ["waiting-room-dashboard", effectivePracticeId],
+  // Optimized: Count only for badge, fetch details on expand
+  const { data: waitingCount, isLoading } = useQuery({
+    queryKey: ["waiting-room-count", effectivePracticeId],
     queryFn: async () => {
-      if (!effectivePracticeId) return [];
-
-      const { data, error } = await supabase
+      if (!effectivePracticeId) return { count: 0, patients: [] };
+      
+      // Count query (fast)
+      const { count, error: countError } = await supabase
         .from("patient_appointments")
-        .select(`
-          id,
-          checked_in_at,
-          patient:patient_accounts(id, first_name, last_name)
-        `)
+        .select('*', { count: 'exact', head: true })
         .eq("practice_id", effectivePracticeId)
-        .eq("status", "checked_in")
-        .order("checked_in_at", { ascending: true })
-        .limit(5);
+        .eq("status", "checked_in");
 
-      if (error) throw error;
-      return (data || []) as any[];
+      if (countError) {
+        console.error("Error counting waiting patients:", countError);
+        return { count: 0, patients: [] };
+      }
+
+      // Only fetch details for display (top 5)
+      if (count && count > 0) {
+        const { data: patients, error } = await supabase
+          .from("patient_appointments")
+          .select(`
+            id,
+            checked_in_at,
+            patient:patient_accounts(id, first_name, last_name)
+          `)
+          .eq("practice_id", effectivePracticeId)
+          .eq("status", "checked_in")
+          .order("checked_in_at", { ascending: true })
+          .limit(5);
+
+        if (error) throw error;
+        return { count: count || 0, patients: (patients || []) as any[] };
+      }
+
+      return { count: 0, patients: [] };
     },
-    staleTime: 30000, // 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
     enabled: !!effectivePracticeId,
   });
+
+  const waitingPatients = waitingCount?.patients || [];
 
   // Real-time subscription for instant updates
   useEffect(() => {
@@ -103,9 +124,9 @@ export function WaitingRoomWidget() {
               <Clock className="h-5 w-5" />
               Waiting Room
             </CardTitle>
-            {!isLoading && waitingPatients && waitingPatients.length > 0 && (
+            {!isLoading && waitingCount && waitingCount.count > 0 && (
               <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
-                {waitingPatients.length}
+                {waitingCount.count}
               </div>
             )}
           </div>
