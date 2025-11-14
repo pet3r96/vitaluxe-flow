@@ -98,27 +98,10 @@ Deno.serve(async (req) => {
     }
 
     // Apply filters (ignore provider filters if provider-scoped)
-    // Filter providers to only actual providers (not staff) to avoid zero results
+    // Accept both provider and staff IDs for calendar filtering
     if (!isProviderScoped && providers && providers.length > 0) {
-      console.log('[get-calendar-data] Provider filter requested:', providers);
-      
-      // Fetch provider records to verify they're actual providers
-      const { data: providerRecords } = await supabaseClient
-        .from('providers')
-        .select('id, role_type')
-        .in('id', providers);
-      
-      const validProviderIds = providerRecords
-        ?.filter(p => p.role_type === 'provider')
-        .map(p => p.id) || [];
-      
-      console.log('[get-calendar-data] Valid provider IDs after filtering:', validProviderIds);
-      
-      if (validProviderIds.length > 0) {
-        query = query.in('provider_id', validProviderIds);
-      } else {
-        console.warn('[get-calendar-data] No valid provider IDs after filtering - showing all providers');
-      }
+      console.log('[get-calendar-data] Provider/staff filter requested:', providers);
+      query = query.in('provider_id', providers);
     }
 
     if (rooms && rooms.length > 0) {
