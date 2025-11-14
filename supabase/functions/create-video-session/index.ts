@@ -173,6 +173,10 @@ Deno.serve(async (req) => {
       appCertificate,
       channelName,
       uid,
+      Role.PUBLISHER,
+      ttl,
+      ttl
+    );
       RtcRole.PUBLISHER,
       Math.floor(Date.now() / 1000) + ttl
     );
@@ -203,8 +207,9 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error('[create-video-session] Unexpected error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ error: 'Internal server error', details: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

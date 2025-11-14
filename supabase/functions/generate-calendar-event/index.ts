@@ -37,15 +37,16 @@ Deno.serve(async (req) => {
       return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     };
 
-    const practiceName = appointment.practice?.full_name || appointment.practice?.name || 'Healthcare Practice';
+    const practice = Array.isArray(appointment.practice) ? appointment.practice[0] : appointment.practice;
+    const practiceName = practice?.full_name || practice?.name || 'Healthcare Practice';
     const providerName = 'Provider';
     
     // Build address safely with fallback
     const addressParts = [
-      appointment.practice?.address_street,
-      appointment.practice?.address_city,
-      appointment.practice?.address_state,
-      appointment.practice?.address_zip
+      practice?.address_street,
+      practice?.address_city,
+      practice?.address_state,
+      practice?.address_zip
     ].filter(Boolean);
     
     const location = appointment.visit_type === 'video' 
