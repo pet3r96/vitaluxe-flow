@@ -304,16 +304,28 @@ export const RepPracticesDataTable = () => {
     if (expected > currentLinks && !autoHealAttempted.current && !isRepairing) {
       autoHealAttempted.current = true;
       console.log(`Auto-healing: Expected ${expected} practices but found ${currentLinks} links. Running backfill...`);
+      
+      // Show user-friendly message instead of error
+      toast.info(`Syncing your practices (${expected} expected, ${currentLinks} found)...`, {
+        duration: 3000,
+      });
+      
+      setIsRepairing(true);
 
       supabase.functions.invoke('backfill-rep-links')
         .then(({ data, error }) => {
           if (error) {
             console.error('Auto-heal backfill failed:', error);
+            toast.error('Failed to sync practices. Please try refreshing.');
           } else {
             console.log('Auto-heal backfill succeeded:', data);
+            toast.success('Practices synced successfully');
             queryClient.invalidateQueries({ queryKey: ['rep-practices'] });
             queryClient.invalidateQueries({ queryKey: ['rep-practice-stats'] });
           }
+        })
+        .finally(() => {
+          setIsRepairing(false);
         });
     }
   }, [practices?.length, expectedCount, isRepairing, queryClient]);

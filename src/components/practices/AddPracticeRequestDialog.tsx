@@ -105,7 +105,7 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
           address_state: formData.address_state || null,
           address_zip: formData.address_zip || null,
           address_formatted: formData.address_formatted || null,
-          assigned_rep_user_id: null,
+          assigned_rep_user_id: (effectiveRole === 'topline' || effectiveRole === 'downline') ? effectiveUserId : null,
           company: formData.practice_name,
           created_by_role: (effectiveRole === 'admin' || effectiveRole === 'doctor' || effectiveRole === 'topline' || effectiveRole === 'downline') ? effectiveRole : 'admin',
           prescriber_full_name: "",
