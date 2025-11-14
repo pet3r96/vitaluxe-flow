@@ -358,7 +358,7 @@ export default function Cart() {
                           </span>
                         </div>
                       )}
-                      {line.provider?.profiles && (
+                      {line.provider?.profiles?.name && (
                         <p className="text-xs sm:text-sm">
                           <span className="font-medium">Provider:</span> {line.provider.profiles.name}
                         </p>
