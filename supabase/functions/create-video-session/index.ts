@@ -174,6 +174,7 @@ Deno.serve(async (req) => {
       channelName,
       uid,
       RtcRole.PUBLISHER,
+      Math.floor(Date.now() / 1000) + ttl,
       Math.floor(Date.now() / 1000) + ttl
     );
 
