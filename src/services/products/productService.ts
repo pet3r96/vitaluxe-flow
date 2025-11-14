@@ -35,7 +35,7 @@ export async function fetchProducts(params: ProductQueryParams) {
       { p_effective_user_id: effectiveUserId }
     );
 
-    const visibleProductIds = visibleProductsData?.map((p: any) => p.product_id) || [];
+    const visibleProductIds = visibleProductsData?.map((p: any) => p.id) || [];
     
     if (visibleProductIds.length > 0) {
       query = query.in("id", visibleProductIds);

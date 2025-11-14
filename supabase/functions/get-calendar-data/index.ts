@@ -8,8 +8,11 @@ Deno.serve(async (req) => {
   try {
     const supabaseClient = createAuthClient(req.headers.get('Authorization'));
 
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      console.error('[get-calendar-data] Auth error:', authError);
+      return errorResponse('Not authenticated', 401);
+    }
 
     const { practiceId, startDate, endDate, providers, rooms, statuses, effectiveProviderUserId } = await req.json();
 
