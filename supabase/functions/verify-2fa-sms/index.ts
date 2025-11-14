@@ -179,7 +179,15 @@ serve(async (req) => {
       if (insertError) throw insertError;
     }
 
-    // Log success
+    // Log success with detailed settings info
+    console.log('[2FA Verify] Settings updated:', {
+      userId: user.id,
+      provider,
+      isEnrolled: true,
+      phoneVerified: true,
+      providerEnabled: provider === 'twilio' ? 'twilio_enabled=true' : 'ghl_enabled=true'
+    });
+
     const responseTime = Date.now() - startTime;
     await supabase.from('two_fa_audit_log').insert({
       attempt_id: attemptId,

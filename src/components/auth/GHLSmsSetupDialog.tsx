@@ -189,21 +189,33 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
       console.log('[GHLSmsSetupDialog] Verifying database record...');
       const { data: settings, error: settingsError } = await supabase
         .from('user_2fa_settings')
-        .select('phone_number, is_enrolled, ghl_enabled')
+        .select('phone_number, is_enrolled, phone_verified, twilio_enabled, ghl_enabled')
         .eq('user_id', userId)
         .maybeSingle();
 
       console.log('[GHLSmsSetupDialog] Database check:', { 
         found: !!settings, 
         enrolled: settings?.is_enrolled,
+        phoneVerified: settings?.phone_verified,
+        twilioEnabled: settings?.twilio_enabled,
         ghlEnabled: settings?.ghl_enabled,
         hasPhone: !!settings?.phone_number,
         error: settingsError?.message 
       });
 
-      if (!settings?.is_enrolled || !settings?.ghl_enabled) {
+      // Check that enrollment succeeded with EITHER provider
+      if (!settings?.is_enrolled || !settings?.phone_verified) {
         throw new Error('2FA setup failed to save. Please try again or contact support.');
       }
+
+      // Additional check: at least one provider should be enabled
+      if (!settings?.twilio_enabled && !settings?.ghl_enabled) {
+        throw new Error('No SMS provider enabled. Please contact support.');
+      }
+
+      const activeProvider = settings?.twilio_enabled ? 'Twilio' : 
+                             settings?.ghl_enabled ? 'GHL' : 'Unknown';
+      console.log('[GHLSmsSetupDialog] 2FA successfully enrolled via', activeProvider);
 
       // Mark this session as verified to prevent another SMS
       mark2FAVerified();
