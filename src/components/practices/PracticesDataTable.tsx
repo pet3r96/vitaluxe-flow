@@ -48,6 +48,24 @@ export const PracticesDataTable = () => {
 
       if (doctorsError) throw doctorsError;
 
+      // Get ALL roles for these doctor profiles to detect conflicting roles
+      const doctorIds = allDoctors?.map(d => d.id) || [];
+      const { data: allRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("user_id", doctorIds);
+
+      if (rolesError) throw rolesError;
+
+      // Create map of user_id -> Set of all roles
+      const userRolesMap = new Map<string, Set<string>>();
+      allRoles?.forEach(ur => {
+        if (!userRolesMap.has(ur.user_id)) {
+          userRolesMap.set(ur.user_id, new Set());
+        }
+        userRolesMap.get(ur.user_id)!.add(ur.role);
+      });
+
       // Get provider records with both user_id and practice_id
       const { data: providerRecords, error: providersError } = await supabase
         .from("providers")
@@ -56,11 +74,29 @@ export const PracticesDataTable = () => {
       if (providersError) throw providersError;
 
       // Filter out actual providers (user_id != practice_id), but keep self-referential practice records
-      // This handles cases like Demo Practice 1 which has a provider record where user_id = practice_id
       const providerUserIds = new Set(
         providerRecords?.filter(p => p.user_id !== p.practice_id).map(p => p.user_id) || []
       );
-      const practicesOnly = allDoctors?.filter(doc => !providerUserIds.has(doc.id)) || [];
+
+      // Filter for TRUE practices only - exclude those with non-practice roles
+      const NON_PRACTICE_ROLES = ['downline', 'topline', 'staff', 'patient', 'pharmacy'];
+      const practicesOnly = allDoctors?.filter(doc => {
+        // Exclude if they're a provider at another practice
+        if (providerUserIds.has(doc.id)) return false;
+        
+        // Exclude if they have any non-practice roles
+        const roles = userRolesMap.get(doc.id);
+        if (roles) {
+          for (const nonPracticeRole of NON_PRACTICE_ROLES) {
+            if (roles.has(nonPracticeRole)) {
+              console.warn(`[Practices] Excluding ${doc.name} - has ${nonPracticeRole} role in addition to doctor`);
+              return false;
+            }
+          }
+        }
+        
+        return true;
+      }) || [];
 
       return practicesOnly;
     },
