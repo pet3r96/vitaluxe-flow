@@ -295,7 +295,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Error in send-2fa-sms:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ success: false, error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

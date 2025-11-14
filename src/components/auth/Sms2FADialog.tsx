@@ -88,21 +88,29 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
   // Auto-send on mount if phone is provided (verify mode)
   useEffect(() => {
     if (open && phone && !codeSent && step === 'phone') {
+      // Validate phone before proceeding
+      if (!isValidPhone(phone)) {
+        console.log('[Sms2FADialog] Invalid phone prop provided, showing phone input');
+        return;
+      }
+      
       setPhoneNumber(phone);
-      setStep('verify');
       const existing = checkSharedCooldown();
       if (existing > 0) {
+        setStep('verify');
         setCountdown(existing);
         setCodeSent(true);
       } else {
+        // Don't set step yet, let sendCode do it on success
         sendCode(phone);
       }
     }
   }, [open, phone, codeSent, step, checkSharedCooldown]);
 
   const maskPhone = (num: string) => {
-    if (!num || num.length < 4) return num;
-    return `***-***-${num.slice(-4)}`;
+    const digits = num.replace(/\D/g, '');
+    if (digits.length < 4) return '***-***-****';
+    return `***-***-${digits.slice(-4)}`;
   };
 
   const handleReturnToLogin = async () => {
@@ -180,10 +188,14 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
       });
 
       if (fnError) throw fnError;
+      
+      if (!data?.success || !data?.attemptId) {
+        throw new Error(data?.error || 'Failed to send verification code');
+      }
 
-      console.log('[Sms2FADialog] SMS sent successfully, attemptId:', data?.attemptId);
+      console.log('[Sms2FADialog] SMS sent successfully, attemptId:', data.attemptId);
 
-      setAttemptId(data?.attemptId || '');
+      setAttemptId(data.attemptId);
       setCodeSent(true);
       setStep('verify');
       setCountdown(60);
@@ -194,6 +206,9 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
     } catch (err: any) {
       console.error('[Sms2FADialog] Send SMS error:', err);
       setError(err.message || 'Failed to send verification code');
+      setCodeSent(false);
+      setAttemptId('');
+      // Don't change step - keep user on current step
     } finally {
       setLoading(false);
       // Remove lock after 15s
@@ -221,6 +236,11 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
   const verifyCode = async () => {
     if (code.length !== 6) {
       setError('Please enter the 6-digit code');
+      return;
+    }
+    
+    if (!attemptId) {
+      setError('No verification attempt found. Please resend code.');
       return;
     }
 
