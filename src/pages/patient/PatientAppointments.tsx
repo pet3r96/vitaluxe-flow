@@ -235,8 +235,23 @@ export default function PatientAppointments() {
     if (!cancelId) return;
     try {
       setIsCancelling(true);
+      
+      // Get CSRF token for security
+      const { getCurrentCSRFToken } = await import("@/lib/csrf");
+      const csrfToken = await getCurrentCSRFToken();
+      
+      if (!csrfToken) {
+        throw new Error("Security token unavailable. Please refresh and try again.");
+      }
+
       const { data, error } = await supabase.functions.invoke("cancel-appointment", {
-        body: { appointmentId: cancelId },
+        body: { 
+          appointmentId: cancelId,
+          csrfToken 
+        },
+        headers: {
+          "x-csrf-token": csrfToken
+        }
       });
       if (error) throw error;
 
