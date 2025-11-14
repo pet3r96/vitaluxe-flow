@@ -34,7 +34,13 @@ serve(async (req) => {
       throw new Error('practiceId is required');
     }
 
-    console.log(`[get-orders-page] Fetching page ${page} for ${role || 'practice'} ${practiceId}`);
+    console.log(`[get-orders-page] 🔍 Request:`, { 
+      page, 
+      pageSize, 
+      role, 
+      scopeId: practiceId,
+      authUserId: user.id 
+    });
     const startTime = performance.now();
 
     // Calculate offset for pagination
@@ -42,6 +48,7 @@ serve(async (req) => {
     const to = from + pageSize - 1;
 
     // Build query with minimal columns for list view
+    // CRITICAL: Use LEFT join for patient_accounts (not inner) to avoid RLS filtering out orders
     let query = supabase
       .from('orders')
       .select(`
@@ -50,7 +57,8 @@ serve(async (req) => {
         status,
         total_amount,
         payment_status,
-        patient_accounts!inner (
+        doctor_id,
+        patient_accounts (
           id,
           first_name,
           last_name
@@ -66,16 +74,53 @@ serve(async (req) => {
       `, { count: 'exact' });
 
     // CRITICAL: Filter by role FIRST (before pagination)
-    console.log(`[get-orders-page] Filtering by role: ${role}`);
+    console.log(`[get-orders-page] 🎯 Filtering by role: ${role}`);
+    
     if (role === 'doctor') {
+      // CRITICAL FIX: doctor_id in orders table stores providers.user_id (not providers.id)
+      // practiceId parameter is actually the auth user.id for doctor role
+      console.log(`[get-orders-page] Doctor filter: doctor_id = ${practiceId}`);
       query = query.eq('doctor_id', practiceId);
     } else if (role === 'practice') {
-      query = query.eq('practice_id', practiceId);
+      // For practice role: get all provider user_ids for this practice, then filter orders
+      console.log(`[get-orders-page] Practice filter: fetching providers for practice ${practiceId}`);
+      
+      const { data: providers, error: providersError } = await supabase
+        .from('providers')
+        .select('user_id')
+        .eq('practice_id', practiceId)
+        .eq('active', true);
+      
+      if (providersError) {
+        console.error('[get-orders-page] ❌ Error fetching providers:', providersError);
+        throw new Error('Failed to fetch practice providers');
+      }
+      
+      const providerUserIds = providers?.map(p => p.user_id) || [];
+      console.log(`[get-orders-page] Found ${providerUserIds.length} active providers for practice`);
+      
+      if (providerUserIds.length === 0) {
+        console.warn('[get-orders-page] ⚠️ No active providers found for practice - returning empty');
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            total: 0,
+            page,
+            pageSize,
+            totalPages: 0,
+            hasNextPage: false,
+            debug: { providersFound: 0, practiceId }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      query = query.in('doctor_id', providerUserIds);
     } else if (role === 'admin') {
       // Admin sees all orders - no filter
       console.log('[get-orders-page] Admin role - no filtering');
     } else {
-      console.warn(`[get-orders-page] Unknown role: ${role}, defaulting to practice filter`);
+      console.warn(`[get-orders-page] ⚠️ Unknown role: ${role}, defaulting to practice filter`);
       query = query.eq('practice_id', practiceId);
     }
 
@@ -100,15 +145,20 @@ serve(async (req) => {
     const { data: orders, error: ordersError, count } = await query;
 
     if (ordersError) {
-      console.error('[get-orders-page] Error:', ordersError);
+      console.error('[get-orders-page] ❌ Query error:', ordersError);
       throw ordersError;
     }
 
     const duration = performance.now() - startTime;
-    console.log(`[get-orders-page] ✅ Fetched ${orders?.length || 0} orders in ${duration.toFixed(2)}ms`);
+    console.log(`[get-orders-page] ✅ SUCCESS: ${orders?.length || 0} orders fetched in ${duration.toFixed(2)}ms (total: ${count || 0})`);
 
     if (duration > 2000) {
       console.warn(`[get-orders-page] ⚠️ SLOW QUERY: ${duration.toFixed(2)}ms`);
+    }
+    
+    // Diagnostic warning if no orders found
+    if (count === 0) {
+      console.warn(`[get-orders-page] ⚠️ Zero orders returned - check filters (role: ${role}, scopeId: ${practiceId})`);
     }
 
     return new Response(

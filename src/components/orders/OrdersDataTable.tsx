@@ -211,18 +211,35 @@ export const OrdersDataTable = () => {
           console.error('[OrdersDataTable] Edge function error:', edgeError);
           logger.error('Edge function invocation failed', {
             error: edgeError,
-            practiceId: effectiveUserId,
+            practiceId: filterIdForOrders,
             role: effectiveRole
+          });
+          // Show user-friendly error
+          toast({
+            title: "Failed to Load Orders",
+            description: edgeError.message || "Could not fetch orders. Please try again.",
+            variant: "destructive"
           });
           throw new Error(`Failed to load orders: ${edgeError.message || 'Unknown error'}`);
         }
         
         if (!edgeData || !Array.isArray(edgeData.orders)) {
           console.error('[OrdersDataTable] Invalid edge function response:', edgeData);
+          toast({
+            title: "Invalid Response",
+            description: "Received invalid data from orders service.",
+            variant: "destructive"
+          });
           throw new Error('Invalid response from orders service');
         }
         
-        console.log(`[OrdersDataTable] Edge function returned ${edgeData.orders.length} orders`);
+        console.log(`[OrdersDataTable] ✅ Edge function returned ${edgeData.orders.length} orders`);
+        
+        // Warn if edge function returns 0 orders (potential filtering issue)
+        if (edgeData.orders.length === 0 && edgeData.total === 0) {
+          console.warn('[OrdersDataTable] ⚠️ Edge function returned 0 orders - check filtering logic');
+        }
+        
         return edgeData.orders;
       }
 

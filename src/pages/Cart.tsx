@@ -49,8 +49,8 @@ const Cart = React.memo(function Cart() {
     );
   }
   
-  const { effectiveUserId, user } = authContext;
-  console.log('[Cart] Auth loaded, effectiveUserId:', effectiveUserId);
+  const { effectiveUserId, effectiveRole, effectivePracticeId, user } = authContext;
+  console.log('[Cart] Auth loaded, effectiveUserId:', effectiveUserId, 'role:', effectiveRole);
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -63,11 +63,23 @@ const Cart = React.memo(function Cart() {
   const showStaffLoading = checkingPrivileges && isStaffAccount;
   const showStaffNoAccess = isStaffAccount && !canOrder && !checkingPrivileges;
 
-  const { data: cart, isLoading } = useCart(effectiveUserId, {
+  // CRITICAL: Resolve correct cart owner ID based on role
+  const { data: cartOwnerId } = useQuery({
+    queryKey: ["cart-owner-id", effectiveUserId, effectiveRole, effectivePracticeId],
+    queryFn: async () => {
+      const { resolveCartOwnerUserId } = await import("@/lib/cartOwnerResolver");
+      return await resolveCartOwnerUserId(effectiveUserId, effectiveRole, effectivePracticeId);
+    },
+    enabled: !!effectiveUserId && !showStaffLoading,
+  });
+
+  console.log('[Cart] Cart owner resolved:', cartOwnerId);
+
+  const { data: cart, isLoading } = useCart(cartOwnerId, {
     productFields: "name, dosage, image_url",
     includePharmacy: true,
     includeProvider: true,
-    enabled: !!effectiveUserId && !showStaffLoading,
+    enabled: !!cartOwnerId && !showStaffLoading,
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
@@ -75,7 +87,7 @@ const Cart = React.memo(function Cart() {
 
   // Realtime subscription for instant cart updates
   useEffect(() => {
-    if (!effectiveUserId || !cart?.id) return;
+    if (!cartOwnerId || !cart?.id) return;
 
     console.log('Setting up realtime subscription for cart:', cart.id);
 
@@ -92,7 +104,7 @@ const Cart = React.memo(function Cart() {
         (payload) => {
           console.log('Cart realtime update received:', payload);
           // Instantly invalidate and refetch cart data
-          queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+          queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
         }
       )
       .subscribe();
@@ -101,7 +113,7 @@ const Cart = React.memo(function Cart() {
       console.log('Cleaning up cart realtime subscription');
       supabase.removeChannel(channel);
     };
-  }, [effectiveUserId, cart?.id, queryClient]);
+  }, [cartOwnerId, cart?.id, queryClient]);
 
   const removeMutation = useMutation({
     mutationFn: async (lineId: string) => {
