@@ -414,7 +414,9 @@ serve(async (req) => {
       throw new Error('Invalid action');
     }
 
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('Error in approve-pending-rep:', error);
     
     // Log error to database
@@ -424,8 +426,8 @@ serve(async (req) => {
         p_entity_type: 'approve-pending-rep',
         p_entity_id: requestId,
         p_details: {
-          error_message: error.message,
-          error_stack: error.stack,
+          error_message: errorMessage,
+          error_stack: errorStack,
           function_name: 'approve-pending-rep',
           request_data: { requestId, action, adminNotes },
           rep_email: pendingRep?.email

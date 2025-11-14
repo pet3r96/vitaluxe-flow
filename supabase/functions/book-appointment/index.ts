@@ -283,10 +283,12 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: true, appointment: data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('[book-appointment] Error:', error);
-    console.error('[book-appointment] Error stack:', error.stack);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('[book-appointment] Error stack:', errorStack);
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
