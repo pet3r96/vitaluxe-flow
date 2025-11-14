@@ -252,6 +252,23 @@ const Cart = React.memo(function Cart() {
     return calculateTotal() + shippingPreview + merchantFee;
   }, [calculateTotal, shippingPreview, merchantFee]);
 
+  // Normalize invalid shipping speeds automatically (one-time per group)
+  const normalizedGroupsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    patientGroups.forEach((group: any) => {
+      const key = `${group.patient_id || 'practice'}_${group.pharmacy_id || 'unknown'}`;
+      if (normalizedGroupsRef.current.has(key)) return;
+      const enabled = getEnabledSpeeds(group.pharmacy_id);
+      if (enabled && enabled.length > 0 && !enabled.includes(group.shipping_speed)) {
+        const newSpeed = enabled[0];
+        const lineIds = group.lines.map((l: any) => l.id);
+        console.log('[Cart] Normalizing shipping speed', { key, from: group.shipping_speed, to: newSpeed, lineCount: lineIds.length });
+        updateShippingSpeedMutation.mutate({ lineIds, shipping_speed: newSpeed });
+        normalizedGroupsRef.current.add(key);
+      }
+    });
+  }, [patientGroups, getEnabledSpeeds, updateShippingSpeedMutation]);
+
   if (showStaffLoading) {
     return (
       <div className="patient-container">
@@ -340,11 +357,16 @@ const Cart = React.memo(function Cart() {
                   
                   return (
                     <div key={line.id} className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-lg border ${isExpiringSoon ? "border-yellow-500 bg-yellow-50/50 dark:bg-yellow-950/20" : "bg-card"}`}>
-                {line.product?.image_url && (
+                    {line.product?.image_url && (
                       <img
                         src={line.product.image_url}
                         alt={line.product.name}
                         className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded"
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          img.onerror = null;
+                          img.src = '/placeholder.svg';
+                        }}
                       />
                     )}
                     <div className="flex-1 w-full">

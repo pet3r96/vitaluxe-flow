@@ -389,6 +389,7 @@ export default function Checkout() {
         createdOrders: data.created_orders || [],
         failedPayments: data.failed_payments || [],
         failedOrders: data.failed_orders || [],
+        deletedCartLineIds: data.deleted_cart_line_ids || [],
       };
     },
     onSuccess: async (result) => {
