@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
-import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 
 const corsHeaders = {
@@ -275,15 +275,31 @@ serve(async (req) => {
           
           if (account.email) {
             const recipientName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || 'Valued Patient';
-            const emailResult = await sendNotificationEmail({
-              to: account.email,
+            const htmlBody = generateNotificationEmailHTML({
               recipientName,
-              subject: notificationTitle,
               title: notificationTitle,
               message: notificationMessage,
               actionUrl: undefined
             });
-            console.log('[assign-document-to-patient] Fallback email:', emailResult.success ? 'sent' : 'failed');
+            const textBody = generateNotificationEmailText({
+              recipientName,
+              title: notificationTitle,
+              message: notificationMessage,
+              actionUrl: undefined
+            });
+            
+            const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('unified-email-sender', {
+              body: {
+                type: 'notification',
+                to: account.email,
+                subject: notificationTitle,
+                htmlBody,
+                textBody,
+                userId: account.user_id,
+                eventType: 'form_assigned'
+              }
+            });
+            console.log('[assign-document-to-patient] Fallback email:', (!emailError && emailResult?.success) ? 'sent' : 'failed');
           }
           
           if (account.phone) {

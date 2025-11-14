@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sendMessageSchema, validateInput } from '../_shared/zodSchemas.ts';
-import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 
 // Helper to normalize phone to E.164
@@ -321,13 +321,29 @@ Deno.serve(async (req) => {
         
         if (patientData?.email) {
           const recipientName = `${patientData.first_name || ''} ${patientData.last_name || ''}`.trim() || 'Valued Patient';
-          const emailResult = await sendNotificationEmail({
-            to: patientData.email,
+          const htmlBody = generateNotificationEmailHTML({
             recipientName,
-            subject: messageTitle,
             title: messageTitle,
             message: messageBody,
             actionUrl: undefined
+          });
+          const textBody = generateNotificationEmailText({
+            recipientName,
+            title: messageTitle,
+            message: messageBody,
+            actionUrl: undefined
+          });
+          
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke('unified-email-sender', {
+            body: {
+              type: 'notification',
+              to: patientData.email,
+              subject: messageTitle,
+              htmlBody,
+              textBody,
+              userId: patientData.user_id,
+              eventType: 'new_message'
+            }
           });
           
           console.log('[send-patient-message] Fallback email result:', emailResult);

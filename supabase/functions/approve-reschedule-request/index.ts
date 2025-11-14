@@ -1,6 +1,6 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
@@ -175,14 +175,31 @@ Deno.serve(async (req) => {
         } else {
           if (patientWithUser.email) {
             try {
-              await sendNotificationEmail({
-                to: patientWithUser.email,
+              const htmlBody = generateNotificationEmailHTML({
                 recipientName: patientName,
-                subject: 'Appointment Rescheduled',
                 title: 'Appointment Rescheduled',
                 message: `Your appointment has been rescheduled to ${appointmentDateFormatted} at ${appointmentTimeFormatted}.`,
                 actionUrl: undefined,
                 senderContext: { fromName: 'Your Healthcare Provider' }
+              });
+              const textBody = generateNotificationEmailText({
+                recipientName: patientName,
+                title: 'Appointment Rescheduled',
+                message: `Your appointment has been rescheduled to ${appointmentDateFormatted} at ${appointmentTimeFormatted}.`,
+                actionUrl: undefined,
+                senderContext: { fromName: 'Your Healthcare Provider' }
+              });
+              
+              await supabaseClient.functions.invoke('unified-email-sender', {
+                body: {
+                  type: 'notification',
+                  to: patientWithUser.email,
+                  subject: 'Appointment Rescheduled',
+                  htmlBody,
+                  textBody,
+                  userId: patientWithUser.user_id,
+                  eventType: 'appointment_reschedule'
+                }
               });
               console.log('[approve-reschedule] Email sent to:', patientWithUser.email);
             } catch (emailError) {

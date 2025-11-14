@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { mapNotificationTypeToEventType } from "../_shared/notificationMapping.ts";
-import { sendNotificationEmail } from "../_shared/notificationEmailSender.ts";
 import { sendNotificationSms } from "../_shared/notificationSmsSender.ts";
+import { generateNotificationEmailHTML, generateNotificationEmailText } from "../_shared/emailTemplates.ts";
 import { logNotificationDelivery } from "../_shared/notificationLogger.ts";
 
 const corsHeaders = {
@@ -239,30 +239,60 @@ serve(async (req) => {
       const recipientName = profile.full_name || profile.name || 'Valued User';
       const emailSubject = payload.title || 'Notification from Vitaluxe';
 
-      const emailResult = await sendNotificationEmail({
-        to: profile.email,
+      const htmlBody = generateNotificationEmailHTML({
         recipientName,
-        subject: emailSubject,
         title: payload.title,
         message: payload.message,
         actionUrl: payload.metadata?.join_links?.patient || payload.action_url
       });
 
-      if (emailResult.success) {
-        results.channels_sent.push('email');
-      } else {
-        results.errors.push(`Email failed: ${emailResult.error}`);
-      }
-
-      await logNotificationDelivery({
-        notificationId,
-        userId: payload.user_id,
-        channel: 'email',
-        status: emailResult.success ? 'sent' : 'failed',
-        externalId: emailResult.messageId,
-        errorMessage: emailResult.error,
-        supabaseClient: supabase
+      const textBody = generateNotificationEmailText({
+        recipientName,
+        title: payload.title,
+        message: payload.message,
+        actionUrl: payload.metadata?.join_links?.patient || payload.action_url
       });
+
+      try {
+        const { data: emailResult, error: emailError } = await supabase.functions.invoke('unified-email-sender', {
+          body: {
+            type: 'notification',
+            to: profile.email,
+            subject: emailSubject,
+            htmlBody,
+            textBody,
+            userId: payload.user_id,
+            eventType
+          }
+        });
+
+        if (!emailError && emailResult?.success) {
+          results.channels_sent.push('email');
+        } else {
+          results.errors.push(`Email failed: ${emailError?.message || emailResult?.error}`);
+        }
+
+        await logNotificationDelivery({
+          notificationId,
+          userId: payload.user_id,
+          channel: 'email',
+          status: (!emailError && emailResult?.success) ? 'sent' : 'failed',
+          externalId: emailResult?.messageId,
+          errorMessage: emailError?.message || emailResult?.error,
+          supabaseClient: supabase
+        });
+      } catch (error: any) {
+        console.error('[handleNotifications] Email sending error:', error);
+        results.errors.push(`Email failed: ${error.message}`);
+        await logNotificationDelivery({
+          notificationId,
+          userId: payload.user_id,
+          channel: 'email',
+          status: 'failed',
+          supabaseClient: supabase,
+          errorMessage: error.message
+        });
+      }
     } else if (emailEnabled && !practiceEmailEnabled) {
       console.log('[handleNotifications] Email blocked by practice settings');
       results.errors.push('Email disabled at practice level');
