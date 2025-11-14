@@ -231,6 +231,8 @@ serve(async (req: Request) => {
           const patientState = orderLineDetails.destination_state || '';
 
           // Create shipment via EasyPost API
+          const pharmacy = Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies;
+          
           const shipmentResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/create-easypost-shipment`, {
             method: 'POST',
             headers: {
@@ -240,7 +242,6 @@ serve(async (req: Request) => {
             },
             body: JSON.stringify({
               order_line_id: orderLineId,
-              const pharmacy = Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies;
               from_address: {
                 street: pharmacy?.address_street || '',
                 city: pharmacy?.address_city || '',

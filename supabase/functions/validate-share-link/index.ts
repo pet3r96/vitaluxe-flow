@@ -147,6 +147,8 @@ Deno.serve(async (req) => {
     }
 
     // Log successful access
+    const patientAccount = Array.isArray(shareLink.patient_accounts) ? shareLink.patient_accounts[0] : shareLink.patient_accounts;
+    
     await supabase.from('audit_logs').insert({
       user_id: null,
       user_email: 'public',
@@ -157,7 +159,7 @@ Deno.serve(async (req) => {
       details: {
         token,
         patient_account_id: patientAccountId,
-        patient_name: `${shareLink.patient_accounts.first_name} ${shareLink.patient_accounts.last_name}`,
+        patient_name: `${patientAccount?.first_name} ${patientAccount?.last_name}`,
         ip_address: clientIP,
         access_count: newAccessCount,
         accessed_at: new Date().toISOString()
