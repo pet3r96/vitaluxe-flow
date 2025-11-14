@@ -427,7 +427,7 @@ export default function PatientAppointments() {
                   <CardHeader>
                     <div className={isMobile ? 'space-y-3' : 'flex justify-between items-start'}>
                       <div className="flex-1">
-                        <CardTitle className={isMobile ? 'text-lg' : ''}>{appt.practice?.name}</CardTitle>
+                        <CardTitle className={isMobile ? 'text-lg' : ''}>{practiceName || appt.practice?.name || 'Practice'}</CardTitle>
                         <CardDescription className="flex items-center gap-2 mt-1">
                           <Clock className="h-3 w-3" />
                           <span className={isMobile ? 'text-xs' : ''}>
