@@ -17,10 +17,10 @@ import { usePatientDashboard } from "@/hooks/usePatientDashboard";
 export default function PatientDashboard() {
   const navigate = useNavigate();
   const [practiceSubscription, setPracticeSubscription] = useState<any>(null);
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole } = useAuth();
 
   // Use batched dashboard data hook
-  const { data: dashboardData, isLoading: loadingDashboard } = usePatientDashboard(effectiveUserId);
+  const { data: dashboardData, isLoading: loadingDashboard } = usePatientDashboard(effectiveUserId, effectiveRole);
 
   // Extract data from batched response
   const patientAccount = dashboardData?.patientAccount;
