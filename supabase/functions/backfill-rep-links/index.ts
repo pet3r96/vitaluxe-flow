@@ -32,13 +32,30 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    console.log(`Backfilling rep_practice_links for user ${user.id}`);
+    // Check for active impersonation
+    let effectiveUserId = user.id;
+    const { data: impersonationData } = await supabaseAdmin
+      .from('impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .eq('revoked', false)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (impersonationData?.impersonated_user_id) {
+      effectiveUserId = impersonationData.impersonated_user_id;
+      console.log(`Using impersonated user ${effectiveUserId} for rep links`);
+    }
+
+    console.log(`Backfilling rep_practice_links for user ${effectiveUserId}`);
 
     // Determine if user is topline or downline
     const { data: repData, error: repError } = await supabaseAdmin
       .from('reps')
       .select('id, role, assigned_topline_id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .single();
 
     if (repError || !repData) {
@@ -54,7 +71,7 @@ Deno.serve(async (req) => {
     if (repData.role === 'topline') {
       // For topline: include self + all active downlines
       repIds.push(repData.id);
-      userIds.push(user.id);
+      userIds.push(effectiveUserId);
 
       // Get all active downlines
       const { data: downlines, error: downlinesError } = await supabaseAdmin
@@ -71,7 +88,7 @@ Deno.serve(async (req) => {
     } else if (repData.role === 'downline') {
       // For downline: only self
       repIds.push(repData.id);
-      userIds.push(user.id);
+      userIds.push(effectiveUserId);
     }
 
     console.log(`Processing ${repIds.length} rep(s) and ${userIds.length} user ID(s)`);
@@ -105,7 +122,7 @@ Deno.serve(async (req) => {
         const downlineIndex = userIds.indexOf(practice.linked_topline_id);
         if (downlineIndex >= 0 && repIds[downlineIndex]) {
           targetRepId = repIds[downlineIndex];
-        } else if (practice.linked_topline_id === user.id) {
+        } else if (practice.linked_topline_id === effectiveUserId) {
           // Matches the topline user directly
           targetRepId = repData.id;
         }
