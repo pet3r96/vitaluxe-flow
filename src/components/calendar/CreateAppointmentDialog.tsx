@@ -89,9 +89,14 @@ export function CreateAppointmentDialog({
   
   const walkInDate = isWalkIn ? getCurrentTimeRounded() : (defaultDate || new Date());
   
+  // Find the logged-in provider's ID
+  const loggedInProviderId = isProviderAccount 
+    ? providers.find(p => p.user_id === effectiveUserId)?.id 
+    : undefined;
+  
   const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
-      providerId: defaultProviderId || (isProviderAccount && providers.length === 1 ? providers[0].id : ""),
+      providerId: defaultProviderId || loggedInProviderId || "",
       roomId: "",
       appointmentDate: format(walkInDate, 'yyyy-MM-dd'),
       startTime: format(walkInDate, 'HH:mm'),
@@ -103,6 +108,17 @@ export function CreateAppointmentDialog({
       notes: "",
     },
   });
+  
+  // Auto-select logged-in provider when dialog opens
+  useEffect(() => {
+    if (open && isProviderAccount && !defaultProviderId) {
+      const myProvider = providers.find(p => p.user_id === effectiveUserId);
+      if (myProvider) {
+        console.log('[CreateAppointmentDialog] Auto-selecting logged-in provider:', myProvider.id);
+        setValue('providerId', myProvider.id);
+      }
+    }
+  }, [open, isProviderAccount, effectiveUserId, providers, defaultProviderId, setValue]);
 
   // Fetch patients for the practice
   const { data: patients } = useQuery({

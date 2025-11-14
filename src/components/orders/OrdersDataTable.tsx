@@ -85,6 +85,8 @@ export const OrdersDataTable = () => {
     async () => {
       const queryStart = Date.now();
       console.time('OrdersQuery');
+      console.log('[OrdersDataTable] Query starting for role:', effectiveRole);
+      
       try {
         logger.info('OrdersDataTable query START', logger.sanitize({ 
           effectiveRole, 
@@ -485,6 +487,8 @@ export const OrdersDataTable = () => {
       gcTime: 5 * 60 * 1000,
       refetchOnMount: true,
       refetchOnWindowFocus: true,
+      retry: 3, // Retry up to 3 times
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     }
   );
 

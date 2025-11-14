@@ -172,7 +172,7 @@ export default function PracticeCalendar() {
         setSelectedProviders(providers.map((p: any) => p.id));
       }
     }
-  }, [providers.length, effectiveRole, effectiveUserId]);
+  }, [providers.length, effectiveRole, effectiveUserId, selectedProviders.length]);
 
   const handleProviderToggle = (providerId: string) => {
     setSelectedProviders((prev) =>

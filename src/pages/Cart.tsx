@@ -21,10 +21,24 @@ import React from "react";
 
 const Cart = React.memo(function Cart() {
   console.time('Cart-Render');
+  console.log('[Cart] Render start');
+  
   const authContext = useAuth();
   
-  // Defensive check - prevent render if auth not ready
-  if (!authContext?.effectiveUserId) {
+  // Multi-level defensive check
+  if (!authContext) {
+    console.warn('[Cart] AuthContext is null/undefined');
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center py-8">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!authContext.effectiveUserId) {
+    console.warn('[Cart] effectiveUserId not available yet');
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center py-8">
@@ -35,6 +49,7 @@ const Cart = React.memo(function Cart() {
   }
   
   const { effectiveUserId, user } = authContext;
+  console.log('[Cart] Auth loaded, effectiveUserId:', effectiveUserId);
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

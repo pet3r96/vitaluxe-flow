@@ -65,6 +65,9 @@ Deno.serve(async (req) => {
       console.log('Provider scope (admin impersonation):', isProviderScoped, 'Effective Provider ID:', providerRecord?.id);
     }
 
+    const fetchStartTime = Date.now();
+    console.log('[get-calendar-data] Starting fetch for role:', callerRole, 'providerScoped:', isProviderScoped);
+
     // Build query - optimized with only essential columns
     // CRITICAL: Use LEFT JOIN for patient_accounts and providers to ensure appointments are always returned
     let query = supabaseClient
@@ -133,6 +136,8 @@ Deno.serve(async (req) => {
       // Get providers based on user type
       (async () => {
         if (isProviderScoped && providerRecord) {
+          // Provider: only fetch their own record for better performance
+          console.log('[get-calendar-data] Fetching single provider:', providerRecord.id);
           const effectiveUserId = effectiveProviderUserId || user.id;
           const { data: providerProfile } = await supabaseClient
             .from('profiles')
@@ -155,6 +160,8 @@ Deno.serve(async (req) => {
           }
           return [];
         } else {
+          // Admin/doctor/staff: fetch all providers
+          console.log('[get-calendar-data] Fetching all providers for practice:', practiceId);
           // Fetch providers with minimal data
           const { data: providerRecords, error: providerError } = await supabaseClient
             .from('providers')
@@ -222,6 +229,9 @@ Deno.serve(async (req) => {
     const transformedProviders = providersData;
     const allRooms = roomsResult.data;
     const blockedTime = blockedTimeResult.data;
+
+    const fetchDuration = Date.now() - fetchStartTime;
+    console.log('[get-calendar-data] Total fetch duration:', fetchDuration, 'ms');
 
     return successResponse({
       appointments: appointments || [],
