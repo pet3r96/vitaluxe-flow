@@ -226,7 +226,7 @@ export default function Checkout() {
         .select("*")
         .in("practice_id", practiceIds)
         .eq("payment_type", "credit_card")
-        .neq("status", "declined")
+        .neq("status", "removed")
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });
 

@@ -28,13 +28,13 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { page = 1, pageSize = 50, status, search, practiceId } = await req.json();
+    const { page = 1, pageSize = 50, status, search, practiceId, role } = await req.json();
     
     if (!practiceId) {
       throw new Error('practiceId is required');
     }
 
-    console.log(`[get-orders-page] Fetching page ${page} for practice ${practiceId}`);
+    console.log(`[get-orders-page] Fetching page ${page} for ${role || 'practice'} ${practiceId}`);
     const startTime = performance.now();
 
     // Calculate offset for pagination
@@ -64,9 +64,15 @@ serve(async (req) => {
           )
         )
       `, { count: 'exact' })
-      .eq('practice_id', practiceId)
       .order('created_at', { ascending: false })
       .range(from, to);
+
+    // Filter by role
+    if (role === 'doctor') {
+      query = query.eq('doctor_id', practiceId);
+    } else {
+      query = query.eq('practice_id', practiceId);
+    }
 
     // Apply filters
     if (status && status !== 'all') {

@@ -56,7 +56,7 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
         .from('practice_payment_methods')
         .select('*')
         .eq('practice_id', effectiveUserId)
-        .eq('status', 'active')
+        .neq('status', 'removed')
         .order('is_default', { ascending: false });
 
       console.log('[PaymentMethodSelector] Query result:', { 
