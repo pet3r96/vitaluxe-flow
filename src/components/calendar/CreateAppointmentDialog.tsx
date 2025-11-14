@@ -553,7 +553,12 @@ export function CreateAppointmentDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="in_person">In-Person</SelectItem>
-                <SelectItem value="video">Video Call</SelectItem>
+                <SelectItem value="video" disabled>
+                  <div className="flex items-center gap-2">
+                    Video Call
+                    <Badge variant="outline" size="xs" className="ml-2">Coming Soon</Badge>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
