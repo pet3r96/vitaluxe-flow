@@ -48,15 +48,18 @@ export const PracticesDataTable = () => {
 
       if (doctorsError) throw doctorsError;
 
-      // Then get all provider user_ids
-      const { data: providerIds, error: providersError } = await supabase
+      // Get provider records with both user_id and practice_id
+      const { data: providerRecords, error: providersError } = await supabase
         .from("providers")
-        .select("user_id");
+        .select("user_id, practice_id");
 
       if (providersError) throw providersError;
 
-      // Filter out providers, keeping only practices
-      const providerUserIds = new Set(providerIds?.map(p => p.user_id) || []);
+      // Filter out actual providers (user_id != practice_id), but keep self-referential practice records
+      // This handles cases like Demo Practice 1 which has a provider record where user_id = practice_id
+      const providerUserIds = new Set(
+        providerRecords?.filter(p => p.user_id !== p.practice_id).map(p => p.user_id) || []
+      );
       const practicesOnly = allDoctors?.filter(doc => !providerUserIds.has(doc.id)) || [];
 
       return practicesOnly;
