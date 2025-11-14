@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
+import { resolveCartOwnerUserId } from "@/lib/cartOwnerResolver";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,7 +69,16 @@ export const ProductsGrid = () => {
   const { canOrder: staffCanOrder, isStaffAccount } = useStaffOrderingPrivileges();
   // Providers and doctors always have ordering privileges, but reps can only view
   const canOrder = (isProvider || staffCanOrder) && !isRep;
-  const { data: cartCount } = useCartCount(effectiveUserId);
+  
+  // Resolve cart owner for accurate cart count
+  const { data: cartOwnerId } = useQuery({
+    queryKey: ['cart-owner', effectiveUserId, effectiveRole, effectivePracticeId],
+    queryFn: () => resolveCartOwnerUserId(effectiveUserId!, effectiveRole!, effectivePracticeId),
+    enabled: !!effectiveUserId && !!effectiveRole,
+    staleTime: 5 * 60 * 1000,
+  });
+  
+  const { data: cartCount } = useCartCount(cartOwnerId);
   
   // Check RX ordering privileges
   const { canOrderRx, hasProviders, providerCount, providersWithNpiCount, isLoading: isLoadingRxPrivileges } = usePracticeRxPrivileges();

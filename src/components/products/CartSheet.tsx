@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
+import { resolveCartOwnerUserId } from "@/lib/cartOwnerResolver";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Sheet,
   SheetContent,
@@ -24,17 +26,27 @@ interface CartSheetProps {
 }
 
 export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
-  const { effectiveUserId } = useAuth();
+  const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: cartData, isLoading } = useCart(effectiveUserId, {
+  // Resolve the correct cart owner based on role
+  const { data: cartOwnerId, isLoading: resolvingOwner } = useQuery({
+    queryKey: ['cart-owner', effectiveUserId, effectiveRole, effectivePracticeId],
+    queryFn: () => resolveCartOwnerUserId(effectiveUserId!, effectiveRole!, effectivePracticeId),
+    enabled: !!effectiveUserId && !!effectiveRole,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const { data: cartData, isLoading: loadingCart } = useCart(cartOwnerId, {
     productFields: "id, name, dosage, image_url",
-    enabled: !!effectiveUserId && open,
+    enabled: !!cartOwnerId && open,
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
+
+  const isLoading = resolvingOwner || loadingCart;
 
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ lineId, newQuantity }: { lineId: string; newQuantity: number }) => {
@@ -99,13 +111,36 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
     0
   ) || 0;
 
+  // Show helpful message if no cart owner resolved
+  if (!cartOwnerId && !resolvingOwner && (effectiveRole === 'staff' || effectiveRole === 'practice')) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="w-full sm:max-w-lg flex flex-col">
+          <SheetHeader>
+            <SheetTitle>Shopping Cart</SheetTitle>
+            <SheetDescription>Cart unavailable</SheetDescription>
+          </SheetHeader>
+          <Alert className="mt-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              No provider found for this practice. Please add a provider to enable ordering.
+            </AlertDescription>
+          </Alert>
+          <SheetFooter className="mt-4">
+            <Button onClick={() => onOpenChange(false)}>Close</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
           <SheetTitle>Shopping Cart</SheetTitle>
           <SheetDescription>
-            {cartData?.lines?.length || 0} item(s) in your cart
+            {isLoading ? "Loading cart..." : `${cartData?.lines?.length || 0} item(s) in your cart`}
           </SheetDescription>
         </SheetHeader>
 
