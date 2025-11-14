@@ -99,11 +99,11 @@ serve(async (req) => {
 
         messageId = result.data?.messageId || null;
         success = true;
-        console.log(`[email-dispatcher] ${correlationId} - ✅ Success on attempt ${attempt}`);
+        console.log(`[email-dispatcher] ✅ Success - correlationId: ${correlationId}, messageId: ${messageId}, attempt: ${attempt}, type: ${payload.type}`);
         
       } catch (error: any) {
         lastError = error;
-        console.error(`[email-dispatcher] ${correlationId} - ❌ Attempt ${attempt} failed:`, error);
+        console.error(`[email-dispatcher] ❌ Failed - correlationId: ${correlationId}, attempt: ${attempt}, type: ${payload.type}, error:`, error.message);
         
         if (attempt < maxAttempts) {
           const backoffMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
