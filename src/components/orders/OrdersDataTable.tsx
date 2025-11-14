@@ -132,7 +132,7 @@ export const OrdersDataTable = () => {
           .eq("assigned_pharmacy_id", pharmacyData.id)
           .neq("orders.payment_status", "payment_failed")
           .order("created_at", { ascending: false })
-          .limit(200);
+          .limit(50); // OPTIMIZED: Reduced from 200 to 50 for better performance
 
         if (orderLinesError) {
           logger.error('Pharmacy order lines query error', orderLinesError);
@@ -480,7 +480,7 @@ export const OrdersDataTable = () => {
       const { data, error } = await query
         .neq('payment_status', 'payment_failed')
         .order("created_at", { ascending: false })
-        .limit(100); // OPTIMIZED: Limit for better performance
+        .limit(50); // OPTIMIZED: Reduced from 100 to 50 for better performance
 
       if (error) {
         logger.error('Orders query error', { 
@@ -680,7 +680,7 @@ export const OrdersDataTable = () => {
     hasPrevPage
   } = usePagination({
     totalItems: filteredOrders?.length || 0,
-    itemsPerPage: 25
+    itemsPerPage: 20 // OPTIMIZED: Reduced from 25 to 20 for better performance
   });
 
   const paginatedOrders = filteredOrders?.slice(startIndex, endIndex);
