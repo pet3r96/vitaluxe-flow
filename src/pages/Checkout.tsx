@@ -393,11 +393,13 @@ export default function Checkout() {
       };
     },
     onSuccess: async (result) => {
-      const { createdOrders, failedPayments, failedOrders } = result;
+      const { createdOrders, failedPayments, failedOrders, deletedCartLineIds } = result;
       
       if (failedPayments.length === 0) {
         // All payments succeeded
         const orderCount = createdOrders.length;
+        const deletedCount = deletedCartLineIds?.length || 0;
+        console.log('[Checkout] Cart cleared confirmation', { deletedCount });
         
         // Send order notifications to patients
         for (const order of createdOrders) {
@@ -457,7 +459,7 @@ export default function Checkout() {
         
         toast({
           title: "Order Placed Successfully! 🎉",
-          description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. Redirecting to orders page...`,
+          description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. Cart cleared (${deletedCount} items). Redirecting to orders page...`,
         });
         
         // Navigate immediately - orders page will load fresh data
