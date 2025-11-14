@@ -40,15 +40,25 @@ function normalizePhoneToE164(phone: string): string {
 }
 
 serve(async (req) => {
+  console.log('[handleNotifications] ===== NEW REQUEST RECEIVED =====');
+  console.log('[handleNotifications] Timestamp:', new Date().toISOString());
+  console.log('[handleNotifications] Method:', req.method);
+  console.log('[handleNotifications] Headers:', Object.fromEntries(req.headers));
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const supabase = createAdminClient();
+    console.log('[handleNotifications] Supabase admin client created');
 
     const payload: NotificationPayload = await req.json();
-    console.log('[handleNotifications] Processing:', payload);
+    console.log('[handleNotifications] ===== PAYLOAD RECEIVED =====');
+    console.log('[handleNotifications] Full Payload:', JSON.stringify(payload, null, 2));
+    console.log('[handleNotifications] User ID:', payload.user_id);
+    console.log('[handleNotifications] Type:', payload.notification_type);
+    console.log('[handleNotifications] Title:', payload.title);
 
     // Step 1: Map notification_type to event_type
     const eventType = mapNotificationTypeToEventType(payload.notification_type);

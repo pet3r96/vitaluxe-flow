@@ -462,8 +462,14 @@ export default function Checkout() {
           description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. Cart cleared (${deletedCount} items). Redirecting to orders page...`,
         });
         
-        // Navigate immediately - orders page will load fresh data
-        navigate("/orders");
+        // Navigate immediately with order success state
+        navigate("/orders", {
+          state: {
+            orderPlaced: true,
+            orderNumber: createdOrders[0]?.order_number,
+            orderCount: createdOrders.length
+          }
+        });
       } else {
         // Some payments failed - show retry dialog
         setPaymentErrors(failedPayments);

@@ -9133,37 +9133,61 @@ export type Database = {
       user_2fa_settings_decrypted: {
         Row: {
           created_at: string | null
+          enrolled_at: string | null
           ghl_enabled: boolean | null
           ghl_phone_verified: boolean | null
           id: string | null
           is_enrolled: boolean | null
           last_ghl_verification: string | null
+          last_twilio_verification: string | null
+          last_verified_at: string | null
           phone_number: string | null
           phone_verified: boolean | null
+          phone_verified_at: string | null
+          reset_at: string | null
+          reset_requested_by: string | null
+          twilio_enabled: boolean | null
+          twilio_phone_verified: boolean | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
+          enrolled_at?: string | null
           ghl_enabled?: boolean | null
           ghl_phone_verified?: boolean | null
           id?: string | null
           is_enrolled?: boolean | null
           last_ghl_verification?: string | null
+          last_twilio_verification?: string | null
+          last_verified_at?: string | null
           phone_number?: never
           phone_verified?: boolean | null
+          phone_verified_at?: string | null
+          reset_at?: string | null
+          reset_requested_by?: string | null
+          twilio_enabled?: boolean | null
+          twilio_phone_verified?: boolean | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
+          enrolled_at?: string | null
           ghl_enabled?: boolean | null
           ghl_phone_verified?: boolean | null
           id?: string | null
           is_enrolled?: boolean | null
           last_ghl_verification?: string | null
+          last_twilio_verification?: string | null
+          last_verified_at?: string | null
           phone_number?: never
           phone_verified?: boolean | null
+          phone_verified_at?: string | null
+          reset_at?: string | null
+          reset_requested_by?: string | null
+          twilio_enabled?: boolean | null
+          twilio_phone_verified?: boolean | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -9329,6 +9353,10 @@ export type Database = {
       }
       can_user_impersonate: { Args: { _user_id: string }; Returns: boolean }
       can_view_credentials: { Args: { _user_id: string }; Returns: boolean }
+      can_view_provider_profile: {
+        Args: { _profile_id: string; _viewer_id: string }
+        Returns: boolean
+      }
       check_refill_eligibility: {
         Args: { p_order_line_id: string }
         Returns: Json
@@ -9339,6 +9367,14 @@ export type Database = {
       cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
       cleanup_expired_sms_attempts: { Args: never; Returns: undefined }
       cleanup_expired_sms_codes: { Args: never; Returns: undefined }
+      count_pharmacy_orders: {
+        Args: { p_pharmacy_id: string }
+        Returns: number
+      }
+      count_provider_orders: {
+        Args: { p_provider_id: string }
+        Returns: number
+      }
       create_practice_subscription: {
         Args: { p_practice_id: string; p_start_trial?: boolean }
         Returns: string
@@ -9486,6 +9522,10 @@ export type Database = {
           total_orders: number
           total_uses: number
         }[]
+      }
+      get_downline_practice_ids: {
+        Args: { _user_id: string }
+        Returns: string[]
       }
       get_effective_product_price: {
         Args: { p_product_id: string; p_user_id: string }
@@ -9639,6 +9679,10 @@ export type Database = {
           unique_users: number
         }[]
       }
+      get_topline_practice_ids: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
       get_topline_rep_id_for_practice: {
         Args: { _practice_linked_topline_user_id: string }
         Returns: string
@@ -9681,11 +9725,14 @@ export type Database = {
         Args: { _topline_user_id: string }
         Returns: boolean
       }
+      is_downline_rep: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_thread_participant: {
         Args: { _thread_id: string; _user_id: string }
         Returns: boolean
       }
       is_topline_of_rep: { Args: { _rep_id: string }; Returns: boolean }
+      is_topline_rep: { Args: { _user_id: string }; Returns: boolean }
       log_audit_event: {
         Args: {
           p_action_type: string
@@ -9766,6 +9813,7 @@ export type Database = {
         | "subscription"
         | "staff"
         | "patient"
+        | "super_admin"
       notification_type:
         | "message"
         | "order_status"
@@ -9979,6 +10027,7 @@ export const Constants = {
         "subscription",
         "staff",
         "patient",
+        "super_admin",
       ],
       notification_type: [
         "message",
