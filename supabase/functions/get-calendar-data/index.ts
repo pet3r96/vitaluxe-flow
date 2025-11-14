@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
 
     if (appointmentsError) throw appointmentsError;
 
-    console.log(`[get-calendar-data] Retrieved ${appointments?.length || 0} appointments. Sample IDs:`, appointments?.slice(0, 2).map(a => a.id));
+    console.log(`[get-calendar-data] Retrieved ${appointments?.length || 0} appointments`);
 
     // Parallel fetch for better performance
     const [settingsResult, providersData, roomsResult, blockedTimeResult] = await Promise.all([

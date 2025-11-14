@@ -489,7 +489,7 @@ Deno.serve(async (req) => {
     if (teamMemberIds.length > 0) {
       // Send notification to each team member via unified system
       for (const memberId of teamMemberIds) {
-        await supabaseAdmin.functions.invoke('handleNotifications', {
+        const { error: notificationError } = await supabaseAdmin.functions.invoke('handleNotifications', {
           body: {
             user_id: memberId,
             notification_type: 'message',
@@ -506,13 +506,13 @@ Deno.serve(async (req) => {
             entity_id: insertedMessage.id
           }
         });
-      }
 
-      if (notificationError) {
-        console.error('[send-patient-message] Failed to create team notifications:', notificationError);
-      } else {
-        console.log('[send-patient-message] Created notifications for', teamMemberIds.length, 'team members');
+        if (notificationError) {
+          console.error('[send-patient-message] Failed to create team notification:', notificationError);
+        }
       }
+      
+      console.log('[send-patient-message] Created notifications for', teamMemberIds.length, 'team members');
     }
 
     console.log('[send-patient-message] Patient message sent successfully');

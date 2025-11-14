@@ -273,8 +273,9 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('❌ [join-video-session] Unexpected error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to join video session';
     return new Response(JSON.stringify({ 
-      error: error.message || 'Failed to join video session',
+      error: errorMessage,
       details: 'An unexpected error occurred while joining the session'
     }), {
       status: 500,
