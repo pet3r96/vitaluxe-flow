@@ -294,8 +294,9 @@ Deno.serve(async (req) => {
               try {
                 await sendNotificationEmail({
                   to: patientWithUser.email,
-                  toName: patientName,
+                  recipientName: patientName,
                   subject: 'Appointment Cancelled',
+                  title: 'Appointment Cancelled',
                   message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} with ${practiceName}${practiceAddress ? ' at ' + practiceAddress : ''} has been cancelled.`,
                   actionUrl: undefined,
                   senderContext: { fromName: practiceName }

@@ -156,8 +156,9 @@ Deno.serve(async (req) => {
           try {
             await sendNotificationEmail({
               to: patientWithUser.email,
-              toName: patientName,
+              recipientName: patientName,
               subject: 'Video Session Ready',
+              title: 'Video Session Ready',
               message: `Your instant video session is ready to join.`,
               actionUrl: undefined,
               senderContext: { fromName: 'Your Healthcare Provider' }
