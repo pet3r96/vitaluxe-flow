@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
             actionUrl: undefined
           });
           
-          const { data: emailResult, error: emailError } = await supabase.functions.invoke('unified-email-sender', {
+          const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('unified-email-sender', {
             body: {
               type: 'notification',
               to: patientData.email,
