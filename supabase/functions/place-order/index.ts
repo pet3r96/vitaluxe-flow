@@ -402,16 +402,40 @@ serve(async (req) => {
       }
     }
 
+    // CRITICAL: Validate we have order lines before proceeding
+    if (allOrderLines.length === 0) {
+      console.error("[place-order] No order lines generated - aborting order creation");
+      
+      // Rollback: Delete the orders we just created
+      if (createdOrders.length > 0) {
+        await supabaseAdmin
+          .from("orders")
+          .delete()
+          .in("id", createdOrders.map(o => o.id));
+      }
+      
+      throw new Error("Cannot create order without order lines");
+    }
+
     const { error: orderLinesError } = await supabaseAdmin
       .from("order_lines")
       .insert(allOrderLines);
 
     if (orderLinesError) {
       console.error("[place-order] Failed to create order lines:", orderLinesError);
+      
+      // Rollback: Delete the orders we just created
+      if (createdOrders.length > 0) {
+        await supabaseAdmin
+          .from("orders")
+          .delete()
+          .in("id", createdOrders.map(o => o.id));
+      }
+      
       throw new Error("Failed to create order lines");
     }
 
-    console.log(`[place-order] Created ${allOrderLines.length} order lines successfully`);
+    console.log(`[place-order] Created ${allOrderLines.length} order lines successfully for ${createdOrders.length} orders`);
 
     // Process payments for each order
     const failedPayments: any[] = [];
