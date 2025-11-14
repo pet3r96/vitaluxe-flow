@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Package, ShoppingCart, Users, DollarSign, Clock, Sparkles, Lock } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -52,10 +53,10 @@ const Dashboard = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Batched dashboard stats - single query replaces 6 separate queries
-  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
-    queryKey: ["dashboard-stats-batched", effectiveRole, effectiveUserId, isImpersonating],
-    queryFn: async () => {
+  // Batched dashboard stats with real-time updates
+  const { data: dashboardStats, isLoading: statsLoading } = useRealtimeQuery(
+    ["dashboard-stats-batched", effectiveRole, effectiveUserId, String(isImpersonating)],
+    async () => {
       const { data, error } = await supabase.functions.invoke('get-dashboard-stats', {
         body: { role: effectiveRole, isImpersonating, effectiveUserId }
       });
@@ -63,12 +64,13 @@ const Dashboard = () => {
       if (error) throw error;
       return data.data;
     },
-    staleTime: 30000, // 30 seconds - faster refresh for real-time feel
-    gcTime: 2 * 60 * 1000, // 2 minutes
-    refetchOnMount: false, // Don't refetch if cache is fresh
-    refetchOnWindowFocus: false, // Don't refetch on tab switch
-    placeholderData: (previousData) => previousData,
-  });
+    {
+      staleTime: 30000, // 30 seconds
+      gcTime: 2 * 60 * 1000,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+    }
+  );
 
   // Individual stats from batched response
   const ordersCount = dashboardStats?.ordersCount ?? 0;

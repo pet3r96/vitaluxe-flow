@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import {
   Table,
   TableBody,
@@ -32,10 +33,9 @@ export const PracticesDataTable = () => {
   // Check if user can view credentials
   const canViewCredentials = effectiveRole && ['admin', 'doctor', 'provider', 'pharmacy'].includes(effectiveRole);
 
-  const { data: practices, isLoading, refetch } = useQuery({
-    queryKey: ["practices"],
-    staleTime: 600000, // 10 minutes - practices rarely change
-    queryFn: async () => {
+  const { data: practices, isLoading, refetch } = useRealtimeQuery(
+    ["practices"],
+    async () => {
       // First get all doctor role users
       const { data: allDoctors, error: doctorsError } = await supabase
         .from("profiles")
@@ -61,7 +61,8 @@ export const PracticesDataTable = () => {
 
       return practicesOnly;
     },
-  });
+    { staleTime: 60000 } // 1 minute for instant updates
+  );
 
   // No longer need decryption - credentials stored in profiles table
 

@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { realtimeManager } from "@/lib/realtimeManager";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import {
   Table,
   TableBody,
@@ -80,14 +80,9 @@ export const OrdersDataTable = () => {
     },
   });
 
-  const { data: orders, isLoading, refetch, error } = useQuery({
-    queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
-    staleTime: 60 * 1000, // 60 seconds - rely on realtime for updates
-    gcTime: 5 * 60 * 1000,
-    refetchInterval: false, // Disable polling - use realtime instead
-    refetchOnMount: true, // Always fetch fresh on mount
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    queryFn: async () => {
+  const { data: orders, isLoading, refetch, error } = useRealtimeQuery(
+    ["orders", effectiveRole, effectiveUserId, user?.id],
+    async () => {
       const queryStart = Date.now();
       console.time('OrdersQuery');
       try {
@@ -466,7 +461,13 @@ export const OrdersDataTable = () => {
         throw error;
       }
     },
-  });
+    {
+      staleTime: 60 * 1000, // 60 seconds
+      gcTime: 5 * 60 * 1000,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+    }
+  );
 
   // Fetch commission data - ONLY FOR ADMIN (reps should not see commission data)
   const { data: orderCommissions } = useQuery({
@@ -509,28 +510,8 @@ export const OrdersDataTable = () => {
       
       return commissionMap;
     },
-    // CRITICAL: Only admin should see commissions - disable for topline/downline reps
     enabled: effectiveRole === 'admin' && !!currentRepId && !!orders?.length,
   });
-
-  // Set up real-time subscription for order updates using centralized manager
-  useEffect(() => {
-    // Don't set up subscription if no effective user
-    if (!effectiveUserId) return;
-    
-    // Subscribe to both orders and order_lines tables
-    realtimeManager.subscribe('orders', () => {
-      logger.info('Order update detected, refetching');
-      refetch();
-    });
-    
-    realtimeManager.subscribe('order_lines', () => {
-      logger.info('Order line update detected, refetching');
-      refetch();
-    });
-
-    // Cleanup handled by realtimeManager
-  }, [effectiveUserId, refetch]);
 
   // Calculate counts for each status (including search filter)
   const statusCounts = useMemo(() => {

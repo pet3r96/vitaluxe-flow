@@ -17,14 +17,54 @@ class RealtimeManager {
   
   // Cross-table dependencies - when table A changes, also invalidate queries for B, C
   private tableDependencies: Record<string, string[]> = {
-    'patient_appointments': ['calendar-data', 'waiting-room-dashboard', 'today-appointments', 'being-treated-appointments', 'provider-video-sessions'],
+    // Appointments & Clinical
+    'patient_appointments': ['calendar-data', 'waiting-room-dashboard', 'today-appointments', 'being-treated-appointments', 'provider-video-sessions', 'dashboard-stats-batched'],
     'practice_rooms': ['calendar-data'],
-    'providers': ['calendar-data'],
+    'providers': ['calendar-data', 'practices', 'provider-counts'],
     'practice_blocked_time': ['calendar-data'],
     'patient_notes': ['engagement-summary'],
     'treatment_plans': ['engagement-summary'],
     'patient_follow_ups': ['engagement-summary', 'follow-up-reminders'],
     'video_sessions': ['provider-video-sessions'],
+    
+    // Products & Inventory
+    'products': ['products', 'pharmacy-products'],
+    'product_pharmacies': ['products', 'pharmacy-products'],
+    'product_types': ['product-types'],
+    'topline_product_visibility': ['products', 'rep-product-visibility'],
+    
+    // Orders & Cart
+    'orders': ['orders', 'dashboard-stats-batched', 'rep-dashboard-stats-batched', 'pharmacy-dashboard-stats', 'orders-page'],
+    'order_lines': ['orders', 'order-details', 'orders-page'],
+    'cart': ['cart-items', 'cart-count'],
+    'cart_lines': ['cart-items', 'cart-count'],
+    
+    // Practices & Accounts
+    'profiles': ['practices', 'accounts', 'dashboard-profile', 'rep-practices'],
+    'user_roles': ['practices', 'accounts'],
+    'pending_practices': ['rep-pending-practices', 'pending-practices'],
+    'rep_practice_links': ['rep-practices', 'rep-practice-stats'],
+    
+    // Reps & Commissions
+    'reps': ['all-reps-lookup', 'rep-productivity-view', 'rep-practices', 'current-rep-id'],
+    'commissions': ['rep-productivity-view', 'rep-dashboard-stats-batched'],
+    'pending_reps': ['pending-reps'],
+    
+    // Patients
+    'patient_accounts': ['patients', 'dashboard-stats-batched', 'orders-page'],
+    'patient_intake_forms': ['intake-forms', 'intake-reminders'],
+    
+    // Pharmacies
+    'pharmacies': ['pharmacies', 'pharmacy-shipping-rates'],
+    'pharmacy_shipping_rates': ['shipping-rates', 'multiple-pharmacy-rates'],
+    
+    // Communications
+    'messages': ['messages', 'unread-messages', 'dashboard-stats-batched'],
+    'follow_up_reminders': ['follow-up-reminders'],
+    
+    // System & Audit
+    'audit_logs': ['audit-logs', 'error-logs'],
+    'subscriptions': ['subscription-status', 'dashboard-stats-batched'],
   };
 
   /**

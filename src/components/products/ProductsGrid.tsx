@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProducts } from "@/hooks/useProducts";
+import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,8 +73,8 @@ export const ProductsGrid = () => {
   // Check RX ordering privileges
   const { canOrderRx, hasProviders, providerCount, providersWithNpiCount, isLoading: isLoadingRxPrivileges } = usePracticeRxPrivileges();
 
-  // Use service layer hook for fetching products
-  const { data: products, isLoading, refetch } = useProducts();
+  // Use real-time hook for instant updates
+  const { data: products, isLoading } = useRealtimeProducts();
 
   // Fetch visibility settings for topline rep to show hidden status
   const { data: visibilitySettings } = useQuery({
@@ -131,7 +131,7 @@ export const ProductsGrid = () => {
 
     if (!error) {
       toast.success(`Product ${!currentStatus ? "activated" : "deactivated"}`);
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     } else {
       toast.error("Failed to update product status");
     }
@@ -933,7 +933,7 @@ export const ProductsGrid = () => {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         product={isEditing ? selectedProduct : null}
-        onSuccess={() => refetch()}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["products"] })}
       />
 
       <PatientSelectionDialog
