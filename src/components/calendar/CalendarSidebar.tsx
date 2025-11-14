@@ -205,13 +205,13 @@ export function CalendarSidebar({
 
             <Separator />
 
-            {/* Providers */}
+            {/* Providers & Staff */}
             <div>
               <button
                 onClick={() => setProvidersExpanded(!providersExpanded)}
                 className="w-full flex items-center justify-between text-sm font-semibold mb-3 hover:text-primary transition-colors"
               >
-                <span>Providers ({selectedProviders.length}/{providers.length})</span>
+                <span>Providers & Staff ({selectedProviders.length}/{providers.length})</span>
                 {providersExpanded ? (
                   <ChevronDown className="h-4 w-4" />
                 ) : (
@@ -233,15 +233,23 @@ export function CalendarSidebar({
                         className="flex items-center gap-2 flex-1 cursor-pointer"
                       >
                         <ProviderAvatar provider={provider} size="sm" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">
-                            {getProviderDisplayName(provider)}
-                          </div>
-                          {provider.specialty && (
-                            <div className="text-xs text-muted-foreground truncate">
-                              {provider.specialty}
+                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">
+                              {getProviderDisplayName(provider)}
                             </div>
-                          )}
+                            {provider.specialty && (
+                              <div className="text-xs text-muted-foreground truncate">
+                                {provider.specialty}
+                              </div>
+                            )}
+                          </div>
+                          <Badge 
+                            variant={provider.type === 'provider' ? 'default' : 'secondary'} 
+                            className="text-xs shrink-0"
+                          >
+                            {provider.type === 'provider' ? 'Provider' : 'Staff'}
+                          </Badge>
                         </div>
                       </label>
                     </div>
