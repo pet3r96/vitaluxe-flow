@@ -32,6 +32,21 @@ const VideoConsultationRoom = () => {
       try {
         setLoading(true);
 
+        // Preflight: Verify Agora config before proceeding
+        try {
+          const { data: configData, error: configError } = await supabase.functions.invoke("verify-agora-config", {
+            body: { appId: import.meta.env.VITE_AGORA_APP_ID }
+          });
+          
+          if (configError || !configData?.match) {
+            console.error("[VideoRoom] Agora config mismatch:", configData);
+            setError("Configuration error. Please contact support.");
+            return;
+          }
+        } catch (configErr) {
+          console.warn("[VideoRoom] Config verification unavailable, continuing...");
+        }
+
         // Fetch channel name + patient ID
         const { data: session, error: sessionError } = await supabase
           .from("video_sessions")
@@ -42,9 +57,14 @@ const VideoConsultationRoom = () => {
         if (!isMounted) return;
 
         if (sessionError || !session) {
-          const errorMsg = sessionError
-            ? `Database error: ${sessionError.message} (Code: ${sessionError.code})`
-            : "Session not found";
+          let errorMsg = "Session not found";
+          if (sessionError?.code === 'PGRST116') {
+            errorMsg = "This video session no longer exists.";
+          } else if (sessionError?.message?.includes('JWT')) {
+            errorMsg = "Your session expired. Please sign in again.";
+          } else if (sessionError) {
+            errorMsg = `Database error: ${sessionError.message}`;
+          }
           setError(errorMsg);
           return;
         }
@@ -53,8 +73,12 @@ const VideoConsultationRoom = () => {
         setChannelName(normalized);
         setPatientId(session.patient_id);
 
-        // Fetch Agora tokens
-        const { data, error } = await supabase.functions.invoke("agora-token", {
+        // Fetch Agora tokens with timeout
+        const tokenTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Token request timed out")), 10000)
+        );
+
+        const tokenRequest = supabase.functions.invoke("agora-token", {
           body: {
             channel: normalized,
             role: "publisher",
@@ -62,10 +86,19 @@ const VideoConsultationRoom = () => {
           },
         });
 
+        const { data, error } = await Promise.race([tokenRequest, tokenTimeout]) as any;
+
         if (!isMounted) return;
 
         if (error || !data) {
-          const errorMsg = error ? `Token generation failed: ${error.message}` : "No token data received";
+          let errorMsg = "Failed to generate access token";
+          if (error?.message?.includes('401') || error?.message?.includes('Unauthorized')) {
+            errorMsg = "Your session expired. Please sign in again.";
+          } else if (error?.message?.includes('timeout')) {
+            errorMsg = "Connection timed out. Please check your internet and try again.";
+          } else if (error) {
+            errorMsg = `Token generation failed: ${error.message}`;
+          }
           setError(errorMsg);
           return;
         }
@@ -76,7 +109,18 @@ const VideoConsultationRoom = () => {
         setUid(data.uid);
         setRtmUid(data.rtmUid);
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Unknown error";
+        if (!isMounted) return;
+        
+        let errorMsg = "Unable to join video session";
+        if (err instanceof Error) {
+          if (err.message.includes('timeout')) {
+            errorMsg = "Connection timed out. Please check your internet and try again.";
+          } else if (err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
+            errorMsg = "Network error. Please check your connection.";
+          } else {
+            errorMsg = err.message;
+          }
+        }
         setError(errorMsg);
       } finally {
         if (isMounted) setLoading(false);

@@ -65,16 +65,25 @@ Deno.serve(async (req) => {
       console.log('Provider scope (admin impersonation):', isProviderScoped, 'Effective Provider ID:', providerRecord?.id);
     }
 
-    // Build query - use left join for providers so pending appointments without providers show up
+    // Build query - optimized with only essential columns
     let query = supabaseClient
       .from('patient_appointments')
       .select(`
-        *,
-        patient_accounts!inner(id, first_name, last_name, phone, email),
-        providers!patient_appointments_provider_id_fkey(id, user_id, profiles!providers_user_id_fkey(name, full_name)),
-        practice_rooms(id, name, color),
+        id,
+        start_time,
+        end_time,
+        status,
+        practice_id,
+        provider_id,
+        room_id,
+        patient_id,
+        appointment_type,
+        notes,
         checked_in_at,
-        treatment_started_at
+        treatment_started_at,
+        patient_accounts!inner(id, first_name, last_name, phone),
+        providers!patient_appointments_provider_id_fkey(id, user_id),
+        practice_rooms(id, name, color)
       `)
       .eq('practice_id', practiceId)
       .gte('start_time', startDate)
@@ -106,25 +115,6 @@ Deno.serve(async (req) => {
     const { data: appointments, error: appointmentsError } = await query;
 
     if (appointmentsError) throw appointmentsError;
-
-    // Transform appointments to include provider first_name and last_name
-    const transformedAppointments = appointments?.map((apt: any) => {
-      if (apt.providers && apt.providers.profiles) {
-        const profile = Array.isArray(apt.providers.profiles) ? apt.providers.profiles[0] : apt.providers.profiles;
-        const displayName = profile?.full_name || profile?.name || 'Provider';
-        const nameParts = displayName.trim().split(' ');
-        
-        return {
-          ...apt,
-          providers: {
-            ...apt.providers,
-            first_name: nameParts[0] || 'Provider',
-            last_name: nameParts.slice(1).join(' ') || ''
-          }
-        };
-      }
-      return apt;
-    });
 
     // Parallel fetch for better performance
     const [settingsResult, providersData, roomsResult, blockedTimeResult] = await Promise.all([
@@ -160,14 +150,14 @@ Deno.serve(async (req) => {
           }
           return [];
         } else {
-          // Fetch providers with their profiles - use left join to ensure providers show even without profile
+          // Fetch providers with minimal data
           const { data: providerRecords, error: providerError } = await supabaseClient
             .from('providers')
             .select(`
               id,
               user_id,
               active,
-              profiles:user_id(id, name, full_name, prescriber_name, email)
+              profiles:user_id(id, full_name, name)
             `)
             .eq('practice_id', practiceId)
             .eq('active', true);
@@ -178,35 +168,15 @@ Deno.serve(async (req) => {
           }
           
           if (providerRecords && providerRecords.length > 0) {
-            console.log('[get-calendar-data] Raw provider records:', JSON.stringify(providerRecords, null, 2));
-            
             return providerRecords.map((p: any) => {
               const profile = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
               
-              console.log('[get-calendar-data] Processing provider:', {
-                provider_id: p.id,
-                user_id: p.user_id,
-                profile_exists: !!profile,
-                profile_prescriber_name: profile?.prescriber_name,
-                profile_name: profile?.name,
-                profile_full_name: profile?.full_name,
-                profile_email: profile?.email
-              });
-              
-              // Build display name with comprehensive fallbacks (Priority: prescriber_name > full_name > name > email-derived)
+              // Build display name with fallbacks
               let displayName = 'Provider';
-              if (profile?.prescriber_name?.trim()) {
-                displayName = profile.prescriber_name.trim();
-              } else if (profile?.full_name?.trim()) {
-                displayName = profile.full_name.trim();
-              } else if (profile?.name?.trim() && !profile.name.includes('@')) {
-                displayName = profile.name.trim();
-              } else if (profile?.email) {
-                // Derive from email local part (convert to Title Case)
-                const localPart = profile.email.split('@')[0];
-                displayName = localPart.split(/[._-]/).map((word: string) => 
-                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                ).join(' ');
+              if (profile?.full_name) {
+                displayName = profile.full_name;
+              } else if (profile?.name) {
+                displayName = profile.name;
               }
               
               const nameParts = displayName.trim().split(' ');
@@ -220,7 +190,6 @@ Deno.serve(async (req) => {
                 specialty: null
               };
               
-              console.log('[get-calendar-data] Transformed provider:', result);
               return result;
             });
           }
@@ -249,21 +218,18 @@ Deno.serve(async (req) => {
     const allRooms = roomsResult.data;
     const blockedTime = blockedTimeResult.data;
 
-    return new Response(
-      JSON.stringify({
-        appointments: transformedAppointments || [],
-        settings: settings || {
-          slot_duration: 15,
-          start_hour: 7,
-          end_hour: 20,
-          working_days: [1, 2, 3, 4, 5]
-        },
-        providers: transformedProviders || [],
-        rooms: allRooms || [],
-        blockedTime: blockedTime || []
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return successResponse({
+      appointments: appointments || [],
+      settings: settings || {
+        slot_duration: 15,
+        start_hour: 7,
+        end_hour: 20,
+        working_days: [1, 2, 3, 4, 5]
+      },
+      providers: transformedProviders || [],
+      rooms: allRooms || [],
+      blockedTime: blockedTime || []
+    });
   } catch (error: any) {
     console.error('Get calendar data error:', error);
     return new Response(
