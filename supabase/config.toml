@@ -1,5 +1,11 @@
 project_id = "qbtsfajshnrwwlfzkeog"
 
+[functions.email-health]
+verify_jwt = false
+
+[functions.test-email-sending]
+verify_jwt = false
+
 [functions.email-dispatcher]
 verify_jwt = false
 
