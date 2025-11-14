@@ -538,7 +538,12 @@ Deno.serve(async (req) => {
     }
 
     console.log('[send-patient-message] Patient message sent successfully');
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ 
+      success: true,
+      message_id: insertedMessage.id,
+      patient_id: patient_id,
+      practice_id: insertedMessage.practice_id
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {

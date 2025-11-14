@@ -110,14 +110,15 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('[validate-rx-order] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ 
         allowed: false, 
-        error: error.message || 'Internal server error' 
+        error: errorMessage 
       }),
       { 
-        status: error.message === 'Unauthorized' ? 401 : 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        status: errorMessage === 'Unauthorized' ? 401 : 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
