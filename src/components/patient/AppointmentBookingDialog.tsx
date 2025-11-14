@@ -35,7 +35,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
   const [debugOpen, setDebugOpen] = useState(false);
   const [visitType, setVisitType] = useState<'in_person'>('in_person');
 
-  // Fetch patient's assigned practice
+  // Fetch patient's assigned practice - DIRECT QUERY (no join)
   const { data: patientAccount } = useQuery({
     queryKey: ["patient-account"],
     queryFn: async () => {
@@ -53,15 +53,33 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       
       console.log("👤 [AppointmentBooking] Effective user ID:", effectiveUserId);
       
+      // Get patient_account with practice_id only (no join)
       const { data, error } = await supabase
         .from("patient_accounts")
-        .select("id, practice_id, practice:profiles!patient_accounts_practice_id_fkey(name, address_city, address_state)")
+        .select("id, practice_id")
         .eq("user_id", effectiveUserId)
         .maybeSingle();
       
-      console.log("📋 [AppointmentBooking] Patient account:", data);
-      
       if (error) throw error;
+      
+      // If we have a practice_id, fetch practice details separately
+      if (data?.practice_id) {
+        const { data: practiceData, error: practiceError } = await supabase
+          .from("profiles")
+          .select("name, address_street, address_city, address_state, address_zip")
+          .eq("id", data.practice_id)
+          .single();
+        
+        if (!practiceError && practiceData) {
+          console.log("📋 [AppointmentBooking] Practice loaded:", practiceData.name);
+          return {
+            ...data,
+            practice: practiceData
+          };
+        }
+      }
+      
+      console.log("📋 [AppointmentBooking] Patient account:", data);
       return data;
     },
   });
@@ -316,11 +334,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
             Book Appointment
           </DialogTitle>
           <DialogDescription>
-            {patientAccount?.practice ? (
-              <>Request an appointment with {Array.isArray(patientAccount.practice) ? patientAccount.practice[0]?.name : patientAccount.practice?.name}</>
-            ) : (
-              <>Request an appointment with your healthcare provider</>
-            )}
+            {practiceName || "Request an appointment with your healthcare provider"}
           </DialogDescription>
         </DialogHeader>
 
@@ -363,13 +377,9 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
                 </SelectItem>
               </SelectContent>
             </Select>
-            {patientAccount && (
+            {practiceName && (
               <p className="text-xs text-muted-foreground">
-                {Array.isArray(patientAccount.practice) 
-                  ? `${patientAccount.practice[0]?.address_city}, ${patientAccount.practice[0]?.address_state}` 
-                  : patientAccount.practice 
-                    ? `${patientAccount.practice.address_city}, ${patientAccount.practice.address_state}`
-                    : ''}
+                {practiceName}
               </p>
             )}
           </div>

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
+import { resolveCartOwnerUserId } from "@/lib/cartOwnerResolver";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,7 +26,7 @@ import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Checkout() {
-  const { effectiveUserId, effectivePracticeId, user, isStaffAccount, isProviderAccount } = useAuth();
+  const { effectiveUserId, effectivePracticeId, effectiveRole, user, isStaffAccount, isProviderAccount } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -38,6 +39,14 @@ export default function Checkout() {
   // Calculate the correct practice ID for shipping address
   // Providers and staff use effectivePracticeId, practice owners use effectiveUserId
   const practiceIdForShipping = (isProviderAccount || isStaffAccount) ? effectivePracticeId : effectiveUserId;
+  
+  // Resolve cart owner
+  const { data: cartOwnerId } = useQuery({
+    queryKey: ['cart-owner', effectiveUserId, effectiveRole, effectivePracticeId],
+    queryFn: () => resolveCartOwnerUserId(effectiveUserId!, effectiveRole!, effectivePracticeId),
+    enabled: !!effectiveUserId && !!effectiveRole,
+    staleTime: 5 * 60 * 1000,
+  });
   
   // Payment method state
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>("");
@@ -94,9 +103,9 @@ export default function Checkout() {
     return calculateSubtotal() - calculateDiscountAmount() + calculateShipping() + merchantFeeAmount;
   };
 
-  const { data: cart, isLoading} = useCart(effectiveUserId, {
+  const { data: cart, isLoading} = useCart(cartOwnerId, {
     hydratePatients: true,
-    enabled: !!effectiveUserId,
+    enabled: !!cartOwnerId,
     staleTime: 5000,
     refetchOnWindowFocus: false,
   });

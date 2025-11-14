@@ -942,28 +942,29 @@ serve(async (req) => {
         console.log('✅ [assign-user-role] Password status record created');
       }
 
-      // Send welcome email
+      // Send welcome email using email-dispatcher with retry logic
       try {
-        const emailPayload = {
-          userId: userId,
-          email: signupData.email,
-          name: signupData.name,
-          role: signupData.role,
-          practiceId: signupData.roleData?.practiceId
-        };
-        console.log('[assign-user-role] Welcome email payload:', emailPayload);
+        const correlationId = crypto.randomUUID();
+        console.log(`[assign-user-role] ${correlationId} - Invoking email-dispatcher for welcome`);
         
-        const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-welcome-email', {
-          body: emailPayload
+        const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('email-dispatcher', {
+          body: {
+            type: 'welcome',
+            userId: userId,
+            email: signupData.email,
+            name: signupData.name,
+            practiceId: signupData.roleData?.practiceId,
+            correlationId
+          }
         });
 
         if (emailError) {
-          console.error('❌ [assign-user-role] Error response from send-welcome-email:', emailError);
+          console.error(`❌ [assign-user-role] ${correlationId} - Welcome email failed:`, emailError);
         } else {
-          console.log('✅ [assign-user-role] Welcome email sent successfully:', emailData);
+          console.log(`✅ [assign-user-role] ${correlationId} - Welcome email sent:`, emailData);
         }
       } catch (emailErr) {
-        console.error('❌ [assign-user-role] Exception invoking send-welcome-email:', emailErr);
+        console.error('❌ [assign-user-role] Exception invoking email-dispatcher:', emailErr);
       }
     } else {
       console.log('[assign-user-role] No email sent - not self-signup or admin-created flow');
