@@ -95,15 +95,12 @@ export default function PracticeCalendar() {
     async () => {
       const { startDate, endDate } = getDateRange();
       
-      // Use local timezone boundaries
-      const start = new Date(`${startDate}T00:00:00`);
-      const end = new Date(`${endDate}T23:59:59`);
-      
+      // Use UTC timezone for consistent date handling
       const { data, error } = await supabase.functions.invoke('get-calendar-data', {
         body: {
           practiceId,
-          startDate: start.toISOString(),
-          endDate: end.toISOString(),
+          startDate: `${startDate}T00:00:00.000Z`,
+          endDate: `${endDate}T23:59:59.999Z`,
           providers: selectedProviders.length > 0 ? selectedProviders : undefined,
           rooms: selectedRooms.length > 0 ? selectedRooms : undefined,
           statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
