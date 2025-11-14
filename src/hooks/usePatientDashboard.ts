@@ -63,7 +63,7 @@ export interface PatientDashboardData {
   }>;
 }
 
-export function usePatientDashboard(effectiveUserId: string | null) {
+export function usePatientDashboard(effectiveUserId: string | null, effectiveRole: string | null) {
   return useQuery({
     queryKey: ["patient-dashboard-data", effectiveUserId],
     queryFn: async () => {
@@ -91,7 +91,7 @@ export function usePatientDashboard(effectiveUserId: string | null) {
       console.log('[usePatientDashboard] ✅ Successfully fetched batched dashboard data');
       return data;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!effectiveUserId && effectiveRole === 'patient',
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: true,
   });
