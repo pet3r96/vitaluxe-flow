@@ -913,25 +913,30 @@ serve(async (req) => {
 
       // Send temp password email with userId for token generation
       try {
-        const authHeader = req.headers.get('Authorization');
-        const { error: emailError } = await supabaseAdmin.functions.invoke('send-temp-password-email', {
-          body: {
+        const functionUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-welcome-email`;
+        const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+        
+        const emailResponse = await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${anonKey}`,
+            'apikey': anonKey
+          },
+          body: JSON.stringify({
+            userId: userId,
             email: signupData.email,
             name: signupData.name,
-            temporaryPassword: initialPassword,
             role: signupData.role,
-            userId: userId  // CRITICAL: Pass userId so token can be created
-          },
-          headers: authHeader ? {
-            Authorization: authHeader
-          } : {}
+            practiceId: signupData.roleData?.practiceId
+          })
         });
 
-        if (emailError) {
-          console.error('Error sending temp password email:', emailError);
-          console.error('Email error details:', JSON.stringify(emailError));
+        if (!emailResponse.ok) {
+          const errorText = await emailResponse.text();
+          console.error('Error sending welcome email:', errorText);
         } else {
-          console.log('✅ Temporary password email sent successfully to:', signupData.email);
+          console.log('✅ Welcome email sent successfully to:', signupData.email);
         }
       } catch (emailErr) {
         console.error('Failed to invoke send-temp-password-email function:', emailErr);

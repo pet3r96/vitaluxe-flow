@@ -81,12 +81,13 @@ export const StaffDetailsDialog = ({
   const handleResendWelcomeEmail = async () => {
     setResendingEmail(true);
     try {
-      const { error } = await supabase.functions.invoke('send-temp-password-email', {
+      const { error } = await supabase.functions.invoke('send-welcome-email', {
         body: {
+          userId: staff.user_id,
           email: staff.profiles?.email,
           name: staff.profiles?.full_name || staff.profiles?.name || '',
           role: 'staff',
-          userId: staff.user_id
+          practiceId: staff.practice_id
         }
       });
 
