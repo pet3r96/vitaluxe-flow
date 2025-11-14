@@ -240,6 +240,18 @@ Deno.serve(async (req) => {
       } else if (patientWithUser) {
         const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
         
+        // Get practice details for notification
+        const { data: practiceDetails } = await supabaseAdmin
+          .from('profiles')
+          .select('name, company, address_street, address_city, address_state, address_zip')
+          .eq('id', appointment.practice_id)
+          .single();
+
+        const practiceName = practiceDetails?.company || practiceDetails?.name || 'Your Healthcare Provider';
+        const practiceAddress = practiceDetails?.address_street 
+          ? `${practiceDetails.address_street}, ${practiceDetails.address_city}, ${practiceDetails.address_state} ${practiceDetails.address_zip}`
+          : '';
+        
         // Get appointment details for notification
         const { data: appointmentDetails } = await supabaseAdmin
           .from('patient_appointments')
@@ -260,11 +272,13 @@ Deno.serve(async (req) => {
                   user_id: patientWithUser.user_id,
                   type: 'appointment_cancelled',
                   title: 'Appointment Cancelled',
-                  message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been cancelled.`,
+                  message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} with ${practiceName}${practiceAddress ? ' at ' + practiceAddress : ''} has been cancelled.`,
                   metadata: {
                     appointmentId: appointmentId,
                     appointmentDate: appointmentDateFormatted,
-                    appointmentTime: appointmentTimeFormatted
+                    appointmentTime: appointmentTimeFormatted,
+                    practiceName: practiceName,
+                    practiceAddress: practiceAddress
                   }
                 }
               });
@@ -282,9 +296,9 @@ Deno.serve(async (req) => {
                   to: patientWithUser.email,
                   toName: patientName,
                   subject: 'Appointment Cancelled',
-                  message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been cancelled.`,
+                  message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} with ${practiceName}${practiceAddress ? ' at ' + practiceAddress : ''} has been cancelled.`,
                   actionUrl: undefined,
-                  senderContext: { fromName: 'Your Healthcare Provider' }
+                  senderContext: { fromName: practiceName }
                 });
                 console.log('[cancel-appointment] Email sent to:', patientWithUser.email);
               } catch (emailError) {
@@ -297,8 +311,12 @@ Deno.serve(async (req) => {
                 const normalizedPhone = normalizePhoneToE164(patientWithUser.phone);
                 await sendNotificationSms({
                   phoneNumber: normalizedPhone,
-                  message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been cancelled.`,
-                  metadata: { appointmentId: appointmentId }
+                  message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} with ${practiceName} has been cancelled. ${practiceAddress}`,
+                  metadata: { 
+                    appointmentId: appointmentId,
+                    practiceName: practiceName,
+                    practiceAddress: practiceAddress
+                  }
                 });
                 console.log('[cancel-appointment] SMS sent to:', normalizedPhone);
               } catch (smsError) {
