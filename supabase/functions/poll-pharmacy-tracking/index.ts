@@ -116,7 +116,10 @@ serve(async (req) => {
         // Process each tracking update
         for (const update of orders) {
           const orderLine = orderLines.find(
-            ol => ol.orders?.order_number === update.vitaluxe_order_number
+            ol => {
+              const orders = Array.isArray(ol.orders) ? ol.orders[0] : ol.orders;
+              return orders?.order_number === update.vitaluxe_order_number;
+            }
           );
 
           if (!orderLine) continue;

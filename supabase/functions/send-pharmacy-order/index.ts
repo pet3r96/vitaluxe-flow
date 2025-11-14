@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
 
     // Parse patient address (assuming format "street, city, state zip")
     const addressStr = firstLine.patient_address || "";
-    const addressParts = addressStr.split(",").map(p => p.trim());
+    const addressParts = addressStr.split(",").map((p: string) => p.trim());
     const line1 = addressParts[0] || "";
     const city = addressParts[1] || "";
     const stateZip = addressParts[2] || "";

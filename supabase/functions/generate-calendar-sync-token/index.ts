@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
     }
 
     // Construct feed URL
-    const feedUrl = `${SUPABASE_URL}/functions/v1/calendar-feed?token=${token}`;
+    const feedUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/calendar-feed?token=${token}`;
 
     console.log('Calendar sync token generated for user:', user.id);
 

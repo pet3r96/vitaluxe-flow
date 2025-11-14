@@ -508,11 +508,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (notificationError) {
-        console.error('[send-patient-message] Failed to create team notifications:', notificationError);
-      } else {
-        console.log('[send-patient-message] Created notifications for', teamMemberIds.length, 'team members');
-      }
+      console.log('[send-patient-message] Created notifications for', teamMemberIds.length, 'team members');
     }
 
     console.log('[send-patient-message] Patient message sent successfully');
