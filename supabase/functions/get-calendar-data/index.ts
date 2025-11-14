@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     }
 
     // Build query - optimized with only essential columns
-    // CRITICAL: Use LEFT JOIN for patient_accounts to avoid RLS blanking all appointments
+    // CRITICAL: Use LEFT JOIN for patient_accounts and providers to ensure appointments are always returned
     let query = supabaseClient
       .from('patient_appointments')
       .select(`
@@ -82,9 +82,9 @@ Deno.serve(async (req) => {
         notes,
         checked_in_at,
         treatment_started_at,
-        patient_accounts(id, first_name, last_name, phone),
-        providers!patient_appointments_provider_id_fkey(id, user_id),
-        practice_rooms(id, name, color)
+        patient_accounts!left(id, first_name, last_name, phone),
+        providers!patient_appointments_provider_id_fkey!left(id, user_id),
+        practice_rooms!left(id, name, color)
       `)
       .eq('practice_id', practiceId)
       .gte('start_time', startDate)
@@ -118,6 +118,8 @@ Deno.serve(async (req) => {
     const { data: appointments, error: appointmentsError } = await query;
 
     if (appointmentsError) throw appointmentsError;
+
+    console.log(`[get-calendar-data] Retrieved ${appointments?.length || 0} appointments. Sample IDs:`, appointments?.slice(0, 2).map(a => a.id));
 
     // Parallel fetch for better performance
     const [settingsResult, providersData, roomsResult, blockedTimeResult] = await Promise.all([

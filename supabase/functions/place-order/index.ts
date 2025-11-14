@@ -336,7 +336,6 @@ serve(async (req) => {
         merchant_fee_percentage: merchant_fee_percentage,
         status: "pending",
         ship_to: "patient",
-        patient_id: line.patient_id,
         practice_address: null,
         formatted_shipping_address: null,
         payment_method_id: payment_method_id,
@@ -374,7 +373,7 @@ serve(async (req) => {
       }]);
     }
 
-    console.log(`[place-order] Creating ${ordersToCreate.length} orders`);
+    console.log(`[place-order] Creating ${ordersToCreate.length} orders with keys:`, ordersToCreate.length > 0 ? Object.keys(ordersToCreate[0]) : []);
 
     // Batch insert all orders using admin client (bypasses RLS)
     const { data: createdOrders, error: ordersError } = await supabaseAdmin
