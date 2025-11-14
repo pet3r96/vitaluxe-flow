@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Calendar, Building, Loader2, AlertCircle, CheckCircle, Info, ChevronDown } from "lucide-react";
 import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
+import { usePatientPracticeSubscription } from "@/hooks/usePatientPracticeSubscription";
 
 interface AppointmentBookingDialogProps {
   open: boolean;
@@ -332,7 +333,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {patientData && (
+          {patientAccount && (
             <div className="space-y-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
