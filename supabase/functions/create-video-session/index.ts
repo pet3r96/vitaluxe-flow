@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
       appCertificate,
       channelName,
       uid,
-      Role.PUBLISHER,
+      RtcRole.PUBLISHER,
       ttl,
       ttl
     );
