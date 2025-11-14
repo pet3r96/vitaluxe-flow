@@ -145,17 +145,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     try {
-      // Query user_2fa_settings for Twilio enrollment
+      // Query user_2fa_settings for enrollment (check both Twilio and GHL)
       const { data, error } = await supabase
         .from('user_2fa_settings')
-        .select('twilio_enabled, phone_verified, phone_number, is_enrolled')
+        .select('twilio_enabled, ghl_enabled, phone_verified, phone_number, is_enrolled')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (error) throw error;
 
-      if (!data || !data.twilio_enabled || !data.is_enrolled) {
-        // Not enrolled in Twilio 2FA - force setup
+      // Check if any provider is enabled
+      const anyProviderEnabled = !!(data?.twilio_enabled || data?.ghl_enabled);
+
+      if (!data || !data.is_enrolled || !anyProviderEnabled) {
+        // Not enrolled in any 2FA provider - force setup
         console.log('[AuthContext] check2FAStatus - No 2FA record or not enrolled, requires setup');
         setRequires2FASetup(true);
         setRequires2FAVerify(false);

@@ -50,7 +50,7 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
       const data = JSON.parse(cooldownStr);
       if (data.userId !== userId) return 0;
       const elapsed = Date.now() - data.timestamp;
-      const remaining = 60000 - elapsed;
+      const remaining = 30000 - elapsed;
       return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
     } catch {
       return 0;
@@ -73,7 +73,7 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
           const data = JSON.parse(e.newValue);
           if (data.userId === userId) {
             const elapsed = Date.now() - data.timestamp;
-            const remaining = 60000 - elapsed;
+            const remaining = 30000 - elapsed;
             if (remaining > 0) {
               setCountdown(Math.ceil(remaining / 1000));
             }
@@ -85,27 +85,40 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
     return () => window.removeEventListener('storage', handleStorage);
   }, [userId]);
 
-  // Auto-send on mount if phone is provided (verify mode)
+  // Auto-send on mount if phone is provided (verify mode) or load from localStorage
   useEffect(() => {
-    if (open && phone && !codeSent && step === 'phone') {
-      // Validate phone before proceeding
-      if (!isValidPhone(phone)) {
-        console.log('[Sms2FADialog] Invalid phone prop provided, showing phone input');
-        return;
+    if (open && !codeSent && step === 'phone') {
+      let phoneToUse = phone;
+      
+      // Fallback to localStorage if no phone prop
+      if (!phoneToUse) {
+        const storedPhone = localStorage.getItem(`vitaluxe_2fa_phone_${userId}`);
+        if (storedPhone && isValidPhone(storedPhone)) {
+          console.log('[Sms2FADialog] Loaded phone from localStorage');
+          phoneToUse = storedPhone;
+        }
       }
       
-      setPhoneNumber(phone);
-      const existing = checkSharedCooldown();
-      if (existing > 0) {
-        setStep('verify');
-        setCountdown(existing);
-        setCodeSent(true);
-      } else {
-        // Don't set step yet, let sendCode do it on success
-        sendCode(phone);
+      if (phoneToUse) {
+        // Validate phone before proceeding
+        if (!isValidPhone(phoneToUse)) {
+          console.log('[Sms2FADialog] Invalid phone, showing phone input');
+          return;
+        }
+        
+        setPhoneNumber(phoneToUse);
+        const existing = checkSharedCooldown();
+        if (existing > 0) {
+          setStep('verify');
+          setCountdown(existing);
+          setCodeSent(true);
+        } else {
+          // Don't set step yet, let sendCode do it on success
+          sendCode(phoneToUse);
+        }
       }
     }
-  }, [open, phone, codeSent, step, checkSharedCooldown]);
+  }, [open, phone, codeSent, step, checkSharedCooldown, userId]);
 
   const maskPhone = (num: string) => {
     const digits = num.replace(/\D/g, '');
@@ -198,7 +211,7 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
       setAttemptId(data.attemptId);
       setCodeSent(true);
       setStep('verify');
-      setCountdown(60);
+      setCountdown(30);
 
       // Set cooldown in storage
       localStorage.setItem(COOLDOWN_KEY, JSON.stringify({ timestamp: Date.now(), userId }));
@@ -271,6 +284,9 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
       }
 
       console.log('[Sms2FADialog] ✅ Verification successful');
+
+      // Store phone in localStorage for future logins
+      localStorage.setItem(`vitaluxe_2fa_phone_${userId}`, normalizedPhone);
 
       // Determine if this is setup (new phone) or verify (existing phone)
       const isSetup = !phone; // If no phone prop was provided, this is setup
