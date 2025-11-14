@@ -437,34 +437,30 @@ export default function Checkout() {
           }
         }
         
-        // Invalidate and force refetch cart queries
-        queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
-        queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+        // CRITICAL: Clear cart immediately and force refetch
+        console.log('[Checkout] Clearing cart after successful order');
+        
+        // Set empty cart data immediately (optimistic update)
+        queryClient.setQueryData(["cart", effectiveUserId], { id: '', lines: [] });
+        queryClient.setQueryData(["cart-count", effectiveUserId], 0);
+        
+        // Invalidate all order-related queries to force refetch
+        queryClient.invalidateQueries({ queryKey: ["cart"] });
+        queryClient.invalidateQueries({ queryKey: ["cart-count"] });
         queryClient.invalidateQueries({ queryKey: ["orders"] });
         
-        // Force immediate refetch and clear local state
-        await queryClient.refetchQueries({ 
-          queryKey: ["cart", effectiveUserId],
-          exact: true 
-        });
-        await queryClient.refetchQueries({ 
-          queryKey: ["cart-count", effectiveUserId],
-          exact: true 
-        });
-        
-        // Reset cart data to empty
-        queryClient.setQueryData(["cart", effectiveUserId], null);
-        queryClient.setQueryData(["cart-count", effectiveUserId], 0);
+        // Force refetch in background (don't await to avoid delay)
+        queryClient.refetchQueries({ queryKey: ["cart", effectiveUserId] });
+        queryClient.refetchQueries({ queryKey: ["cart-count", effectiveUserId] });
+        queryClient.refetchQueries({ queryKey: ["orders"] });
         
         toast({
           title: "Order Placed Successfully! 🎉",
-          description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,
+          description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. Redirecting to orders page...`,
         });
         
-        // Wait 500ms for DB commit before navigating
-        setTimeout(() => {
-          navigate("/orders");
-        }, 500);
+        // Navigate immediately - orders page will load fresh data
+        navigate("/orders");
       } else {
         // Some payments failed - show retry dialog
         setPaymentErrors(failedPayments);

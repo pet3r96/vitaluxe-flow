@@ -90,17 +90,18 @@ export function useCart(
 
   return useQuery({
     queryKey: ["cart", userId, productFields, includePharmacy, includeProvider, hydratePatients],
-    queryFn: async (): Promise<Cart | null> => {
-      if (!userId) return null;
+    queryFn: async (): Promise<Cart> => {
+      if (!userId) return { id: '', lines: [] };
 
-      const { data: cartData, error: cartError } = await supabase
-        .from("cart")
-        .select("id")
-        .eq("doctor_id", userId)
-        .maybeSingle();
+      try {
+        const { data: cartData, error: cartError } = await supabase
+          .from("cart")
+          .select("id")
+          .eq("doctor_id", userId)
+          .maybeSingle();
 
-      if (cartError) throw cartError;
-      if (!cartData) return null;
+        if (cartError) throw cartError;
+        if (!cartData) return { id: '', lines: [] };
 
       // Build select query
       let selectFields = `
@@ -158,10 +159,14 @@ export function useCart(
         }
       }
 
-      return {
-        id: cartData.id,
-        lines,
-      };
+        return {
+          id: cartData.id,
+          lines,
+        };
+      } catch (error) {
+        console.error('[useCart] Error fetching cart:', error);
+        return { id: '', lines: [] };
+      }
     },
     enabled: !!userId && enabled,
     staleTime,

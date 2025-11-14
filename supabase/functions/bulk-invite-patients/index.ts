@@ -113,9 +113,10 @@ Deno.serve(async (req) => {
           throw new Error('Patient not found after account creation');
         }
 
-        // Call send-patient-welcome-email function
+        // Call send-welcome-email function (replaces deprecated send-patient-welcome-email)
+        console.log(`[bulk-invite-patients] Calling send-welcome-email for patient portal access`);
         const sendEmailResponse = await fetch(
-          `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-patient-welcome-email`,
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-welcome-email`,
           {
             method: 'POST',
             headers: {
@@ -126,6 +127,7 @@ Deno.serve(async (req) => {
               userId: createAccountResult.userId,
               email: patient.email,
               name: patient.name,
+              role: 'patient',
               token: createAccountResult.token,
               practiceId: patient.practice_id,
             }),
