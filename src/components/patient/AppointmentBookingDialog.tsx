@@ -23,7 +23,7 @@ interface AppointmentBookingDialogProps {
 
 export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: AppointmentBookingDialogProps) {
   const queryClient = useQueryClient();
-  const { practiceName } = usePatientPracticeSubscription();
+  const { practiceName, practiceId, loading: practiceLoading, reason } = usePatientPracticeSubscription();
   const [loading, setLoading] = useState(false);
   const [loadingSoonest, setLoadingSoonest] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
@@ -355,7 +355,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
                 <div>
                   <Label className="text-sm text-muted-foreground">Practice</Label>
                   <p className="font-medium text-lg">
-                    {practiceName || 'Loading...'}
+                    {practiceLoading ? 'Loading...' : (practiceName || 'No practice assigned')}
                   </p>
                 </div>
               </div>
