@@ -5,10 +5,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export function OrdersBreakdown() {
+interface OrdersBreakdownProps {
+  data?: Record<string, number>;
+}
+
+export function OrdersBreakdown({ data: externalData }: OrdersBreakdownProps) {
   const { effectiveRole, effectiveUserId } = useAuth();
 
-  // Fetch orders data based on role
+  // Fetch orders data based on role (only if no external data provided)
   const { data: ordersData } = useQuery({
     queryKey: ["orders-breakdown", effectiveUserId, effectiveRole],
     queryFn: async () => {
@@ -226,15 +230,18 @@ export function OrdersBreakdown() {
 
       return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
     },
-    enabled: !!effectiveUserId,
+    enabled: !externalData && !!effectiveUserId,
   });
 
+  // Use external data if provided, otherwise use fetched data
+  const finalData = externalData || ordersData;
+
   const data = [
-    { name: "Pending", value: (ordersData?.pending || 0) + (ordersData?.on_hold || 0), color: "#FF9A76", colorEnd: "#FF7051", gradient: "from-orange-400 to-orange-500" },
-    { name: "Processing", value: ordersData?.processing || 0, color: "#A78BFA", colorEnd: "#8B5CF6", gradient: "from-purple-400 to-purple-600" },
-    { name: "Shipped", value: ordersData?.shipped || 0, color: "#60A5FA", colorEnd: "#3B82F6", gradient: "from-blue-400 to-blue-500" },
-    { name: "Completed", value: ordersData?.completed || 0, color: "#6EE7B7", colorEnd: "#34D399", gradient: "from-emerald-400 to-emerald-500" },
-    { name: "Declined", value: ordersData?.declined || 0, color: "#FB7185", colorEnd: "#F43F5E", gradient: "from-rose-400 to-rose-500" },
+    { name: "Pending", value: (finalData?.pending || 0) + (finalData?.on_hold || 0), color: "#FF9A76", colorEnd: "#FF7051", gradient: "from-orange-400 to-orange-500" },
+    { name: "Processing", value: finalData?.processing || 0, color: "#A78BFA", colorEnd: "#8B5CF6", gradient: "from-purple-400 to-purple-600" },
+    { name: "Shipped", value: finalData?.shipped || 0, color: "#60A5FA", colorEnd: "#3B82F6", gradient: "from-blue-400 to-blue-500" },
+    { name: "Completed", value: finalData?.completed || 0, color: "#6EE7B7", colorEnd: "#34D399", gradient: "from-emerald-400 to-emerald-500" },
+    { name: "Declined", value: finalData?.declined || 0, color: "#FB7185", colorEnd: "#F43F5E", gradient: "from-rose-400 to-rose-500" },
   ].filter(item => item.value > 0); // Only show items with values
 
   // Total excludes cancelled orders

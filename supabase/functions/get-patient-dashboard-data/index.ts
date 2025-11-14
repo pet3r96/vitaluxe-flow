@@ -32,13 +32,27 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    console.log('[get-patient-dashboard-data] 👤 User ID:', user.id);
+    console.log('[get-patient-dashboard-data] 👤 Admin User ID:', user.id);
+
+    // Check for active impersonation session
+    const { data: impersonationSession } = await supabaseClient
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id, impersonated_role')
+      .eq('admin_user_id', user.id)
+      .eq('revoked', false)
+      .maybeSingle();
+
+    const effectiveUserId = impersonationSession?.impersonated_user_id || user.id;
+    const effectiveRole = impersonationSession?.impersonated_role || null;
+
+    console.log('[get-patient-dashboard-data] 🎭 Effective User ID:', effectiveUserId);
+    console.log('[get-patient-dashboard-data] 🎭 Effective Role:', effectiveRole);
 
     // If user is not a patient, return an empty dashboard payload gracefully
     const { data: rolesData } = await supabaseClient
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id);
+      .eq('user_id', effectiveUserId);
 
     const isPatient = Array.isArray(rolesData) && rolesData.some((r: any) => r.role === 'patient');
     if (!isPatient) {
@@ -75,7 +89,7 @@ Deno.serve(async (req) => {
       supabaseClient
         .from('patient_accounts')
         .select('id, first_name, last_name, practice_id, user_id, email, birth_date, address_street, address_city, address_state, address_zip, address_formatted, gender_at_birth, intake_completed_at')
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .maybeSingle(),
     ]);
 
