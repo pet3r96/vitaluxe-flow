@@ -63,27 +63,117 @@ const Cart = React.memo(function Cart() {
   const showStaffLoading = checkingPrivileges && isStaffAccount;
   const showStaffNoAccess = isStaffAccount && !canOrder && !checkingPrivileges;
 
-  // CRITICAL: Resolve correct cart owner ID based on role
-  const { data: cartOwnerId } = useQuery({
+  // CRITICAL: Resolve correct cart owner ID based on role with error handling
+  const { data: cartOwnerId, isLoading: isLoadingCartOwner, error: cartOwnerError } = useQuery({
     queryKey: ["cart-owner-id", effectiveUserId, effectiveRole, effectivePracticeId],
     queryFn: async () => {
       const { resolveCartOwnerUserId } = await import("@/lib/cartOwnerResolver");
-      return await resolveCartOwnerUserId(effectiveUserId, effectiveRole, effectivePracticeId);
+      const ownerId = await resolveCartOwnerUserId(effectiveUserId, effectiveRole, effectivePracticeId);
+      
+      if (!ownerId) {
+        console.error('[Cart] Failed to resolve cart owner', { effectiveUserId, effectiveRole, effectivePracticeId });
+        throw new Error('Unable to determine cart owner. Please contact support.');
+      }
+      
+      return ownerId;
     },
     enabled: !!effectiveUserId && !showStaffLoading,
+    retry: 2,
   });
 
-  console.log('[Cart] Cart owner resolved:', cartOwnerId);
+  console.log('[Cart] Cart owner resolved:', cartOwnerId, 'error:', cartOwnerError);
 
-  const { data: cart, isLoading } = useCart(cartOwnerId, {
+  const { data: cart, isLoading: isLoadingCart, error: cartError } = useCart(cartOwnerId, {
     productFields: "name, dosage, image_url",
     includePharmacy: true,
     includeProvider: true,
-    enabled: !!cartOwnerId && !showStaffLoading,
+    enabled: !!cartOwnerId && !showStaffLoading && !cartOwnerError,
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
+  
+  const isLoading = isLoadingCartOwner || isLoadingCart;
+
+  // Staff without ordering privileges cannot access cart
+  if (showStaffLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
+        <p className="text-muted-foreground mb-6">Review your selections</p>
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (showStaffNoAccess) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
+        <p className="text-muted-foreground mb-6">Review your selections</p>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            You do not have ordering privileges. Please contact your practice administrator.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+  
+  // Handle cart owner resolution errors
+  if (cartOwnerError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
+        <p className="text-muted-foreground mb-6">Review your selections</p>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {(effectiveRole === 'staff' || effectiveRole === 'practice') && !effectivePracticeId
+              ? 'No practice association found. Please contact your administrator to set up your practice.'
+              : 'Unable to load cart. Please try refreshing the page or contact support if the issue persists.'}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+  
+  // Handle cart loading errors
+  if (cartError && !isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
+        <p className="text-muted-foreground mb-6">Review your selections</p>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load cart items. Please try again or contact support.
+          </AlertDescription>
+        </Alert>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Refresh Page
+        </Button>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading || !cart) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
+        <p className="text-muted-foreground mb-6">Review your selections</p>
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   // Realtime subscription for instant cart updates
   useEffect(() => {
@@ -129,7 +219,9 @@ const Cart = React.memo(function Cart() {
         title: "Item Removed",
         description: "Item has been removed from your cart.",
       });
-      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+      // CRITICAL FIX: Use cartOwnerId for invalidation
+      queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+      queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
     },
   });
 
@@ -144,13 +236,13 @@ const Cart = React.memo(function Cart() {
     },
     onMutate: async ({ lineIds, shipping_speed }) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["cart", effectiveUserId] });
+      await queryClient.cancelQueries({ queryKey: ["cart", cartOwnerId] });
       
       // Snapshot the previous value
-      const previousCart = queryClient.getQueryData(["cart", effectiveUserId]);
+      const previousCart = queryClient.getQueryData(["cart", cartOwnerId]);
       
       // Optimistically update the cache
-      queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
+      queryClient.setQueryData(["cart", cartOwnerId], (old: any) => {
         if (!old) return old;
         
         return {
@@ -169,7 +261,7 @@ const Cart = React.memo(function Cart() {
     onError: (error, variables, context) => {
       // Rollback on error
       if (context?.previousCart) {
-        queryClient.setQueryData(["cart", effectiveUserId], context.previousCart);
+        queryClient.setQueryData(["cart", cartOwnerId], context.previousCart);
       }
       toast({
         title: "Error",
@@ -179,7 +271,7 @@ const Cart = React.memo(function Cart() {
     },
     onSettled: () => {
       // Always refetch after error or success (background sync)
-      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
     }
   });
 
@@ -230,7 +322,8 @@ const Cart = React.memo(function Cart() {
     return rates ? Object.keys(rates) as ('ground' | '2day' | 'overnight')[] : [];
   }, [pharmacyRatesMap]);
 
-  const cartLines = cart?.lines || [];
+  // Safe cart lines extraction with null checks
+  const cartLines = (cart?.lines && Array.isArray(cart.lines)) ? cart.lines : [];
   const isEmpty = cartLines.length === 0;
 
   const calculateSubtotal = useCallback(() => {
@@ -311,7 +404,8 @@ const Cart = React.memo(function Cart() {
     );
   }
 
-  if (isLoading) {
+  // Show loading state with better UX
+  if (isLoading || !cart) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-muted-foreground">Loading cart...</div>

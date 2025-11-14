@@ -195,6 +195,12 @@ export const OrdersDataTable = () => {
           userId: user?.id
         });
         
+        // CRITICAL FIX: Get current session and pass Authorization header
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('No active session - please log in again');
+        }
+        
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-orders-page', {
           body: {
             page: 1,
@@ -203,6 +209,9 @@ export const OrdersDataTable = () => {
             role: effectiveRole,
             status: undefined,
             search: undefined
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
           }
         });
         console.timeEnd(`OrdersEdgeFunctionQuery-${effectiveRole}`);

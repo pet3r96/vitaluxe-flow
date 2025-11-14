@@ -713,14 +713,19 @@ export const ProductsGrid = () => {
       }
 
       toast.success("Product added to cart");
+      
+      // CRITICAL FIX: Use cartOwnerId for optimistic updates (not effectiveUserId)
+      const resolvedCartOwnerId = cartOwnerId || effectiveUserId;
+      
       // Optimistic update: increment count immediately
       queryClient.setQueryData(
-        ["cart-count", effectiveUserId],
+        ["cart-count", resolvedCartOwnerId],
         (old: number | undefined) => (old || 0) + quantity
       );
+      
       // Optimistic update: push item into cart cache for instant UI
-      queryClient.setQueryData(["cart", effectiveUserId], (old: any) => {
-        const patientName = 'Practice Order';
+      queryClient.setQueryData(["cart", resolvedCartOwnerId], (old: any) => {
+        const patientName = shipToPractice ? 'Practice Order' : (patientId ? 'Patient Order' : 'Practice Order');
         const productMeta = {
           id: productForCart.id,
           name: productForCart.name,
@@ -739,7 +744,7 @@ export const ProductsGrid = () => {
           created_at: new Date().toISOString(),
         };
         if (!old) {
-          return { cartId: cart.id, items: [optimisticItem] };
+          return { id: cart.id, lines: [optimisticItem] };
         }
         if (old.items) {
           return { ...old, items: [...old.items, optimisticItem] };
@@ -747,11 +752,12 @@ export const ProductsGrid = () => {
         if (old.lines) {
           return { ...old, lines: [...old.lines, optimisticItem] };
         }
-        return old;
+        return { ...old, lines: [optimisticItem] };
       });
-      // Immediately invalidate to force fresh fetch
-      await queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
-      await queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+      
+      // Immediately invalidate to force fresh fetch with correct data from DB
+      await queryClient.invalidateQueries({ queryKey: ["cart-count", resolvedCartOwnerId] });
+      await queryClient.invalidateQueries({ queryKey: ["cart", resolvedCartOwnerId] });
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error adding to cart", error);
