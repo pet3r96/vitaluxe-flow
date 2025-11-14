@@ -450,7 +450,12 @@ export default function PracticeCalendar() {
 
       <CreateAppointmentDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) {
+            setIsWalkIn(false); // Reset walk-in state when dialog closes
+          }
+        }}
         practiceId={practiceId!}
         defaultDate={defaultDate}
         defaultProviderId={defaultProviderId}

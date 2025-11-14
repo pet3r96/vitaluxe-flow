@@ -138,7 +138,7 @@ class RealtimeManager {
     // Set new timeout
     const timeout = setTimeout(() => {
       if (this.queryClient) {
-        logger.info(`Invalidating React Query cache for ${table}`);
+        logger.info(`🔄 Invalidating React Query cache for ${table}`);
         
         // Invalidate the main table
         this.queryClient.invalidateQueries({ 
@@ -149,12 +149,15 @@ class RealtimeManager {
         // Invalidate dependent queries for cross-component updates
         const dependencies = this.tableDependencies[table] || [];
         dependencies.forEach(depKey => {
-          logger.info(`Invalidating dependent query: ${depKey}`);
+          logger.info(`🔄 Invalidating dependent query: ${depKey}`);
           this.queryClient.invalidateQueries({
             queryKey: [depKey],
             refetchType: 'all' // Refetch ALL queries for instant updates
           });
         });
+        
+        // Log completion
+        logger.info(`✅ Cache invalidation complete for ${table}`);
       }
       this.pendingInvalidations.delete(table);
     }, this.DEBOUNCE_MS);

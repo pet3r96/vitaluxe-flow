@@ -185,6 +185,15 @@ export function CreateAppointmentDialog({
 
       if (error) throw error;
 
+      console.log('[CreateAppointmentDialog] ✅ Appointment created:', {
+        id: data.id,
+        type: values.appointmentType,
+        status: isWalkIn ? 'checked_in' : 'scheduled',
+        isWalkIn,
+        patient_id: selectedPatientId,
+        start_time: startDateTime.toISOString()
+      });
+
       // If this is a video appointment, create video session via edge function
       if (values.visitType === 'video') {
         console.log('[CreateAppointmentDialog] Creating video session via edge function');
