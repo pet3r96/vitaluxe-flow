@@ -389,7 +389,8 @@ export const OrdersDataTable = () => {
 
       const { data, error } = await query
         .neq('payment_status', 'payment_failed')
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
       if (error) {
         logger.error('Orders query error', { 
