@@ -181,7 +181,7 @@ export const OrdersDataTable = () => {
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-orders-page', {
           body: {
             page: 1,
-            pageSize: 1000, // Fetch all for now, pagination handled client-side
+            pageSize: 50, // Reduced for faster initial load
             practiceId: effectiveUserId,
             role: effectiveRole,
             status: undefined,

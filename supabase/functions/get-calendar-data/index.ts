@@ -125,6 +125,7 @@ Deno.serve(async (req) => {
     console.log(`[get-calendar-data] Retrieved ${appointments?.length || 0} appointments`);
 
     // Parallel fetch for better performance
+    const queryStartTime = performance.now();
     const [settingsResult, providersData, roomsResult, blockedTimeResult] = await Promise.all([
       // Get practice settings
       supabaseClient
@@ -224,6 +225,9 @@ Deno.serve(async (req) => {
         .eq('practice_id', practiceId)
         .or(`start_time.lte.${endDate},end_time.gte.${startDate}`)
     ]);
+
+    const queryEndTime = performance.now();
+    console.log(`[get-calendar-data] Parallel queries completed in ${(queryEndTime - queryStartTime).toFixed(2)}ms`);
 
     const settings = settingsResult.data;
     const transformedProviders = providersData;
