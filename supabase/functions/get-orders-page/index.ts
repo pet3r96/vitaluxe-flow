@@ -165,46 +165,21 @@ serve(async (req) => {
       console.log(`[get-orders-page] ✅ Found ${orderIds.length} unique orders for provider`);
       query = query.in('id', orderIds);
     } else if (role === 'practice') {
-      // For practice role: get all provider user_ids for this practice, then filter orders
-      console.log(`[get-orders-page] Practice filter: fetching providers for practice ${practiceId}`);
-      
-      const { data: providers, error: providersError } = await supabase
-        .from('providers')
-        .select('user_id')
-        .eq('practice_id', practiceId)
-        .eq('active', true);
-      
-      if (providersError) {
-        console.error('[get-orders-page] ❌ Error fetching providers:', providersError);
-        throw new Error('Failed to fetch practice providers');
-      }
-      
-      const providerUserIds = providers?.map(p => p.user_id) || [];
-      console.log(`[get-orders-page] Found ${providerUserIds.length} active providers for practice`);
-      
-      if (providerUserIds.length === 0) {
-        console.warn('[get-orders-page] ⚠️ No active providers found for practice - returning empty');
-        return new Response(
-          JSON.stringify({
-            orders: [],
-            total: 0,
-            page,
-            pageSize,
-            totalPages: 0,
-            hasNextPage: false,
-            debug: { providersFound: 0, practiceId }
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      query = query.in('doctor_id', providerUserIds);
+      // Practice owners see orders where doctor_id = their user_id
+      // This matches RLS policy: auth.uid() = doctor_id
+      console.log(`[get-orders-page] Practice filter: doctor_id = ${practiceId}`);
+      query = query.eq('doctor_id', practiceId);
+    } else if (role === 'staff') {
+      // Staff see orders for their practice (where doctor_id = practice owner's user_id)
+      // RLS policy checks: practice_staff.practice_id = orders.doctor_id
+      console.log(`[get-orders-page] Staff filter: doctor_id = ${practiceId}`);
+      query = query.eq('doctor_id', practiceId);
     } else if (role === 'admin') {
       // Admin sees all orders - no filter
       console.log('[get-orders-page] Admin role - no filtering');
     } else {
       console.warn(`[get-orders-page] ⚠️ Unknown role: ${role}, defaulting to practice filter`);
-      query = query.eq('practice_id', practiceId);
+      query = query.eq('doctor_id', practiceId);
     }
 
     // Apply additional filters (after role filter, before pagination)

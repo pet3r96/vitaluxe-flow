@@ -267,96 +267,35 @@ export const OrdersDataTable = () => {
       }
 
       // For complex roles (pharmacy, provider, staff, topline, downline), use direct queries
-      // These need special joins and filtering that can't be easily handled by the edge function
-      
-      // Filter by provider using order_lines.provider_id (not orders.doctor_id)
-      // Providers should see all orders where they are the selected provider
+      // For provider role, use edge function for consistency and performance
       if (effectiveRole === "provider") {
-        console.log('[OrdersDataTable] Provider role - mapping user_id to provider.id:', effectiveUserId);
+        console.log('[OrdersDataTable] Provider role - using edge function');
         
-        // Step 1: Get provider.id from user_id
-        const { data: providerRecord, error: providerError } = await supabase
-          .from("providers")
-          .select("id")
-          .eq("user_id", effectiveUserId)
-          .eq("active", true)
-          .maybeSingle();
-        
-        if (providerError) {
-          logger.error('Failed to fetch provider record', providerError);
-          throw providerError;
-        }
-        
-        if (!providerRecord) {
-          console.warn('[OrdersDataTable] No active provider found for user');
-          return [];
-        }
-        
-        console.log('[OrdersDataTable] Found provider record:', providerRecord.id);
-        
-        // Step 2: Get unique order_ids where this provider appears in order_lines
-        const { data: orderLineData, error: orderLineError } = await supabase
-          .from("order_lines")
-          .select("order_id")
-          .eq("provider_id", providerRecord.id);
-        
-        if (orderLineError) {
-          logger.error('Failed to fetch order_lines', orderLineError);
-          throw orderLineError;
-        }
-        
-        const orderIds = [...new Set(orderLineData?.map(ol => ol.order_id) || [])];
-        
-        if (orderIds.length === 0) {
-          console.log('[OrdersDataTable] No orders found for provider');
-          return [];
-        }
-        
-        console.log(`[OrdersDataTable] Found ${orderIds.length} unique orders for provider`);
-        
-        // Step 3: Fetch full order details for these order_ids
-        const { data: providerOrders, error: ordersError } = await supabase
-          .from("orders")
-          .select(`
-            id,
-            created_at,
-            total_amount,
-            payment_status,
-            ship_to,
-            status,
-            status_manual_override,
-            doctor_id,
-            profiles:doctor_id(name, company),
-            order_lines(
-              id,
-              status,
-              tracking_number,
-              created_at,
-              patient_name,
-              patient_id,
-              shipping_speed,
-              products(name, product_types(name))
-            )
-          `)
-          .in("id", orderIds)
-          .order("created_at", { ascending: false });
+        const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-orders-page', {
+          body: {
+            page: 1,
+            pageSize: 1000, // Get all orders for provider
+            practiceId: effectiveUserId,
+            role: 'doctor', // Edge function maps this to provider logic
+            status: undefined,
+            search: undefined
+          }
+        });
 
-        if (ordersError) {
-          logger.error('Provider orders query error', ordersError);
-          throw ordersError;
+        if (edgeError) {
+          logger.error('Provider edge function error', edgeError);
+          throw edgeError;
         }
-        
+
         const queryDuration = Date.now() - queryStart;
-        logger.info('Provider orders query COMPLETE', { 
+        logger.info('Provider orders via edge function COMPLETE', { 
           duration: queryDuration,
-          orderCount: providerOrders?.length || 0,
-          providerId: providerRecord.id
+          orderCount: edgeData?.orders?.length || 0
         });
         
-        console.log(`[OrdersDataTable] Provider orders loaded: ${providerOrders?.length || 0} orders`);
+        console.log(`[OrdersDataTable] Provider orders loaded: ${edgeData?.orders?.length || 0} orders`);
         
-        // Filter out orders with failed payments
-        return (providerOrders || []).filter(order => order.payment_status !== 'payment_failed');
+        return edgeData?.orders || [];
       }
 
       // Build base query for remaining roles (staff, topline, downline)
