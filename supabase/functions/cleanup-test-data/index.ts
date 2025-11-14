@@ -232,18 +232,17 @@ serve(async (req) => {
           cleanupDetails.carts_deleted = carts.length;
         }
 
-        // STEP 5: Delete patient data
-        const { data: patients } = await supabaseAdmin
-          .from('patients')
+        // STEP 5: Delete patient_accounts data (not the old patients table)
+        const { data: practicePatients } = await supabaseAdmin
+          .from('patient_accounts')
           .select('id')
           .eq('practice_id', userId);
 
-        if (patients && patients.length > 0) {
-          const patientIds = patients.map(p => p.id);
+        if (practicePatients && practicePatients.length > 0) {
+          const patientIds = practicePatients.map(p => p.id);
           
           await supabaseAdmin.from('patient_follow_ups').delete().in('patient_id', patientIds);
           await supabaseAdmin.from('patient_accounts').delete().eq('practice_id', userId);
-          await supabaseAdmin.from('patients').delete().eq('practice_id', userId);
           
           cleanupDetails.patients_deleted = patientIds.length;
         }

@@ -327,7 +327,7 @@ serve(async (req) => {
 
     // Phase 8: Patient Data
     deleted_counts.prescription_refills = await deleteRecords('prescription_refills', 'all');
-    deleted_counts.patients = await deleteRecords('patients', 'all');
+    deleted_counts.patient_accounts = await deleteRecords('patient_accounts', 'all');
 
     // Phase 9: Reps & Relationships
     deleted_counts.rep_practice_links = await deleteRecords('rep_practice_links', 'all');
