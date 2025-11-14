@@ -7,22 +7,28 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('📧 [send-verification-email] Function START');
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('[send-verification-email] CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('[send-verification-email] Parsing request body...');
     const { userId, email, name } = await req.json();
+    console.log('[send-verification-email] Request params:', { userId, email, hasName: !!name });
 
     if (!userId || !email) {
-      console.error("❌ Missing required fields:", { userId, email });
+      console.error("❌ [send-verification-email] Missing required fields:", { userId, email });
       return new Response(
         JSON.stringify({ error: 'Missing userId or email' }), 
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('[send-verification-email] Creating admin client...');
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -32,9 +38,10 @@ serve(async (req) => {
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    console.log("📧 Generating verification token for:", email);
+    console.log("📧 [send-verification-email] Generated verification token for:", email, "expires:", expiresAt.toISOString());
 
     // Insert token into database
+    console.log('[send-verification-email] Inserting token into database...');
     const { error: insertError } = await supabaseAdmin
       .from("email_verification_tokens")
       .insert({
@@ -44,29 +51,31 @@ serve(async (req) => {
       });
 
     if (insertError) {
-      console.error("❌ Failed to insert token:", insertError);
+      console.error("❌ [send-verification-email] Failed to insert token:", insertError);
       return new Response(
         JSON.stringify({ error: "Failed to store token" }), 
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    console.log('✅ [send-verification-email] Token stored successfully');
 
     // Build verification link
     const verificationUrl = `https://app.vitaluxeservices.com/verify-email?token=${token}`;
+    console.log('[send-verification-email] Verification URL:', verificationUrl);
 
     // Send via Postmark template
     const postmarkApiKey = Deno.env.get("POSTMARK_API_KEY");
     const postmarkFromEmail = Deno.env.get("POSTMARK_FROM_EMAIL") || "info@vitaluxeservices.com";
 
     if (!postmarkApiKey) {
-      console.error("❌ POSTMARK_API_KEY not configured");
+      console.error("❌ [send-verification-email] POSTMARK_API_KEY not configured");
       return new Response(
         JSON.stringify({ error: "Email service not configured" }), 
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log("📤 Sending verification email via Postmark to:", email);
+    console.log("📤 [send-verification-email] Sending email via Postmark to:", email);
 
     const postmarkRes = await fetch("https://api.postmarkapp.com/email", {
       method: "POST",
@@ -121,7 +130,7 @@ serve(async (req) => {
 
     if (!postmarkRes.ok) {
       const errorData = await postmarkRes.text();
-      console.error("❌ Postmark API failed:", errorData);
+      console.error("❌ [send-verification-email] Postmark API failed:", errorData);
       return new Response(
         JSON.stringify({ error: "Failed to send email" }), 
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -129,9 +138,10 @@ serve(async (req) => {
     }
 
     const postmarkData = await postmarkRes.json();
-    console.log("✅ Verification email sent successfully:", postmarkData);
+    console.log("✅ [send-verification-email] Email sent successfully, MessageID:", postmarkData.MessageID);
 
     // Log audit event
+    console.log('[send-verification-email] Logging audit event...');
     await supabaseAdmin.from("audit_logs").insert({
       user_id: userId,
       user_email: email,
@@ -145,14 +155,16 @@ serve(async (req) => {
       },
     });
 
+    console.log('✅ [send-verification-email] Complete - returning success');
     return new Response(
       JSON.stringify({ success: true, messageId: postmarkData.MessageID }), 
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error("❌ Error in send-verification-email:", error);
+    console.error("❌ [send-verification-email] CRITICAL ERROR:", error);
+    console.error('[send-verification-email] Error stack:', error?.stack || 'No stack trace');
     return new Response(
-      JSON.stringify({ error: error.message }), 
+      JSON.stringify({ error: error.message || "Internal error" }), 
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

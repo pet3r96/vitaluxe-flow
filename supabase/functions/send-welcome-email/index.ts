@@ -15,13 +15,15 @@ interface WelcomeEmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log('[send-welcome-email] Function invoked');
+  console.log('📧 [send-welcome-email] Function START');
   
   if (req.method === "OPTIONS") {
+    console.log('[send-welcome-email] CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('[send-welcome-email] Creating admin client...');
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -33,11 +35,13 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
+    console.log('[send-welcome-email] Parsing request body...');
     const { userId, email, name, role, practiceId }: WelcomeEmailRequest = await req.json();
 
     console.log('[send-welcome-email] Request params:', { userId, email, role, practiceId });
 
     if (!userId || !email || !name || !role) {
+      console.error('[send-welcome-email] Missing required fields:', { userId, email, name, role });
       return new Response(
         JSON.stringify({ error: "Missing required fields: userId, email, name, role" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -51,6 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('[send-welcome-email] Generated token, expires:', expiresAt);
 
     // Store token in temp_password_tokens
+    console.log('[send-welcome-email] Storing token in database...');
     const { error: tokenError } = await supabaseAdmin
       .from('temp_password_tokens')
       .insert({
@@ -60,23 +65,26 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (tokenError) {
-      console.error("[send-welcome-email] Error creating token:", tokenError);
+      console.error("❌ [send-welcome-email] Error creating token:", tokenError);
       throw tokenError;
     }
+    console.log('✅ [send-welcome-email] Token stored successfully');
 
     // Get practice information if practiceId provided
     let practiceInfo = null;
     if (practiceId) {
+      console.log('[send-welcome-email] Fetching practice info for:', practiceId);
       const { data: practice } = await supabaseAdmin
         .from('profiles')
         .select('name, company, phone')
         .eq('id', practiceId)
         .single();
       practiceInfo = practice;
-      console.log('[send-welcome-email] Practice info:', practice?.name);
+      console.log('[send-welcome-email] Practice info:', practice?.name || 'Not found');
     }
 
     // Check if 2FA is enabled for the system
+    console.log('[send-welcome-email] Checking 2FA settings...');
     const { data: systemSettings } = await supabaseAdmin
       .from('system_settings')
       .select('value')
@@ -84,15 +92,17 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     const twoFactorEnabled = systemSettings?.value === true;
+    console.log('[send-welcome-email] 2FA enabled:', twoFactorEnabled);
 
     // Send email via Postmark
     const POSTMARK_API_KEY = Deno.env.get("POSTMARK_API_KEY");
     if (!POSTMARK_API_KEY) {
-      console.error("[send-welcome-email] POSTMARK_API_KEY not configured");
+      console.error("❌ [send-welcome-email] POSTMARK_API_KEY not configured");
       throw new Error("Email service not configured");
     }
 
     const resetLink = `https://app.vitaluxeservices.com/change-password?token=${token}`;
+    console.log('[send-welcome-email] Password setup link:', resetLink);
     
     // Determine if this is a patient or staff/doctor
     const isPatient = role === 'patient';
@@ -183,6 +193,7 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
+    console.log('📤 [send-welcome-email] Sending email via Postmark to:', email, 'Type:', isPatient ? 'patient' : 'staff');
     const postmarkResponse = await fetch("https://api.postmarkapp.com/email", {
       method: "POST",
       headers: {
@@ -203,14 +214,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!postmarkResponse.ok) {
       const errorText = await postmarkResponse.text();
-      console.error("[send-welcome-email] Postmark API error:", errorText);
+      console.error("❌ [send-welcome-email] Postmark API error:", errorText);
       throw new Error(`Failed to send email: ${errorText}`);
     }
 
     const result = await postmarkResponse.json();
-    console.log("[send-welcome-email] Email sent successfully:", result.MessageID);
+    console.log("✅ [send-welcome-email] Email sent successfully, MessageID:", result.MessageID);
 
     // Log audit event
+    console.log('[send-welcome-email] Logging audit event...');
     await supabaseAdmin.rpc('log_audit_event', {
       p_action_type: 'welcome_email_sent',
       p_entity_type: 'user',
@@ -222,6 +234,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
+    console.log('✅ [send-welcome-email] Complete - returning success');
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -232,7 +245,8 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error: any) {
-    console.error("[send-welcome-email] Error:", error);
+    console.error("❌ [send-welcome-email] CRITICAL ERROR:", error);
+    console.error('[send-welcome-email] Error stack:', error?.stack || 'No stack trace');
     return new Response(
       JSON.stringify({ 
         success: false, 
