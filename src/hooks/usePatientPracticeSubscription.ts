@@ -62,8 +62,22 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
         };
       }
 
+      // Defensive fallback: if status is active/trial but isSubscribed is false, trust the status
+      let computedIsSubscribed = result.isSubscribed ?? false;
+      if (!computedIsSubscribed && ['active', 'trial', 'suspended'].includes(result.status)) {
+        console.debug('[usePatientPracticeSubscription] Status indicates access but isSubscribed=false, applying fallback');
+        computedIsSubscribed = true;
+      }
+
+      console.debug('[usePatientPracticeSubscription] Final result:', {
+        status: result.status,
+        isSubscribed: computedIsSubscribed,
+        practiceId: result.practice.id,
+        practiceName: result.practice.name
+      });
+
       return {
-        isSubscribed: result.isSubscribed ?? false,
+        isSubscribed: computedIsSubscribed,
         status: result.status || "unknown",
         practiceId: result.practice.id,
         practiceName: result.practice.name,
@@ -71,7 +85,9 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
       };
     },
     enabled: !!effectiveUserId && !!session?.access_token,
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    staleTime: 0, // Always fetch fresh data for subscription checks
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 

@@ -55,114 +55,162 @@ serve(async (req) => {
     }
 
     const userId = user.id;
-    console.log('[patient-practice-context] Auth OK, userId:', userId);
+    console.log('[patient-practice-context] Authenticated user:', userId);
 
-    // Get patient account
-    const { data: patientAccount, error: patientError } = await supabase
+    // Helper to send consistent responses
+    const sendResponse = (body: any, status = 200) => {
+      return new Response(
+        JSON.stringify(body),
+        { 
+          status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    };
+
+    // Use service role client for consistent access
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+    // 1. Get patient account to find practice_id
+    console.log('[patient-practice-context] Fetching patient account for user:', userId);
+    const { data: patientAccount, error: patientError } = await supabaseClient
       .from('patient_accounts')
       .select('id, practice_id')
       .eq('user_id', userId)
       .maybeSingle();
 
     if (patientError) {
-      console.error('[patient-practice-context] Patient account query error:', patientError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch patient account' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error('[patient-practice-context] Error fetching patient account:', patientError);
+      return sendResponse({ 
+        success: false, 
+        isSubscribed: false,
+        status: 'error',
+        reason: 'patient_account_fetch_error',
+        practice: null
+      }, 500);
     }
 
     if (!patientAccount) {
       console.log('[patient-practice-context] No patient account found');
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          practice: null, 
-          isSubscribed: false,
-          reason: 'no_patient_account' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return sendResponse({ 
+        success: false, 
+        isSubscribed: false,
+        status: 'no_patient_account',
+        reason: 'no_patient_account',
+        practice: null
+      }, 404);
     }
 
     if (!patientAccount.practice_id) {
-      console.log('[patient-practice-context] No practice assigned');
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          practice: null, 
-          isSubscribed: false,
-          reason: 'no_practice_assigned' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('[patient-practice-context] Patient has no practice assigned');
+      return sendResponse({ 
+        success: false, 
+        isSubscribed: false,
+        status: 'no_practice_assigned',
+        reason: 'no_practice_assigned',
+        practice: null
+      }, 404);
     }
 
-    // Fetch practice details
-    const { data: practice, error: practiceError } = await supabase
-      .from('profiles')
-      .select('name, address_city, address_state')
-      .eq('id', patientAccount.practice_id)
-      .single();
+    const practiceId = patientAccount.practice_id;
+    console.log('[patient-practice-context] Practice ID:', practiceId);
 
-    if (practiceError || !practice) {
-      console.error('[patient-practice-context] Practice query error:', practiceError);
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          practice: null, 
-          isSubscribed: false,
-          reason: 'practice_not_found' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Fetch subscription
-    const { data: subscription, error: subError } = await supabase
+    // 2. Check practice subscription status FIRST (independent of practice profile read)
+    console.log('[patient-practice-context] Fetching subscription for practice:', practiceId);
+    const { data: subscription, error: subError } = await supabaseClient
       .from('practice_subscriptions')
-      .select('status, trial_ends_at, current_period_end, grace_period_ends_at')
-      .eq('practice_id', patientAccount.practice_id)
+      .select('status, subscription_type, trial_ends_at, current_period_end, grace_period_ends_at')
+      .eq('practice_id', practiceId)
       .maybeSingle();
 
-    let isSubscribed = false;
-    let subscriptionStatus = 'none';
-
-    if (subscription && !subError) {
-      const now = new Date();
-      subscriptionStatus = subscription.status;
-
-      if (subscription.status === 'trial' && subscription.trial_ends_at) {
-        isSubscribed = new Date(subscription.trial_ends_at) > now;
-      } else if (subscription.status === 'active' && subscription.current_period_end) {
-        isSubscribed = new Date(subscription.current_period_end) > now;
-      } else if (subscription.status === 'suspended' && subscription.grace_period_ends_at) {
-        isSubscribed = new Date(subscription.grace_period_ends_at) > now;
-      }
+    if (subError) {
+      console.error('[patient-practice-context] Error fetching subscription:', subError);
+      // Don't fail the whole request - continue with practice read
     }
 
-    console.log('[patient-practice-context] Result:', {
-      patientAccountId: patientAccount.id,
-      practiceId: patientAccount.practice_id,
-      practiceName: practice.name,
-      subscriptionStatus,
-      isSubscribed
+    // 3. Compute subscription access (UTC-safe)
+    let isSubscribed = false;
+    let subscriptionStatus = 'no_subscription';
+    const nowTimestamp = Date.now();
+    
+    if (subscription) {
+      subscriptionStatus = subscription.status;
+      console.log('[patient-practice-context] Subscription row:', {
+        status: subscription.status,
+        trial_ends_at: subscription.trial_ends_at,
+        current_period_end: subscription.current_period_end,
+        grace_period_ends_at: subscription.grace_period_ends_at,
+        now_timestamp: nowTimestamp
+      });
+      
+      // Check if practice has active access using UTC-safe comparison
+      if (subscription.status === 'active' && subscription.current_period_end) {
+        const endTime = new Date(subscription.current_period_end).getTime();
+        isSubscribed = endTime > nowTimestamp;
+        console.log('[patient-practice-context] Active check:', { endTime, nowTimestamp, isSubscribed });
+      } else if (subscription.status === 'trial' && subscription.trial_ends_at) {
+        const endTime = new Date(subscription.trial_ends_at).getTime();
+        isSubscribed = endTime > nowTimestamp;
+        console.log('[patient-practice-context] Trial check:', { endTime, nowTimestamp, isSubscribed });
+      } else if (subscription.status === 'suspended' && subscription.grace_period_ends_at) {
+        const endTime = new Date(subscription.grace_period_ends_at).getTime();
+        isSubscribed = endTime > nowTimestamp;
+        console.log('[patient-practice-context] Grace check:', { endTime, nowTimestamp, isSubscribed });
+      }
+    } else {
+      console.log('[patient-practice-context] No subscription found for practice');
+    }
+
+    console.log('[patient-practice-context] Computed isSubscribed:', isSubscribed);
+
+    // 4. Get practice profile details (OPTIONAL - don't fail if missing)
+    let practice = null;
+    const { data: practiceProfile, error: practiceError } = await supabaseClient
+      .from('profiles')
+      .select('id, name, address_city, address_state')
+      .eq('id', practiceId)
+      .maybeSingle();
+
+    if (practiceError) {
+      console.error('[patient-practice-context] Error fetching practice profile (non-fatal):', practiceError);
+      // Don't fail - use practice ID only
+      practice = {
+        id: practiceId,
+        name: null,
+        city: null,
+        state: null
+      };
+    } else if (practiceProfile) {
+      console.log('[patient-practice-context] Practice profile:', practiceProfile.name);
+      practice = {
+        id: practiceProfile.id,
+        name: practiceProfile.name,
+        city: practiceProfile.address_city,
+        state: practiceProfile.address_state
+      };
+    } else {
+      console.warn('[patient-practice-context] No practice profile found (non-fatal)');
+      practice = {
+        id: practiceId,
+        name: null,
+        city: null,
+        state: null
+      };
+    }
+
+    console.log('[patient-practice-context] Final response:', {
+      success: true,
+      isSubscribed,
+      status: subscriptionStatus,
+      practice
     });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        practice: {
-          id: patientAccount.practice_id,
-          name: practice.name,
-          city: practice.address_city,
-          state: practice.address_state
-        },
-        isSubscribed,
-        status: subscriptionStatus
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return sendResponse({
+      success: true,
+      isSubscribed,
+      status: subscriptionStatus,
+      practice
+    });
 
   } catch (error) {
     console.error('[patient-practice-context] Unexpected error:', error);
