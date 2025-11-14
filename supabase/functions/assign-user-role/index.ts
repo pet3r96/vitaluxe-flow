@@ -72,17 +72,25 @@ interface SignupRequest {
 }
 
 serve(async (req) => {
+  console.log('🚀 [assign-user-role] Function START - Request received');
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('[assign-user-role] CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('[assign-user-role] Creating admin client...');
     const supabaseAdmin = createAdminClient();
+    console.log('[assign-user-role] Admin client created successfully');
 
     // Rate limiting to prevent abuse
+    console.log('[assign-user-role] Checking rate limit...');
     const limiter = new RateLimiter();
     const clientIP = getClientIP(req);
+    console.log('[assign-user-role] Client IP:', clientIP);
+    
     const { allowed } = await limiter.checkLimit(
       supabaseAdmin,
       clientIP,
@@ -91,17 +99,27 @@ serve(async (req) => {
     );
 
     if (!allowed) {
+      console.warn('[assign-user-role] Rate limit exceeded for IP:', clientIP);
       return new Response(
         JSON.stringify({ error: 'Too many signup attempts. Please try again later.' }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    console.log('[assign-user-role] Rate limit check passed');
 
     // Parse and validate JSON
+    console.log('[assign-user-role] Parsing request body...');
     let signupData: SignupRequest;
     try {
       signupData = await req.json();
+      console.log('[assign-user-role] Request parsed:', {
+        email: signupData.email,
+        role: signupData.role,
+        isSelfSignup: signupData.isSelfSignup,
+        isAdminCreated: signupData.isAdminCreated
+      });
     } catch (error) {
+      console.error('[assign-user-role] JSON parsing error:', error);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -874,29 +892,37 @@ serve(async (req) => {
     }
 
     // Handle email sending based on flow type
+    console.log('[assign-user-role] Email sending phase - isSelfSignup:', isSelfSignup, 'isAdminCreated:', isAdminCreated);
+    
     if (isSelfSignup) {
       // Self-signup: Send verification email
-      console.log(`Self-signup: sending verification email to ${signupData.email}`);
+      console.log(`✉️ [assign-user-role] Self-signup flow: sending verification email to ${signupData.email}`);
+      console.log('[assign-user-role] Invoking send-verification-email function with userId:', userId);
       
       try {
-        const { error: emailError } = await supabaseAdmin.functions.invoke('send-verification-email', {
-          body: {
-            userId: userId,
-            email: signupData.email,
-            name: signupData.name
-          }
+        const emailPayload = {
+          userId: userId,
+          email: signupData.email,
+          name: signupData.name
+        };
+        console.log('[assign-user-role] Email payload:', emailPayload);
+        
+        const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-verification-email', {
+          body: emailPayload
         });
 
         if (emailError) {
-          console.error('Error sending verification email:', emailError);
+          console.error('❌ [assign-user-role] Error response from send-verification-email:', emailError);
+        } else {
+          console.log('✅ [assign-user-role] Verification email sent successfully:', emailData);
         }
       } catch (emailErr) {
-        console.error('Failed to invoke send-verification-email function:', emailErr);
+        console.error('❌ [assign-user-role] Exception invoking send-verification-email:', emailErr);
       }
     } else if (isAdminCreated && signupData.role !== 'admin' && signupData.role !== 'staff') {
       // Admin-created (but NOT staff): Send temp password email and set password status
-      // Note: Staff welcome emails are handled by frontend calling send-staff-welcome-email
-      console.log(`Admin-created account: sending temp password email to ${signupData.email}`);
+      console.log(`✉️ [assign-user-role] Admin-created flow: sending welcome email to ${signupData.email}`);
+      console.log('[assign-user-role] Invoking send-welcome-email function with userId:', userId);
       
       // Insert password status record for forced password change
       const { error: statusError } = await supabaseAdmin
@@ -909,45 +935,43 @@ serve(async (req) => {
         });
 
       if (statusError) {
-        console.error('Error creating password status:', statusError);
+        console.error('❌ [assign-user-role] Error creating password status:', statusError);
+      } else {
+        console.log('✅ [assign-user-role] Password status record created');
       }
 
-      // Send temp password email with userId for token generation
+      // Send welcome email
       try {
-        const functionUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-welcome-email`;
-        const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-        if (!anonKey) {
-          throw new Error('Missing SUPABASE_ANON_KEY');
-        }
+        const emailPayload = {
+          userId: userId,
+          email: signupData.email,
+          name: signupData.name,
+          role: signupData.role,
+          practiceId: signupData.roleData?.practiceId
+        };
+        console.log('[assign-user-role] Welcome email payload:', emailPayload);
         
-        const emailResponse = await fetch(functionUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${anonKey}`,
-            'apikey': anonKey
-          },
-          body: JSON.stringify({
-            userId: userId,
-            email: signupData.email,
-            name: signupData.name,
-            role: signupData.role,
-            practiceId: signupData.roleData?.practiceId
-          })
+        const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-welcome-email', {
+          body: emailPayload
         });
 
-        if (!emailResponse.ok) {
-          const errorText = await emailResponse.text();
-          console.error('Error sending welcome email:', errorText);
+        if (emailError) {
+          console.error('❌ [assign-user-role] Error response from send-welcome-email:', emailError);
         } else {
-          console.log('✅ Welcome email sent successfully to:', signupData.email);
+          console.log('✅ [assign-user-role] Welcome email sent successfully:', emailData);
         }
       } catch (emailErr) {
-        console.error('Failed to invoke send-temp-password-email function:', emailErr);
-        console.error('Email invocation error details:', emailErr);
+        console.error('❌ [assign-user-role] Exception invoking send-welcome-email:', emailErr);
       }
+    } else {
+      console.log('[assign-user-role] No email sent - not self-signup or admin-created flow');
     }
 
+    console.log('[assign-user-role] Email phase complete, proceeding to audit log...');
+
+    // Log user creation in audit logs
+
+    console.log('✅ [assign-user-role] User creation complete, returning success response');
     return new Response(
       JSON.stringify({ 
         success: true,
@@ -963,10 +987,11 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    console.error('❌ [assign-user-role] CRITICAL ERROR:', error);
+    console.error('[assign-user-role] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Unexpected error in assign-user-role:', error);
     return new Response(
-      JSON.stringify({ error: 'An error occurred processing the request' }),
+      JSON.stringify({ error: 'An error occurred processing the request', details: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
