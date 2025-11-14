@@ -241,11 +241,11 @@ serve(async (req: Request) => {
             body: JSON.stringify({
               order_line_id: orderLineId,
               from_address: {
-                street: orderLineDetails.pharmacies.address_street || '',
-                city: orderLineDetails.pharmacies.address_city || '',
-                state: orderLineDetails.pharmacies.address_state || '',
-                zip: orderLineDetails.pharmacies.address_zip || '',
-                name: orderLineDetails.pharmacies.name
+                street: (Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies)?.address_street || '',
+                city: (Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies)?.address_city || '',
+                state: (Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies)?.address_state || '',
+                zip: (Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies)?.address_zip || '',
+                name: (Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies)?.name || ''
               },
               to_address: {
                 street: patientStreet,

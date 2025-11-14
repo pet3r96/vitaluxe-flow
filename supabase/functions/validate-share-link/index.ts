@@ -146,6 +146,11 @@ Deno.serve(async (req) => {
       console.log('[validate-share-link] Link updated. Access count:', newAccessCount);
     }
 
+    // Extract patient account from the array
+    const patientAccount = Array.isArray(shareLink.patient_accounts) 
+      ? shareLink.patient_accounts[0] 
+      : shareLink.patient_accounts;
+
     // Log successful access
     await supabase.from('audit_logs').insert({
       user_id: null,
@@ -157,7 +162,7 @@ Deno.serve(async (req) => {
       details: {
         token,
         patient_account_id: patientAccountId,
-        patient_name: `${shareLink.patient_accounts.first_name} ${shareLink.patient_accounts.last_name}`,
+        patient_name: `${patientAccount.first_name} ${patientAccount.last_name}`,
         ip_address: clientIP,
         access_count: newAccessCount,
         accessed_at: new Date().toISOString()
@@ -171,9 +176,9 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         patient: {
-          first_name: shareLink.patient_accounts.first_name,
-          last_name: shareLink.patient_accounts.last_name,
-          date_of_birth: shareLink.patient_accounts.date_of_birth
+          first_name: patientAccount.first_name,
+          last_name: patientAccount.last_name,
+          date_of_birth: patientAccount.date_of_birth
         },
         medications: medications || [],
         conditions: conditions || [],
