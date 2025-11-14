@@ -194,9 +194,26 @@ export const OrdersDataTable = () => {
         logger.info('Admin fetching all orders');
       }
 
-      // For doctor role, explicitly filter by doctor_id (defense in depth with RLS)
       if (effectiveRole === "doctor") {
-        query = query.eq("doctor_id", effectiveUserId);
+        console.time('OrdersEdgeFunctionQuery-Doctor');
+        const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-orders-page', {
+          body: {
+            page: 1,
+            pageSize: 1000, // Fetch all for now, pagination handled client-side
+            practiceId: effectiveUserId,
+            role: 'doctor',
+            status: undefined,
+            search: undefined
+          }
+        });
+        console.timeEnd('OrdersEdgeFunctionQuery-Doctor');
+        
+        if (edgeError) {
+          console.error('[OrdersDataTable] Edge function error:', edgeError);
+          throw edgeError;
+        }
+        
+        return edgeData?.orders || [];
       }
 
       // Filter by provider if role is provider - fetch only their order_lines
