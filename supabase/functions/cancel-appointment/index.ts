@@ -1,7 +1,7 @@
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 
@@ -292,14 +292,31 @@ Deno.serve(async (req) => {
             
             if (patientWithUser.email) {
               try {
-                await sendNotificationEmail({
-                  to: patientWithUser.email,
+                const htmlBody = generateNotificationEmailHTML({
                   recipientName: patientName,
-                  subject: 'Appointment Cancelled',
                   title: 'Appointment Cancelled',
                   message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} with ${practiceName}${practiceAddress ? ' at ' + practiceAddress : ''} has been cancelled.`,
                   actionUrl: undefined,
                   senderContext: { fromName: practiceName }
+                });
+                const textBody = generateNotificationEmailText({
+                  recipientName: patientName,
+                  title: 'Appointment Cancelled',
+                  message: `Your appointment for ${appointmentDateFormatted} at ${appointmentTimeFormatted} with ${practiceName}${practiceAddress ? ' at ' + practiceAddress : ''} has been cancelled.`,
+                  actionUrl: undefined,
+                  senderContext: { fromName: practiceName }
+                });
+                
+                await supabaseClient.functions.invoke('unified-email-sender', {
+                  body: {
+                    type: 'notification',
+                    to: patientWithUser.email,
+                    subject: 'Appointment Cancelled',
+                    htmlBody,
+                    textBody,
+                    userId: patientWithUser.user_id,
+                    eventType: 'appointment_cancellation'
+                  }
                 });
                 console.log('[cancel-appointment] Email sent to:', patientWithUser.email);
               } catch (emailError) {

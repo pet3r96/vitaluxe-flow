@@ -2,7 +2,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { bookAppointmentSchema, validateInput } from '../_shared/zodSchemas.ts';
-import { sendNotificationEmail } from '../_shared/notificationEmailSender.ts';
+import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 
 const normalizePhoneToE164 = (phone: string): string => {
@@ -245,14 +245,31 @@ Deno.serve(async (req) => {
         
         if (patientWithUser.email) {
           try {
-            await sendNotificationEmail({
-              to: patientWithUser.email,
+            const htmlBody = generateNotificationEmailHTML({
               recipientName: patientName,
-              subject: 'Appointment Requested',
               title: 'Appointment Requested',
               message: directMessage,
               actionUrl: undefined,
               senderContext: { fromName: 'Your Healthcare Provider' }
+            });
+            const textBody = generateNotificationEmailText({
+              recipientName: patientName,
+              title: 'Appointment Requested',
+              message: directMessage,
+              actionUrl: undefined,
+              senderContext: { fromName: 'Your Healthcare Provider' }
+            });
+            
+            await supabaseClient.functions.invoke('unified-email-sender', {
+              body: {
+                type: 'notification',
+                to: patientWithUser.email,
+                subject: 'Appointment Requested',
+                htmlBody,
+                textBody,
+                userId: patientWithUser.user_id,
+                eventType: 'appointment_confirmation'
+              }
             });
             console.log('[book-appointment] Email sent to:', patientWithUser.email);
           } catch (emailError) {
