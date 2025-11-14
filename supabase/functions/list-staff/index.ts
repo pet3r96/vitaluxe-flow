@@ -1,4 +1,4 @@
-import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,20 +11,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createAdminClient();
-
-    // Get authenticated user
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('[list-staff] No authorization header');
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    // Use auth client for user authentication
+    const supabaseAuth = createAuthClient(req.headers.get('Authorization'));
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
     
     if (userError || !user) {
       console.error('[list-staff] Auth error:', userError);
@@ -33,6 +22,9 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Use admin client for data queries
+    const supabase = createAdminClient();
 
     console.log('[list-staff] User:', user.id);
 
