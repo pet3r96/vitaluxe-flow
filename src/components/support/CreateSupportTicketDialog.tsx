@@ -51,6 +51,8 @@ export function CreateSupportTicketDialog() {
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: TicketFormData) => {
+      console.log('[CreateSupportTicket] Starting mutation with data:', data);
+      
       // Find patient by email and get their practice_id
       const { data: patient, error: patientError } = await supabase
         .from("patient_accounts")
@@ -58,14 +60,17 @@ export function CreateSupportTicketDialog() {
         .eq("email", data.patientEmail)
         .single();
 
+      console.log('[CreateSupportTicket] Patient lookup result:', { patient, error: patientError });
+
       if (patientError || !patient) {
         throw new Error("Patient not found with that email address");
       }
 
       // Create a new message thread
       const threadId = crypto.randomUUID();
-
-      const { error } = await supabase.from("patient_messages").insert({
+      
+      // Add detailed logging before insert
+      const insertData = {
         patient_id: patient.id,
         practice_id: patient.practice_id,
         sender_id: effectiveUserId!,
@@ -74,9 +79,29 @@ export function CreateSupportTicketDialog() {
         message_body: data.message,
         thread_id: threadId,
         resolved: false,
-      });
+      } as const;
+      
+      console.log('[CreateSupportTicket] Attempting insert:', insertData);
 
-      if (error) throw error;
+      const { data: insertResult, error } = await supabase
+        .from("patient_messages")
+        .insert(insertData)
+        .select()
+        .single();
+
+      console.log('[CreateSupportTicket] Insert result:', { insertResult, error });
+
+      if (error) {
+        console.error('[CreateSupportTicket] Insert error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
+      
+      return insertResult;
     },
     onSuccess: () => {
       toast.success("Support ticket created successfully");
