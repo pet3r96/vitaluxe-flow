@@ -74,7 +74,6 @@ serve(async (req) => {
     const to = from + pageSize - 1;
 
     // Build query with minimal columns for list view
-    // CRITICAL: Use LEFT join for patient_accounts (not inner) to avoid RLS filtering out orders
     let query = supabase
       .from('orders')
       .select(`
@@ -84,14 +83,10 @@ serve(async (req) => {
         total_amount,
         payment_status,
         doctor_id,
-        patient_accounts (
-          id,
-          first_name,
-          last_name
-        ),
         order_lines (
           id,
           status,
+          patient_name,
           products (
             name,
             dosage
