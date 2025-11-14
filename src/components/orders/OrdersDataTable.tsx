@@ -82,13 +82,14 @@ export const OrdersDataTable = () => {
 
   const { data: orders, isLoading, refetch, error } = useQuery({
     queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
-    staleTime: 30 * 1000, // 30 seconds - shorter for better UX
+    staleTime: 60 * 1000, // 60 seconds - rely on realtime for updates
     gcTime: 5 * 60 * 1000,
     refetchInterval: false, // Disable polling - use realtime instead
     refetchOnMount: true, // Always fetch fresh on mount
     refetchOnWindowFocus: true, // Refetch when window regains focus
     queryFn: async () => {
       const queryStart = Date.now();
+      console.time('OrdersQuery');
       try {
         logger.info('OrdersDataTable query START', logger.sanitize({ 
           effectiveRole, 
@@ -390,7 +391,7 @@ export const OrdersDataTable = () => {
       const { data, error } = await query
         .neq('payment_status', 'payment_failed')
         .order("created_at", { ascending: false })
-        .limit(500);
+        .limit(100); // OPTIMIZED: Limit for better performance
 
       if (error) {
         logger.error('Orders query error', { 
@@ -405,11 +406,16 @@ export const OrdersDataTable = () => {
       }
       
       const queryDuration = Date.now() - queryStart;
+      console.timeEnd('OrdersQuery');
       logger.info('OrdersDataTable query COMPLETE', { 
         duration: queryDuration, 
         orderCount: data?.length || 0,
         effectiveRole 
       });
+      
+      if (queryDuration > 2000) {
+        logger.warn('Slow orders query detected', { duration: queryDuration, orderCount: data?.length || 0 });
+      }
       
       // CRITICAL: Filter out orders without order_lines (data integrity issue)
       const validOrders = (data || []).filter((order: any) => {

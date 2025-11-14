@@ -7,6 +7,15 @@ import { GHLSmsVerifyDialog } from "@/components/auth/GHLSmsVerifyDialog";
  * Renders 2FA dialogs globally so they appear immediately after sign-in on any route
  */
 export const Global2FADialogs = () => {
+  // Defensive check: only proceed if we have auth context
+  let authData;
+  try {
+    authData = useAuth();
+  } catch (error) {
+    console.warn('[Global2FADialogs] Auth context not available yet');
+    return null;
+  }
+
   const {
     user,
     mustChangePassword,
@@ -15,7 +24,12 @@ export const Global2FADialogs = () => {
     requires2FAVerify,
     user2FAPhone,
     twoFAStatusChecked,
-  } = useAuth();
+  } = authData;
+
+  // Early return if no user
+  if (!user) {
+    return null;
+  }
 
   // Don't show dialogs if:
   // - 2FA status hasn't been checked yet

@@ -27,6 +27,27 @@ export class ErrorBoundary extends Component<Props, State> {
     // Detect dynamic import failures (chunk loading errors)
     const msg = (error as any)?.message || '';
     const name = (error as any)?.name || '';
+    
+    // Detect AuthContext errors (React Error #185)
+    const isAuthContextError = 
+      msg.includes('useAuth must be used within an AuthProvider') ||
+      msg.includes('AuthContext');
+
+    if (isAuthContextError) {
+      console.warn('[ErrorBoundary] AuthContext timing error detected - attempting auto-recovery');
+      
+      // Auto-retry once by refreshing
+      const hasRetried = sessionStorage.getItem('auth-error-retry');
+      if (!hasRetried) {
+        sessionStorage.setItem('auth-error-retry', 'true');
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+        return;
+      }
+      sessionStorage.removeItem('auth-error-retry');
+    }
+    
     const isChunkLoadError =
       name === 'ChunkLoadError' ||
       name === 'SyntaxError' ||
