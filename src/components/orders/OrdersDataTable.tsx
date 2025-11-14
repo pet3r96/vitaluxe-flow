@@ -269,75 +269,55 @@ export const OrdersDataTable = () => {
       // For complex roles (pharmacy, provider, staff, topline, downline), use direct queries
       // These need special joins and filtering that can't be easily handled by the edge function
       
-      // Filter by provider if role is provider - fetch only their order_lines
+      // Filter by provider if role is provider - query by doctor_id (user_id)
+      // FIX: Query orders by doctor_id instead of order_lines by provider_id
+      // because provider_id is inconsistently populated in order_lines
       if (effectiveRole === "provider") {
-        const { data: providerData } = await supabase
-          .from("providers")
-          .select("id")
-          .eq("user_id", effectiveUserId)
-          .maybeSingle();
+        console.log('[OrdersDataTable] Provider role - querying by doctor_id:', effectiveUserId);
         
-        if (!providerData) {
-          return []; // Provider not found
-        }
-
-        // Fetch ONLY order lines prescribed by this provider
+        // Query orders by doctor_id (which is the provider's user_id)
         // OPTIMIZED: Only fetch fields needed for table display
-        const { data: providerOrderLines, error: linesError } = await supabase
-          .from("order_lines")
+        const { data: providerOrders, error: ordersError } = await supabase
+          .from("orders")
           .select(`
             id,
-            order_id,
-            status,
-            tracking_number,
             created_at,
-            patient_name,
-            patient_id,
-            shipping_speed,
-            products(name, product_types(name)),
-            orders!inner(
+            total_amount,
+            payment_status,
+            ship_to,
+            status,
+            status_manual_override,
+            doctor_id,
+            profiles:doctor_id(name, company),
+            order_lines(
               id,
-              created_at,
-              total_amount,
-              payment_status,
-              ship_to,
               status,
-              status_manual_override,
-              profiles:doctor_id(name, company)
+              tracking_number,
+              created_at,
+              patient_name,
+              patient_id,
+              shipping_speed,
+              products(name, product_types(name))
             )
           `)
-          .eq("provider_id", providerData.id)
+          .eq("doctor_id", effectiveUserId)
           .order("created_at", { ascending: false });
 
-        if (linesError) {
-          logger.error('Provider order lines query error', linesError);
-          throw linesError;
+        if (ordersError) {
+          logger.error('Provider orders query error', ordersError);
+          throw ordersError;
         }
-
-        // Transform data to match expected format - group order_lines by order
-        const ordersMap = new Map();
-        (providerOrderLines as any)?.forEach((line: any) => {
-          const orderId = line.orders.id;
-          if (!ordersMap.has(orderId)) {
-            ordersMap.set(orderId, {
-              ...line.orders,
-              order_lines: []
-            });
-          }
-          // Remove the nested orders object from the line before adding to array
-          const { orders: _, ...lineWithoutOrders } = line;
-          ordersMap.get(orderId).order_lines.push(lineWithoutOrders);
-        });
         
         const queryDuration = Date.now() - queryStart;
-        logger.info('Provider order lines query COMPLETE', { 
+        logger.info('Provider orders query COMPLETE', { 
           duration: queryDuration,
-          lineCount: providerOrderLines?.length || 0,
-          orderCount: ordersMap.size
+          orderCount: providerOrders?.length || 0
         });
         
+        console.log(`[OrdersDataTable] Provider orders loaded: ${providerOrders?.length || 0} orders`);
+        
         // Filter out orders with failed payments
-        return Array.from(ordersMap.values()).filter(order => order.payment_status !== 'payment_failed');
+        return (providerOrders || []).filter(order => order.payment_status !== 'payment_failed');
       }
 
       // Build base query for remaining roles (staff, topline, downline)
@@ -680,7 +660,7 @@ export const OrdersDataTable = () => {
     hasPrevPage
   } = usePagination({
     totalItems: filteredOrders?.length || 0,
-    itemsPerPage: 20 // OPTIMIZED: Reduced from 25 to 20 for better performance
+    itemsPerPage: 15 // OPTIMIZED: Reduced for faster initial load
   });
 
   const paginatedOrders = filteredOrders?.slice(startIndex, endIndex);
