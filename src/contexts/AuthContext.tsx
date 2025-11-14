@@ -36,6 +36,7 @@ interface AuthContextType {
   showIntakeDialog: boolean;
   setShowIntakeDialog: (show: boolean) => void;
   mark2FAVerified: () => void;
+  mark2FAEnrolled?: (phone: string) => void;
   checkPasswordStatus: (roleOverride?: string, userIdOverride?: string) => Promise<{ mustChangePassword: boolean; termsAccepted: boolean }>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
@@ -128,7 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Function to check GHL 2FA status
+  // Function to check Twilio 2FA status
   const check2FAStatus = async (userId: string) => {
     console.log('[AuthContext] check2FAStatus - START for userId:', userId);
     
@@ -144,18 +145,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     try {
-      // Query the decrypted view to get actual phone number instead of [ENCRYPTED]
+      // Query user_2fa_settings for Twilio enrollment
       const { data, error } = await supabase
-        .from('user_2fa_settings_decrypted')
-        .select('ghl_enabled, ghl_phone_verified, phone_number, is_enrolled')
+        .from('user_2fa_settings')
+        .select('twilio_enabled, phone_verified, phone_number, is_enrolled')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (error) throw error;
 
-      if (!data || !data.ghl_enabled || !data.is_enrolled) {
-        // Not enrolled in GHL 2FA - force setup
-        console.log('[AuthContext] check2FAStatus - No 2FA record or not enabled, requires setup');
+      if (!data || !data.twilio_enabled || !data.is_enrolled) {
+        // Not enrolled in Twilio 2FA - force setup
+        console.log('[AuthContext] check2FAStatus - No 2FA record or not enrolled, requires setup');
         setRequires2FASetup(true);
         setRequires2FAVerify(false);
         setUser2FAPhone(null);
@@ -185,7 +186,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setTwoFAStatusChecked(true);
       console.log('[AuthContext] check2FAStatus - END, twoFAStatusChecked=true');
     } catch (error) {
-      logger.error('Error checking GHL 2FA status', error);
+      logger.error('Error checking Twilio 2FA status', error);
       console.log('[AuthContext] check2FAStatus - ERROR, forcing setup');
       // On error, force setup to be safe
       setRequires2FASetup(true);
@@ -1643,6 +1644,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRequires2FAVerify(false);
   };
 
+  const mark2FAEnrolled = (phone: string) => {
+    console.log('[AuthContext] ✅ mark2FAEnrolled called with phone:', phone.slice(-4));
+    setRequires2FASetup(false);
+    setUser2FAPhone(phone);
+    setTwoFAStatusChecked(true);
+    mark2FAVerified(); // Also mark as verified
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -1671,6 +1680,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       showIntakeDialog,
       setShowIntakeDialog,
       mark2FAVerified,
+      mark2FAEnrolled,
       checkPasswordStatus,
       setImpersonation,
       clearImpersonation,

@@ -1,6 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { GHLSmsSetupDialog } from "@/components/auth/GHLSmsSetupDialog";
-import { GHLSmsVerifyDialog } from "@/components/auth/GHLSmsVerifyDialog";
+import { Sms2FADialog } from "@/components/auth/Sms2FADialog";
 
 /**
  * Global 2FA Dialog Manager
@@ -40,25 +39,15 @@ export const Global2FADialogs = () => {
     return null;
   }
 
-  // Show 2FA setup dialog if user needs to enroll
-  if (requires2FASetup && user?.id) {
-    console.log('[Global2FADialogs] Rendering SETUP dialog only', { 
-      requires2FASetup, 
-      requires2FAVerify, 
-      userId: user.id 
-    });
-    return <GHLSmsSetupDialog open={true} userId={user.id} />;
-  }
-
-  // Show 2FA verification dialog if user needs to verify this session
-  if (requires2FAVerify && user2FAPhone && user?.id) {
-    console.log('[Global2FADialogs] Rendering VERIFY dialog only', { 
+  // Show unified 2FA dialog for both setup and verify
+  if ((requires2FASetup || requires2FAVerify) && user?.id) {
+    console.log('[Global2FADialogs] Rendering Sms2FADialog', { 
       requires2FASetup, 
       requires2FAVerify, 
       phone: user2FAPhone,
       userId: user.id 
     });
-    return <GHLSmsVerifyDialog open={true} phoneNumber={user2FAPhone} userId={user.id} />;
+    return <Sms2FADialog open={true} userId={user.id} phone={user2FAPhone ?? undefined} />;
   }
 
   console.log('[Global2FADialogs] No dialog needed', { 

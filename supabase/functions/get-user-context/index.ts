@@ -39,7 +39,8 @@ Deno.serve(async (req) => {
       providerResult,
       impersonationResult,
       passwordResult,
-      twoFAResult
+      twoFAResult,
+      twoFAPhoneResult
     ] = await Promise.allSettled([
       // User role
       supabase
@@ -69,6 +70,13 @@ Deno.serve(async (req) => {
       supabase
         .from('user_2fa')
         .select('setup_complete, verified')
+        .eq('user_id', userId)
+        .maybeSingle(),
+      
+      // 2FA phone number from settings
+      supabase
+        .from('user_2fa_settings')
+        .select('phone_number, is_enrolled, twilio_enabled')
         .eq('user_id', userId)
         .maybeSingle()
     ]);
@@ -119,6 +127,17 @@ Deno.serve(async (req) => {
           verified: false
         };
 
+    // Process 2FA phone
+    let twoFAPhone = null;
+    if (twoFAPhoneResult.status === 'fulfilled' && twoFAPhoneResult.value.data) {
+      const phoneData = twoFAPhoneResult.value.data;
+      twoFAPhone = phoneData.phone_number || null;
+      // Update twoFAStatus with Twilio-specific enrollment status
+      if (phoneData.is_enrolled && phoneData.twilio_enabled) {
+        twoFAStatus.setupComplete = true;
+      }
+    }
+
     // Return complete user context
     return new Response(
       JSON.stringify({
@@ -128,6 +147,7 @@ Deno.serve(async (req) => {
         canImpersonate,
         passwordStatus,
         twoFAStatus,
+        twoFAPhone,
         timestamp: new Date().toISOString()
       }),
       {
