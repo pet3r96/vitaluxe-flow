@@ -82,14 +82,15 @@ export const OrdersDataTable = () => {
 
   const { data: orders, isLoading, refetch, error } = useQuery({
     queryKey: ["orders", effectiveRole, effectiveUserId, user?.id],
-    staleTime: 2 * 60 * 1000, // 2min - trust realtime for freshness
+    staleTime: 30 * 1000, // 30 seconds - shorter for better UX
     gcTime: 5 * 60 * 1000,
     refetchInterval: false, // Disable polling - use realtime instead
-    refetchOnMount: false, // Trust cache on mount
-    refetchOnWindowFocus: false, // Realtime handles updates
+    refetchOnMount: true, // Always fetch fresh on mount
+    refetchOnWindowFocus: true, // Refetch when window regains focus
     queryFn: async () => {
+      const queryStart = Date.now();
       try {
-        logger.info('OrdersDataTable query', logger.sanitize({ 
+        logger.info('OrdersDataTable query START', logger.sanitize({ 
           effectiveRole, 
           effectiveUserId,
           authUid: user?.id 
@@ -152,6 +153,13 @@ export const OrdersDataTable = () => {
           }
           const { orders: _, ...lineWithoutOrders } = line;
           ordersMap.get(orderId).order_lines.push(lineWithoutOrders);
+        });
+        
+        const queryDuration = Date.now() - queryStart;
+        logger.info('Pharmacy order lines query COMPLETE', { 
+          duration: queryDuration,
+          lineCount: orderLinesData?.length || 0,
+          orderCount: ordersMap.size
         });
         
         // Sort orders by created_at descending
@@ -253,6 +261,13 @@ export const OrdersDataTable = () => {
           // Remove the nested orders object from the line before adding to array
           const { orders: _, ...lineWithoutOrders } = line;
           ordersMap.get(orderId).order_lines.push(lineWithoutOrders);
+        });
+        
+        const queryDuration = Date.now() - queryStart;
+        logger.info('Provider order lines query COMPLETE', { 
+          duration: queryDuration,
+          lineCount: providerOrderLines?.length || 0,
+          orderCount: ordersMap.size
         });
         
         // Filter out orders with failed payments
@@ -388,8 +403,37 @@ export const OrdersDataTable = () => {
         throw error;
       }
       
+      const queryDuration = Date.now() - queryStart;
+      logger.info('OrdersDataTable query COMPLETE', { 
+        duration: queryDuration, 
+        orderCount: data?.length || 0,
+        effectiveRole 
+      });
+      
+      // CRITICAL: Filter out orders without order_lines (data integrity issue)
+      const validOrders = (data || []).filter((order: any) => {
+        const hasOrderLines = order.order_lines && order.order_lines.length > 0;
+        if (!hasOrderLines) {
+          logger.warn('Order missing order_lines - filtering out', { 
+            orderId: order.id,
+            orderTotal: order.total_amount,
+            createdAt: order.created_at
+          });
+        }
+        return hasOrderLines;
+      });
+      
+      if (validOrders.length < (data?.length || 0)) {
+        const orphanCount = (data?.length || 0) - validOrders.length;
+        logger.warn('Filtered orphan orders', { 
+          total: data?.length,
+          valid: validOrders.length,
+          orphaned: orphanCount
+        });
+      }
+      
       // Update metadata if we got results for downline
-      if (effectiveRole === "downline" && data?.length === 0 && queryMetadata.practiceCount > 0) {
+      if (effectiveRole === "downline" && validOrders.length === 0 && queryMetadata.practiceCount > 0) {
         setQueryMetadata(prev => ({
           ...prev,
           isEmpty: true,
@@ -397,7 +441,7 @@ export const OrdersDataTable = () => {
         }));
       }
       
-      return data;
+      return validOrders;
       } catch (error: any) {
         logger.error('Orders fetch failed', { 
           error: error.message || String(error), 
