@@ -19,7 +19,21 @@ import { useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function PatientAppointments() {
-  const { isSubscribed: practiceHasSubscription, practiceName, loading: subscriptionLoading } = usePatientPracticeSubscription();
+  const { 
+    isSubscribed: practiceHasSubscription, 
+    practiceName,
+    loading: subscriptionLoading,
+    reason: subscriptionReason,
+    status: subscriptionStatus
+  } = usePatientPracticeSubscription();
+
+  console.debug('[PatientAppointments] Subscription state:', {
+    practiceHasSubscription,
+    subscriptionLoading,
+    subscriptionStatus,
+    subscriptionReason
+  });
+
   const [bookingOpen, setBookingOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -389,6 +403,16 @@ export default function PatientAppointments() {
           <p className="text-muted-foreground text-sm md:text-base">Manage your scheduled visits</p>
         </div>
         
+        {subscriptionLoading && (
+          <Alert className="max-w-2xl border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+            <Building className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-800 dark:text-blue-200">Checking availability...</AlertTitle>
+            <AlertDescription className="text-blue-700 dark:text-blue-300">
+              Verifying your practice subscription status.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {!subscriptionLoading && !practiceHasSubscription && (
           <Alert className="max-w-2xl">
             <Lock className="h-4 w-4" />
@@ -404,10 +428,10 @@ export default function PatientAppointments() {
         <Button 
           onClick={() => setBookingOpen(true)} 
           className="touch-target"
-          disabled={!practiceHasSubscription}
+          disabled={!subscriptionLoading && !practiceHasSubscription}
         >
           <Calendar className="mr-2 h-4 w-4" />
-          Book Appointment
+          {subscriptionLoading ? 'Checking...' : 'Book Appointment'}
         </Button>
       </div>
 

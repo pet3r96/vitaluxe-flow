@@ -84,16 +84,8 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
     },
   });
 
-  // Check practice subscription status
-  useEffect(() => {
-    const checkSubscription = async () => {
-      if (patientAccount?.id) {
-        const status = await getPatientPracticeSubscription(patientAccount.id);
-        setPracticeSubscription(status);
-      }
-    };
-    checkSubscription();
-  }, [patientAccount?.id]);
+  // Subscription status is already checked by parent via usePatientPracticeSubscription hook
+  // No need for duplicate check here - the dialog is only opened when subscription is valid
 
   // Fetch providers for the patient's assigned practice only
   const { data: providers } = useQuery({
