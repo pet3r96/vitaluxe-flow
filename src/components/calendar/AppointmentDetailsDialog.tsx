@@ -21,7 +21,7 @@ import { RescheduleAppointmentDialog } from "./RescheduleAppointmentDialog";
 import { CreateFollowUpFromAppointmentDialog } from "./CreateFollowUpFromAppointmentDialog";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatPatientEmail } from "@/lib/emailUtils";
+import { formatPatientEmail } from "@/lib/email/emailValidation";
 import { JoinVideoButton } from "@/components/appointments/JoinVideoButton";
 
 interface AppointmentDetailsDialogProps {

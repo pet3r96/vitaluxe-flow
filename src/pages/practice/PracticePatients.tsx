@@ -9,7 +9,7 @@ import { PatientPortalStatusBadge } from "@/components/patients/PatientPortalSta
 import { PatientInvitationDialog } from "@/components/patients/PatientInvitationDialog";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { formatPatientEmail } from "@/lib/emailUtils";
+import { formatPatientEmail } from "@/lib/email/emailValidation";
 
 export default function PracticePatients() {
   const { user, effectivePracticeId } = useAuth();
