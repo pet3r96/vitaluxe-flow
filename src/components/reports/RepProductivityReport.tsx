@@ -20,15 +20,27 @@ const RepProductivityReport = () => {
   const { data: productivityData, isLoading, refetch } = useQuery({
     queryKey: ["rep-productivity"],
     queryFn: async () => {
-      // Refresh materialized view first
-      await supabase.rpc('refresh_rep_productivity_summary');
+      // Try to refresh materialized view, but don't block if it fails
+      try {
+        console.log('[RepProductivity] Refreshing materialized view...');
+        await supabase.rpc('refresh_rep_productivity_summary');
+        console.log('[RepProductivity] ✅ Materialized view refreshed');
+      } catch (refreshError) {
+        console.warn('[RepProductivity] ⚠️ Failed to refresh materialized view:', refreshError);
+        // Continue anyway - we'll use existing data in the view
+      }
       
       const { data, error } = await supabase
         .from("rep_productivity_view")
         .select("*")
         .order("total_commissions", { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('[RepProductivity] ❌ Error fetching data:', error);
+        throw error;
+      }
+      
+      console.log('[RepProductivity] ✅ Fetched', data?.length || 0, 'records');
       return data;
     },
   });
