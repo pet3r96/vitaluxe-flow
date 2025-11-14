@@ -55,7 +55,10 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-verification-email]
-verify_jwt = true
+verify_jwt = false
+
+[functions.send-welcome-email]
+verify_jwt = false
 
 [functions.approve-pending-product]
 verify_jwt = true
