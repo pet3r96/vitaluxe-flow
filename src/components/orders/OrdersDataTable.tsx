@@ -34,7 +34,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { OrderQueryMetadata } from "@/types/domain/orders";
 
 export const OrdersDataTable = () => {
-  const { effectiveRole, effectiveUserId, user } = useAuth();
+  const { effectiveRole, effectiveUserId, effectivePracticeId, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -175,18 +175,16 @@ export const OrdersDataTable = () => {
         // For doctor role, look up their provider ID first
         let filterIdForOrders = effectiveUserId;
         if (effectiveRole === "doctor") {
-          const { data: providerData } = await supabase
-            .from("providers")
-            .select("id")
-            .eq("user_id", effectiveUserId)
-            .maybeSingle();
-          
-          if (providerData) {
-            filterIdForOrders = providerData.id;
-            console.log(`[OrdersDataTable] Doctor role - using provider ID:`, filterIdForOrders);
-          } else {
-            console.log(`[OrdersDataTable] Doctor role - no provider found, using user_id:`, filterIdForOrders);
+          // Doctors filter by their own auth user_id stored in orders.doctor_id
+          filterIdForOrders = effectiveUserId;
+          console.log(`[OrdersDataTable] Doctor role - using user_id:`, filterIdForOrders);
+        } else if (effectiveRole === "practice") {
+          // Practices filter by their practice profile id
+          if (!effectivePracticeId) {
+            throw new Error('Missing practice context for practice user');
           }
+          filterIdForOrders = effectivePracticeId;
+          console.log(`[OrdersDataTable] Practice role - using practice_id:`, filterIdForOrders);
         }
         
         console.log(`[OrdersDataTable] Invoking edge function with:`, {
