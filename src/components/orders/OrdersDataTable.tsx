@@ -172,6 +172,12 @@ export const OrdersDataTable = () => {
         console.time(`OrdersEdgeFunctionQuery-${effectiveRole}`);
         console.log(`[OrdersDataTable] Using edge function for role: ${effectiveRole}`);
         
+        console.log(`[OrdersDataTable] Invoking edge function with:`, {
+          practiceId: effectiveUserId,
+          role: effectiveRole,
+          userId: user?.id
+        });
+        
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-orders-page', {
           body: {
             page: 1,
@@ -186,11 +192,21 @@ export const OrdersDataTable = () => {
         
         if (edgeError) {
           console.error('[OrdersDataTable] Edge function error:', edgeError);
-          throw edgeError;
+          logger.error('Edge function invocation failed', {
+            error: edgeError,
+            practiceId: effectiveUserId,
+            role: effectiveRole
+          });
+          throw new Error(`Failed to load orders: ${edgeError.message || 'Unknown error'}`);
         }
         
-        console.log(`[OrdersDataTable] Edge function returned ${edgeData?.orders?.length || 0} orders`);
-        return edgeData?.orders || [];
+        if (!edgeData || !Array.isArray(edgeData.orders)) {
+          console.error('[OrdersDataTable] Invalid edge function response:', edgeData);
+          throw new Error('Invalid response from orders service');
+        }
+        
+        console.log(`[OrdersDataTable] Edge function returned ${edgeData.orders.length} orders`);
+        return edgeData.orders;
       }
 
       // For complex roles (pharmacy, provider, staff, topline, downline), use direct queries
@@ -489,6 +505,7 @@ export const OrdersDataTable = () => {
       refetchOnWindowFocus: true,
       retry: 3, // Retry up to 3 times
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+      enabled: !!effectiveRole && !!effectiveUserId && !!user, // Only run when auth data is available
     }
   );
 
@@ -752,7 +769,7 @@ export const OrdersDataTable = () => {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
-                  Loading...
+                  {!effectiveRole || !effectiveUserId ? "Initializing..." : "Loading orders..."}
                 </TableCell>
               </TableRow>
             ) : error ? (
