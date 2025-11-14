@@ -254,8 +254,12 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
         throw new Error('No active session');
       }
 
+      // Normalize phone to E.164 format before sending
+      const normalizedPhone = '+' + phoneNumber.replace(/\D/g, '');
+      console.log('[GHLSmsVerifyDialog] Verifying with normalized phone:', normalizedPhone);
+
       const { data, error } = await supabase.functions.invoke('verify-2fa-sms', {
-        body: { code: codeToVerify, attemptId, phoneNumber }, // Send attemptId, code, and phoneNumber
+        body: { code: codeToVerify, attemptId, phoneNumber: normalizedPhone },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -269,7 +273,9 @@ export const GHLSmsVerifyDialog = ({ open, phoneNumber, userId }: GHLSmsVerifyDi
 
       if (error) throw error;
 
-      // Success
+      console.log('[GHLSmsVerifyDialog] Code verified successfully:', data);
+
+      // Mark this session as verified immediately
       mark2FAVerified();
       
       toast.success('Verification successful!');
