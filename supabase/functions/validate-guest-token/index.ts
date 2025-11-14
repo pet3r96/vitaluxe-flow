@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
       session.channel_name,
       uid,
       RtcRole.SUBSCRIBER,
+      Math.floor(Date.now() / 1000) + ttl,
       Math.floor(Date.now() / 1000) + ttl
     );
 
@@ -134,7 +135,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('[validate-guest-token] Unexpected error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -75,7 +75,10 @@ serve(async (req) => {
       throw new Error('Error checking provider credentials');
     }
 
-    const providersWithNpi = providers?.filter(p => p.profiles?.npi) || [];
+    const providersWithNpi = providers?.filter(p => {
+      const profiles = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
+      return profiles?.npi;
+    }) || [];
 
     console.log('[validate-rx-order] Provider check:', {
       practice_id,
@@ -110,13 +113,14 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('[validate-rx-order] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ 
         allowed: false, 
-        error: error.message || 'Internal server error' 
+        error: errorMessage
       }),
       { 
-        status: error.message === 'Unauthorized' ? 401 : 500,
+        status: errorMessage === 'Unauthorized' ? 401 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
