@@ -138,7 +138,8 @@ serve(async (req) => {
     }
 
     const postmarkData = await postmarkRes.json();
-    console.log("✅ [send-verification-email] Email sent successfully, MessageID:", postmarkData.MessageID);
+    const correlationId = crypto.randomUUID();
+    console.log(`[send-verification] ✅ Email sent - correlationId: ${correlationId}, messageId: ${postmarkData.MessageID}, to: ${email}`);
 
     // Log audit event
     console.log('[send-verification-email] Logging audit event...');

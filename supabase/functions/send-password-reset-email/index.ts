@@ -88,6 +88,11 @@ const handler = async (req: Request): Promise<Response> => {
 
       const resetLink = `https://app.vitaluxeservices.com/change-password?token=${token}`;
 
+      const fromEmail = Deno.env.get("POSTMARK_FROM_EMAIL") || "info@vitaluxeservices.com";
+      const correlationId = crypto.randomUUID();
+      
+      console.log(`[send-password-reset] 📧 Sending - correlationId: ${correlationId}, to: ${email}`);
+
       const postmarkResponse = await fetch("https://api.postmarkapp.com/email", {
         method: "POST",
         headers: {
@@ -96,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
           "X-Postmark-Server-Token": POSTMARK_API_KEY,
         },
         body: JSON.stringify({
-          From: "noreply@vitaluxeservices.com",
+          From: fromEmail,
           To: email,
           Subject: "Reset Your Vitaluxe Password",
           HtmlBody: `
@@ -149,7 +154,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const result = await postmarkResponse.json();
-      console.log("Password reset email sent successfully:", result.MessageID);
+      console.log(`[send-password-reset] ✅ Email sent - correlationId: ${correlationId}, messageId: ${result.MessageID}`);
 
       // Log audit event
       await supabaseAdmin.rpc('log_audit_event', {

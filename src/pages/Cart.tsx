@@ -24,33 +24,8 @@ const Cart = React.memo(function Cart() {
   console.time('Cart-Render');
   console.log('[Cart] Render start');
   
+  // ALL HOOKS AT TOP LEVEL - NO EARLY RETURNS BEFORE THIS
   const authContext = useAuth();
-  
-  // Multi-level defensive check
-  if (!authContext) {
-    console.warn('[Cart] AuthContext is null/undefined');
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        </div>
-      </div>
-    );
-  }
-  
-  if (!authContext.effectiveUserId) {
-    console.warn('[Cart] effectiveUserId not available yet');
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        </div>
-      </div>
-    );
-  }
-  
-  const { effectiveUserId, effectiveRole, effectivePracticeId, user } = authContext;
-  console.log('[Cart] Auth loaded, effectiveUserId:', effectiveUserId, 'role:', effectiveRole);
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -58,12 +33,20 @@ const Cart = React.memo(function Cart() {
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   const { feePercentage, calculateMerchantFee } = useMerchantFee();
   const { canOrder, isLoading: checkingPrivileges, isStaffAccount } = useStaffOrderingPrivileges();
+  
+  // Extract auth with safe defaults
+  const effectiveUserId = authContext?.effectiveUserId || null;
+  const effectiveRole = authContext?.effectiveRole || null;
+  const effectivePracticeId = authContext?.effectivePracticeId || null;
+  const user = authContext?.user || null;
 
-  // Staff without ordering privileges cannot access cart - compute flags only (avoid early return before hooks)
+  console.log('[Cart] Auth state:', { effectiveUserId, effectiveRole });
+
+  // Staff access flags
   const showStaffLoading = checkingPrivileges && isStaffAccount;
   const showStaffNoAccess = isStaffAccount && !canOrder && !checkingPrivileges;
 
-  // CRITICAL: Resolve correct cart owner ID based on role with error handling
+  // Resolve cart owner
   const { data: cartOwnerId, isLoading: isLoadingCartOwner, error: cartOwnerError } = useQuery({
     queryKey: ["cart-owner-id", effectiveUserId, effectiveRole, effectivePracticeId],
     queryFn: async () => {
@@ -87,7 +70,7 @@ const Cart = React.memo(function Cart() {
     productFields: "name, dosage, image_url",
     includePharmacy: true,
     includeProvider: true,
-    enabled: !!cartOwnerId && !showStaffLoading && !cartOwnerError,
+    enabled: !!cartOwnerId && !showStaffLoading && !showStaffNoAccess,
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
