@@ -84,9 +84,9 @@ export default function PatientDashboard() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Limited Access</AlertTitle>
           <AlertDescription>
-            {practiceSubscription.practiceName}'s subscription is currently inactive. 
+            Your clinic's subscription is currently inactive. 
             Appointment booking and some features are temporarily unavailable. 
-            Please contact your practice for more information.
+            Please contact your clinic for more information.
           </AlertDescription>
         </Alert>
       )}
