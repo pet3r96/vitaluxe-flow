@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import {
   Table,
   TableBody,
@@ -31,38 +32,10 @@ export const RepPracticesDataTable = () => {
   const autoHealAttempted = useRef(false);
   const queryClient = useQueryClient();
 
-  // Realtime subscription for pending_practices approval
-  useEffect(() => {
-    const channel = supabase
-      .channel('pending-practices-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'pending_practices',
-          filter: `status=eq.approved`
-        },
-        (payload) => {
-          console.log('[RepPracticesDataTable] Practice approved, refreshing:', payload);
-          queryClient.invalidateQueries({ queryKey: ['rep-practices', effectiveUserId] });
-          queryClient.invalidateQueries({ queryKey: ['rep-practice-stats', effectiveUserId] });
-          queryClient.invalidateQueries({ queryKey: ['rep-practice-count'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [effectiveUserId, queryClient]);
-
-  // Fetch practices based on role using rep_practice_links
-  const { data: practices, isLoading, refetch } = useQuery({
-    queryKey: ["rep-practices", effectiveUserId, effectiveRole],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: true,
-    queryFn: async () => {
+  // Fetch practices based on role using rep_practice_links with real-time updates
+  const { data: practices, isLoading, refetch } = useRealtimeQuery(
+    ["rep-practices", effectiveUserId, effectiveRole],
+    async () => {
       if (!effectiveUserId) return [];
 
       // Get the current user's rep record (reps.id, not user_id)
@@ -155,8 +128,12 @@ export const RepPracticesDataTable = () => {
       
       return practicesData;
     },
-    enabled: !!effectiveUserId && (effectiveRole === "topline" || effectiveRole === "downline"),
-  });
+    { 
+      staleTime: 60000, // 1 minute for instant updates
+      refetchOnWindowFocus: true,
+      enabled: !!effectiveUserId && (effectiveRole === "topline" || effectiveRole === "downline"),
+    }
+  );
 
   const { data: providerCounts } = useQuery({
     queryKey: ["provider-counts"],

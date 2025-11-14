@@ -111,72 +111,78 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      const isChunkError = 
+        this.state.error?.message?.includes('Failed to fetch') ||
+        this.state.error?.message?.includes('Loading chunk') ||
+        this.state.error?.message?.includes('dynamically imported module') ||
+        this.state.error?.message?.includes('Importing a module script failed') ||
+        this.state.error?.name === 'ChunkLoadError';
+
+      const isCacheIssue = isChunkError;
+
       return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-background">
           <Card className="max-w-lg w-full">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-6 w-6 text-destructive" />
-                <CardTitle>Something went wrong</CardTitle>
+                <CardTitle>
+                  {isCacheIssue ? "App Update Detected" : "Something went wrong"}
+                </CardTitle>
               </div>
               <CardDescription>
-                {this.state.error?.message?.includes('dynamically imported module') || 
-                 this.state.error?.message?.includes('Importing a module script failed') ||
-                 this.state.error?.message?.includes('Unexpected token') ? (
-                  <>
-                    Failed to load application module. This usually happens after an update.
-                    <br />
-                    <strong>Please clear your browser cache and reload the page.</strong>
-                  </>
-                ) : (
-                  'An unexpected error occurred. Our team has been notified.'
-                )}
+                {isCacheIssue 
+                  ? "We've recently upgraded VitaLuxe with new features and improvements. Please refresh your browser to get the latest version."
+                  : "An unexpected error occurred. Our team has been notified and will investigate."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {this.state.error && (
+              {isCacheIssue && (
+                <div className="p-4 bg-muted rounded-lg space-y-2">
+                  <p className="text-sm font-medium">Quick Refresh Options:</p>
+                  <ul className="text-sm space-y-1 ml-4 list-disc text-muted-foreground">
+                    <li><strong>Windows:</strong> Press <kbd className="px-1.5 py-0.5 bg-muted/50 rounded">Ctrl+Shift+R</kbd></li>
+                    <li><strong>Mac:</strong> Press <kbd className="px-1.5 py-0.5 bg-muted/50 rounded">Cmd+Shift+R</kbd></li>
+                    <li><strong>Or:</strong> Click the button below</li>
+                  </ul>
+                </div>
+              )}
+
+              {!isCacheIssue && this.state.error && (
                 <div className="p-3 rounded-md bg-muted text-sm font-mono overflow-auto max-h-40">
                   {this.state.error.message}
                 </div>
               )}
               
-              {(this.state.error?.message?.includes('dynamically imported module') || 
-                this.state.error?.message?.includes('Failed to fetch') ||
-                this.state.error?.message?.includes('Importing a module script failed') ||
-                this.state.error?.message?.includes('Unexpected token') ||
-                this.state.error?.message?.includes("'text/html' is not a valid JavaScript MIME type")) && (
-                <div className="mt-4 p-4 bg-muted/30 border border-border rounded-lg">
-                  <p className="text-sm font-semibold mb-2">
-                    🔄 Cache Issue Detected - Auto-reloading...
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    The app has been updated and will reload automatically. If the issue persists:
-                  </p>
-                  <ul className="text-sm text-muted-foreground space-y-1.5 list-disc list-inside">
-                    <li><strong>Hard Refresh:</strong> Press <kbd className="px-1.5 py-0.5 bg-muted/50 rounded">Ctrl+Shift+R</kbd> (Windows) or <kbd className="px-1.5 py-0.5 bg-muted/50 rounded">Cmd+Shift+R</kbd> (Mac)</li>
-                    <li><strong>Clear Cache:</strong> Browser Settings → Privacy → Clear Browsing Data</li>
-                    <li><strong>Incognito Mode:</strong> Try opening in a private/incognito window</li>
-                  </ul>
-                  <button
-                    onClick={() => {
-                      sessionStorage.clear();
-                      window.location.href = window.location.pathname + '?v=' + Date.now();
-                    }}
-                    className="mt-3 px-3 py-1.5 text-sm bg-gold1 hover:bg-gold1/90 text-white rounded"
-                  >
-                    Clear Storage & Reload Now
-                  </button>
-                </div>
-              )}
-              
               <div className="flex gap-2">
-                <Button onClick={this.handleReset} className="flex-1">
-                  Return to Dashboard
+                <Button 
+                  onClick={() => {
+                    sessionStorage.clear();
+                    window.location.reload();
+                  }} 
+                  className="flex-1"
+                  variant={isCacheIssue ? "default" : "outline"}
+                >
+                  {isCacheIssue ? "Refresh Now" : "Reload Page"}
                 </Button>
-                <Button onClick={() => window.location.reload()} variant="outline">
-                  Reload Page
-                </Button>
+                {!isCacheIssue && (
+                  <Button onClick={this.handleReset} className="flex-1">
+                    Return to Dashboard
+                  </Button>
+                )}
               </div>
+
+              {!isCacheIssue && this.state.error && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                    Technical Details
+                  </summary>
+                  <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-auto max-h-40">
+                    {this.state.error.message}
+                    {this.state.error.stack && '\n\n' + this.state.error.stack}
+                  </pre>
+                </details>
+              )}
             </CardContent>
           </Card>
         </div>
