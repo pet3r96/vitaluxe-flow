@@ -70,12 +70,12 @@ export const AccountsDataTable = () => {
 
       if (profilesError) throw profilesError;
 
-      // Then, get all providers to identify which user_ids are providers
-      const { data: providersData, error: providersError } = await supabase
-        .from("providers")
-        .select("user_id, practice_id, id");
+      // Then, get all practice_users to identify which user_ids are providers
+      const { data: practiceUsersData, error: practiceUsersError } = await supabase
+        .from("practice_users")
+        .select("user_id, practice_id, id, role_in_practice");
 
-      if (providersError) throw providersError;
+      if (practiceUsersError) throw practiceUsersError;
 
       // Fetch all active topline profiles for reliable parent display
       const { data: toplinesData } = await supabase
@@ -100,7 +100,11 @@ export const AccountsDataTable = () => {
         `);
 
       // Create a Set of provider user_ids for quick lookup
-      const providerUserIds = new Set(providersData?.map(p => p.user_id) || []);
+      const providerUserIds = new Set(
+        (practiceUsersData || [])
+          .filter(pu => pu.role_in_practice === 'PROVIDER')
+          .map(pu => pu.user_id)
+      );
 
       // Create a map of toplines for quick lookup by user_id
       const toplineMap = new Map(
