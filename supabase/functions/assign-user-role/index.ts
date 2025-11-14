@@ -962,7 +962,8 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Unexpected error in assign-user-role:', error);
     return new Response(
       JSON.stringify({ error: 'An error occurred processing the request' }),

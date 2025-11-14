@@ -194,10 +194,11 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ [complete-video-appointment] Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: errorMessage || 'Internal server error' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

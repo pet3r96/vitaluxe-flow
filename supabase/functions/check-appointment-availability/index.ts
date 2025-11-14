@@ -56,10 +56,11 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Availability check error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

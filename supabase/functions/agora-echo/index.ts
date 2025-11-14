@@ -32,7 +32,8 @@ serve(async (req) => {
       console.log("[agora-echo] Agora API status:", res.status);
       console.log("[agora-echo] Agora API body prefix:", body.substring(0, 120));
     } catch (probeErr) {
-      console.log("[agora-echo] Agora API fetch error:", (probeErr as any)?.message || String(probeErr));
+      const probeErrMsg = probeErr instanceof Error ? probeErr.message : String(probeErr);
+      console.log("[agora-echo] Agora API fetch error:", probeErrMsg);
     }
     
     // Accept optional params from query string or body
@@ -65,11 +66,12 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("[agora-echo] Error:", error);
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Failed to retrieve credentials',
+        error: errorMessage || 'Failed to retrieve credentials',
         timestamp: new Date().toISOString(),
       }),
       { 

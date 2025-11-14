@@ -236,12 +236,13 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error finding availability:', error);
     return new Response(
       JSON.stringify({ 
         available: false,
-        message: error.message || 'Unable to find availability. Please try again.'
+        message: errorMessage || 'Unable to find availability. Please try again.'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
