@@ -83,15 +83,15 @@ Deno.serve(async (req) => {
             .single();
           
           if (providerData) {
-            const { data: orderLines } = await supabase
-              .from('order_lines')
-              .select('order_id, orders!inner(payment_status, status)')
-              .eq('provider_id', providerData.id)
-              .neq('orders.payment_status', 'payment_failed')
-              .neq('orders.status', 'cancelled');
+            // Use efficient RPC function with COUNT(DISTINCT)
+            const { data, error } = await supabase
+              .rpc('count_provider_orders', {
+                p_provider_id: providerData.id
+              });
             
-            const uniqueOrderIds = [...new Set(orderLines?.map(ol => ol.order_id) || [])];
-            count = uniqueOrderIds.length;
+            if (!error) {
+              count = data || 0;
+            }
           }
         } else if (role === 'pharmacy') {
           const { data: pharmacyData } = await supabase
@@ -101,15 +101,15 @@ Deno.serve(async (req) => {
             .maybeSingle();
           
           if (pharmacyData) {
-            const { data: orderLines } = await supabase
-              .from('order_lines')
-              .select('order_id, orders!inner(payment_status, status)')
-              .eq('assigned_pharmacy_id', pharmacyData.id)
-              .neq('orders.payment_status', 'payment_failed')
-              .neq('orders.status', 'cancelled');
+            // Use efficient RPC function with COUNT(DISTINCT)
+            const { data, error } = await supabase
+              .rpc('count_pharmacy_orders', {
+                p_pharmacy_id: pharmacyData.id
+              });
             
-            const uniqueOrderIds = [...new Set(orderLines?.map(ol => ol.order_id) || [])];
-            count = uniqueOrderIds.length;
+            if (!error) {
+              count = data || 0;
+            }
           }
         } else if (role === 'staff') {
           let practiceId: string | null = null;
