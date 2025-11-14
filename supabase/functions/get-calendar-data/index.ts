@@ -85,9 +85,9 @@ Deno.serve(async (req) => {
         notes,
         checked_in_at,
         treatment_started_at,
-        patient_accounts!left(id, first_name, last_name, phone),
-        providers!patient_appointments_provider_id_fkey!left(id, user_id),
-        practice_rooms!left(id, name, color)
+        patient_accounts(id, first_name, last_name, phone),
+        providers(id, user_id),
+        practice_rooms(id, name, color)
       `)
       .eq('practice_id', practiceId)
       .gte('start_time', startDate)
