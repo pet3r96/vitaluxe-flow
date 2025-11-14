@@ -327,6 +327,9 @@ serve(async (req) => {
         try {
           const functionUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-welcome-email`;
           const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+          if (!anonKey) {
+            throw new Error('Missing SUPABASE_ANON_KEY');
+          }
           
           const emailResponse = await fetch(functionUrl, {
             method: 'POST',

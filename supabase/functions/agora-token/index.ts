@@ -114,12 +114,13 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
-    console.error("[AGORA TOKEN] ERROR:", err);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error("[AGORA TOKEN] ERROR:", errorMessage);
 
     return new Response(
       JSON.stringify({
         ok: false,
-        error: err?.message || "Unknown error",
+        error: errorMessage,
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );

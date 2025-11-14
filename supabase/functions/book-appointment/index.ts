@@ -247,8 +247,9 @@ Deno.serve(async (req) => {
           try {
             await sendNotificationEmail({
               to: patientWithUser.email,
-              toName: patientName,
+              recipientName: patientName,
               subject: 'Appointment Requested',
+              title: 'Appointment Requested',
               message: directMessage,
               actionUrl: undefined,
               senderContext: { fromName: 'Your Healthcare Provider' }

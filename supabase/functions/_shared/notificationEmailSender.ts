@@ -6,8 +6,9 @@ interface SendNotificationEmailParams {
   message: string;
   actionUrl?: string;
   senderContext?: {
-    role: string;
-    name: string | null;
+    role?: string;
+    name?: string | null;
+    fromName?: string;
   };
 }
 
