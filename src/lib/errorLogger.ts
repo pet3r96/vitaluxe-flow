@@ -21,11 +21,21 @@ export const logApplicationError = async (
 export const initializeErrorHandlers = () => {
   // Handle unhandled JavaScript errors
   window.onerror = (message, source, lineno, colno, error) => {
+    const errorMsg = typeof message === 'string' ? message : String(message);
+    
+    // Track navigation timing errors separately
+    const isNavigationError = 
+      errorMsg.includes('useAuth must be used within') ||
+      errorMsg.includes('Loading chunk') ||
+      errorMsg.includes('Failed to fetch dynamically imported');
+    
     logger.error('Unhandled JavaScript Error', error, {
-      message: typeof message === 'string' ? message : String(message),
+      message: errorMsg,
       source,
       line: lineno,
       column: colno,
+      isNavigationError,
+      url: window.location.href,
     });
 
     // Don't suppress default error handling

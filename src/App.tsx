@@ -208,20 +208,27 @@ const SidebarLayout = ({ children }: { children: React.ReactNode }) => {
   return <SidebarProvider defaultOpen={defaultOpen}>{children}</SidebarProvider>;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-      <ErrorBoundary>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AuthProvider>
-              <SubscriptionProvider>
-                <SessionTimerWrapper />
-                <GlobalImpersonationBanner>
-                  <Global2FADialogs />
-                  <GlobalIntakeDialog />
+const App = () => {
+  console.time('App-Mount');
+  
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        <ErrorBoundary>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AuthProvider>
+                <SubscriptionProvider>
+                  <SessionTimerWrapper />
+                  <GlobalImpersonationBanner>
+                    <ErrorBoundary>
+                      <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+                        <Global2FADialogs />
+                        <GlobalIntakeDialog />
+                      </Suspense>
+                    </ErrorBoundary>
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
                       {/* Public Routes */}
@@ -461,5 +468,7 @@ const App = () => (
       </ErrorBoundary>
     </ThemeProvider>
   </QueryClientProvider>
-);
-export default App; // deploy trigger 2 - 2025-11-07 16:36
+  );
+};
+
+export default App;

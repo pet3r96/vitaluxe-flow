@@ -11,6 +11,16 @@ import { useToast } from "@/hooks/use-toast";
 export const GlobalIntakeDialog = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Defensive check: only proceed if we have auth context
+  let authData;
+  try {
+    authData = useAuth();
+  } catch (error) {
+    console.warn('[GlobalIntakeDialog] Auth context not available yet');
+    return null;
+  }
+
   const {
     userRole,
     effectiveUserId,
@@ -20,7 +30,12 @@ export const GlobalIntakeDialog = () => {
     termsAccepted,
     requires2FASetup,
     requires2FAVerify,
-  } = useAuth();
+  } = authData;
+
+  // Early return if no user ID
+  if (!effectiveUserId) {
+    return null;
+  }
 
   // Don't show dialog if:
   // - Not a patient
@@ -34,8 +49,7 @@ export const GlobalIntakeDialog = () => {
     requires2FASetup ||
     requires2FAVerify ||
     !termsAccepted ||
-    !showIntakeDialog ||
-    !effectiveUserId
+    !showIntakeDialog
   ) {
     return null;
   }

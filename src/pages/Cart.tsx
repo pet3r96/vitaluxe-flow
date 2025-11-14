@@ -17,47 +17,10 @@ import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMultiplePharmacyRates } from "@/hooks/useMultiplePharmacyRates";
+import React from "react";
 
-// Wrapper component to fetch enabled options for a pharmacy
-const ShippingSpeedSelectorWithOptions = ({ 
-  pharmacyId, 
-  value, 
-  onChange, 
-  patientName, 
-  disabled 
-}: { 
-  pharmacyId: string; 
-  value: 'ground' | '2day' | 'overnight';
-  onChange: (value: 'ground' | '2day' | 'overnight') => void;
-  patientName: string;
-  disabled?: boolean;
-}) => {
-  const { data: enabledRates, isLoading } = useQuery({
-    queryKey: ['pharmacy-enabled-rates', pharmacyId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('pharmacy_shipping_rates')
-        .select('shipping_speed')
-        .eq('pharmacy_id', pharmacyId)
-        .eq('enabled', true);
-      return data?.map(r => r.shipping_speed as 'ground' | '2day' | 'overnight') || [];
-    },
-    enabled: !!pharmacyId
-  });
-  
-  return (
-    <ShippingSpeedSelector
-      value={value}
-      onChange={onChange}
-      patientName={patientName}
-      disabled={disabled}
-      enabledOptions={enabledRates}
-      isLoading={isLoading}
-    />
-  );
-};
-
-export default function Cart() {
+const Cart = React.memo(function Cart() {
+  console.time('Cart-Render');
   const { effectiveUserId, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -181,7 +144,11 @@ export default function Cart() {
 
   // Group cart lines by patient AND pharmacy - critical for multi-pharmacy orders
   const patientGroups = useMemo(() => {
-    if (!cart?.lines) return [];
+    console.time('Cart-PatientGroups');
+    if (!cart?.lines) {
+      console.timeEnd('Cart-PatientGroups');
+      return [];
+    }
     
     const groups: Record<string, any> = {};
     
@@ -214,7 +181,13 @@ export default function Cart() {
   }, [patientGroups]);
 
   // Fetch rates for all pharmacies in cart using a single stable hook
-  const { data: pharmacyRatesMap = {} } = useMultiplePharmacyRates(uniquePharmacyIds);
+  const { data: pharmacyRatesMap = {}, isLoading: ratesLoading } = useMultiplePharmacyRates(uniquePharmacyIds);
+  
+  // Get enabled speeds for a pharmacy from batched data
+  const getEnabledSpeeds = useCallback((pharmacyId: string) => {
+    const rates = pharmacyRatesMap?.[pharmacyId];
+    return rates ? Object.keys(rates) as ('ground' | '2day' | 'overnight')[] : [];
+  }, [pharmacyRatesMap]);
 
   const cartLines = cart?.lines || [];
   const isEmpty = cartLines.length === 0;
@@ -405,8 +378,7 @@ export default function Cart() {
                 
                 <Separator className="my-3" />
                 
-                <ShippingSpeedSelectorWithOptions
-                  pharmacyId={group.pharmacy_id}
+                <ShippingSpeedSelector
                   value={group.shipping_speed}
                   onChange={(speed) => {
                     const lineIds = group.lines.map((l: any) => l.id);
@@ -414,6 +386,8 @@ export default function Cart() {
                   }}
                   patientName={group.patient_name}
                   disabled={updateShippingSpeedMutation.isPending}
+                  enabledOptions={getEnabledSpeeds(group.pharmacy_id)}
+                  isLoading={ratesLoading}
                 />
                 
                 <div className="text-sm text-muted-foreground pt-1">
@@ -502,4 +476,6 @@ export default function Cart() {
       )}
     </div>
   );
-}
+});
+
+export default Cart;
