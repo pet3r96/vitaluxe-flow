@@ -123,6 +123,33 @@ async function fetchOrdersTimeSeries(
 
   if (role === 'doctor') {
     query += ` AND doctor_id = '${userId}'`;
+  } else if (role === 'provider') {
+    // Get provider ID first
+    const { data: provider } = await supabase
+      .from('providers')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('active', true)
+      .maybeSingle();
+    
+    if (provider) {
+      query = `
+        SELECT 
+          date_trunc('${granularity}', o.created_at) as period,
+          COUNT(DISTINCT ol.order_id)::integer as value
+        FROM order_lines ol
+        INNER JOIN orders o ON ol.order_id = o.id
+        WHERE o.created_at >= '${startDate}'
+          AND o.created_at <= '${endDate}'
+          AND o.status != 'cancelled'
+          AND o.payment_status != 'payment_failed'
+          AND ol.provider_id = '${provider.id}'
+        GROUP BY period
+        ORDER BY period
+      `;
+      const { data } = await supabase.rpc('exec_sql', { sql: query });
+      return data || [];
+    }
   } else if (role === 'pharmacy') {
     // Get pharmacy ID first
     const { data: pharmacy } = await supabase
@@ -180,6 +207,33 @@ async function fetchRevenueTimeSeries(
 
   if (role === 'doctor') {
     query += ` AND doctor_id = '${userId}'`;
+  } else if (role === 'provider') {
+    // Get provider ID first
+    const { data: provider } = await supabase
+      .from('providers')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('active', true)
+      .maybeSingle();
+    
+    if (provider) {
+      query = `
+        SELECT 
+          date_trunc('${granularity}', o.created_at) as period,
+          SUM(o.total_amount)::numeric as value
+        FROM order_lines ol
+        INNER JOIN orders o ON ol.order_id = o.id
+        WHERE o.created_at >= '${startDate}'
+          AND o.created_at <= '${endDate}'
+          AND o.status != 'cancelled'
+          AND ${statusFilter}
+          AND ol.provider_id = '${provider.id}'
+        GROUP BY period
+        ORDER BY period
+      `;
+      const { data } = await supabase.rpc('exec_sql', { sql: query });
+      return data || [];
+    }
   }
 
   query += ` GROUP BY period ORDER BY period`;

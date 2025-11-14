@@ -98,10 +98,72 @@ serve(async (req) => {
     console.log(`[get-orders-page] 🎯 Filtering by role: ${role}`);
     
     if (role === 'doctor') {
-      // CRITICAL FIX: doctor_id in orders table stores providers.user_id (not providers.id)
-      // practiceId parameter is actually the auth user.id for doctor role
-      console.log(`[get-orders-page] Doctor filter: doctor_id = ${practiceId}`);
-      query = query.eq('doctor_id', practiceId);
+      // For providers: practiceId parameter contains their user_id
+      // Need to map user_id -> provider.id -> filter by order_lines.provider_id
+      const { data: providerRecord, error: providerError } = await supabase
+        .from('providers')
+        .select('id')
+        .eq('user_id', practiceId)
+        .eq('active', true)
+        .maybeSingle();
+      
+      if (providerError) {
+        console.error('[get-orders-page] ❌ Error fetching provider:', providerError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch provider record' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (!providerRecord) {
+        console.warn('[get-orders-page] ⚠️ No active provider found for user');
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            total: 0,
+            page,
+            pageSize,
+            totalPages: 0,
+            hasNextPage: false,
+            debug: { reason: 'no_provider_record', userId: practiceId }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[get-orders-page] 🔍 Provider filter: provider_id = ${providerRecord.id} (user: ${practiceId})`);
+      
+      // Get order IDs that have this provider in any order line
+      const { data: orderLineData, error: orderLineError } = await supabase
+        .from('order_lines')
+        .select('order_id')
+        .eq('provider_id', providerRecord.id);
+      
+      if (orderLineError) {
+        console.error('[get-orders-page] ❌ Error fetching order_lines:', orderLineError);
+        throw orderLineError;
+      }
+      
+      const orderIds = [...new Set(orderLineData?.map(ol => ol.order_id) || [])];
+      
+      if (orderIds.length === 0) {
+        console.log('[get-orders-page] ℹ️ No orders found for provider');
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            total: 0,
+            page,
+            pageSize,
+            totalPages: 0,
+            hasNextPage: false,
+            debug: { reason: 'no_orders', providerId: providerRecord.id }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[get-orders-page] ✅ Found ${orderIds.length} unique orders for provider`);
+      query = query.in('id', orderIds);
     } else if (role === 'practice') {
       // For practice role: get all provider user_ids for this practice, then filter orders
       console.log(`[get-orders-page] Practice filter: fetching providers for practice ${practiceId}`);
