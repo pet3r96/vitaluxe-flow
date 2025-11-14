@@ -449,22 +449,48 @@ export default function Checkout() {
           }
         }
         
-        // CRITICAL: Clear cart immediately and force refetch
-        console.log('[Checkout] Clearing cart after successful order');
+        // CRITICAL: Clear cart using the correct cartOwnerId
+        console.log('[Checkout] Clearing cart after successful order', { 
+          cartOwnerId, 
+          effectiveUserId,
+          deletedCount 
+        });
         
-        // Set empty cart data immediately (optimistic update)
-        queryClient.setQueryData(["cart", effectiveUserId], { id: '', lines: [] });
-        queryClient.setQueryData(["cart-count", effectiveUserId], 0);
+        // Explicitly delete remaining cart lines from database (belt & suspenders)
+        if (cart?.id) {
+          try {
+            const { error: deleteError } = await supabase
+              .from('cart_lines')
+              .delete()
+              .eq('cart_id', cart.id);
+            
+            if (deleteError) {
+              console.error('[Checkout] Error deleting cart lines:', deleteError);
+            } else {
+              console.log('[Checkout] Successfully deleted all cart lines from DB');
+            }
+          } catch (err) {
+            console.error('[Checkout] Exception deleting cart lines:', err);
+          }
+        }
         
-        // Invalidate all order-related queries to force refetch
-        queryClient.invalidateQueries({ queryKey: ["cart"] });
-        queryClient.invalidateQueries({ queryKey: ["cart-count"] });
-        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        // Set empty cart data immediately (optimistic update) - use cartOwnerId
+        if (cartOwnerId) {
+          queryClient.setQueryData(["cart", cartOwnerId], { id: '', lines: [] });
+          queryClient.setQueryData(["cart-count", cartOwnerId], 0);
+        }
         
-        // Force refetch in background (don't await to avoid delay)
-        queryClient.refetchQueries({ queryKey: ["cart", effectiveUserId] });
-        queryClient.refetchQueries({ queryKey: ["cart-count", effectiveUserId] });
-        queryClient.refetchQueries({ queryKey: ["orders"] });
+        // Invalidate all cart-related queries with wildcard matching
+        await queryClient.invalidateQueries({ queryKey: ["cart"], exact: false });
+        await queryClient.invalidateQueries({ queryKey: ["cart-count"], exact: false });
+        await queryClient.invalidateQueries({ queryKey: ["cart-owner"], exact: false });
+        await queryClient.invalidateQueries({ queryKey: ["orders"], exact: false });
+        
+        // Force immediate refetch of cart queries
+        if (cartOwnerId) {
+          queryClient.refetchQueries({ queryKey: ["cart", cartOwnerId] });
+          queryClient.refetchQueries({ queryKey: ["cart-count", cartOwnerId] });
+        }
         
         toast({
           title: "Order Placed Successfully! 🎉",
