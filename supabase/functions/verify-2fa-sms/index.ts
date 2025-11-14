@@ -69,6 +69,8 @@ serve(async (req) => {
 
     if (fetchError || !attempt) {
       await supabase.from('two_fa_audit_log').insert({
+        user_id: user.id,
+        phone: phoneNumber,
         attempt_id: attemptId,
         event_type: 'verification_failed',
         code_verified: false,
@@ -84,6 +86,8 @@ serve(async (req) => {
     // Check if already verified
     if (attempt.verified_at) {
       await supabase.from('two_fa_audit_log').insert({
+        user_id: user.id,
+        phone: phoneNumber,
         attempt_id: attemptId,
         event_type: 'verification_failed',
         code_verified: false,
@@ -101,6 +105,8 @@ serve(async (req) => {
     const now = new Date();
     if (now > expiresAt) {
       await supabase.from('two_fa_audit_log').insert({
+        user_id: user.id,
+        phone: phoneNumber,
         attempt_id: attemptId,
         event_type: 'verification_failed',
         code_verified: false,
@@ -117,6 +123,8 @@ serve(async (req) => {
     const codeHash = await hashCode(code);
     if (codeHash !== attempt.code_hash) {
       await supabase.from('two_fa_audit_log').insert({
+        user_id: user.id,
+        phone: phoneNumber,
         attempt_id: attemptId,
         event_type: 'verification_failed',
         code_verified: false,
@@ -199,6 +207,8 @@ serve(async (req) => {
       message: 'Verification successful'
     };
     await supabase.from('two_fa_audit_log').insert({
+      user_id: user.id,
+      phone: phoneNumber,
       attempt_id: attemptId,
       event_type: 'code_verified',
       code_verified: true,

@@ -86,6 +86,8 @@ serve(async (req) => {
 
     if (!attemptData) {
       await supabase.from('two_fa_audit_log').insert({
+        user_id: user.id,
+        phone: phoneNumber,
         attempt_id: attemptId,
         event_type: 'code_failed',
         code_verified: false,
@@ -105,6 +107,8 @@ serve(async (req) => {
     // Check attempt count
     if (attemptData.attempt_count >= 5) {
       await supabase.from('two_fa_audit_log').insert({
+        user_id: user.id,
+        phone: phoneNumber,
         attempt_id: attemptId,
         event_type: 'code_failed',
         code_verified: false,
@@ -138,6 +142,8 @@ serve(async (req) => {
       const attemptsRemaining = 5 - (attemptData.attempt_count + 1);
       
       await supabase.from('two_fa_audit_log').insert({
+        user_id: user.id,
+        phone: phoneNumber,
         attempt_id: attemptId,
         event_type: 'code_failed',
         code_verified: false,
@@ -221,6 +227,8 @@ serve(async (req) => {
     // Log successful verification (NO PII)
     const totalTime = Date.now() - startTime;
     await supabase.from('two_fa_audit_log').insert({
+      user_id: user.id,
+      phone: phoneNumber,
       attempt_id: attemptId,
       event_type: 'code_verified',
       code_verified: true,

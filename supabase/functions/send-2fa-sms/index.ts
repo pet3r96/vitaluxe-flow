@@ -117,6 +117,8 @@ serve(async (req) => {
       }
 
       await supabase.from('two_fa_audit_log').insert({
+        user_id: user.id,
+        phone: phoneNumber,
         attempt_id: existingAttempt.attempt_id,
         event_type: 'duplicate_blocked',
         code_verified: false,
@@ -190,6 +192,8 @@ serve(async (req) => {
         // For transient errors (5xx), treat as queued
         if (twilioResponse.status >= 500 && twilioResponse.status < 600) {
           await supabase.from('two_fa_audit_log').insert({
+            user_id: user.id,
+            phone: phoneNumber,
             attempt_id: attemptId,
             event_type: 'code_queued',
             code_verified: false,
@@ -219,6 +223,8 @@ serve(async (req) => {
         
         // Log definitive failures
         await supabase.from('two_fa_audit_log').insert({
+          user_id: user.id,
+          phone: phoneNumber,
           attempt_id: attemptId,
           event_type: 'twilio_api_failed',
           code_verified: false,
@@ -235,6 +241,8 @@ serve(async (req) => {
       
       // Log success
       await supabase.from('two_fa_audit_log').insert({
+        user_id: user.id,
+        phone: phoneNumber,
         attempt_id: attemptId,
         event_type: 'code_sent',
         code_verified: false,
@@ -264,6 +272,8 @@ serve(async (req) => {
         console.log('[2FA Twilio] Attempt:', attemptId, '| Timeout after 12s, treating as queued');
         
         await supabase.from('two_fa_audit_log').insert({
+          user_id: user.id,
+          phone: phoneNumber,
           attempt_id: attemptId,
           event_type: 'code_queued',
           code_verified: false,
