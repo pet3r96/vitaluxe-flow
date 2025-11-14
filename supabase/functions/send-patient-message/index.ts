@@ -508,8 +508,30 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (notificationError) {
-        console.error('[send-patient-message] Failed to create team notifications:', notificationError);
+      const { error: teamNotificationError } = await Promise.all(
+        teamMemberIds.map(memberId => 
+          supabaseAdmin.functions.invoke('handleNotifications', {
+            body: {
+              user_id: memberId,
+              notification_type: 'patient_message_received',
+              title: `New patient message`,
+              message: `Patient ${insertedMessage.patient_name || 'Unknown'} sent a message`,
+              metadata: {
+                message_id: insertedMessage.id,
+                patient_id: patient_id,
+                practice_id: effectivePracticeId,
+                thread_id: insertedMessage.thread_id || insertedMessage.id
+              },
+              action_url: '/messages',
+              entity_type: 'message',
+              entity_id: insertedMessage.id
+            }
+          })
+        )
+      ).then(results => ({ error: results.find(r => r.error)?.error }));
+
+      if (teamNotificationError) {
+        console.error('[send-patient-message] Failed to create team notifications:', teamNotificationError);
       } else {
         console.log('[send-patient-message] Created notifications for', teamMemberIds.length, 'team members');
       }
