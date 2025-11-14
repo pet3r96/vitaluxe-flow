@@ -73,9 +73,48 @@ export const AccountsDataTable = () => {
       // Then, get all providers to identify which user_ids are providers
       const { data: providersData, error: providersError } = await supabase
         .from("providers")
-        .select("user_id, practice_id, id");
+        .select(`
+          user_id, 
+          practice_id, 
+          id,
+          practice:practice_id (
+            id,
+            name
+          )
+        `);
 
       if (providersError) throw providersError;
+
+      // Get staff associations
+      const { data: staffData, error: staffError } = await supabase
+        .from("practice_staff")
+        .select(`
+          user_id,
+          practice_id,
+          id,
+          practice:practice_id (
+            id,
+            name
+          )
+        `);
+
+      if (staffError) throw staffError;
+
+      // Get patient associations
+      const { data: patientsData, error: patientsError } = await supabase
+        .from("patient_accounts")
+        .select(`
+          user_id,
+          practice_id,
+          id,
+          practice:practice_id (
+            id,
+            name
+          )
+        `)
+        .not("user_id", "is", null);
+
+      if (patientsError) throw patientsError;
 
       // Fetch all active topline profiles for reliable parent display
       const { data: toplinesData } = await supabase
@@ -101,6 +140,28 @@ export const AccountsDataTable = () => {
 
       // Create a Set of provider user_ids for quick lookup
       const providerUserIds = new Set(providersData?.map(p => p.user_id) || []);
+
+      // Create maps for practice associations
+      const providerPracticeMap = new Map();
+      providersData?.forEach(p => {
+        if (p.user_id !== p.practice_id && p.practice) {
+          providerPracticeMap.set(p.user_id, p.practice);
+        }
+      });
+
+      const staffPracticeMap = new Map();
+      staffData?.forEach(s => {
+        if (s.practice) {
+          staffPracticeMap.set(s.user_id, s.practice);
+        }
+      });
+
+      const patientPracticeMap = new Map();
+      patientsData?.forEach(pa => {
+        if (pa.user_id && pa.practice) {
+          patientPracticeMap.set(pa.user_id, pa.practice);
+        }
+      });
 
       // Create a map of toplines for quick lookup by user_id
       const toplineMap = new Map(
@@ -136,6 +197,12 @@ export const AccountsDataTable = () => {
             resolvedTopline = downlineToToplineMap.get(profile.linked_topline_id);
           }
         }
+
+        // Get practice association
+        const practiceAssociation = 
+          providerPracticeMap.get(profile.id) ||
+          staffPracticeMap.get(profile.id) ||
+          patientPracticeMap.get(profile.id);
         
         return {
           ...profile,
@@ -145,6 +212,7 @@ export const AccountsDataTable = () => {
             p => p.user_id === profile.id && p.user_id !== p.practice_id
           ) || false,
           linked_topline_display: resolvedTopline,
+          practice_association: practiceAssociation, // Add practice association
         };
       });
 
@@ -338,14 +406,19 @@ export const AccountsDataTable = () => {
                     
                     {((account.user_roles?.[0]?.role === 'downline' || getDisplayRole(account) === 'practice') && 
                       (account.linked_topline_display?.name || account.linked_topline?.name)) ||
-                      account.parent ? (
+                      account.parent ||
+                      account.practice_association ? (
                       <div className="text-sm">
                         <span className="text-muted-foreground">Parent: </span>
                         <span className="text-foreground">
                           {(account.user_roles?.[0]?.role === 'downline' || getDisplayRole(account) === 'practice') ? (
                             account.linked_topline_display?.name || account.linked_topline?.name || "-"
+                          ) : account.parent ? (
+                            account.parent.name
+                          ) : account.practice_association ? (
+                            account.practice_association.name
                           ) : (
-                            account.parent?.name || "-"
+                            "-"
                           )}
                         </span>
                       </div>
@@ -446,6 +519,8 @@ export const AccountsDataTable = () => {
                       )
                     ) : account.parent ? (
                       <span className="text-sm">{account.parent.name}</span>
+                    ) : account.practice_association ? (
+                      <span className="text-sm">{account.practice_association.name}</span>
                     ) : (
                       "-"
                     )}
