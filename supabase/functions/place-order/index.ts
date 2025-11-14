@@ -82,6 +82,23 @@ serve(async (req) => {
       );
     }
 
+    // Check for active impersonation session
+    let effectiveUserId = user.id;
+    const { data: impersonationSession } = await supabaseAdmin
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (impersonationSession) {
+      effectiveUserId = impersonationSession.impersonated_user_id;
+      console.log('[place-order] Impersonation detected:', {
+        adminUserId: user.id,
+        effectiveUserId
+      });
+    }
+
     // Fetch cart with all lines using admin client (bypasses RLS for efficiency)
     const { data: cart, error: cartError } = await supabaseAdmin
       .from("cart")
@@ -120,9 +137,13 @@ serve(async (req) => {
       );
     }
 
-    // Verify cart belongs to user
-    if (cart.doctor_id !== user.id) {
-      console.error("[place-order] Cart ownership mismatch");
+    // Verify cart belongs to effective user (accounts for impersonation)
+    if (cart.doctor_id !== effectiveUserId) {
+      console.error("[place-order] Cart ownership mismatch", {
+        cartDoctorId: cart.doctor_id,
+        effectiveUserId,
+        isImpersonating: !!impersonationSession
+      });
       return new Response(
         JSON.stringify({ error: "Unauthorized access to cart" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
