@@ -16,24 +16,27 @@ const RepProductivityReport = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
   const [selectedTopline, setSelectedTopline] = useState<string>("all");
 
-  // Fetch productivity data
+  // Fetch productivity data (NO blocking refresh - background job handles it)
   const { data: productivityData, isLoading, refetch } = useQuery({
     queryKey: ["rep-productivity"],
     queryFn: async () => {
-      // Try to refresh materialized view, but don't block if it fails
-      try {
-        console.log('[RepProductivity] Refreshing materialized view...');
-        await supabase.rpc('refresh_rep_productivity_summary');
-        console.log('[RepProductivity] ✅ Materialized view refreshed');
-      } catch (refreshError) {
-        console.warn('[RepProductivity] ⚠️ Failed to refresh materialized view:', refreshError);
-        // Continue anyway - we'll use existing data in the view
-      }
+      console.time('[RepProductivity] Query');
       
+      // Fetch ONLY the columns we need for display - no SELECT *
       const { data, error } = await supabase
         .from("rep_productivity_view")
-        .select("*")
+        .select(`
+          rep_id,
+          user_id,
+          role,
+          practice_count,
+          total_orders,
+          total_commissions,
+          total_revenue
+        `)
         .order("total_commissions", { ascending: false });
+      
+      console.timeEnd('[RepProductivity] Query');
       
       if (error) {
         console.error('[RepProductivity] ❌ Error fetching data:', error);
@@ -43,6 +46,8 @@ const RepProductivityReport = () => {
       console.log('[RepProductivity] ✅ Fetched', data?.length || 0, 'records');
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - background job refreshes the view
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
   // Fetch topline reps for filter dropdown (admin only)

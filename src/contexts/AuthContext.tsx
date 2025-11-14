@@ -464,7 +464,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                       console.log('[AuthContext] Auto-enrolling new practice in 14-day trial');
                       
                       try {
-                        const { error: subError } = await supabase.functions.invoke(
+                        const { data: subData, error: subError } = await supabase.functions.invoke(
                           'subscribe-to-vitaluxepro',
                           { body: { autoEnroll: true } }
                         );
@@ -472,14 +472,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         if (subError) {
                           console.error('[AuthContext] Auto-enrollment failed:', subError);
                         } else {
-                          // Show welcome notification
-                          toast.success(
-                            "Welcome to VitaLuxePro! 🎉",
-                            {
-                              description: "You've been automatically enrolled in a 14-day free trial with full access to all features. Add a payment method before day 14 to continue.",
-                              duration: 10000,
-                            }
-                          );
+                          console.log('[AuthContext] Subscription result:', subData);
+                          
+                          // Only show trial toast if a NEW trial was actually created
+                          const isNewTrial = subData && 
+                            !(subData as any)?.alreadySubscribed && 
+                            (subData as any)?.subscription_status !== 'active';
+                          
+                          if (isNewTrial) {
+                            toast.success(
+                              "Welcome to VitaLuxePro! 🎉",
+                              {
+                                description: "You've been automatically enrolled in a 14-day free trial with full access to all features. Add a payment method before day 14 to continue.",
+                                duration: 10000,
+                              }
+                            );
+                          }
                         }
                       } catch (error) {
                         console.error('[AuthContext] Auto-enrollment error:', error);
