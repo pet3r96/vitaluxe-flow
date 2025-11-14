@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { realtimeManager } from "@/lib/realtimeManager";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import {
   Table,
   TableBody,
@@ -40,9 +39,9 @@ export function BeingTreatedPanel({
   const endOfDay = new Date(currentDate);
   endOfDay.setHours(23, 59, 59, 999);
 
-  const { data: appointments, refetch } = useQuery({
-    queryKey: ["being-treated-appointments", practiceId, currentDate.toDateString()],
-    queryFn: async () => {
+  const { data: appointments } = useRealtimeQuery(
+    ["being-treated-appointments", practiceId, currentDate.toDateString()],
+    async () => {
       const { data, error } = await supabase
         .from("patient_appointments")
         .select(`
@@ -71,18 +70,10 @@ export function BeingTreatedPanel({
       if (error) throw error;
       return data;
     },
-    staleTime: 0, // Keep staleTime: 0 - realtime handles updates instantly
-  });
-
-  useEffect(() => {
-    realtimeManager.subscribe('patient_appointments', () => {
-      refetch();
-    });
-
-    return () => {
-      // Manager handles cleanup
-    };
-  }, [practiceId, refetch]);
+    {
+      staleTime: 0,
+    }
+  );
 
   const getProviderName = (appointment: any) => {
     const user = appointment.provider?.user;

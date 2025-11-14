@@ -183,7 +183,17 @@ export function CompleteAppointmentDialog({
       onSuccess();
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to complete appointment");
+      console.error('[CompleteAppointmentDialog] Error:', error);
+      
+      const isTimeout = error.message?.includes('timeout') || 
+                        error.message?.includes('timed out') ||
+                        error.code === 'PGRST301';
+      
+      if (isTimeout) {
+        toast.error("Request timed out. The operation may still complete. Please refresh if needed.");
+      } else {
+        toast.error(error.message || "Failed to complete appointment. Please try again.");
+      }
     },
   });
 
