@@ -109,7 +109,19 @@ export default function PracticeCalendar() {
       });
 
       if (error) throw error;
-      return data;
+      const wrapped = data as any;
+      const payload = wrapped && typeof wrapped === 'object' && 'data' in wrapped ? (wrapped as any).data : wrapped;
+      console.info('[PracticeCalendar] Calendar range', {
+        startDate: `${startDate}T00:00:00.000Z`,
+        endDate: `${endDate}T23:59:59.999Z`,
+      });
+      console.info('[PracticeCalendar] Appointments received', {
+        count: Array.isArray(payload?.appointments) ? payload.appointments.length : 0,
+      });
+      if (!payload) {
+        console.warn('[PracticeCalendar] Empty calendar payload from get-calendar-data');
+      }
+      return payload;
     },
     {
       enabled: !!practiceId,
