@@ -48,7 +48,7 @@ serve(async (req) => {
           .select("id, order_id, orders!inner(order_number)")
           .eq("assigned_pharmacy_id", pharmacy.id)
           .in("status", ["processing", "shipped"])
-          .limit(100);
+          .limit(100) as { data: Array<{ id: string; order_id: string; orders: Array<{ order_number: string }> }> | null };
 
         if (!orderLines || orderLines.length === 0) {
           console.log(`No active orders for pharmacy ${pharmacy.name}`);
@@ -116,7 +116,10 @@ serve(async (req) => {
         // Process each tracking update
         for (const update of orders) {
           const orderLine = orderLines.find(
-            ol => ol.orders?.order_number === update.vitaluxe_order_number
+            ol => {
+              const orderData = Array.isArray(ol.orders) ? ol.orders[0] : ol.orders;
+              return orderData?.order_number === update.vitaluxe_order_number;
+            }
           );
 
           if (!orderLine) continue;

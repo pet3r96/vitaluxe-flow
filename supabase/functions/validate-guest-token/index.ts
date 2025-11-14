@@ -93,13 +93,14 @@ Deno.serve(async (req) => {
     const ttl = 3600; // 1 hour
 
     // Guest joins as audience (no publishing)
+    const privilegeExpire = Math.floor(Date.now() / 1000) + ttl;
     const rtcToken = RtcTokenBuilder.buildTokenWithUid(
       appId,
       appCertificate,
       session.channel_name,
       uid,
       RtcRole.SUBSCRIBER,
-      Math.floor(Date.now() / 1000) + ttl
+      privilegeExpire
     );
 
     const rtmUid = `guest_${uid}`;
