@@ -33,7 +33,13 @@ interface Sms2FADialogProps {
 
 export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
   const auth = useAuth();
-  const [step, setStep] = useState<'phone' | 'verify'>('phone');
+  // Initialize to 'verify' if phone is already provided to prevent flicker
+  const [step, setStep] = useState<'phone' | 'verify'>(() => {
+    if (phone && phone.length >= 10) return 'verify';
+    const storedPhone = localStorage.getItem(`vitaluxe_2fa_phone_${userId}`);
+    if (storedPhone && storedPhone.length >= 10) return 'verify';
+    return 'phone';
+  });
   const [phoneNumber, setPhoneNumber] = useState('');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -109,11 +115,11 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
         setPhoneNumber(phoneToUse);
         const existing = checkSharedCooldown();
         if (existing > 0) {
-          setStep('verify');
+          // Already on verify step if initialized correctly
           setCountdown(existing);
           setCodeSent(true);
         } else {
-          // Don't set step yet, let sendCode do it on success
+          // Already on verify step, just send code
           sendCode(phoneToUse);
         }
       }
