@@ -24,35 +24,47 @@ export function useMetricTimeSeries(
   const { data: metricsData, isLoading, error } = useQuery({
     queryKey: ['metric-timeseries', metricType, period, effectiveRole, effectiveUserId],
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     queryFn: async () => {
       const { start, end } = getDateRange(period);
-      const startStr = format(start, 'yyyy-MM-dd HH:mm:ss');
-      const endStr = format(end, 'yyyy-MM-dd HH:mm:ss');
+      const startStr = start.toISOString();
+      const endStr = end.toISOString();
 
-      // Get current period data
-      const currentData = await fetchMetricData(
-        metricType,
-        startStr,
-        endStr,
-        effectiveRole,
-        effectiveUserId
-      );
+      // Use optimized edge function for server-side aggregation
+      const { data, error: fnError } = await supabase.functions.invoke('get-metric-timeseries', {
+        body: {
+          metricType,
+          period,
+          startDate: startStr,
+          endDate: endStr,
+          effectiveRole,
+          effectiveUserId,
+        },
+      });
 
-      // Get previous period data for comparison
-      const prevStart = new Date(start.getTime() - (end.getTime() - start.getTime()));
-      const prevStartStr = format(prevStart, 'yyyy-MM-dd HH:mm:ss');
-      const prevData = await fetchMetricData(
-        metricType,
-        prevStartStr,
-        startStr,
-        effectiveRole,
-        effectiveUserId
-      );
+      if (fnError) {
+        console.error('Error fetching metric timeseries:', fnError);
+        // Fallback to client-side aggregation
+        const currentData = await fetchMetricData(
+          metricType,
+          format(start, 'yyyy-MM-dd HH:mm:ss'),
+          format(end, 'yyyy-MM-dd HH:mm:ss'),
+          effectiveRole,
+          effectiveUserId
+        );
+        const prevStart = new Date(start.getTime() - (end.getTime() - start.getTime()));
+        const prevData = await fetchMetricData(
+          metricType,
+          format(prevStart, 'yyyy-MM-dd HH:mm:ss'),
+          format(start, 'yyyy-MM-dd HH:mm:ss'),
+          effectiveRole,
+          effectiveUserId
+        );
+        return { current: currentData, previous: prevData };
+      }
 
-      return {
-        current: currentData,
-        previous: prevData
-      };
+      return data;
     }
   });
 
