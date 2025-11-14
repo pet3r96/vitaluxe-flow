@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,62 +15,50 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('[get-orders-page] Missing Authorization header');
-      return new Response(JSON.stringify({ error: 'Unauthorized: missing authorization header' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Extract Bearer token
     const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
     if (!token || token.length < 10) {
       console.error('[get-orders-page] Invalid Authorization token');
-      return new Response(JSON.stringify({ error: 'Unauthorized: invalid token' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Create Supabase client with user's JWT forwarded in headers for RLS
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? Deno.env.get('VITE_SUPABASE_URL') ?? '';
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('VITE_SUPABASE_PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    
     if (!supabaseUrl || !supabaseKey) {
-      console.error('[get-orders-page] Missing Supabase envs', { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey });
-      return new Response(JSON.stringify({ error: 'Server misconfiguration' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-    const supabase = createClient(
-      supabaseUrl,
-      supabaseKey,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
-    // Verify user using token, with header-based fallback for robustness
-    let userId: string | null = null;
-    let authErrMsg: string | null = null;
-    try {
-      const { data: userFromToken, error: errToken } = await supabase.auth.getUser(token);
-      if (errToken) authErrMsg = `getUser(token) error: ${errToken.message}`;
-      if (userFromToken?.user) userId = userFromToken.user.id;
-    } catch (e) {
-      authErrMsg = `getUser(token) threw: ${e}`;
+      console.error('[get-orders-page] Missing Supabase envs');
+      return new Response(
+        JSON.stringify({ error: 'Server misconfiguration' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    if (!userId) {
-      try {
-        const { data: userFromHeader, error: errHeader } = await supabase.auth.getUser();
-        if (errHeader) authErrMsg = `${authErrMsg ?? ''}; getUser() error: ${errHeader.message}`;
-        if (userFromHeader?.user) userId = userFromHeader.user.id;
-      } catch (e) {
-        authErrMsg = `${authErrMsg ?? ''}; getUser() threw: ${e}`;
-      }
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) {
+      console.error('[get-orders-page] Auth failed:', userError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    if (!userId) {
-      console.error('[get-orders-page] Auth verification failed', { msg: authErrMsg, tokenPrefix: token.slice(0, 12) });
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-    
-    console.log('[get-orders-page] ✅ User authenticated:', userId);
-
+    const userId = user.id;
     const { page = 1, pageSize = 50, status, search, practiceId, role } = await req.json();
-    
-    if (!practiceId && role !== 'admin') {
-      throw new Error('practiceId is required');
-    }
+
+    // Normalize role: provider -> doctor
+    const roleNorm = role === 'provider' ? 'doctor' : role;
 
     console.log(`[get-orders-page] 🔍 Request:`, { 
       page, 

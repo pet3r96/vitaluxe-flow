@@ -34,7 +34,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { OrderQueryMetadata } from "@/types/domain/orders";
 
 export const OrdersDataTable = () => {
-  const { effectiveRole, effectiveUserId, effectivePracticeId, user } = useAuth();
+  const { effectiveRole, effectiveUserId, effectivePracticeId, user, session } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -168,34 +168,44 @@ export const OrdersDataTable = () => {
 
       // USE EDGE FUNCTION FOR SIMPLE ROLES (admin, doctor, practice)
       // These roles have straightforward filtering that the edge function handles efficiently
-      if (effectiveRole === "admin" || effectiveRole === "doctor" || effectiveRole === "practice") {
-        console.time(`OrdersEdgeFunctionQuery-${effectiveRole}`);
-        console.log(`[OrdersDataTable] Using edge function for role: ${effectiveRole}`);
+      // Normalize effectiveRole before checking (provider -> doctor)
+      const normalizedRole = effectiveRole === 'provider' ? 'doctor' : effectiveRole;
+      
+      if (normalizedRole === "admin" || normalizedRole === "doctor" || normalizedRole === "practice") {
+        console.time(`OrdersEdgeFunctionQuery-${normalizedRole}`);
+        console.log(`[OrdersDataTable] Using edge function for role: ${normalizedRole}`);
         
-        // For doctor role, look up their provider ID first
-        let filterIdForOrders = effectiveUserId;
-        if (effectiveRole === "doctor") {
-          // Doctors filter by their own auth user_id stored in orders.doctor_id
-          filterIdForOrders = effectiveUserId;
-          console.log(`[OrdersDataTable] Doctor role - using user_id:`, filterIdForOrders);
-        } else if (effectiveRole === "practice") {
-          // Practices filter by their practice profile id
+        // Compute scopeId based on normalized role
+        let scopeId: string | null = null;
+        if (normalizedRole === 'doctor') {
+          scopeId = effectiveUserId;
+          console.log(`[OrdersDataTable] Doctor role - scopeId (user_id):`, scopeId);
+        } else if (normalizedRole === 'practice') {
           if (!effectivePracticeId) {
+            toast({
+              title: "Configuration Error",
+              description: "Practice context is missing. Please contact support.",
+              variant: "destructive"
+            });
             throw new Error('Missing practice context for practice user');
           }
-          filterIdForOrders = effectivePracticeId;
-          console.log(`[OrdersDataTable] Practice role - using practice_id:`, filterIdForOrders);
+          scopeId = effectivePracticeId;
+          console.log(`[OrdersDataTable] Practice role - scopeId (practice_id):`, scopeId);
         }
+        // Admin: scopeId remains null (no filter)
         
-        console.log(`[OrdersDataTable] Invoking edge function with:`, {
-          practiceId: filterIdForOrders,
-          role: effectiveRole,
-          userId: user?.id
+        console.log(`[OrdersDataTable] Invoking edge function:`, {
+          roleNormalized: normalizedRole,
+          scopeId,
+          authUserId: user?.id
         });
         
-        // CRITICAL FIX: Get current session and pass Authorization header
-        const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) {
+          toast({
+            title: "Authentication Required",
+            description: "No active session. Please log in again.",
+            variant: "destructive"
+          });
           throw new Error('No active session - please log in again');
         }
         
@@ -203,8 +213,8 @@ export const OrdersDataTable = () => {
           body: {
             page: 1,
             pageSize: 50,
-            practiceId: filterIdForOrders,
-            role: effectiveRole,
+            practiceId: scopeId,
+            role: normalizedRole,
             status: undefined,
             search: undefined
           },
@@ -216,17 +226,23 @@ export const OrdersDataTable = () => {
         
         if (edgeError) {
           console.error('[OrdersDataTable] Edge function error:', edgeError);
-          logger.error('Edge function invocation failed', {
-            error: edgeError,
-            practiceId: filterIdForOrders,
-            role: effectiveRole
-          });
-          // Show user-friendly error
-          toast({
-            title: "Failed to Load Orders",
-            description: edgeError.message || "Could not fetch orders. Please try again.",
-            variant: "destructive"
-          });
+          
+          // Log detailed error for debugging
+          if (edgeError.message?.includes('Unauthorized') || edgeError.message?.includes('401')) {
+            console.error('[OrdersDataTable] 401 Unauthorized - token issue or RLS policy problem');
+            toast({
+              title: "Authorization Error",
+              description: "Unable to authenticate request. Please refresh and try again.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Failed to Load Orders",
+              description: edgeError.message || "Could not fetch orders. Please try again.",
+              variant: "destructive"
+            });
+          }
+          
           throw new Error(`Failed to load orders: ${edgeError.message || 'Unknown error'}`);
         }
         
