@@ -194,7 +194,7 @@ serve(async (req: Request) => {
     }
 
     // Auto-create EasyPost shipment if status is 'shipped' and tracking number is provided
-    if (normalizedStatus === 'shipped' && trackingNumber && !currentLine.easypost_shipment_id) {
+    if (normalizedStatus === 'shipped' && trackingNumber && !(currentLine as any).easypost_shipment_id) {
       try {
         console.log('Auto-creating EasyPost shipment for order line:', orderLineId);
         
@@ -207,13 +207,13 @@ serve(async (req: Request) => {
             patient_address,
             destination_state,
             assigned_pharmacy_id,
-            pharmacies!inner(
-              name,
-              address_street,
-              address_city,
-              address_state,
-              address_zip
-            )
+              pharmacies!inner(
+                name,
+                address_street,
+                address_city,
+                address_state,
+                address_zip
+              )
           `)
           .eq('id', orderLineId)
           .single();
@@ -240,12 +240,13 @@ serve(async (req: Request) => {
             },
             body: JSON.stringify({
               order_line_id: orderLineId,
+              const pharmacy = Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies;
               from_address: {
-                street: orderLineDetails.pharmacies.address_street || '',
-                city: orderLineDetails.pharmacies.address_city || '',
-                state: orderLineDetails.pharmacies.address_state || '',
-                zip: orderLineDetails.pharmacies.address_zip || '',
-                name: orderLineDetails.pharmacies.name
+                street: pharmacy?.address_street || '',
+                city: pharmacy?.address_city || '',
+                state: pharmacy?.address_state || '',
+                zip: pharmacy?.address_zip || '',
+                name: pharmacy?.name
               },
               to_address: {
                 street: patientStreet,

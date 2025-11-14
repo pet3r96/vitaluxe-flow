@@ -171,9 +171,9 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         patient: {
-          first_name: shareLink.patient_accounts.first_name,
-          last_name: shareLink.patient_accounts.last_name,
-          date_of_birth: shareLink.patient_accounts.date_of_birth
+          first_name: patientAccount?.first_name,
+          last_name: patientAccount?.last_name,
+          date_of_birth: patientAccount?.date_of_birth
         },
         medications: medications || [],
         conditions: conditions || [],
