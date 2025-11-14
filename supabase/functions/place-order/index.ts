@@ -534,16 +534,20 @@ serve(async (req) => {
       }
     }
 
-    // Clear cart only if all payments succeeded
+    // CRITICAL: Clear cart lines after successful order placement
     if (failedPayments.length === 0) {
-      const { error: deleteError } = await supabaseAdmin
+      console.log(`[place-order] Clearing cart_lines for cart_id: ${cart_id}`);
+      const { data: deletedLines, error: deleteError } = await supabaseAdmin
         .from("cart_lines")
         .delete()
-        .eq("cart_id", cart_id);
+        .eq("cart_id", cart_id)
+        .select('id');
 
       if (deleteError) {
         console.error("[place-order] Failed to clear cart:", deleteError);
-        // Non-fatal
+        // Non-fatal but log for debugging
+      } else {
+        console.log(`[place-order] ✅ Successfully cleared ${deletedLines?.length || 0} cart lines`);
       }
     }
 

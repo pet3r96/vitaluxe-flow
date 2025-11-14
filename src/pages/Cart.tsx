@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMultiplePharmacyRates } from "@/hooks/useMultiplePharmacyRates";
 import React from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const Cart = React.memo(function Cart() {
   console.time('Cart-Render');
@@ -506,4 +507,10 @@ const Cart = React.memo(function Cart() {
   );
 });
 
-export default Cart;
+const CartWithErrorBoundary = () => (
+  <ErrorBoundary>
+    <Cart />
+  </ErrorBoundary>
+);
+
+export default CartWithErrorBoundary;
