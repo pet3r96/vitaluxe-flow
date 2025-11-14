@@ -228,8 +228,7 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
     setError('');
 
     try {
-      const digits = phoneNumber.replace(/\D/g, '');
-      const normalizedPhone = `+1${digits}`;
+      const normalizedPhone = normalizePhone(phoneNumber);
 
       console.log('[Sms2FADialog] Verifying code for attemptId:', attemptId);
 
