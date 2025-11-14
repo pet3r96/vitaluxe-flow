@@ -71,7 +71,7 @@ class ByteBuf {
 
 async function encodeHMac(key: Uint8Array | string, message: Uint8Array): Promise<string> {
   const encoder = new TextEncoder();
-  const keyData = typeof key === 'string' ? encoder.encode(key) : key;
+  const keyData = typeof key === 'string' ? encoder.encode(key) : new Uint8Array(key);
   
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
@@ -81,7 +81,7 @@ async function encodeHMac(key: Uint8Array | string, message: Uint8Array): Promis
     ['sign']
   );
 
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, message);
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, new Uint8Array(message));
   const hashArray = Array.from(new Uint8Array(signature));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -149,7 +149,7 @@ class ServiceRtc extends Service {
     this.__uid = uid === 0 ? '' : `${uid}`;
   }
 
-  pack(): Uint8Array {
+  override pack(): Uint8Array {
     const servicePack = super.pack();
     const buffer = new ByteBuf();
     buffer.putString(this.__channel_name).putString(this.__uid);
@@ -174,7 +174,7 @@ class ServiceRtm extends Service {
     this.__user_id = user_id || '';
   }
 
-  pack(): Uint8Array {
+  override pack(): Uint8Array {
     const servicePack = super.pack();
     const buffer = new ByteBuf();
     buffer.putString(this.__user_id);
@@ -415,7 +415,7 @@ export async function buildRtcToken(
   role: Role | string,
   expireTimestamp: number
 ): Promise<string> {
-  const tokenRole = (role === Role.PUBLISHER || role === 1 || role === 'publisher')
+  const tokenRole = (role === 'publisher' || role === Role.PUBLISHER)
     ? Role.PUBLISHER
     : Role.SUBSCRIBER;
 
