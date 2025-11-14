@@ -63,27 +63,40 @@ serve(async (req) => {
             dosage
           )
         )
-      `, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, to);
+      `, { count: 'exact' });
 
-    // Filter by role
+    // CRITICAL: Filter by role FIRST (before pagination)
+    console.log(`[get-orders-page] Filtering by role: ${role}`);
     if (role === 'doctor') {
       query = query.eq('doctor_id', practiceId);
+    } else if (role === 'practice') {
+      query = query.eq('practice_id', practiceId);
+    } else if (role === 'admin') {
+      // Admin sees all orders - no filter
+      console.log('[get-orders-page] Admin role - no filtering');
     } else {
+      console.warn(`[get-orders-page] Unknown role: ${role}, defaulting to practice filter`);
       query = query.eq('practice_id', practiceId);
     }
 
-    // Apply filters
+    // Apply additional filters (after role filter, before pagination)
     if (status && status !== 'all') {
+      console.log(`[get-orders-page] Filtering by status: ${status}`);
       query = query.eq('status', status);
     }
 
     if (search) {
+      console.log(`[get-orders-page] Filtering by search: ${search}`);
       // Search in patient name or order ID
       query = query.or(`id.ilike.%${search}%,patient_accounts.first_name.ilike.%${search}%,patient_accounts.last_name.ilike.%${search}%`);
     }
 
+    // CRITICAL: Apply ordering and pagination LAST
+    query = query
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    console.log(`[get-orders-page] Executing query with range ${from}-${to}`);
     const { data: orders, error: ordersError, count } = await query;
 
     if (ordersError) {

@@ -164,58 +164,36 @@ export const OrdersDataTable = () => {
         );
       }
 
-      // OPTIMIZED: Only fetch fields needed for table display
-      let query = supabase
-        .from("orders")
-        .select(`
-          id,
-          created_at,
-          total_amount,
-          payment_status,
-          status,
-          status_manual_override,
-          ship_to,
-          doctor_id,
-          order_lines(
-            id,
-            status,
-            patient_name,
-            patient_id,
-            shipping_speed,
-            tracking_number,
-            products(name, product_types(name))
-          ),
-          profiles:doctor_id(name, company)
-        `);
-
-      // Admin role has access to all orders (no filtering needed)
-      if (effectiveRole === "admin") {
-        // No additional filters - admin sees everything
-        logger.info('Admin fetching all orders');
-      }
-
-      if (effectiveRole === "doctor") {
-        console.time('OrdersEdgeFunctionQuery-Doctor');
+      // USE EDGE FUNCTION FOR SIMPLE ROLES (admin, doctor, practice)
+      // These roles have straightforward filtering that the edge function handles efficiently
+      if (effectiveRole === "admin" || effectiveRole === "doctor" || effectiveRole === "practice") {
+        console.time(`OrdersEdgeFunctionQuery-${effectiveRole}`);
+        console.log(`[OrdersDataTable] Using edge function for role: ${effectiveRole}`);
+        
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-orders-page', {
           body: {
             page: 1,
             pageSize: 1000, // Fetch all for now, pagination handled client-side
             practiceId: effectiveUserId,
-            role: 'doctor',
+            role: effectiveRole,
             status: undefined,
             search: undefined
           }
         });
-        console.timeEnd('OrdersEdgeFunctionQuery-Doctor');
+        console.timeEnd(`OrdersEdgeFunctionQuery-${effectiveRole}`);
         
         if (edgeError) {
           console.error('[OrdersDataTable] Edge function error:', edgeError);
           throw edgeError;
         }
         
+        console.log(`[OrdersDataTable] Edge function returned ${edgeData?.orders?.length || 0} orders`);
         return edgeData?.orders || [];
       }
 
+      // For complex roles (pharmacy, provider, staff, topline, downline), use direct queries
+      // These need special joins and filtering that can't be easily handled by the edge function
+      
       // Filter by provider if role is provider - fetch only their order_lines
       if (effectiveRole === "provider") {
         const { data: providerData } = await supabase
@@ -286,6 +264,30 @@ export const OrdersDataTable = () => {
         // Filter out orders with failed payments
         return Array.from(ordersMap.values()).filter(order => order.payment_status !== 'payment_failed');
       }
+
+      // Build base query for remaining roles (staff, topline, downline)
+      let query = supabase
+        .from("orders")
+        .select(`
+          id,
+          created_at,
+          total_amount,
+          payment_status,
+          status,
+          status_manual_override,
+          ship_to,
+          doctor_id,
+          order_lines(
+            id,
+            status,
+            patient_name,
+            patient_id,
+            shipping_speed,
+            tracking_number,
+            products(name, product_types(name))
+          ),
+          profiles:doctor_id(name, company)
+        `);
 
       // Filter by staff practice if role is staff
       if (effectiveRole === "staff") {

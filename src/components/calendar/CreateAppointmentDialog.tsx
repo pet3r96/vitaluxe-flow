@@ -191,8 +191,21 @@ export function CreateAppointmentDialog({
         status: isWalkIn ? 'checked_in' : 'scheduled',
         isWalkIn,
         patient_id: selectedPatientId,
-        start_time: startDateTime.toISOString()
+        start_time: startDateTime.toISOString(),
+        end_time: endDateTime.toISOString(),
+        created_at: new Date().toISOString()
       });
+      
+      // Add extra logging for walk-ins
+      if (isWalkIn) {
+        console.log('[CreateAppointmentDialog] 🚶 Walk-in appointment created - should appear in calendar immediately');
+        console.log('[CreateAppointmentDialog] Walk-in details:', {
+          appointment_id: data.id,
+          checked_in_at: data.checked_in_at,
+          status: data.status,
+          start_time: data.start_time
+        });
+      }
 
       // If this is a video appointment, create video session via edge function
       if (values.visitType === 'video') {
