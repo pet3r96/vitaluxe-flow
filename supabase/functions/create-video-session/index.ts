@@ -177,9 +177,6 @@ Deno.serve(async (req) => {
       ttl,
       ttl
     );
-      RtcRole.PUBLISHER,
-      Math.floor(Date.now() / 1000) + ttl
-    );
 
     const rtmUid = `${uid}`;
     const rtmToken = rtcToken; // Using same token for RTM
