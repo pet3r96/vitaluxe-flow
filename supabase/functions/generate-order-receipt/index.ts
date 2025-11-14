@@ -15,21 +15,23 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createAdminClient();
-
-    // Get authenticated user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('No authorization header');
+      console.error('[generate-order-receipt] Missing Authorization header');
+      return errorResponse('Unauthorized - Missing credentials', 401);
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const { createAuthClient } = await import('../_shared/supabaseAdmin.ts');
+    const supabase = createAuthClient(authHeader);
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      throw new Error('Unauthorized');
+      console.error('[generate-order-receipt] Auth error:', authError);
+      return errorResponse('Unauthorized - Invalid session', 401);
     }
+
+    console.log('[generate-order-receipt] User authenticated:', user.id);
 
     // Parse and validate JSON
     let requestData;
@@ -95,19 +97,43 @@ serve(async (req) => {
       throw new Error('Order not found');
     }
 
-    // Check authorization - user must be the practice owner or admin
+    // Check authorization - user must be admin, practice owner, or staff of practice
     const { data: userRole } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     const isAdmin = userRole?.role === 'admin';
     const isPracticeOwner = order.doctor_id === user.id;
-
+    
+    // Check if user is staff of this practice
+    let isStaffOfPractice = false;
     if (!isAdmin && !isPracticeOwner) {
-      throw new Error('Unauthorized to access this receipt');
+      const { data: staffData } = await supabase
+        .from('providers')
+        .select('practice_id')
+        .eq('user_id', user.id)
+        .eq('active', true)
+        .maybeSingle();
+      
+      isStaffOfPractice = staffData?.practice_id === order.doctor_id;
     }
+
+    if (!isAdmin && !isPracticeOwner && !isStaffOfPractice) {
+      console.error('[generate-order-receipt] Unauthorized access attempt:', {
+        userId: user.id,
+        orderId: order_id,
+        practiceId: order.doctor_id
+      });
+      return errorResponse('You don\'t have permission to access this receipt', 403);
+    }
+
+    console.log('[generate-order-receipt] Authorization successful:', {
+      isAdmin,
+      isPracticeOwner,
+      isStaffOfPractice
+    });
 
     // Fetch order lines
     const { data: orderLines, error: linesError } = await supabase
@@ -124,8 +150,13 @@ serve(async (req) => {
       .eq('order_id', order_id);
 
     if (linesError) {
-      console.error('Order lines fetch error:', linesError);
-      throw new Error('Failed to fetch order lines');
+      console.error('[generate-order-receipt] Order lines fetch error:', linesError);
+      return errorResponse('Failed to fetch order lines', 500);
+    }
+
+    if (!orderLines || orderLines.length === 0) {
+      console.error('[generate-order-receipt] No order lines found for order:', order_id);
+      return errorResponse('Order has no items', 404);
     }
 
     // Generate PDF

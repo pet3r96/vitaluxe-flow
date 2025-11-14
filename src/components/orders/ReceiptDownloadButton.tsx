@@ -37,17 +37,28 @@ export const ReceiptDownloadButton = ({
         import('@/lib/logger').then(({ logger }) => {
           logger.error('Error generating receipt', error);
         });
-        throw new Error(error.message || 'Failed to generate receipt');
+        
+        // Handle specific error cases with helpful messages
+        let errorMessage = 'Failed to generate receipt. Please try again.';
+        if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
+          errorMessage = 'Your session expired. Please sign in again.';
+        } else if (error.message?.includes('403') || error.message?.includes('not authorized')) {
+          errorMessage = 'You don\'t have access to this receipt.';
+        } else if (error.message?.includes('404') || error.message?.includes('not found')) {
+          errorMessage = 'Receipt not found.';
+        }
+        
+        throw new Error(errorMessage);
       }
 
       if (!data?.url) {
-        throw new Error('No download URL received');
+        throw new Error('No download URL received from server');
       }
 
       // Download the PDF
       const response = await fetch(data.url);
       if (!response.ok) {
-        throw new Error('Failed to download receipt');
+        throw new Error('Failed to download receipt file');
       }
 
       const blob = await response.blob();

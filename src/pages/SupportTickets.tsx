@@ -29,12 +29,12 @@ interface SupportTicket {
 }
 
 export default function SupportTickets() {
-  const { effectiveRole } = useAuth();
+  const { effectiveRole, effectivePracticeId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "open" | "resolved">("all");
 
   const { data: tickets = [], isLoading } = useQuery({
-    queryKey: ["support-tickets", effectiveRole],
+    queryKey: ["support-tickets", effectiveRole, effectivePracticeId],
     queryFn: async () => {
       let query = supabase
         .from("support_tickets")
@@ -44,35 +44,10 @@ export default function SupportTickets() {
         `)
         .order("created_at", { ascending: false });
 
-      // Filter by practice_id for staff and doctors
-      if (effectiveRole === "staff") {
-        // Get staff's practice_id with better error handling
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        const { data: staffData, error: staffError } = await supabase
-          .from("providers")
-          .select("practice_id")
-          .eq("user_id", user?.id)
-          .eq("active", true)
-          .maybeSingle();
-
-        if (staffError) {
-          console.error('[SupportTickets] Error fetching staff practice:', staffError);
-          throw staffError;
-        }
-
-        if (!staffData?.practice_id) {
-          console.warn('[SupportTickets] ⚠️ Staff has no active practice');
-          return [];
-        }
-
-        console.log('[SupportTickets] Staff viewing tickets for practice:', staffData.practice_id);
-        query = query.eq("practice_id", staffData.practice_id);
-      } else if (effectiveRole === "doctor") {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          query = query.eq("practice_id", user.id);
-        }
+      // Filter by practice_id for staff and doctors using effectivePracticeId
+      if ((effectiveRole === "staff" || effectiveRole === "doctor") && effectivePracticeId) {
+        console.log('[SupportTickets] Filtering tickets for practice:', effectivePracticeId);
+        query = query.eq("practice_id", effectivePracticeId);
       }
       // Admin sees all tickets (no filter)
 
