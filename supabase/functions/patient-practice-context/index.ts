@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('[patient-practice-context] Missing Supabase envs');
@@ -121,7 +121,7 @@ serve(async (req) => {
     // Fetch subscription
     const { data: subscription, error: subError } = await supabase
       .from('practice_subscriptions')
-      .select('status, trial_end, current_period_end, grace_period_end')
+      .select('status, trial_ends_at, current_period_end, grace_period_ends_at')
       .eq('practice_id', patientAccount.practice_id)
       .maybeSingle();
 
@@ -132,12 +132,12 @@ serve(async (req) => {
       const now = new Date();
       subscriptionStatus = subscription.status;
 
-      if (subscription.status === 'trial' && subscription.trial_end) {
-        isSubscribed = new Date(subscription.trial_end) > now;
+      if (subscription.status === 'trial' && subscription.trial_ends_at) {
+        isSubscribed = new Date(subscription.trial_ends_at) > now;
       } else if (subscription.status === 'active' && subscription.current_period_end) {
         isSubscribed = new Date(subscription.current_period_end) > now;
-      } else if (subscription.status === 'suspended' && subscription.grace_period_end) {
-        isSubscribed = new Date(subscription.grace_period_end) > now;
+      } else if (subscription.status === 'suspended' && subscription.grace_period_ends_at) {
+        isSubscribed = new Date(subscription.grace_period_ends_at) > now;
       }
     }
 
