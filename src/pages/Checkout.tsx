@@ -437,13 +437,34 @@ export default function Checkout() {
           }
         }
         
+        // Invalidate and force refetch cart queries
+        queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+        queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        
+        // Force immediate refetch and clear local state
+        await queryClient.refetchQueries({ 
+          queryKey: ["cart", effectiveUserId],
+          exact: true 
+        });
+        await queryClient.refetchQueries({ 
+          queryKey: ["cart-count", effectiveUserId],
+          exact: true 
+        });
+        
+        // Reset cart data to empty
+        queryClient.setQueryData(["cart", effectiveUserId], null);
+        queryClient.setQueryData(["cart-count", effectiveUserId], 0);
+        
         toast({
           title: "Order Placed Successfully! 🎉",
           description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. You can view ${orderCount > 1 ? 'them' : 'it'} under "My Orders".`,
         });
-        queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
-        queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
-        navigate("/orders");
+        
+        // Wait 500ms for DB commit before navigating
+        setTimeout(() => {
+          navigate("/orders");
+        }, 500);
       } else {
         // Some payments failed - show retry dialog
         setPaymentErrors(failedPayments);

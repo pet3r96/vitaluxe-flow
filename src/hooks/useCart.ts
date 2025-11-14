@@ -165,6 +165,7 @@ export function useCart(
     },
     enabled: !!userId && enabled,
     staleTime,
+    gcTime: 0, // Don't cache at all - prevent stale cart after order
     refetchOnWindowFocus,
     refetchOnMount,
   });
