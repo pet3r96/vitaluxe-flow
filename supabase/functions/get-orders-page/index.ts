@@ -15,28 +15,56 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('[get-orders-page] Missing Authorization header');
-      throw new Error('Missing authorization header');
+      return new Response(JSON.stringify({ error: 'Unauthorized: missing authorization header' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Create Supabase client with the user's JWT on each request
+    // Extract Bearer token
+    const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+    if (!token || token.length < 10) {
+      console.error('[get-orders-page] Invalid Authorization token');
+      return new Response(JSON.stringify({ error: 'Unauthorized: invalid token' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Create Supabase client with user's JWT forwarded in headers for RLS
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? Deno.env.get('VITE_SUPABASE_URL') ?? '';
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('VITE_SUPABASE_PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[get-orders-page] Missing Supabase envs', { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey });
+      return new Response(JSON.stringify({ error: 'Server misconfiguration' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader }
-        }
-      }
+      supabaseUrl,
+      supabaseKey,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
     );
 
-    // Verify the user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error('[get-orders-page] Auth verification failed', { hasHeader: !!authHeader, err: userError?.message });
-      throw new Error('Unauthorized');
+    // Verify user using token, with header-based fallback for robustness
+    let userId: string | null = null;
+    let authErrMsg: string | null = null;
+    try {
+      const { data: userFromToken, error: errToken } = await supabase.auth.getUser(token);
+      if (errToken) authErrMsg = `getUser(token) error: ${errToken.message}`;
+      if (userFromToken?.user) userId = userFromToken.user.id;
+    } catch (e) {
+      authErrMsg = `getUser(token) threw: ${e}`;
+    }
+
+    if (!userId) {
+      try {
+        const { data: userFromHeader, error: errHeader } = await supabase.auth.getUser();
+        if (errHeader) authErrMsg = `${authErrMsg ?? ''}; getUser() error: ${errHeader.message}`;
+        if (userFromHeader?.user) userId = userFromHeader.user.id;
+      } catch (e) {
+        authErrMsg = `${authErrMsg ?? ''}; getUser() threw: ${e}`;
+      }
+    }
+
+    if (!userId) {
+      console.error('[get-orders-page] Auth verification failed', { msg: authErrMsg, tokenPrefix: token.slice(0, 12) });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     
-    console.log('[get-orders-page] ✅ User authenticated:', user.id);
+    console.log('[get-orders-page] ✅ User authenticated:', userId);
 
     const { page = 1, pageSize = 50, status, search, practiceId, role } = await req.json();
     
@@ -49,7 +77,7 @@ serve(async (req) => {
       pageSize, 
       role, 
       scopeId: practiceId,
-      authUserId: user.id 
+      authUserId: userId 
     });
     const startTime = performance.now();
 
