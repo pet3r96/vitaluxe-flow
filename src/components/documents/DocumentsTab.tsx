@@ -53,8 +53,7 @@ export function DocumentsTab() {
             created_at,
             updated_at,
             assigned_staff_id,
-            provider_document_patients:provider_document_patients(document_id, patient_id),
-            uploader_profile:profiles!provider_documents_uploaded_by_fkey(id, name, full_name)
+            provider_document_patients:provider_document_patients(document_id, patient_id)
           `)
           .eq('practice_id', effectivePracticeId)
           .order('created_at', { ascending: false }),
