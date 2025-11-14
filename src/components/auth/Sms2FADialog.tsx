@@ -118,15 +118,29 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
     return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
   };
 
+  // Normalize phone to E.164 format (+1XXXXXXXXXX)
+  const normalizePhone = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, "");
+    // Accept 10-digit (US) or 11-digit (already has +1)
+    if (cleaned.length === 10) {
+      return `+1${cleaned}`;
+    } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
+      return `+${cleaned}`;
+    }
+    return phone; // Return as-is if unexpected format
+  };
+
   const isValidPhone = (num: string) => {
     const digits = num.replace(/\D/g, '');
-    return digits.length === 10;
+    return digits.length === 10 || (digits.length === 11 && digits.startsWith('1'));
   };
 
   const sendCode = async (targetPhone?: string) => {
     const phoneToUse = targetPhone || phoneNumber;
-    if (!isValidPhone(phoneToUse)) {
-      setError('Please enter a valid 10-digit US phone number');
+    
+    // Only validate phone if we're in setup mode (no phone prop provided initially)
+    if (!phone && !isValidPhone(phoneToUse)) {
+      setError('Please enter a valid US phone number (10 digits)');
       return;
     }
 
@@ -153,8 +167,7 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
     setError('');
 
     try {
-      const digits = phoneToUse.replace(/\D/g, '');
-      const normalizedPhone = `+1${digits}`;
+      const normalizedPhone = normalizePhone(phoneToUse);
 
       console.log('[Sms2FADialog] Sending SMS to:', maskPhone(normalizedPhone));
 
@@ -240,12 +253,14 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
 
       console.log('[Sms2FADialog] ✅ Verification successful');
 
-      // Mark verified in context
-      auth.mark2FAVerified();
-
-      // If this was setup flow, mark enrolled too
-      if (!phone) {
-        auth.mark2FAEnrolled?.(normalizedPhone);
+      // Determine if this is setup (new phone) or verify (existing phone)
+      const isSetup = !phone; // If no phone prop was provided, this is setup
+      
+      // Update auth context
+      if (isSetup && auth.mark2FAEnrolled) {
+        auth.mark2FAEnrolled(normalizedPhone);
+      } else {
+        auth.mark2FAVerified();
       }
 
       // Best-effort DB check (non-blocking)
@@ -260,9 +275,9 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
         console.warn('[Sms2FADialog] DB check failed (non-fatal):', dbErr);
       }
 
-      // Redirect immediately if on /auth
+      // Immediate redirect if on auth page
       if (window.location.pathname === '/auth') {
-        console.log('[Sms2FADialog] 2FA verified → navigating to / from /auth');
+        console.log('[Sms2FADialog] Redirecting to home...');
         window.location.assign('/');
       }
 

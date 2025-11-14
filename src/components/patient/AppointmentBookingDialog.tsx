@@ -22,6 +22,7 @@ interface AppointmentBookingDialogProps {
 
 export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: AppointmentBookingDialogProps) {
   const queryClient = useQueryClient();
+  const { practiceName } = usePatientPracticeSubscription();
   const [loading, setLoading] = useState(false);
   const [loadingSoonest, setLoadingSoonest] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
@@ -331,22 +332,13 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {patientAccount && (
+          {patientData && (
             <div className="space-y-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm text-muted-foreground">Your Practice</Label>
+                  <Label className="text-sm text-muted-foreground">Practice</Label>
                   <p className="font-medium text-lg">
-                    {Array.isArray(patientAccount.practice) 
-                      ? patientAccount.practice[0]?.name 
-                      : patientAccount.practice?.name || 'Your Practice'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {Array.isArray(patientAccount.practice) 
-                      ? `${patientAccount.practice[0]?.address_city}, ${patientAccount.practice[0]?.address_state}` 
-                      : patientAccount.practice 
-                        ? `${patientAccount.practice.address_city}, ${patientAccount.practice.address_state}`
-                        : ''}
+                    {practiceName || 'Loading...'}
                   </p>
                 </div>
               </div>
