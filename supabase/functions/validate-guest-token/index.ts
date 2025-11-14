@@ -91,15 +91,17 @@ Deno.serve(async (req) => {
     const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE') || '';
     const uid = Math.floor(Math.random() * 1000000);
     const ttl = 3600; // 1 hour
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpire = currentTimestamp + ttl;
 
     // Guest joins as audience (no publishing)
-    const privilegeExpire = Math.floor(Date.now() / 1000) + ttl;
     const rtcToken = RtcTokenBuilder.buildTokenWithUid(
       appId,
       appCertificate,
       session.channel_name,
       uid,
       RtcRole.SUBSCRIBER,
+      ttl,
       privilegeExpire
     );
 

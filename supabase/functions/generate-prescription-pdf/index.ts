@@ -226,9 +226,8 @@ serve(async (req) => {
       });
     }
 
-    // Compute prescriber display name
-    const prescriberDisplayName = profileData.prescriber_name || 
-                                  profileData.full_name || 
+    // Compute prescriber display name (prescriber_name not in schema)
+    const prescriberDisplayName = profileData.full_name || 
                                   provider_name || 
                                   'Provider';
 

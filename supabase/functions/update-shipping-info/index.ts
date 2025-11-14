@@ -119,10 +119,10 @@ serve(async (req: Request) => {
       throw new Error(`Unsupported status value: "${status}". Allowed values: pending, filled, shipped, denied, change_requested`);
     }
 
-    // Get current order line data
+    // Get current order line data including easypost_shipment_id
     const { data: currentLine, error: fetchError } = await supabase
       .from('order_lines')
-      .select('tracking_number, shipping_carrier, status')
+      .select('tracking_number, shipping_carrier, status, easypost_shipment_id')
       .eq('id', orderLineId)
       .single();
 

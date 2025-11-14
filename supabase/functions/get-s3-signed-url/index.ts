@@ -390,10 +390,8 @@ serve(async (req) => {
       if (storageError) {
         console.error('[get-s3-signed-url] ❌ Storage error details:', {
           message: storageError.message,
-          code: storageError.code,
           bucket: normalizedBucket,
-          path: normalizedPath,
-          hint: storageError.hint
+          path: normalizedPath
         });
         throw new Error(`Storage access failed: ${storageError.message}`);
       }

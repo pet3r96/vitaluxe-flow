@@ -167,6 +167,8 @@ Deno.serve(async (req) => {
     const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE') || '';
     const uid = Math.floor(Math.random() * 1000000);
     const ttl = 3600; // 1 hour
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpire = currentTimestamp + ttl;
 
     const rtcToken = RtcTokenBuilder.buildTokenWithUid(
       appId,
@@ -174,7 +176,8 @@ Deno.serve(async (req) => {
       channelName,
       uid,
       RtcRole.PUBLISHER,
-      Math.floor(Date.now() / 1000) + ttl
+      ttl,
+      privilegeExpire
     );
 
     const rtmUid = `${uid}`;
