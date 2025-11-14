@@ -149,13 +149,13 @@ export const PatientsDataTable = () => {
 
       // Try to send welcome email (works for both new and re-invited patients)
       const { error: emailError } = await supabase.functions.invoke(
-        'send-patient-welcome-email',
+        'send-welcome-email',
         {
           body: {
             userId: portalData.userId,
             email: patient.email.toLowerCase(),
             name: patient.name,
-            token: portalData.token,
+            role: 'patient',
             practiceId: patient.practice_id,
           },
         }

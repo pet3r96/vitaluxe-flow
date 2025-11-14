@@ -33,7 +33,7 @@ export default function ForgotPasswordDialog({ open, onOpenChange }: ForgotPassw
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('reset-password', {
+      const { data, error } = await supabase.functions.invoke('send-password-reset-email', {
         body: { email }
       });
 

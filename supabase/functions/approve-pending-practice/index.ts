@@ -330,16 +330,30 @@ serve(async (req) => {
       // Send welcome email only for new users
       if (isNewUser) {
         try {
-          await supabaseAdmin.functions.invoke('send-temp-password-email', {
-            body: {
+          const functionUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-welcome-email`;
+          const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+          
+          const emailResponse = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${anonKey}`,
+              'apikey': anonKey
+            },
+            body: JSON.stringify({
+              userId: userId,
               email: practiceData.email,
               name: practiceData.practice_name,
-              temporaryPassword: temporaryPassword,
-              role: 'doctor',
-              userId: userId  // CRITICAL: Pass userId so token can be created
-            }
+              role: 'doctor'
+            })
           });
-          console.log('✅ Welcome email sent successfully to:', practiceData.email);
+          
+          if (!emailResponse.ok) {
+            const errorText = await emailResponse.text();
+            console.error('Error sending welcome email:', errorText);
+          } else {
+            console.log('✅ Welcome email sent successfully to:', practiceData.email);
+          }
         } catch (emailErr) {
           console.error('Failed to send welcome email:', emailErr);
           console.error('Email error details:', emailErr);

@@ -117,13 +117,13 @@ export default function PracticePatients() {
 
       // Try to send welcome email (works for both new and re-invited patients)
       const { data: emailData, error: emailError } = await supabase.functions.invoke(
-        'send-patient-welcome-email',
+        'send-welcome-email',
         {
           body: {
             userId: userIdToUse,
             email: patient.email.toLowerCase(),
             name: patientName,
-            token: accountData.token,
+            role: 'patient',
             practiceId: patient.practice_id,
           },
         }

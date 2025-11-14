@@ -165,8 +165,8 @@ export const AccountDetailsDialog = ({
   const handleResendWelcomeEmail = async () => {
     setIsResendingEmail(true);
     try {
-      // Call edge function - it handles password generation and update
-      const { error: emailError } = await supabase.functions.invoke('send-temp-password-email', {
+      // Call edge function - unified welcome email
+      const { error: emailError } = await supabase.functions.invoke('send-welcome-email', {
         body: {
           userId: account.id,
           email: account.email,
