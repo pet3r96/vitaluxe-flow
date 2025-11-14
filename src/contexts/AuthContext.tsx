@@ -145,12 +145,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     try {
-      // Query user_2fa_settings for enrollment (check both Twilio and GHL)
+      // Query user_2fa_settings_decrypted for enrollment (check both Twilio and GHL)
+      // Using decrypted view to access phone_number and all status columns
       const { data, error } = await supabase
-        .from('user_2fa_settings')
-        .select('twilio_enabled, ghl_enabled, phone_verified, phone_number, is_enrolled')
+        .from('user_2fa_settings_decrypted')
+        .select('twilio_enabled, ghl_enabled, phone_verified, phone_number, is_enrolled, enrolled_at, phone_verified_at')
         .eq('user_id', userId)
         .maybeSingle();
+      
+      console.log('[AuthContext] 2FA status query result:', { data, error });
 
       if (error) throw error;
 
