@@ -34,38 +34,87 @@ export function DocumentsTab() {
     queryFn: async () => {
       if (!effectivePracticeId) return [];
 
-      console.log('[DocumentsTab] Fetching documents for practice:', effectivePracticeId);
+      console.log('[DocumentsTab] Fetching BOTH practice and patient-shared documents for practice:', effectivePracticeId);
 
-      const { data, error } = await supabase.rpc('get_provider_documents', {
-        p_practice_id: effectivePracticeId
-      });
+      // Fetch practice documents AND patient-shared documents in parallel
+      const [practiceResult, patientSharedResult] = await Promise.allSettled([
+        // 1. Practice documents from provider_documents table
+        supabase
+          .from('provider_documents' as any)
+          .select(`
+            id,
+            practice_id,
+            document_name,
+            document_type,
+            status,
+            is_internal,
+            storage_path,
+            uploaded_by,
+            created_at,
+            updated_at,
+            assigned_staff_id,
+            provider_document_patients:provider_document_patients(document_id, patient_id),
+            uploader_profile:profiles!provider_documents_uploaded_by_fkey(id, name, full_name)
+          `)
+          .eq('practice_id', effectivePracticeId)
+          .order('created_at', { ascending: false }),
+        
+        // 2. Patient-shared documents via RPC
+        supabase.rpc('get_provider_documents', {
+          p_practice_id: effectivePracticeId
+        })
+      ]);
 
-      if (error) {
-        console.error('[DocumentsTab] RPC ERROR:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-          practiceId: effectivePracticeId
-        });
-        throw error;
+      // Process practice documents
+      let practiceDocuments: any[] = [];
+      if (practiceResult.status === 'fulfilled') {
+        const { data, error } = practiceResult.value;
+        if (error) {
+          console.error('[DocumentsTab] Error fetching practice documents:', error);
+        } else {
+          practiceDocuments = (data || []).map((doc: any) => ({
+            ...doc,
+            source_type: 'practice_shared',
+            assigned_patient_ids: (doc.provider_document_patients || [])
+              .map((p: any) => p.patient_id)
+              .filter(Boolean),
+          }));
+          console.log('[DocumentsTab] Practice documents loaded:', practiceDocuments.length);
+        }
+      } else {
+        console.error('[DocumentsTab] Practice documents promise rejected:', practiceResult.reason);
       }
 
-      console.log('[DocumentsTab] RPC success, received documents:', data?.length || 0);
+      // Process patient-shared documents
+      let patientSharedDocuments: any[] = [];
+      if (patientSharedResult.status === 'fulfilled') {
+        const { data, error } = patientSharedResult.value;
+        if (error) {
+          console.warn('[DocumentsTab] RPC get_provider_documents failed (patient-shared docs unavailable):', error);
+        } else {
+          const parsed = data ? (typeof data === 'string' ? JSON.parse(data) : data) : [];
+          patientSharedDocuments = (parsed as any[]).map(d => ({ 
+            ...d, 
+            source_type: d.source_type || 'patient_shared' 
+          }));
+          console.log('[DocumentsTab] Patient-shared documents loaded:', patientSharedDocuments.length);
+        }
+      } else {
+        console.warn('[DocumentsTab] Patient-shared RPC promise rejected:', patientSharedResult.reason);
+      }
 
-      // Parse JSONB response
-      let documents = data ? (typeof data === 'string' ? JSON.parse(data) : data) : [];
+      // Merge both document sources
+      let allDocs = [...practiceDocuments, ...patientSharedDocuments];
       
-      console.log('[DocumentsTab] Raw documents from RPC:', {
-        count: documents?.length,
-        practiceId: effectivePracticeId,
-        patientSharedCount: documents.filter((d: any) => d.source_type === 'patient_shared').length,
-        sampleDoc: documents.length > 0 ? documents[0] : null
+      console.log('[DocumentsTab] Merged documents:', {
+        total: allDocs.length,
+        practice: practiceDocuments.length,
+        patientShared: patientSharedDocuments.length
       });
-      
+
       // CLIENT-SIDE SECURITY: Validate all documents belong to the correct practice
       if (effectivePracticeId && (effectiveRole === 'doctor' || effectiveRole === 'staff')) {
-        const invalidDocuments = documents.filter((doc: any) => 
+        const invalidDocuments = allDocs.filter((doc: any) => 
           doc.practice_id && doc.practice_id !== effectivePracticeId
         );
         
@@ -90,33 +139,15 @@ export function DocumentsTab() {
           });
           
           // Filter out invalid documents
-          documents = documents.filter((doc: any) => 
+          allDocs = allDocs.filter((doc: any) => 
             !doc.practice_id || doc.practice_id === effectivePracticeId
           );
         }
       }
       
-      console.log('[DocumentsTab] After security filter:', {
-        originalCount: data?.length || 0,
-        filteredCount: documents.length,
-        hiddenCount: (data?.length || 0) - documents.length
-      });
+      console.log('[DocumentsTab] Final document count after security filter:', allDocs.length);
       
-      if (import.meta.env.DEV && documents?.length > 0) {
-        console.log('[DocumentsTab] Sample document:', documents[0]);
-        console.log('[DocumentsTab] has provider_document_patients?', !!documents[0]?.provider_document_patients);
-        console.log('[DocumentsTab] has uploader_profile?', !!documents[0]?.uploader_profile);
-      }
-      
-      if (effectiveRole === 'provider') {
-        console.log('[DocumentsTab] Provider context:', {
-          effectivePracticeId,
-          effectiveUserId,
-          documentCount: documents?.length
-        });
-      }
-      
-      return documents;
+      return allDocs;
     },
     enabled: !!effectivePracticeId && (effectiveRole === 'admin' || effectiveRole === 'doctor' || effectiveRole === 'staff' || effectiveRole === 'provider'),
     staleTime: 2 * 60 * 1000, // 2 minutes
@@ -148,8 +179,8 @@ export function DocumentsTab() {
         if (doc.assigned_patient_ids?.length > 0 || doc.is_internal === true) return false;
       }
       if (filters.source === 'patient_shared') {
-        // Documents that have been assigned to at least one patient
-        if (!doc.assigned_patient_ids || doc.assigned_patient_ids.length === 0) return false;
+        // Patient-shared documents: either tagged as patient_shared OR have assigned patients
+        if (doc.source_type !== 'patient_shared' && (!doc.assigned_patient_ids || doc.assigned_patient_ids.length === 0)) return false;
       }
 
       return true;
