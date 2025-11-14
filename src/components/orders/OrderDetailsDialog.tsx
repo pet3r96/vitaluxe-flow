@@ -61,26 +61,52 @@ export const OrderDetailsDialog = ({
   // Prescription downloads restricted to practice staff, pharmacies, and admins (not reps)
   const canDownloadPrescription = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
 
-  // Query payment method details to display card info
-  const { data: paymentMethodDetails } = useQuery({
-    queryKey: ["payment-method", order.payment_method_id],
+  // Lazy-load full order details when dialog opens
+  const { data: fullOrderDetails } = useQuery({
+    queryKey: ["order-full-details", order.id],
     queryFn: async () => {
-      if (!order.payment_method_id) return null;
+      console.time(`[OrderDetails] Load full data for ${order.id}`);
       
       const { data, error } = await supabase
-        .from("practice_payment_methods")
-        .select("card_type, card_last_five, card_expiry")
-        .eq("id", order.payment_method_id)
+        .from("orders")
+        .select(`
+          *,
+          patient_accounts!inner (
+            id,
+            first_name,
+            last_name,
+            date_of_birth,
+            email,
+            phone
+          ),
+          order_lines (
+            *,
+            products (*)
+          ),
+          practice_payment_methods (
+            card_type,
+            card_last_five,
+            card_expiry
+          )
+        `)
+        .eq("id", order.id)
         .single();
       
+      console.timeEnd(`[OrderDetails] Load full data for ${order.id}`);
+      
       if (error) {
-        logger.error('Failed to fetch payment method details', error);
-        return null;
+        logger.error('Failed to fetch full order details', error);
+        throw error;
       }
       return data;
     },
-    enabled: !!order.payment_method_id && open
+    enabled: open,
+    staleTime: 60 * 1000,
   });
+
+  // Use full details if available, otherwise use the summary from table
+  const orderData = fullOrderDetails || order;
+  const paymentMethodDetails = orderData?.practice_payment_methods;
 
   // Regenerate signed URL for uploaded prescriptions
   const regenerateSignedUrl = async (existingUrl: string): Promise<string> => {
