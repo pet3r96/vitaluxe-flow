@@ -125,11 +125,11 @@ export default function PracticeCalendar() {
   // Fetch providers and staff using unified hook
   const { data: providersAndStaff = [] } = useProvidersAndStaff(practiceId);
   
-  // Separate providers from staff for calendar
-  const providers = providersAndStaff.filter(p => p.type === 'provider');
+  // Use all personnel (providers + staff) for calendar
+  const providers = providersAndStaff;
   
   console.info('[PracticeCalendar] Personnel loaded:', {
-    providers: providers.length,
+    providers: providersAndStaff.filter(p => p.type === 'provider').length,
     staff: providersAndStaff.filter(p => p.type === 'staff').length,
     total: providersAndStaff.length
   });
@@ -147,19 +147,19 @@ export default function PracticeCalendar() {
   };
   const rooms = calendarData?.rooms || [];
 
-  // Auto-select providers: for provider role, only select their own provider record
+  // Auto-select personnel: for provider role, only select their own record
   useEffect(() => {
     if (providers.length > 0 && selectedProviders.length === 0) {
       if (effectiveRole === 'provider') {
-        // Provider: only select their own provider record
+        // Provider: only select their own record
         const myProvider = providers.find((p: any) => p.user_id === effectiveUserId);
         if (myProvider) {
           console.log(`🔧 Auto-selecting provider ${myProvider.id} for logged-in provider`);
           setSelectedProviders([myProvider.id]);
         }
       } else {
-        // Admin/doctor/staff: select all providers
-        console.log(`🔧 Auto-selecting all ${providers.length} providers for ${effectiveRole}`);
+        // Admin/doctor/staff: select all personnel (providers + staff)
+        console.log(`🔧 Auto-selecting all ${providers.length} personnel (providers + staff) for ${effectiveRole}`);
         setSelectedProviders(providers.map((p: any) => p.id));
       }
     }
