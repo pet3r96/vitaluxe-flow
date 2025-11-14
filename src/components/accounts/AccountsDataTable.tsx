@@ -70,51 +70,75 @@ export const AccountsDataTable = () => {
 
       if (profilesError) throw profilesError;
 
-      // Then, get all providers to identify which user_ids are providers
+      // Flat queries for practice associations (no FK dependency)
       const { data: providersData, error: providersError } = await supabase
         .from("providers")
-        .select(`
-          user_id, 
-          practice_id, 
-          id,
-          practice:practice_id (
-            id,
-            name
-          )
-        `);
+        .select("id, user_id, practice_id");
 
       if (providersError) throw providersError;
 
-      // Get staff associations
       const { data: staffData, error: staffError } = await supabase
         .from("practice_staff")
-        .select(`
-          user_id,
-          practice_id,
-          id,
-          practice:practice_id (
-            id,
-            name
-          )
-        `);
+        .select("id, user_id, practice_id");
 
       if (staffError) throw staffError;
 
-      // Get patient associations
       const { data: patientsData, error: patientsError } = await supabase
         .from("patient_accounts")
-        .select(`
-          user_id,
-          practice_id,
-          id,
-          practice:practice_id (
-            id,
-            name
-          )
-        `)
+        .select("id, user_id, practice_id")
         .not("user_id", "is", null);
 
       if (patientsError) throw patientsError;
+
+      // Build user_id → practice_id maps
+      const providerPracticeIdByUser = new Map<string, string>();
+      providersData?.forEach(p => {
+        if (p.user_id && p.practice_id && p.user_id !== p.practice_id) {
+          providerPracticeIdByUser.set(p.user_id, p.practice_id);
+        }
+      });
+
+      const staffPracticeIdByUser = new Map<string, string>();
+      staffData?.forEach(s => {
+        if (s.user_id && s.practice_id) {
+          staffPracticeIdByUser.set(s.user_id, s.practice_id);
+        }
+      });
+
+      const patientPracticeIdByUser = new Map<string, string>();
+      patientsData?.forEach(pa => {
+        if (pa.user_id && pa.practice_id) {
+          patientPracticeIdByUser.set(pa.user_id, pa.practice_id);
+        }
+      });
+
+      // Collect unique practice_ids
+      const allPracticeIds = new Set<string>([
+        ...providerPracticeIdByUser.values(),
+        ...staffPracticeIdByUser.values(),
+        ...patientPracticeIdByUser.values(),
+      ]);
+
+      // Fetch practice names in one query
+      const { data: practicesInfo, error: practicesError } = await supabase
+        .from("profiles")
+        .select("id, name, staff_role_type, has_prescriber")
+        .in("id", Array.from(allPracticeIds));
+
+      if (practicesError) throw practicesError;
+
+      // Build practice_id → { id, name } map
+      const practiceInfoById = new Map<string, { id: string; name: string }>();
+      practicesInfo?.forEach(p => {
+        practiceInfoById.set(p.id, { id: p.id, name: p.name || "Unknown" });
+        
+        // Warn if practice_id points to a person (data integrity issue)
+        if (p.staff_role_type || p.has_prescriber) {
+          console.warn(
+            `[Accounts] Suspicious practice_id: ${p.id} → "${p.name}" appears to be a person, not a practice`
+          );
+        }
+      });
 
       // Fetch all active topline profiles for reliable parent display
       const { data: toplinesData } = await supabase
@@ -140,28 +164,6 @@ export const AccountsDataTable = () => {
 
       // Create a Set of provider user_ids for quick lookup
       const providerUserIds = new Set(providersData?.map(p => p.user_id) || []);
-
-      // Create maps for practice associations
-      const providerPracticeMap = new Map();
-      providersData?.forEach(p => {
-        if (p.user_id !== p.practice_id && p.practice) {
-          providerPracticeMap.set(p.user_id, p.practice);
-        }
-      });
-
-      const staffPracticeMap = new Map();
-      staffData?.forEach(s => {
-        if (s.practice) {
-          staffPracticeMap.set(s.user_id, s.practice);
-        }
-      });
-
-      const patientPracticeMap = new Map();
-      patientsData?.forEach(pa => {
-        if (pa.user_id && pa.practice) {
-          patientPracticeMap.set(pa.user_id, pa.practice);
-        }
-      });
 
       // Create a map of toplines for quick lookup by user_id
       const toplineMap = new Map(
@@ -198,11 +200,15 @@ export const AccountsDataTable = () => {
           }
         }
 
-        // Get practice association
-        const practiceAssociation = 
-          providerPracticeMap.get(profile.id) ||
-          staffPracticeMap.get(profile.id) ||
-          patientPracticeMap.get(profile.id);
+        // Resolve practice association
+        const practiceId = 
+          providerPracticeIdByUser.get(profile.id) ||
+          staffPracticeIdByUser.get(profile.id) ||
+          patientPracticeIdByUser.get(profile.id);
+        
+        const practiceAssociation = practiceId 
+          ? practiceInfoById.get(practiceId) 
+          : undefined;
         
         return {
           ...profile,
