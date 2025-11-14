@@ -269,14 +269,52 @@ export const OrdersDataTable = () => {
       // For complex roles (pharmacy, provider, staff, topline, downline), use direct queries
       // These need special joins and filtering that can't be easily handled by the edge function
       
-      // Filter by provider if role is provider - query by doctor_id (user_id)
-      // FIX: Query orders by doctor_id instead of order_lines by provider_id
-      // because provider_id is inconsistently populated in order_lines
+      // Filter by provider using order_lines.provider_id (not orders.doctor_id)
+      // Providers should see all orders where they are the selected provider
       if (effectiveRole === "provider") {
-        console.log('[OrdersDataTable] Provider role - querying by doctor_id:', effectiveUserId);
+        console.log('[OrdersDataTable] Provider role - mapping user_id to provider.id:', effectiveUserId);
         
-        // Query orders by doctor_id (which is the provider's user_id)
-        // OPTIMIZED: Only fetch fields needed for table display
+        // Step 1: Get provider.id from user_id
+        const { data: providerRecord, error: providerError } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", effectiveUserId)
+          .eq("active", true)
+          .maybeSingle();
+        
+        if (providerError) {
+          logger.error('Failed to fetch provider record', providerError);
+          throw providerError;
+        }
+        
+        if (!providerRecord) {
+          console.warn('[OrdersDataTable] No active provider found for user');
+          return [];
+        }
+        
+        console.log('[OrdersDataTable] Found provider record:', providerRecord.id);
+        
+        // Step 2: Get unique order_ids where this provider appears in order_lines
+        const { data: orderLineData, error: orderLineError } = await supabase
+          .from("order_lines")
+          .select("order_id")
+          .eq("provider_id", providerRecord.id);
+        
+        if (orderLineError) {
+          logger.error('Failed to fetch order_lines', orderLineError);
+          throw orderLineError;
+        }
+        
+        const orderIds = [...new Set(orderLineData?.map(ol => ol.order_id) || [])];
+        
+        if (orderIds.length === 0) {
+          console.log('[OrdersDataTable] No orders found for provider');
+          return [];
+        }
+        
+        console.log(`[OrdersDataTable] Found ${orderIds.length} unique orders for provider`);
+        
+        // Step 3: Fetch full order details for these order_ids
         const { data: providerOrders, error: ordersError } = await supabase
           .from("orders")
           .select(`
@@ -300,7 +338,7 @@ export const OrdersDataTable = () => {
               products(name, product_types(name))
             )
           `)
-          .eq("doctor_id", effectiveUserId)
+          .in("id", orderIds)
           .order("created_at", { ascending: false });
 
         if (ordersError) {
@@ -311,7 +349,8 @@ export const OrdersDataTable = () => {
         const queryDuration = Date.now() - queryStart;
         logger.info('Provider orders query COMPLETE', { 
           duration: queryDuration,
-          orderCount: providerOrders?.length || 0
+          orderCount: providerOrders?.length || 0,
+          providerId: providerRecord.id
         });
         
         console.log(`[OrdersDataTable] Provider orders loaded: ${providerOrders?.length || 0} orders`);
