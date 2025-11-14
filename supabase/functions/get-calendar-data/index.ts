@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
     }
 
     // Build query - optimized with only essential columns
+    // CRITICAL: Use LEFT JOIN for patient_accounts to avoid RLS blanking all appointments
     let query = supabaseClient
       .from('patient_appointments')
       .select(`
@@ -81,7 +82,7 @@ Deno.serve(async (req) => {
         notes,
         checked_in_at,
         treatment_started_at,
-        patient_accounts!inner(id, first_name, last_name, phone),
+        patient_accounts(id, first_name, last_name, phone),
         providers!patient_appointments_provider_id_fkey(id, user_id),
         practice_rooms(id, name, color)
       `)
@@ -97,8 +98,27 @@ Deno.serve(async (req) => {
     }
 
     // Apply filters (ignore provider filters if provider-scoped)
+    // Filter providers to only actual providers (not staff) to avoid zero results
     if (!isProviderScoped && providers && providers.length > 0) {
-      query = query.in('provider_id', providers);
+      console.log('[get-calendar-data] Provider filter requested:', providers);
+      
+      // Fetch provider records to verify they're actual providers
+      const { data: providerRecords } = await supabaseClient
+        .from('providers')
+        .select('id, role_type')
+        .in('id', providers);
+      
+      const validProviderIds = providerRecords
+        ?.filter(p => p.role_type === 'provider')
+        .map(p => p.id) || [];
+      
+      console.log('[get-calendar-data] Valid provider IDs after filtering:', validProviderIds);
+      
+      if (validProviderIds.length > 0) {
+        query = query.in('provider_id', validProviderIds);
+      } else {
+        console.warn('[get-calendar-data] No valid provider IDs after filtering - showing all providers');
+      }
     }
 
     if (rooms && rooms.length > 0) {
