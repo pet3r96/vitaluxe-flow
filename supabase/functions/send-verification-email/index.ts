@@ -152,13 +152,13 @@ serve(async (req) => {
       details: {
         email,
         expires_at: expiresAt.toISOString(),
-        postmark_message_id: postmarkData.MessageID,
+        postmark_message_id: postmarkData.messageId,
       },
     });
 
     console.log('✅ [send-verification-email] Complete - returning success');
     return new Response(
-      JSON.stringify({ success: true, messageId: postmarkData.MessageID }), 
+      JSON.stringify({ success: true, messageId: postmarkData.messageId }), 
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {

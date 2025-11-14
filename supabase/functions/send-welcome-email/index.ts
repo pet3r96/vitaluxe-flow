@@ -94,18 +94,14 @@ const handler = async (req: Request): Promise<Response> => {
     const twoFactorEnabled = systemSettings?.value === true;
     console.log('[send-welcome-email] 2FA enabled:', twoFactorEnabled);
 
-    // Send email via Postmark
-    const POSTMARK_API_KEY = Deno.env.get("POSTMARK_API_KEY");
-    if (!POSTMARK_API_KEY) {
-      console.error("❌ [send-welcome-email] POSTMARK_API_KEY not configured");
-      throw new Error("Email service not configured");
-    }
-
     const resetLink = `https://app.vitaluxeservices.com/change-password?token=${token}`;
     console.log('[send-welcome-email] Password setup link:', resetLink);
     
     // Determine if this is a patient or staff/doctor
     const isPatient = role === 'patient';
+    
+    // Generate email template
+    const practiceDisplayName = practiceInfo?.name || practiceInfo?.company || undefined;
     const practiceName = practiceInfo?.name || practiceInfo?.company || 'Vitaluxe';
 
     console.log('[send-welcome-email] Sending email type:', isPatient ? 'patient' : 'staff/doctor');
@@ -258,3 +254,96 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 serve(handler);
+
+// Email template generators
+function generateWelcomeEmailHTML(params: {
+  recipientName: string;
+  resetLink: string;
+  isPatient?: boolean;
+  practiceName?: string;
+  twoFactorEnabled?: boolean;
+}): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #E2C977; background-color: #0B0B0B; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #8E6E1E 0%, #C8A64B 50%, #E2C977 100%); padding: 30px 20px; text-align: center; }
+        .header h1 { margin: 0; color: #0B0B0B; font-size: 28px; font-weight: bold; letter-spacing: 2px; }
+        .content { background-color: #1A1A1A; padding: 40px 30px; border: 1px solid #292929; }
+        .content h2 { color: #E2C977; margin-top: 0; }
+        .content p { color: #E2C977; }
+        .greeting { color: #E2C977; font-size: 16px; margin-bottom: 20px; }
+        .button { display: inline-block; background-color: #C8A64B; color: #0B0B0B; padding: 14px 35px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: bold; }
+        .button:hover { background-color: #E2C977; }
+        .footer { text-align: center; padding: 25px 20px; color: #8E6E1E; font-size: 12px; background-color: #0B0B0B; }
+        .footer a { color: #C8A64B; text-decoration: none; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>VITALUXE</h1>
+        </div>
+        <div class="content">
+          <p class="greeting">Dear ${params.recipientName},</p>
+          <h2>Welcome to Vitaluxe${params.practiceName ? ` - ${params.practiceName}` : ''}!</h2>
+          ${params.isPatient 
+            ? '<p>Your healthcare provider has created a secure patient portal account for you.</p>'
+            : '<p>Your account has been created and you now have access to the Vitaluxe platform.</p>'
+          }
+          <p><strong>Important:</strong> You need to set your password before you can access your account.</p>
+          ${params.twoFactorEnabled 
+            ? '<p><em>Note: Two-factor authentication is enabled. After setting your password, you\'ll need to set up 2FA on your next login.</em></p>'
+            : ''
+          }
+          <div style="text-align: center;">
+            <a href="${params.resetLink}" class="button">Set Your Password</a>
+          </div>
+          <p style="margin-top: 30px; color: #C8A64B; font-size: 14px;">
+            This link will expire in 7 days. If you did not request this account, please disregard this email.
+          </p>
+        </div>
+        <div class="footer">
+          <p>&copy; ${new Date().getFullYear()} Vitaluxe Services. All rights reserved.</p>
+          <p><a href="https://app.vitaluxeservices.com">Visit Portal</a> | <a href="https://app.vitaluxeservices.com/support">Support</a></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+function generateWelcomeEmailText(params: {
+  recipientName: string;
+  resetLink: string;
+  isPatient?: boolean;
+  practiceName?: string;
+  twoFactorEnabled?: boolean;
+}): string {
+  return `
+Welcome to Vitaluxe${params.practiceName ? ` - ${params.practiceName}` : ''}!
+
+Dear ${params.recipientName},
+
+${params.isPatient 
+  ? 'Your healthcare provider has created a secure patient portal account for you.'
+  : 'Your account has been created and you now have access to the Vitaluxe platform.'
+}
+
+IMPORTANT: You need to set your password before you can access your account.
+
+${params.twoFactorEnabled 
+  ? 'Note: Two-factor authentication is enabled. After setting your password, you\'ll need to set up 2FA on your next login.'
+  : ''
+}
+
+Click here to set your password: ${params.resetLink}
+
+This link will expire in 7 days. If you did not request this account, please disregard this email.
+
+© ${new Date().getFullYear()} Vitaluxe Services. All rights reserved.
+  `.trim();
+}
