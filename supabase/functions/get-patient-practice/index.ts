@@ -88,13 +88,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    const profiles = Array.isArray(patientAccount.profiles) ? patientAccount.profiles[0] : patientAccount.profiles;
     const response = {
       patientAccountId: patientAccount.id,
       practiceId: patientAccount.practice_id,
       practice: patientAccount.practice_id ? {
-        name: patientAccount.profiles?.name || null,
-        city: patientAccount.profiles?.address_city || null,
-        state: patientAccount.profiles?.address_state || null,
+        name: profiles?.name || null,
+        city: profiles?.address_city || null,
+        state: profiles?.address_state || null,
       } : null
     };
 

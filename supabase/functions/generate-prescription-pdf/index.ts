@@ -227,8 +227,7 @@ serve(async (req) => {
     }
 
     // Compute prescriber display name
-    const prescriberDisplayName = profileData.prescriber_name || 
-                                  profileData.full_name || 
+    const prescriberDisplayName = profileData.full_name || 
                                   provider_name || 
                                   'Provider';
 

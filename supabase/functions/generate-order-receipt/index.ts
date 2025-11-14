@@ -458,6 +458,7 @@ serve(async (req) => {
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.39.7');
       const supabase = createClient(supabaseUrl, supabaseKey);
       
       await supabase.functions.invoke('log-error', {
