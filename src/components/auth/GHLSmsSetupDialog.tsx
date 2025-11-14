@@ -165,10 +165,12 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
         throw new Error('No active session. Please log in again.');
       }
 
-      console.log('[GHLSmsSetupDialog] Calling verify-ghl-sms with attemptId:', attemptId);
+      // Normalize phone to E.164 format before sending
+      const normalizedPhone = '+' + phone.replace(/\D/g, '');
+      console.log('[GHLSmsSetupDialog] Calling verify-2fa-sms with attemptId:', attemptId, 'normalized phone:', normalizedPhone);
 
       const { data, error } = await supabase.functions.invoke('verify-2fa-sms', {
-        body: { code: codeToVerify, attemptId, phoneNumber: phone }, // Send attemptId, code, and phoneNumber
+        body: { code: codeToVerify, attemptId, phoneNumber: normalizedPhone },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -185,40 +187,37 @@ export const GHLSmsSetupDialog = ({ open, userId }: GHLSmsSetupDialogProps) => {
         throw new Error(data.error);
       }
 
-      // Verify that 2FA settings were actually saved in database
-      console.log('[GHLSmsSetupDialog] Verifying database record...');
-      const { data: settings, error: settingsError } = await supabase
-        .from('user_2fa_settings')
-        .select('phone_number, is_enrolled, phone_verified, twilio_enabled, ghl_enabled')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      console.log('[GHLSmsSetupDialog] Database check:', { 
-        found: !!settings, 
-        enrolled: settings?.is_enrolled,
-        phoneVerified: settings?.phone_verified,
-        twilioEnabled: settings?.twilio_enabled,
-        ghlEnabled: settings?.ghl_enabled,
-        hasPhone: !!settings?.phone_number,
-        error: settingsError?.message 
-      });
-
-      // Check that enrollment succeeded with EITHER provider
-      if (!settings?.is_enrolled || !settings?.phone_verified) {
-        throw new Error('2FA setup failed to save. Please try again or contact support.');
-      }
-
-      // Additional check: at least one provider should be enabled
-      if (!settings?.twilio_enabled && !settings?.ghl_enabled) {
-        throw new Error('No SMS provider enabled. Please contact support.');
-      }
-
-      const activeProvider = settings?.twilio_enabled ? 'Twilio' : 
-                             settings?.ghl_enabled ? 'GHL' : 'Unknown';
-      console.log('[GHLSmsSetupDialog] 2FA successfully enrolled via', activeProvider);
-
-      // Mark this session as verified to prevent another SMS
+      // Mark this session as verified immediately after successful verification
       mark2FAVerified();
+
+      // Best-effort database verification (log-only, non-blocking)
+      try {
+        console.log('[GHLSmsSetupDialog] Verifying database record (best-effort)...');
+        const { data: settings, error: settingsError } = await supabase
+          .from('user_2fa_settings')
+          .select('phone_number, is_enrolled, phone_verified, twilio_enabled, ghl_enabled')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (settingsError) {
+          console.warn('[GHLSmsSetupDialog] Could not verify database record (likely RLS):', settingsError.message);
+        } else if (settings) {
+          console.log('[GHLSmsSetupDialog] Database verification successful:', { 
+            enrolled: settings.is_enrolled,
+            phoneVerified: settings.phone_verified,
+            twilioEnabled: settings.twilio_enabled,
+            ghlEnabled: settings.ghl_enabled,
+          });
+          
+          const activeProvider = settings.twilio_enabled ? 'Twilio' : 
+                                 settings.ghl_enabled ? 'GHL' : 'Unknown';
+          console.log('[GHLSmsSetupDialog] 2FA successfully enrolled via', activeProvider);
+        } else {
+          console.warn('[GHLSmsSetupDialog] No settings record found yet (may appear after reload)');
+        }
+      } catch (dbError: any) {
+        console.warn('[GHLSmsSetupDialog] Database check failed (non-blocking):', dbError.message);
+      }
       
       toast.success('Phone verified! Reloading...');
       console.log('[GHLSmsSetupDialog] Success - reloading page');

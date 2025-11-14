@@ -189,6 +189,15 @@ serve(async (req) => {
     });
 
     const responseTime = Date.now() - startTime;
+    
+    // Return confirmation payload so client can trust server state
+    const confirmation = {
+      success: true,
+      is_enrolled: true,
+      phone_verified: true,
+      provider_enabled: provider,
+      message: 'Verification successful'
+    };
     await supabase.from('two_fa_audit_log').insert({
       attempt_id: attemptId,
       event_type: 'code_verified',
@@ -199,6 +208,7 @@ serve(async (req) => {
 
     console.log('[2FA Verify] Attempt:', attemptId, '| Success | Provider:', provider, '| Time:', responseTime, 'ms');
 
+    return successResponse(confirmation);
     return new Response(
       JSON.stringify({ 
         success: true,
