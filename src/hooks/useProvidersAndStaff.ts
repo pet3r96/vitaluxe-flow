@@ -11,6 +11,15 @@ export interface ProviderOrStaff {
   first_name?: string;
   last_name?: string;
   specialty?: string;
+  // Fields for selects
+  label?: string;
+  subLabel?: string;
+  value?: string;
+  npi?: string;
+  email?: string;
+  prescriber_name?: string;
+  dea?: string;
+  name?: string;
 }
 
 export const useProvidersAndStaff = (practiceId: string | null | undefined) => {
@@ -21,41 +30,62 @@ export const useProvidersAndStaff = (practiceId: string | null | undefined) => {
 
       console.info('[useProvidersAndStaff] Fetching unified providers/staff for practice:', practiceId);
 
-      // Fetch all personnel (providers + staff) from unified providers table
-      const { data, error } = await supabase
+      // Step 1: Fetch provider records
+      const { data: providerRecords, error: providerError } = await supabase
         .from('providers')
-        .select(`
-          id,
-          user_id,
-          practice_id,
-          role_type,
-          can_order,
-          active,
-          profiles!providers_user_id_fkey(
-            id,
-            name,
-            full_name,
-            prescriber_name,
-            email,
-            phone,
-            npi
-          )
-        `)
+        .select('id, user_id, practice_id, role_type, can_order, active')
         .eq('practice_id', practiceId)
         .eq('active', true);
 
-      if (error) throw error;
-      const personnel = data || [];
+      if (providerError) throw providerError;
+      if (!providerRecords || providerRecords.length === 0) {
+        console.info('[useProvidersAndStaff] No providers/staff found');
+        return [];
+      }
 
-      // Transform to standardized format
-      const combined: ProviderOrStaff[] = personnel.map((p: any) => ({
-        id: p.id,
-        user_id: p.user_id,
-        full_name: getProviderDisplayName(p),
-        type: p.role_type === 'provider' ? 'provider' as const : 'staff' as const,
-        profiles: p.profiles,
-        specialty: p.profiles?.npi ? 'Medical Provider' : undefined,
-      }));
+      // Step 2: Fetch profiles for all user_ids
+      const userIds = providerRecords.map(p => p.user_id);
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, name, full_name, prescriber_name, email, phone, npi, dea, license_number')
+        .in('id', userIds);
+
+      if (profileError) {
+        console.error('[useProvidersAndStaff] Profile fetch error:', profileError);
+        // Continue with empty profiles rather than failing
+      }
+
+      // Step 3: Merge provider records with profiles
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+      
+      const combined: ProviderOrStaff[] = providerRecords.map((p: any) => {
+        const profile = profileMap.get(p.user_id);
+        
+        // Build display name with fallbacks
+        const displayName = profile?.full_name 
+          || profile?.prescriber_name 
+          || profile?.name 
+          || profile?.email?.split('@')[0] 
+          || 'Provider';
+
+        return {
+          id: p.id,
+          user_id: p.user_id,
+          full_name: displayName,
+          name: displayName,
+          type: p.role_type === 'provider' ? 'provider' as const : 'staff' as const,
+          profiles: profile,
+          specialty: profile?.npi ? 'Medical Provider' : undefined,
+          // Add fields for selects
+          label: profile?.prescriber_name || profile?.full_name || displayName,
+          subLabel: profile?.npi ? `NPI: ${profile.npi}` : 'NPI: N/A',
+          value: p.id,
+          npi: profile?.npi,
+          email: profile?.email,
+          prescriber_name: profile?.prescriber_name || profile?.full_name || displayName,
+          dea: profile?.dea,
+        };
+      });
 
       // Sort alphabetically by full_name
       combined.sort((a, b) => a.full_name.localeCompare(b.full_name));
@@ -67,7 +97,7 @@ export const useProvidersAndStaff = (practiceId: string | null | undefined) => {
         providers: providerCount,
         staff: staffCount,
         total: combined.length,
-        sample: combined.slice(0, 3).map(item => `${item.full_name} (${item.type})`)
+        sample: combined.slice(0, 3).map(item => `${item.full_name} (${item.type}) - NPI: ${item.npi || 'N/A'}`)
       });
 
       return combined;
@@ -75,4 +105,18 @@ export const useProvidersAndStaff = (practiceId: string | null | undefined) => {
     enabled: !!practiceId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+};
+
+// Hook for providers only (excludes staff)
+export const usePracticeProviders = (practiceId: string | null | undefined) => {
+  const { data: allPersonnel, ...rest } = useProvidersAndStaff(practiceId);
+  
+  const providers = allPersonnel?.filter(p => p.type === 'provider') || [];
+  
+  console.info('[usePracticeProviders] Filtered to providers only:', providers.length);
+  
+  return {
+    data: providers,
+    ...rest
+  };
 };

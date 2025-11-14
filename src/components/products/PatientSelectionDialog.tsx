@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePracticeRxPrivileges } from "@/hooks/usePracticeRxPrivileges";
+import { usePracticeProviders } from "@/hooks/useProvidersAndStaff";
 import {
   Dialog,
   DialogContent,
@@ -154,100 +155,10 @@ export const PatientSelectionDialog = ({
       .join(' ');
   };
 
-  // Fetch active providers for practice using backend function with fallback to direct query
-  const { data: providers } = useQuery({
-    queryKey: ["practice-providers", finalPracticeId],
-    queryFn: async () => {
-      if (!finalPracticeId) {
-        console.log('[PatientSelectionDialog] ⚠️ No practice ID, skipping provider fetch');
-        return [];
-      }
+  // Fetch active providers for practice using new hook
+  const { data: providers } = usePracticeProviders(finalPracticeId);
 
-      // Try Edge function first (bypasses RLS complexities and returns rich profiles)
-      const fetchViaEdge = async () => {
-        try {
-          console.log('[PatientSelectionDialog] 🔄 Fetching providers via edge for practice:', finalPracticeId);
-          const { data, error } = await supabase.functions.invoke('list-providers', {
-            body: { practice_id: finalPracticeId }
-          });
-          if (error) throw error;
-          const rows = data?.providers || [];
-          console.log('[PatientSelectionDialog] 🔍 Providers from edge:', rows);
-          return rows.map((p: any) => {
-            let displayName = p.profiles?.prescriber_name?.trim() || '';
-            if (!displayName) displayName = p.profiles?.full_name?.trim() || '';
-            if (!displayName && p.profiles?.name && !p.profiles.name.includes('@')) displayName = p.profiles.name.trim();
-            if (!displayName && p.profiles?.name?.includes('@')) displayName = deriveNameFromEmail(p.profiles.name);
-            if (!displayName) displayName = 'Provider';
-            return {
-              id: p.id,
-              user_id: p.user_id,
-              prescriber_name: displayName,
-              specialty: '',
-              npi: p.profiles?.npi || '',
-              dea: p.profiles?.dea || '',
-              profiles: p.profiles,
-            };
-          });
-        } catch (err: any) {
-          console.error('[PatientSelectionDialog] ❌ Edge providers failed:', err);
-          return null;
-        }
-      };
-
-      // Fallback: direct DB query (works for doctors/practice; used if edge fails)
-      const fetchViaDirect = async () => {
-        try {
-          console.log('[PatientSelectionDialog] 🔁 Fallback: fetching providers directly for practice:', finalPracticeId);
-          const { data, error } = await supabase
-            .from('providers')
-            .select(`
-              id,
-              user_id,
-              practice_id,
-              active,
-              profiles:profiles!providers_user_id_fkey(
-                id, name, full_name, prescriber_name, npi, dea
-              )
-            `)
-            .eq('practice_id', finalPracticeId)
-            .eq('active', true)
-            .order('created_at', { ascending: false });
-          if (error) throw error;
-          const rows = data || [];
-          return rows.map((p: any) => {
-            let displayName = p.profiles?.prescriber_name?.trim() || '';
-            if (!displayName) displayName = p.profiles?.full_name?.trim() || '';
-            if (!displayName && p.profiles?.name && !p.profiles.name.includes('@')) displayName = p.profiles.name.trim();
-            if (!displayName && p.profiles?.name?.includes('@')) displayName = deriveNameFromEmail(p.profiles.name);
-            if (!displayName) displayName = 'Provider';
-            return {
-              id: p.id,
-              user_id: p.user_id,
-              prescriber_name: displayName,
-              specialty: '',
-              npi: p.profiles?.npi || '',
-              dea: p.profiles?.dea || '',
-              profiles: p.profiles,
-            };
-          });
-        } catch (err) {
-          console.error('[PatientSelectionDialog] ❌ Direct providers failed:', err);
-          return null;
-        }
-      };
-
-      const edgeList = await fetchViaEdge();
-      if (edgeList && edgeList.length > 0) return edgeList;
-
-      const directList = await fetchViaDirect();
-      if (directList && directList.length > 0) return directList;
-
-      toast.error('No providers found for your practice.');
-      return [];
-    },
-    enabled: open && !!finalPracticeId
-  });
+  console.log('[PatientSelectionDialog] Providers from hook:', providers?.length, providers);
 
   // Auto-select provider based on role and available providers
   useEffect(() => {
@@ -708,15 +619,12 @@ export const PatientSelectionDialog = ({
                                         selectedProviderId === provider.id ? "opacity-100" : "opacity-0"
                                       )}
                                     />
-                                    <div className="flex flex-col flex-1">
-                                      <span className="font-medium">{provider.prescriber_name}</span>
-                                      {(provider.specialty || provider.npi) && (
-                                        <span className="text-xs text-muted-foreground">
-                                          {provider.specialty && `${provider.specialty}`}
-                                          {provider.specialty && provider.npi && ` • `}
-                                          {provider.npi && `NPI: ${provider.npi}`}
-                                        </span>
-                                      )}
+                                     <div className="flex flex-col flex-1">
+                                      <span className="font-medium">{provider.label || provider.full_name}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {provider.subLabel || (provider.npi ? `NPI: ${provider.npi}` : 'NPI: N/A')}
+                                        {provider.email && ` • ${provider.email}`}
+                                      </span>
                                     </div>
                                   </CommandItem>
                                 ))}
@@ -727,9 +635,9 @@ export const PatientSelectionDialog = ({
                       </Popover>
                       {selectedProviderId && selectedProviderData && (
                         <div className="text-xs text-muted-foreground p-2 bg-muted/30 rounded">
-                          Selected: {selectedProviderData.prescriber_name}
-                          {selectedProviderData.profiles?.email && (
-                            <> • {selectedProviderData.profiles.email}</>
+                          Selected: {selectedProviderData.label || selectedProviderData.full_name}
+                          {selectedProviderData.email && (
+                            <> • {selectedProviderData.email}</>
                           )}
                         </div>
                       )}
@@ -1068,8 +976,8 @@ export const PatientSelectionDialog = ({
             patient={shipTo === 'practice' ? null : selectedPatient}
             provider={{
               id: selectedProviderData.id,
-              name: selectedProviderData.prescriber_name || 'Unknown',
-              email: selectedProviderData.profiles?.email || 'N/A',
+              name: selectedProviderData.label || selectedProviderData.full_name || 'Unknown',
+              email: selectedProviderData.email || 'N/A',
               npi: selectedProviderData.npi || 'N/A',
               dea: selectedProviderData.dea || 'N/A',
               license: selectedProviderData.profiles?.license_number || 'N/A'

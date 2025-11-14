@@ -30,6 +30,7 @@ import { BlockTimeDialog } from "@/components/calendar/BlockTimeDialog";
 import { PrintDayDialog } from "@/components/calendar/PrintDayDialog";
 import { Menu } from "lucide-react";
 import { MobileCalendarFAB } from "@/components/calendar/MobileCalendarFAB";
+import { usePracticeProviders, useProvidersAndStaff } from "@/hooks/useProvidersAndStaff";
 
 export default function PracticeCalendar() {
   const navigate = useNavigate();
@@ -122,55 +123,16 @@ export default function PracticeCalendar() {
   );
 
   // Fetch providers and staff using unified hook
-  const { data: providersData } = useRealtimeQuery(
-    ['providers-and-staff', practiceId],
-    async () => {
-      if (!practiceId) return [];
-
-      console.info('[PracticeCalendar] Fetching providers and staff');
-
-      // Fetch providers via edge function
-      const { data: providersResponse, error: provError } = await supabase.functions.invoke('list-providers', {
-        body: { practice_id: practiceId }
-      });
-
-      if (provError) throw provError;
-      const providers = providersResponse?.providers || [];
-
-      // Fetch staff via edge function
-      const { data: staffResponse, error: staffError } = await supabase.functions.invoke('list-staff', {
-        body: { practice_id: practiceId }
-      });
-
-      if (staffError) throw staffError;
-      const staff = staffResponse?.staff || [];
-
-      // Combine and add type indicator
-      const combined = [
-        ...providers.map((p: any) => ({ ...p, type: 'provider' })),
-        ...staff.map((s: any) => ({
-          id: s.id,
-          user_id: s.user_id,
-          profiles: s.profiles,
-          type: 'staff',
-          full_name: s.profiles?.full_name || s.profiles?.name || 'Staff Member',
-        }))
-      ];
-
-      console.info('[PracticeCalendar] ✅ Providers and staff loaded:', {
-        providers: providers.length,
-        staff: staff.length,
-        total: combined.length
-      });
-
-      return combined;
-    },
-    {
-      enabled: !!practiceId,
-      staleTime: 60 * 1000, // 1 minute
-      refetchOnWindowFocus: true,
-    }
-  );
+  const { data: providersAndStaff = [] } = useProvidersAndStaff(practiceId);
+  
+  // Separate providers from staff for calendar
+  const providers = providersAndStaff.filter(p => p.type === 'provider');
+  
+  console.info('[PracticeCalendar] Personnel loaded:', {
+    providers: providers.length,
+    staff: providersAndStaff.filter(p => p.type === 'staff').length,
+    total: providersAndStaff.length
+  });
 
   const appointments = calendarData?.appointments || [];
   const blockedTime = calendarData?.blockedTime || [];
@@ -183,7 +145,6 @@ export default function PracticeCalendar() {
     end_hour: 20,
     working_days: [1, 2, 3, 4, 5],
   };
-  const providers = providersData || [];
   const rooms = calendarData?.rooms || [];
 
   // Auto-select providers: for provider role, only select their own provider record
