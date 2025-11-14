@@ -14,19 +14,34 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('[get-orders-page] Missing Authorization header');
       throw new Error('Missing authorization header');
     }
 
+    // Extract the JWT token from the Authorization header
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Create Supabase client with the user's JWT token
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+      {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Verify the user by getting their data from the JWT
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
+      console.error('[get-orders-page] Auth verification failed:', userError);
       throw new Error('Unauthorized');
     }
+    
+    console.log('[get-orders-page] ✅ User authenticated:', user.id);
 
     const { page = 1, pageSize = 50, status, search, practiceId, role } = await req.json();
     
