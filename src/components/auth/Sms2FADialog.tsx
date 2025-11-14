@@ -93,38 +93,39 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
 
   // Auto-send on mount if phone is provided (verify mode) or load from localStorage
   useEffect(() => {
-    if (open && !codeSent && step === 'phone') {
-      let phoneToUse = phone;
-      
-      // Fallback to localStorage if no phone prop
-      if (!phoneToUse) {
-        const storedPhone = localStorage.getItem(`vitaluxe_2fa_phone_${userId}`);
-        if (storedPhone && isValidPhone(storedPhone)) {
-          console.log('[Sms2FADialog] Loaded phone from localStorage');
-          phoneToUse = storedPhone;
-        }
-      }
-      
-      if (phoneToUse) {
-        // Validate phone before proceeding
-        if (!isValidPhone(phoneToUse)) {
-          console.log('[Sms2FADialog] Invalid phone, showing phone input');
-          return;
-        }
-        
-        setPhoneNumber(phoneToUse);
-        const existing = checkSharedCooldown();
-        if (existing > 0) {
-          // Already on verify step if initialized correctly
-          setCountdown(existing);
-          setCodeSent(true);
-        } else {
-          // Already on verify step, just send code
-          sendCode(phoneToUse);
-        }
+    if (!open || codeSent) return;
+
+    let phoneToUse = phone;
+    
+    // Fallback to localStorage if no phone prop
+    if (!phoneToUse) {
+      const storedPhone = localStorage.getItem(`vitaluxe_2fa_phone_${userId}`);
+      if (storedPhone && isValidPhone(storedPhone)) {
+        console.log('[Sms2FADialog] Loaded phone from localStorage');
+        phoneToUse = storedPhone;
       }
     }
-  }, [open, phone, codeSent, step, checkSharedCooldown, userId]);
+    
+    if (phoneToUse) {
+      // Validate phone before proceeding
+      if (!isValidPhone(phoneToUse)) {
+        console.log('[Sms2FADialog] Invalid phone, showing phone input');
+        return;
+      }
+      
+      setPhoneNumber(phoneToUse);
+      const existing = checkSharedCooldown();
+      if (existing > 0) {
+        // Already on verify step if initialized correctly
+        setCountdown(existing);
+        setCodeSent(true);
+        if (step !== 'verify') setStep('verify');
+      } else {
+        // Already on verify step, just send code
+        sendCode(phoneToUse);
+      }
+    }
+  }, [open, phone, codeSent, checkSharedCooldown, userId, step]);
 
   const maskPhone = (num: string) => {
     const digits = num.replace(/\D/g, '');
@@ -348,7 +349,7 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
           <DialogDescription>
             {step === 'phone'
               ? 'Enter your US phone number to receive a verification code'
-              : `We've sent a 6-digit code to ${maskPhone(phoneNumber)}`}
+              : `We've sent a 6-digit code to ${maskPhone(phoneNumber || phone || localStorage.getItem(`vitaluxe_2fa_phone_${userId}`) || '')}`}
           </DialogDescription>
         </DialogHeader>
 
