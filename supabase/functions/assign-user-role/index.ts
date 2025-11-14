@@ -621,6 +621,7 @@ serve(async (req) => {
     };
 
     if (signupData.role === 'doctor') {
+      const hasPrescriber = !!(signupData.roleData?.npi && signupData.roleData.npi.trim() !== '');
       profileUpdate.has_prescriber = hasPrescriber;
       profileUpdate.license_number = hasPrescriber ? signupData.roleData.licenseNumber : null;
       profileUpdate.npi = hasPrescriber ? signupData.roleData.npi : null;

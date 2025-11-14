@@ -28,11 +28,12 @@ serve(async (req) => {
       status: 200,
     });
   } catch (err) {
-    console.error("[agora-token] Error:", err.message);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error("[agora-token] Error:", errorMessage);
     return new Response(
       JSON.stringify({
         ok: false,
-        error: err?.message ?? "Unknown error",
+        error: errorMessage,
         hint: "Ensure AGORA_APP_ID and AGORA_APP_CERTIFICATE are configured in env",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },

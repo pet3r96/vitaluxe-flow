@@ -48,6 +48,13 @@ export const ProductCard = memo(({
   const { effectiveUserId, effectiveRole } = useAuth();
   const { canOrderRx } = usePracticeRxPrivileges();
 
+  if (!product) {
+    import('@/lib/logger').then(({ logger }) => {
+      logger.error('ProductCard received null product', { role, canOrder });
+    });
+    return null;
+  }
+
   // Helper to format prices consistently
   const formatPrice = (value: any) => {
     if (value == null) return '-';

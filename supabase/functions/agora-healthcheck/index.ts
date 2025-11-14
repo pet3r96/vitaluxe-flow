@@ -129,11 +129,12 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error("[agora-healthcheck] Error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("[agora-healthcheck] Error:", errorMessage);
     return new Response(
       JSON.stringify({
         healthy: false,
-        error: error?.message ?? "Unknown error",
+        error: errorMessage,
       }),
       {
         status: 500,
