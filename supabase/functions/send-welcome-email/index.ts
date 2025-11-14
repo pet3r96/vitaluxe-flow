@@ -102,152 +102,65 @@ const handler = async (req: Request): Promise<Response> => {
     
     // Generate email template
     const practiceDisplayName = practiceInfo?.name || practiceInfo?.company || undefined;
-    const practiceName = practiceInfo?.name || practiceInfo?.company || 'Vitaluxe';
 
-    console.log('[send-welcome-email] Sending email type:', isPatient ? 'patient' : 'staff/doctor');
-
-    const emailSubject = isPatient 
-      ? `Welcome to ${practiceName} Patient Portal`
-      : "Welcome to Vitaluxe Services";
-
-    const emailHtml = isPatient ? `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #E2C977; background-color: #0B0B0B; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; }
-          .header { background: linear-gradient(135deg, #8E6E1E 0%, #C8A64B 50%, #E2C977 100%); padding: 30px 20px; text-align: center; }
-          .header h1 { margin: 0; color: #0B0B0B; font-size: 28px; font-weight: bold; letter-spacing: 2px; }
-          .content { background-color: #1A1A1A; padding: 40px 30px; border: 1px solid #292929; }
-          .content h2 { color: #E2C977; margin-top: 0; }
-          .content p { color: #E2C977; }
-          .button { display: inline-block; background-color: #C8A64B; color: #0B0B0B; padding: 14px 35px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: bold; transition: background-color 0.3s; }
-          .button:hover { background-color: #E2C977; }
-          .footer { text-align: center; padding: 25px 20px; color: #8E6E1E; font-size: 12px; background-color: #0B0B0B; }
-          .note { color: #C8A64B; font-size: 13px; margin-top: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>${practiceName}</h1>
-          </div>
-          <div class="content">
-            <h2>Welcome to Your Patient Portal</h2>
-            <p>Hello ${name},</p>
-            <p>Your healthcare provider, ${practiceName}, has created a patient portal account for you.</p>
-            <p>Click the button below to set your password and access your portal:</p>
-            <a href="${resetLink}" class="button">Set Your Password</a>
-            <p class="note">This link will expire in 7 days for security reasons.</p>
-            ${twoFactorEnabled ? '<p class="note"><strong>Note:</strong> Two-factor authentication is enabled for enhanced security. You will need to set up 2FA after creating your password.</p>' : ''}
-            <p>If you have any questions, please contact ${practiceName}${practiceInfo?.phone ? ` at ${practiceInfo.phone}` : ''}.</p>
-          </div>
-          <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} ${practiceName}. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    ` : `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #E2C977; background-color: #0B0B0B; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; }
-          .header { background: linear-gradient(135deg, #8E6E1E 0%, #C8A64B 50%, #E2C977 100%); padding: 30px 20px; text-align: center; }
-          .header h1 { margin: 0; color: #0B0B0B; font-size: 28px; font-weight: bold; letter-spacing: 2px; }
-          .content { background-color: #1A1A1A; padding: 40px 30px; border: 1px solid #292929; }
-          .content h2 { color: #E2C977; margin-top: 0; }
-          .content p { color: #E2C977; }
-          .button { display: inline-block; background-color: #C8A64B; color: #0B0B0B; padding: 14px 35px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: bold; transition: background-color 0.3s; }
-          .button:hover { background-color: #E2C977; }
-          .footer { text-align: center; padding: 25px 20px; color: #8E6E1E; font-size: 12px; background-color: #0B0B0B; }
-          .note { color: #C8A64B; font-size: 13px; margin-top: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>VITALUXE</h1>
-          </div>
-          <div class="content">
-            <h2>Welcome to Vitaluxe Services</h2>
-            <p>Hello ${name},</p>
-            <p>Your account has been created. Click the button below to set your password and access your dashboard:</p>
-            <a href="${resetLink}" class="button">Set Your Password</a>
-            <p class="note">This link will expire in 7 days for security reasons.</p>
-            ${twoFactorEnabled ? '<p class="note"><strong>Note:</strong> Two-factor authentication is enabled for enhanced security. You will need to set up 2FA after creating your password.</p>' : ''}
-            <p>If you have any questions, contact us at support@vitaluxeservices.com</p>
-          </div>
-          <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} Vitaluxe Services. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    console.log('📤 [send-welcome-email] Sending email via Postmark to:', email, 'Type:', isPatient ? 'patient' : 'staff');
-    const postmarkResponse = await fetch("https://api.postmarkapp.com/email", {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "X-Postmark-Server-Token": POSTMARK_API_KEY,
-      },
-      body: JSON.stringify({
-        From: "noreply@vitaluxeservices.com",
-        To: email,
-        Subject: emailSubject,
-        HtmlBody: emailHtml,
-        TextBody: isPatient 
-          ? `Welcome to ${practiceName} Patient Portal\n\nHello ${name},\n\nYour healthcare provider has created a patient portal account for you.\n\nSet your password here: ${resetLink}\n\nThis link will expire in 7 days.\n\n${practiceName}`
-          : `Welcome to Vitaluxe Services\n\nHello ${name},\n\nYour account has been created.\n\nSet your password here: ${resetLink}\n\nThis link will expire in 7 days.\n\nVitaluxe Services`
+    // Call unified email sender
+    console.log('📤 [send-welcome-email] Calling unified-email-sender for:', email, 'Type:', isPatient ? 'patient' : 'staff');
+    
+    const emailPayload = {
+      type: 'transactional',
+      to: email,
+      subject: `Welcome to Vitaluxe${practiceDisplayName ? ` - ${practiceDisplayName}` : ''}`,
+      htmlBody: generateWelcomeEmailHTML({
+        recipientName: name,
+        resetLink,
+        isPatient,
+        practiceName: practiceDisplayName,
+        twoFactorEnabled,
       }),
+      textBody: generateWelcomeEmailText({
+        recipientName: name,
+        resetLink,
+        isPatient,
+        practiceName: practiceDisplayName,
+        twoFactorEnabled,
+      }),
+    };
+    
+    const emailResult = await supabaseAdmin.functions.invoke('unified-email-sender', {
+      body: emailPayload,
     });
 
-    if (!postmarkResponse.ok) {
-      const errorText = await postmarkResponse.text();
-      console.error("❌ [send-welcome-email] Postmark API error:", errorText);
-      throw new Error(`Failed to send email: ${errorText}`);
+    if (emailResult.error) {
+      console.error("❌ [send-welcome-email] Unified email sender error:", emailResult.error);
+      throw new Error(`Email sending failed: ${emailResult.error.message}`);
     }
 
-    const result = await postmarkResponse.json();
-    console.log("✅ [send-welcome-email] Email sent successfully, MessageID:", result.MessageID);
+    const result = emailResult.data;
+    console.log(`[send-welcome-email] ✅ Email sent - messageId: ${result.messageId}, to: ${email}`);
 
-    // Log audit event
-    console.log('[send-welcome-email] Logging audit event...');
-    await supabaseAdmin.rpc('log_audit_event', {
-      p_action_type: 'welcome_email_sent',
-      p_entity_type: 'user',
-      p_entity_id: userId,
-      p_details: { 
-        email_type: isPatient ? 'patient_welcome' : 'staff_welcome',
-        role: role,
-        practice_id: practiceId 
+    // Log to audit_logs
+    await supabaseAdmin.from('audit_logs').insert({
+      action_type: 'email_welcome',
+      user_id: userId,
+      user_email: email,
+      entity_type: 'email',
+      entity_id: result.messageId,
+      details: {
+        role,
+        practiceId,
+        success: true,
       }
     });
 
-    console.log('✅ [send-welcome-email] Complete - returning success');
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Welcome email sent successfully",
-        messageId: result.MessageID 
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: true, messageId: result.messageId }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error: any) {
-    console.error("❌ [send-welcome-email] CRITICAL ERROR:", error);
-    console.error('[send-welcome-email] Error stack:', error?.stack || 'No stack trace');
+    console.error("❌ [send-welcome-email] Fatal error:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || "Failed to send welcome email" 
-      }),
+      JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

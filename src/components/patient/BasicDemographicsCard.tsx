@@ -13,7 +13,7 @@ import { Loader2, User, Calendar, MapPin, Mail, CheckCircle2, Edit2 } from "luci
 import { format, differenceInYears } from "date-fns";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatPatientEmail } from "@/lib/emailUtils";
+import { formatPatientEmail } from "@/lib/email/emailValidation";
 
 interface BasicDemographicsCardProps {
   patientAccount: any;
