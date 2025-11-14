@@ -172,8 +172,25 @@ export const OrdersDataTable = () => {
         console.time(`OrdersEdgeFunctionQuery-${effectiveRole}`);
         console.log(`[OrdersDataTable] Using edge function for role: ${effectiveRole}`);
         
+        // For doctor role, look up their provider ID first
+        let filterIdForOrders = effectiveUserId;
+        if (effectiveRole === "doctor") {
+          const { data: providerData } = await supabase
+            .from("providers")
+            .select("id")
+            .eq("user_id", effectiveUserId)
+            .maybeSingle();
+          
+          if (providerData) {
+            filterIdForOrders = providerData.id;
+            console.log(`[OrdersDataTable] Doctor role - using provider ID:`, filterIdForOrders);
+          } else {
+            console.log(`[OrdersDataTable] Doctor role - no provider found, using user_id:`, filterIdForOrders);
+          }
+        }
+        
         console.log(`[OrdersDataTable] Invoking edge function with:`, {
-          practiceId: effectiveUserId,
+          practiceId: filterIdForOrders,
           role: effectiveRole,
           userId: user?.id
         });
@@ -181,8 +198,8 @@ export const OrdersDataTable = () => {
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-orders-page', {
           body: {
             page: 1,
-            pageSize: 50, // Reduced for faster initial load
-            practiceId: effectiveUserId,
+            pageSize: 50,
+            practiceId: filterIdForOrders,
             role: effectiveRole,
             status: undefined,
             search: undefined

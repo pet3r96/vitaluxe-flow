@@ -1,17 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export const useCartCount = (userId: string | null) => {
+export const useCartCount = (cartOwnerId: string | null) => {
   return useQuery({
-    queryKey: ["cart-count", userId],
+    queryKey: ["cart-count", cartOwnerId],
     queryFn: async () => {
-      if (!userId) return 0;
+      if (!cartOwnerId) {
+        console.log('[useCartCount] No cart owner ID provided');
+        return 0;
+      }
+
+      console.log('[useCartCount] Fetching count for owner:', cartOwnerId);
 
       const { data: cart } = await supabase
         .from("cart")
         .select("id")
-        .eq("doctor_id", userId)
+        .eq("doctor_id", cartOwnerId)
         .maybeSingle();
+
+      console.log('[useCartCount] Cart found:', { cartId: cart?.id, ownerId: cartOwnerId });
 
       if (!cart) return 0;
 
@@ -22,9 +29,11 @@ export const useCartCount = (userId: string | null) => {
         .gte("expires_at", new Date().toISOString());
 
       if (error) throw error;
+      
+      console.log('[useCartCount] Final count:', count || 0);
       return count || 0;
     },
-    enabled: !!userId,
+    enabled: !!cartOwnerId,
     staleTime: 0, // Always fetch fresh data - no caching lag
     refetchOnMount: true, // Always check cart on mount
     refetchOnWindowFocus: true, // Refetch when user returns to tab

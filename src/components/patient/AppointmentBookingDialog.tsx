@@ -82,6 +82,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
     queryKey: ["practice-providers", patientAccount?.practice_id],
     queryFn: async () => {
       if (!patientAccount?.practice_id) return [] as any[];
+      console.log('[AppointmentBooking] Fetching providers for practice:', patientAccount.practice_id);
       const { data, error } = await supabase
         .from("providers")
         .select(`
@@ -93,6 +94,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         `)
         .eq("practice_id", patientAccount.practice_id);
       if (error) throw error;
+      console.log('[AppointmentBooking] Providers loaded:', data?.length);
       
       // Format provider display name with robust fallback
       return (data || []).map((provider: any) => {

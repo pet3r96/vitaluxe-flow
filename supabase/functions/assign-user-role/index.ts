@@ -900,24 +900,26 @@ serve(async (req) => {
       console.log('[assign-user-role] Invoking send-verification-email function with userId:', userId);
       
       try {
-        const emailPayload = {
-          userId: userId,
-          email: signupData.email,
-          name: signupData.name
-        };
-        console.log('[assign-user-role] Email payload:', emailPayload);
+        const correlationId = crypto.randomUUID();
+        console.log(`[assign-user-role] ${correlationId} - Invoking email-dispatcher for verification`);
         
-        const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-verification-email', {
-          body: emailPayload
+        const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('email-dispatcher', {
+          body: {
+            type: 'verification',
+            userId: userId,
+            email: signupData.email,
+            name: signupData.name,
+            correlationId
+          }
         });
 
         if (emailError) {
-          console.error('❌ [assign-user-role] Error response from send-verification-email:', emailError);
+          console.error(`❌ [assign-user-role] ${correlationId} - Email dispatch failed:`, emailError);
         } else {
-          console.log('✅ [assign-user-role] Verification email sent successfully:', emailData);
+          console.log(`✅ [assign-user-role] ${correlationId} - Email dispatched:`, emailData);
         }
       } catch (emailErr) {
-        console.error('❌ [assign-user-role] Exception invoking send-verification-email:', emailErr);
+        console.error('❌ [assign-user-role] Exception invoking email-dispatcher:', emailErr);
       }
     } else if (isAdminCreated && signupData.role !== 'admin' && signupData.role !== 'staff') {
       // Admin-created (but NOT staff): Send temp password email and set password status
