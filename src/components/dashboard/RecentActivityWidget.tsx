@@ -5,11 +5,18 @@ import { Activity, FileText, Calendar, Package, CheckCircle } from "lucide-react
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function RecentActivityWidget({ className }: { className?: string }) {
+interface RecentActivityWidgetProps {
+  className?: string;
+  activities?: any[];
+  isPharmacy?: boolean;
+}
+
+export function RecentActivityWidget({ className, activities: externalActivities, isPharmacy }: RecentActivityWidgetProps) {
   const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
+  
   const { data: activities, isLoading } = useQuery({
     queryKey: ["recent-activity", effectivePracticeId, effectiveRole, effectiveUserId],
-    enabled: !!effectiveUserId,
+    enabled: !externalActivities && !!effectiveUserId,
     queryFn: async () => {
       if (!effectiveUserId) return [] as any[];
       
@@ -213,8 +220,21 @@ export function RecentActivityWidget({ className }: { className?: string }) {
         .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
         .slice(0, 5);
     },
-    refetchInterval: 60000,
+    refetchInterval: externalActivities ? undefined : 60000,
   });
+
+  // Use external activities if provided, otherwise use fetched activities
+  const finalActivities = externalActivities || activities;
+
+  // Transform external pharmacy activities if needed
+  const displayActivities = externalActivities && isPharmacy
+    ? externalActivities.map((activity: any) => ({
+        type: "order",
+        icon: Package,
+        description: `Order ${activity.order_id?.substring(0, 8)} - ${activity.status}`,
+        time: activity.created_at,
+      }))
+    : finalActivities;
 
   return (
     <Card variant="modern" className={className}>
@@ -225,15 +245,15 @@ export function RecentActivityWidget({ className }: { className?: string }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        {isLoading ? (
+        {!externalActivities && isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="h-12 bg-muted/50 animate-pulse rounded-lg" />
             ))}
           </div>
-        ) : activities && activities.length > 0 ? (
+        ) : displayActivities && displayActivities.length > 0 ? (
           <div className="space-y-2">
-            {activities.map((activity, index) => {
+            {displayActivities.map((activity, index) => {
               const Icon = activity.icon;
               return (
                 <div 

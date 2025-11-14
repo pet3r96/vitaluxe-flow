@@ -25,6 +25,8 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { TabbedAppointmentsWidget } from "@/components/dashboard/TabbedAppointmentsWidget";
 import { TabbedCommunicationsWidget } from "@/components/dashboard/TabbedCommunicationsWidget";
 import { DayViewCalendar } from "@/components/dashboard/DayViewCalendar";
+import { usePharmacyDashboard } from "@/hooks/usePharmacyDashboard";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
@@ -83,6 +85,12 @@ const Dashboard = () => {
   const usersLoading = statsLoading;
   const pendingRevenueLoading = statsLoading;
   const collectedRevenueLoading = statsLoading;
+
+  // Pharmacy-specific batched stats
+  const { data: pharmacyStats, isLoading: loadingPharmacy } = usePharmacyDashboard(
+    effectiveUserId,
+    effectiveRole
+  );
 
   // Real-time subscriptions for instant dashboard updates
   useEffect(() => {
@@ -343,8 +351,71 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Stats cards for other roles */}
-      {(effectiveRole === 'pharmacy' || effectiveRole === 'admin') && (
+      {/* Stats cards for pharmacy */}
+      {effectiveRole === 'pharmacy' && (
+        <>
+          {loadingPharmacy ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 flex-1 min-w-0">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                      <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{pharmacyStats?.ordersCount || 0}</div>
+                      <p className="text-xs text-muted-foreground">All orders</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{pharmacyStats?.pendingOrdersCount || 0}</div>
+                      <p className="text-xs text-muted-foreground">Orders awaiting fulfillment</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Products</CardTitle>
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{pharmacyStats?.productsCount || 0}</div>
+                      <p className="text-xs text-muted-foreground">Active products</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch">
+                <div className="lg:col-span-1">
+                  <OrdersBreakdown data={pharmacyStats?.ordersByStatus || {}} />
+                </div>
+                <div className="lg:col-span-2">
+                  <RecentActivityWidget 
+                    className="h-full" 
+                    activities={pharmacyStats?.recentActivity || []}
+                    isPharmacy={true}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* Stats cards for admin */}
+      {effectiveRole === 'admin' && (
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 flex-1 min-w-0">
             <StatCardWithChart
@@ -365,56 +436,27 @@ const Dashboard = () => {
               role={effectiveRole}
               userId={effectiveUserId}
             />
-            {effectiveRole === "pharmacy" && (
-              <StatCardWithChart
-                title="Pending Orders"
-                metricKey="pending_orders"
-                icon={Clock}
-                description="Orders awaiting fulfillment"
-                currentValue={(pendingOrdersLoading || pendingOrdersCount === undefined) ? "..." : pendingOrdersCount.toString()}
-                role={effectiveRole}
-                userId={effectiveUserId}
-              />
-            )}
-            {effectiveRole === "admin" && (
-              <>
-                <StatCardWithChart
-                  title="Users"
-                  metricKey="users"
-                  icon={Users}
-                  description="Active accounts"
-                  currentValue={(usersLoading || usersCount === undefined) ? "..." : usersCount.toString()}
-                  role={effectiveRole}
-                  userId={effectiveUserId}
-                />
-                <StatCardWithChart
-                  title="Collected Revenue"
-                  metricKey="revenue"
-                  icon={DollarSign}
-                  description="Paid orders revenue"
-                  currentValue={(collectedRevenueLoading || collectedRevenue === undefined) ? "..." : `$${collectedRevenue.toFixed(2)}`}
-                  role={effectiveRole}
-                  userId={effectiveUserId}
-                  valueFormatter={(v) => `$${v.toFixed(2)}`}
-                />
-              </>
-            )}
+            <StatCardWithChart
+              title="Users"
+              metricKey="users"
+              icon={Users}
+              description="Active accounts"
+              currentValue={(usersLoading || usersCount === undefined) ? "..." : usersCount.toString()}
+              role={effectiveRole}
+              userId={effectiveUserId}
+            />
+            <StatCardWithChart
+              title="Collected Revenue"
+              metricKey="revenue"
+              icon={DollarSign}
+              description="Paid orders revenue"
+              currentValue={(collectedRevenueLoading || collectedRevenue === undefined) ? "..." : `$${collectedRevenue.toFixed(2)}`}
+              role={effectiveRole}
+              userId={effectiveUserId}
+              valueFormatter={(v) => `$${v.toFixed(2)}`}
+            />
           </div>
         </div>
-      )}
-
-      {/* For pharmacy: show Orders by Status next to stats + Recent Activity */}
-      {isSubscribed && effectiveRole === 'pharmacy' && (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch">
-            <div className="lg:col-span-1">
-              <OrdersBreakdown />
-            </div>
-            <div className="lg:col-span-2">
-              <RecentActivityWidget className="h-full" />
-            </div>
-          </div>
-        </>
       )}
 
       {/* For admin: Analytics (includes Revenue + Orders) and Recent Activity */}
