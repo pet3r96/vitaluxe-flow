@@ -64,10 +64,6 @@ export default function Checkout() {
   const { calculateMerchantFee } = useMerchantFee();
   const merchantFeePercentage = location.state?.merchantFeePercentage || 3.75;
 
-  // Staff without ordering privileges cannot access checkout - compute flags only (avoid early return before hooks)
-  const showStaffCheckoutLoading = checkingPrivileges && isStaffAccount;
-  const showStaffCheckoutNoAccess = isStaffAccount && !canOrder;
-
   // For staff members and providers with ordering privileges, use practice payment methods
   const practiceIdForPayment = (isStaffAccount || isProviderAccount) ? effectivePracticeId : effectiveUserId;
 
@@ -109,6 +105,10 @@ export default function Checkout() {
     staleTime: 5000,
     refetchOnWindowFocus: false,
   });
+
+  // Staff privilege checks - compute after hooks
+  const showStaffCheckoutLoading = checkingPrivileges && isStaffAccount;
+  const showStaffCheckoutNoAccess = isStaffAccount && !canOrder;
 
   // Calculate merchant fee - must come after cart query to avoid TDZ
   const merchantFeeAmount = useMemo(() => {
