@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
     
     const { data: patientWithUser, error: patientUserError } = await supabaseClient
       .from('patient_accounts')
-      .select('user_id, first_name, last_name, email, phone')
+      .select('user_id, first_name, last_name, email, phone, practice_id')
       .eq('id', data.patient_id)
       .single();
 

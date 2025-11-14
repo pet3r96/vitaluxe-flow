@@ -88,13 +88,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Profiles is returned as array from foreign key relationship  
+    const profile = Array.isArray(patientAccount.profiles) ? patientAccount.profiles[0] : patientAccount.profiles;
+    
     const response = {
       patientAccountId: patientAccount.id,
       practiceId: patientAccount.practice_id,
       practice: patientAccount.practice_id ? {
-        name: patientAccount.profiles?.name || null,
-        city: patientAccount.profiles?.address_city || null,
-        state: patientAccount.profiles?.address_state || null,
+        name: profile?.name || null,
+        city: profile?.address_city || null,
+        state: profile?.address_state || null,
       } : null
     };
 
