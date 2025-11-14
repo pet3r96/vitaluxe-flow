@@ -34,6 +34,39 @@ Deno.serve(async (req) => {
 
     console.log('[get-patient-dashboard-data] 👤 User ID:', user.id);
 
+    // If user is not a patient, return an empty dashboard payload gracefully
+    const { data: rolesData } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+
+    const isPatient = Array.isArray(rolesData) && rolesData.some((r: any) => r.role === 'patient');
+    if (!isPatient) {
+      console.log('[get-pient-dashboard-data] ℹ️ User is not a patient; returning empty payload');
+      const emptyPayload: DashboardData = {
+        patientAccount: null,
+        medicalVault: {
+          medications_count: 0,
+          allergies_count: 0,
+          conditions_count: 0,
+          surgeries_count: 0,
+          immunizations_count: 0,
+          vitals_count: 0,
+          pharmacies_count: 0,
+          emergency_contacts_count: 0,
+          has_data: false,
+        },
+        nextAppointment: null,
+        unreadMessagesCount: 0,
+        recentAppointments: [],
+        recentMessages: [],
+      };
+      return new Response(
+        JSON.stringify(emptyPayload),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Fetch all data in parallel
     const [
       patientAccountRes,
