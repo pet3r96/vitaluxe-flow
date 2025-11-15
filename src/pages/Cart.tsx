@@ -264,8 +264,9 @@ const Cart = React.memo(function Cart() {
       return;
     }
 
-    // Check if we've already normalized this cart
+    // CRITICAL: Early exit if already done for this cart
     if (normalizeOnceRef.current.cartId === cart.id && normalizeOnceRef.current.done) {
+      console.log('[Cart] Normalization already completed for cart:', cart.id);
       return;
     }
 
@@ -292,10 +293,16 @@ const Cart = React.memo(function Cart() {
       groups.get(key).lines.push(line);
     });
 
-    // Build normalization plan
+    // Build normalization plan - SKIP groups already normalized
     const normalizationPlan: Array<{ lineIds: string[]; targetSpeed: 'ground' | '2day' | 'overnight'; groupKey: string }> = [];
     
     groups.forEach((group: any, key: string) => {
+      // Skip if already normalized
+      if (normalizedGroupsRef.current.has(key)) {
+        console.log('[Cart] Skipping already normalized group:', key);
+        return;
+      }
+
       const rates = pharmacyRatesMap?.[group.pharmacy_id];
       const enabledSpeeds = rates ? Object.keys(rates) as ('ground' | '2day' | 'overnight')[] : [];
       
@@ -315,20 +322,28 @@ const Cart = React.memo(function Cart() {
 
     console.log('[Cart] Executing normalization plan for', normalizationPlan.length, 'groups');
 
-    // Execute all normalizations
-    Promise.all(
-      normalizationPlan.map(({ lineIds, targetSpeed, groupKey }) => {
-        normalizedGroupsRef.current.add(groupKey);
-        return updateShippingSpeedMutation.mutateAsync({ lineIds, shipping_speed: targetSpeed });
-      })
-    ).then(() => {
-      console.log('[Cart] Normalization complete for cart:', cart.id);
-      normalizeOnceRef.current.done = true;
-    }).catch((error) => {
-      console.error('[Cart] Normalization failed:', error);
-      normalizeOnceRef.current.done = true; // Mark done even on error to prevent infinite retries
-    });
-  }, [cart?.id, cart?.lines, ratesLoading, pharmacyRatesMap]); // mutateAsync is stable from useMutation
+    // Mark done IMMEDIATELY to prevent re-entrancy
+    normalizeOnceRef.current.done = true;
+
+    // Execute normalizations SEQUENTIALLY to avoid burst load
+    (async () => {
+      try {
+        for (const { lineIds, targetSpeed, groupKey } of normalizationPlan) {
+          console.log('[Cart] Normalizing group:', groupKey);
+          normalizedGroupsRef.current.add(groupKey);
+          await updateShippingSpeedMutation.mutateAsync({ lineIds, shipping_speed: targetSpeed });
+        }
+        console.log('[Cart] Normalization complete for cart:', cart.id);
+      } catch (error) {
+        console.error('[Cart] Normalization failed:', error);
+        toast({
+          title: "Shipping speed adjustment",
+          description: "Some shipping speeds couldn't be updated. Your cart is still valid.",
+          variant: "default",
+        });
+      }
+    })();
+  }, [cart?.id, cart?.lines, ratesLoading, pharmacyRatesMap, updateShippingSpeedMutation, toast]);
 
   useEffect(() => {
     console.timeEnd('Cart-Render');
