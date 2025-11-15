@@ -145,7 +145,7 @@ serve(async (req) => {
             product_types ( name )
           )
         )
-      `, { count: 'planned', head: false })
+      `, { count: 'exact', head: false })
       .not('status', 'is', null) // Use partial index
       .limit(1, { foreignTable: 'order_lines' }); // Only fetch 1 order_line per order
 
@@ -162,12 +162,46 @@ serve(async (req) => {
     
     if (roleNorm === 'doctor') {
       // DOCTOR = practice owner
-      // Filter by orders for this practice owner
       console.log('[get-orders-page] Doctor (practice owner) filter. practiceId:', practiceId, 'userId:', userId);
       
-      // Use practiceId if provided, fallback to userId
       const doctorFilterId = practiceId || userId;
-      query = query.eq('doctor_id', doctorFilterId);
+      
+      // TWO-PHASE: Fetch order IDs first
+      const { data: orderIds, error: orderIdsError } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('doctor_id', doctorFilterId)
+        .gte('created_at', dateFrom)
+        .not('status', 'is', null)
+        .limit(2000);
+      
+      if (orderIdsError) {
+        console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
+        return new Response(
+          JSON.stringify({ error: `Failed to fetch order IDs: ${parseErr(orderIdsError)}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const uniqueOrderIds = orderIds?.map(o => o.id) || [];
+      
+      if (uniqueOrderIds.length === 0) {
+        console.log('[get-orders-page] ℹ️ No orders found for doctor');
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            total: 0,
+            page,
+            pageSize: safePageSize,
+            totalPages: 0,
+            hasNextPage: false,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for doctor`);
+      query = query.in('id', uniqueOrderIds);
       
     } else if (roleNorm === 'provider') {
       // PROVIDER = regular prescriber
@@ -241,9 +275,44 @@ serve(async (req) => {
       query = query.in('id', uniqueOrderIds);
       
     } else if (roleNorm === 'practice' || roleNorm === 'staff') {
-      // Practice/staff filter by doctor_id
       console.log(`[get-orders-page] ${roleNorm === 'staff' ? 'Staff' : 'Practice'} filter: doctor_id = ${practiceId}`);
-      query = query.eq('doctor_id', practiceId);
+      
+      // TWO-PHASE: Fetch order IDs first
+      const { data: orderIds, error: orderIdsError } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('doctor_id', practiceId)
+        .gte('created_at', dateFrom)
+        .not('status', 'is', null)
+        .limit(2000);
+      
+      if (orderIdsError) {
+        console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
+        return new Response(
+          JSON.stringify({ error: `Failed to fetch order IDs: ${parseErr(orderIdsError)}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const uniqueOrderIds = orderIds?.map(o => o.id) || [];
+      
+      if (uniqueOrderIds.length === 0) {
+        console.log(`[get-orders-page] ℹ️ No orders found for ${roleNorm}`);
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            total: 0,
+            page,
+            pageSize: safePageSize,
+            totalPages: 0,
+            hasNextPage: false,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for ${roleNorm}`);
+      query = query.in('id', uniqueOrderIds);
       
     } else if (roleNorm === 'pharmacy') {
       // Get pharmacy ID for this user
