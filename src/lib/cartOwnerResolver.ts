@@ -18,46 +18,16 @@ export async function resolveCartOwnerUserId(
     return userId;
   }
 
-  // Staff and practice users need their practice's provider
-  if ((role === 'staff' || role === 'practice') && practiceId) {
-    console.log('[CartOwnerResolver] Staff/practice - looking up provider for practice:', practiceId);
-    
-    const { data: provider, error } = await supabase
-      .from('providers')
-      .select('user_id')
-      .eq('practice_id', practiceId)
-      .eq('active', true)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+  // Staff users: use practice_id directly for shared practice cart
+  if (role === 'staff' && practiceId) {
+    console.log('[CartOwnerResolver] Staff - using practice_id for cart:', practiceId);
+    return practiceId;
+  }
 
-    if (error) {
-      console.error('[CartOwnerResolver] Error fetching provider:', error);
-      return null;
-    }
-
-    if (!provider) {
-      console.warn('[CartOwnerResolver] No active provider found for practice:', practiceId);
-      
-      // CRITICAL FIX: Check if this staff user IS a provider themselves
-      const { data: staffAsProvider, error: providerError } = await supabase
-        .from('providers')
-        .select('user_id, practice_id')
-        .eq('user_id', userId)
-        .eq('active', true)
-        .maybeSingle();
-      
-      if (!providerError && staffAsProvider) {
-        console.log('[CartOwnerResolver] Staff IS a provider - using their user_id:', userId);
-        return userId;
-      }
-      
-      console.error('[CartOwnerResolver] CRITICAL: No provider found for staff/practice user. practiceId:', practiceId, 'userId:', userId);
-      return null;
-    }
-
-    console.log('[CartOwnerResolver] Resolved to provider user_id:', provider.user_id);
-    return provider.user_id;
+  // Practice users: use their own user_id (which should equal practice_id)
+  if (role === 'practice') {
+    console.log('[CartOwnerResolver] Practice user - using own user_id:', userId);
+    return userId;
   }
 
   // Admin and other roles - use their own ID as fallback

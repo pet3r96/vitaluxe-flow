@@ -294,18 +294,27 @@ export const ProductsDataTable = () => {
         }
       }
 
-      // CART OPERATIONS: Always use effectiveUserId (provider's or practice's user_id)
-      // This ensures providers see their own cart items
+      // CRITICAL FIX: Need to resolve cart owner for staff/practice users
+      // Import and use cartOwnerResolver at the top of the file
+      const { resolveCartOwnerUserId } = await import("@/lib/cartOwnerResolver");
+      const cartOwnerId = await resolveCartOwnerUserId(effectiveUserId, effectiveRole!, effectivePracticeId);
+      const cartOwnerForDb = cartOwnerId || effectiveUserId;
+      
+      if (!cartOwnerForDb) {
+        toast.error("Unable to determine cart owner. Please contact support.");
+        return;
+      }
+
       let { data: cart } = await supabase
         .from("cart")
         .select("id")
-        .eq("doctor_id", effectiveUserId)
+        .eq("doctor_id", cartOwnerForDb)
         .single();
 
       if (!cart) {
         const { data: newCart, error: cartError } = await supabase
           .from("cart")
-          .insert({ doctor_id: effectiveUserId })
+          .insert({ doctor_id: cartOwnerForDb })
           .select("id")
           .single();
 
