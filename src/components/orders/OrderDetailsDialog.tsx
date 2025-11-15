@@ -89,7 +89,10 @@ export const OrderDetailsDialog = ({
             card_expiry
           ),
           profiles!orders_doctor_id_fkey (
-            name
+            name,
+            prescriber_name,
+            full_name,
+            email
           )
         `)
         .eq("id", order.id)
@@ -538,7 +541,7 @@ export const OrderDetailsDialog = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Doctor</p>
-              <p className="font-medium">{order.profiles?.name || "N/A"}</p>
+              <p className="font-medium">{order.profiles?.prescriber_name || order.profiles?.full_name || order.profiles?.name || "N/A"}</p>
             </div>
             {effectiveRole !== "pharmacy" && (
               <div className="col-span-2">

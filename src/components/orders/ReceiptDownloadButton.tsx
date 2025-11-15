@@ -34,6 +34,13 @@ export const ReceiptDownloadButton = ({
       // Get current session to pass Authorization header
       const { data: { session } } = await supabase.auth.getSession();
       
+      console.log('[ReceiptDownloadButton] Invoking function with:', {
+        orderId,
+        orderDate,
+        practiceName,
+        effectiveUserId
+      });
+      
       const { data, error } = await supabase.functions.invoke('generate-order-receipt', {
         headers: {
           Authorization: `Bearer ${session?.access_token}`
@@ -44,6 +51,12 @@ export const ReceiptDownloadButton = ({
         }
       });
 
+      console.log('[ReceiptDownloadButton] Function response:', {
+        data,
+        error,
+        hasUrl: !!data?.url
+      });
+
       if (error) {
         import('@/lib/logger').then(({ logger }) => {
           logger.error('Error generating receipt', error);
@@ -51,7 +64,9 @@ export const ReceiptDownloadButton = ({
         
         // Handle specific error cases with helpful messages
         let errorMessage = 'Failed to generate receipt. Please try again.';
-        if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
+        if (error.message?.includes('503')) {
+          errorMessage = 'The receipt generator is starting up. Please try again in a moment.';
+        } else if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
           errorMessage = 'Your session expired. Please sign in again.';
         } else if (error.message?.includes('403') || error.message?.includes('not authorized')) {
           errorMessage = 'You don\'t have access to this receipt.';
