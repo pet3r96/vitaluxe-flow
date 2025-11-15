@@ -105,8 +105,8 @@ export function useCart(
       }
     },
     enabled: !!userId && stableOptions.enabled,
-    staleTime: 1000, // 1 second cache for immediate updates
-    gcTime: 1000,
+    staleTime: 5000, // 5 second cache to prevent excessive fetches
+    gcTime: 10000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: stableOptions.refetchOnMount,
