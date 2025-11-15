@@ -260,7 +260,7 @@ const Cart = React.memo(function Cart() {
 
   // Auto-normalize shipping speeds - RUNS ONLY ONCE per cart load
   useEffect(() => {
-    if (!cart?.id || ratesLoading) {
+    if (!cart?.id || !cart.lines || ratesLoading) {
       return;
     }
 
@@ -277,15 +277,30 @@ const Cart = React.memo(function Cart() {
 
     console.log('[Cart] Auto-normalization check starting for cart:', cart.id);
 
+    // Calculate patient groups inline to avoid stale closures
+    const groups = new Map();
+    cart.lines.forEach((line: any) => {
+      const key = `${line.patient_id || 'practice'}_${line.assigned_pharmacy_id || 'unknown'}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          patient_id: line.patient_id,
+          pharmacy_id: line.assigned_pharmacy_id,
+          shipping_speed: line.shipping_speed || 'standard',
+          lines: []
+        });
+      }
+      groups.get(key).lines.push(line);
+    });
+
     // Build normalization plan
     const normalizationPlan: Array<{ lineIds: string[]; targetSpeed: 'ground' | '2day' | 'overnight'; groupKey: string }> = [];
     
-    patientGroups.forEach((group: any) => {
-      const key = `${group.patient_id || 'practice'}_${group.pharmacy_id || 'unknown'}`;
-      const enabled = getEnabledSpeeds(group.pharmacy_id);
+    groups.forEach((group: any, key: string) => {
+      const rates = pharmacyRatesMap?.[group.pharmacy_id];
+      const enabledSpeeds = rates ? Object.keys(rates) as ('ground' | '2day' | 'overnight')[] : [];
       
-      if (enabled && enabled.length > 0 && !enabled.includes(group.shipping_speed)) {
-        const targetSpeed = enabled[0];
+      if (enabledSpeeds.length > 0 && !enabledSpeeds.includes(group.shipping_speed)) {
+        const targetSpeed = enabledSpeeds[0];
         const lineIds = group.lines.map((l: any) => l.id);
         normalizationPlan.push({ lineIds, targetSpeed, groupKey: key });
         console.log('[Cart] Will normalize group:', { key, from: group.shipping_speed, to: targetSpeed, lineCount: lineIds.length });
@@ -313,9 +328,7 @@ const Cart = React.memo(function Cart() {
       console.error('[Cart] Normalization failed:', error);
       normalizeOnceRef.current.done = true; // Mark done even on error to prevent infinite retries
     });
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart?.id, ratesLoading]); // ONLY depend on cart.id and ratesLoading
+  }, [cart?.id, cart?.lines, ratesLoading, pharmacyRatesMap]); // mutateAsync is stable from useMutation
 
   useEffect(() => {
     console.timeEnd('Cart-Render');
