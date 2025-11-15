@@ -123,7 +123,7 @@ serve(async (req) => {
     const to = from + safePageSize - 1;
 
     // Build base query with minimal columns for list view
-    // CRITICAL: Remove !inner to prevent row inflation, limit nested to 1 row
+    // Use count: 'planned' for performance (estimated count, fast)
     let query = supabase
       .from('orders')
       .select(`
@@ -134,7 +134,7 @@ serve(async (req) => {
         payment_status,
         doctor_id,
         ship_to,
-        order_lines (
+        order_lines!inner (
           id,
           status,
           patient_name,
@@ -145,7 +145,7 @@ serve(async (req) => {
             product_types ( name )
           )
       )
-    `, { count: 'exact', head: false })
+    `, { count: 'planned', head: false })
     .not('status', 'is', null); // Use partial index
 
   // Apply date range filter
