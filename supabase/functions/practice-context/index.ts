@@ -105,10 +105,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Check if user is staff
+    // 4. Check if user is staff - use practice_staff table
     if (!practiceId) {
       const { data: staff } = await supabaseAdmin
-        .from('staff')
+        .from('practice_staff')
         .select('practice_id')
         .eq('user_id', effectiveUserId)
         .maybeSingle();
