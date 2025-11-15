@@ -87,6 +87,9 @@ export const OrderDetailsDialog = ({
             card_type,
             card_last_five,
             card_expiry
+          ),
+          profiles!orders_doctor_id_fkey (
+            name
           )
         `)
         .eq("id", order.id)

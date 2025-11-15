@@ -190,10 +190,9 @@ const Cart = React.memo(function Cart() {
   // All mutations
   const removeMutation = useMutation({
     mutationFn: async (lineId: string) => {
-      const { error } = await supabase
-        .from("cart_lines")
-        .delete()
-        .eq("id", lineId);
+      const { error } = await supabase.functions.invoke('remove-cart-line', {
+        body: { lineId }
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -208,12 +207,11 @@ const Cart = React.memo(function Cart() {
 
   const updateShippingSpeedMutation = useMutation({
     mutationFn: async ({ lineIds, shipping_speed }: { lineIds: string[]; shipping_speed: 'ground' | '2day' | 'overnight' }) => {
-      const { error } = await supabase
-        .from("cart_lines")
-        .update({ shipping_speed })
-        .in("id", lineIds);
+      const { data, error } = await supabase.functions.invoke('update-shipping-speed', {
+        body: { lineIds, shipping_speed }
+      });
       if (error) throw error;
-      return { lineIds, shipping_speed };
+      return data;
     },
     onSuccess: (data) => {
       // Optimized: Update cache directly instead of invalidating to prevent refetch loops
@@ -669,14 +667,9 @@ const CartWithErrorBoundary = () => (
                       );
                       
                       if (cartOwnerId) {
-                        const { data: cart } = await supabase
-                          .from('cart')
-                          .select('id')
-                          .eq('doctor_id', cartOwnerId)
-                          .maybeSingle();
-                        if (cart) {
-                          await supabase.from('cart_lines').delete().eq('cart_id', cart.id);
-                        }
+                        await supabase.functions.invoke('clear-cart', {
+                          body: { cartOwnerId }
+                        });
                       }
                     }
                     window.location.href = '/products';

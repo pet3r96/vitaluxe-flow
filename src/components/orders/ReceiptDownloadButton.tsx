@@ -31,7 +31,13 @@ export const ReceiptDownloadButton = ({
     try {
       setIsGenerating(true);
 
+      // Get current session to pass Authorization header
+      const { data: { session } } = await supabase.auth.getSession();
+      
       const { data, error } = await supabase.functions.invoke('generate-order-receipt', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        },
         body: { 
           order_id: orderId,
           effectiveUserId

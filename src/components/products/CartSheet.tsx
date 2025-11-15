@@ -56,10 +56,9 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
         throw new Error("Quantity must be at least 1");
       }
 
-      const { error } = await supabase
-        .from("cart_lines")
-        .update({ quantity: newQuantity })
-        .eq("id", lineId);
+      const { error } = await supabase.functions.invoke('update-cart-lines', {
+        body: { lineId, quantity: newQuantity }
+      });
 
       if (error) throw error;
     },
@@ -74,10 +73,9 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
 
   const removeItemMutation = useMutation({
     mutationFn: async (lineId: string) => {
-      const { error } = await supabase
-        .from("cart_lines")
-        .delete()
-        .eq("id", lineId);
+      const { error } = await supabase.functions.invoke('remove-cart-line', {
+        body: { lineId }
+      });
 
       if (error) throw error;
     },

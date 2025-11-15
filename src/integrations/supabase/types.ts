@@ -2130,6 +2130,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications_sent: {
+        Row: {
+          created_at: string
+          entity_id: string
+          event_type: string
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          recipient: string
+          sent_at: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          event_type: string
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient: string
+          sent_at?: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          event_type?: string
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient?: string
+          sent_at?: string
+        }
+        Relationships: []
+      }
       order_lines: {
         Row: {
           assigned_pharmacy_id: string | null

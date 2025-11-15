@@ -94,75 +94,23 @@ export function useCart(
       if (!userId) return { id: '', lines: [] };
 
       try {
-        const { data: cartData, error: cartError } = await supabase
-          .from("cart")
-          .select("id")
-          .eq("doctor_id", userId)
-          .maybeSingle();
-
-        if (cartError) throw cartError;
-        if (!cartData) return { id: '', lines: [] };
-
-      // Build select query
-      let selectFields = `
-        *,
-        product:products(${productFields})
-      `;
-
-      if (includePharmacy) {
-        selectFields += `,pharmacy:pharmacies(name)`;
-      }
-
-      if (includeProvider) {
-        selectFields += `,provider:providers(
-          id,
-          user_id,
-          profiles!providers_user_id_fkey(name, npi, dea)
-        )`;
-      }
-
-      const { data: linesRaw, error: linesError } = await supabase
-        .from("cart_lines")
-        .select(selectFields)
-        .eq("cart_id", cartData.id)
-        .gte("expires_at", new Date().toISOString());
-
-      if (linesError) throw linesError;
-
-      const lines = (linesRaw || []) as any[] as CartLine[];
-
-      // Manually hydrate patient data if requested
-      if (hydratePatients) {
-        const patientIds = Array.from(
-          new Set(lines.map((l) => l.patient_id).filter(Boolean))
-        );
-        
-        if (patientIds.length > 0) {
-          const { data: patients, error: patientsError } = await supabase
-            .from("patient_accounts")
-            .select(
-              "id, name, first_name, last_name, address_street, address_city, address_state, address_zip, address_formatted"
-            )
-            .in("id", patientIds);
-
-          if (!patientsError && patients) {
-            const patientMap = new Map(patients.map((p: any) => [p.id, p]));
-            for (const line of lines) {
-              if (line.patient_id) {
-                const patient = patientMap.get(line.patient_id) || null;
-                line.patient = patient;
-                // Preserve patient_name for validation
-                line.patient_name = patient?.name || line.patient_name;
-              }
-            }
+        // Use edge function for cart operations
+        const { data, error } = await supabase.functions.invoke('get-cart', {
+          body: {
+            cartOwnerId: userId,
+            productFields,
+            includePharmacy,
+            includeProvider,
+            hydratePatients
           }
-        }
-      }
+        });
 
-        return {
-          id: cartData.id,
-          lines,
-        };
+        if (error) {
+          console.error('[useCart] Error from get-cart function:', error);
+          throw error;
+        }
+
+        return data || { id: '', lines: [] };
       } catch (error) {
         console.error('[useCart] Error fetching cart:', error);
         return { id: '', lines: [] };

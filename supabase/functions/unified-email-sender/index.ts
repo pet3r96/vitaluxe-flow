@@ -19,6 +19,10 @@ interface EmailPayload {
   
   // Correlation tracking
   correlationId?: string;
+  
+  // Idempotency
+  idempotencyKey?: string;
+  entityId?: string;
 }
 
 serve(async (req) => {
@@ -40,6 +44,30 @@ serve(async (req) => {
     payload.correlationId = payload.correlationId || correlationId;
 
     console.log(`[unified-email-sender] ${payload.correlationId} - Type: ${payload.type}, To: ${payload.to}`);
+
+    // Check idempotency - prevent duplicate sends
+    if (payload.eventType && payload.entityId) {
+      const { data: existingSend } = await supabaseAdmin
+        .from('notifications_sent')
+        .select('id')
+        .eq('event_type', payload.eventType)
+        .eq('entity_id', payload.entityId)
+        .eq('recipient', payload.to)
+        .maybeSingle();
+
+      if (existingSend) {
+        console.log(`[unified-email-sender] ${payload.correlationId} - Duplicate prevented for ${payload.eventType}/${payload.entityId}`);
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            skipped: true,
+            reason: 'already_sent',
+            correlationId: payload.correlationId 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Validate placeholder email
     if (isPlaceholderEmail(payload.to)) {
@@ -170,6 +198,25 @@ serve(async (req) => {
     }
 
     if (success) {
+      // Record successful send for idempotency
+      if (payload.eventType && payload.entityId) {
+        await supabaseAdmin
+          .from('notifications_sent')
+          .upsert({
+            event_type: payload.eventType,
+            entity_id: payload.entityId,
+            recipient: payload.to,
+            message_id: messageId || undefined,
+            metadata: {
+              correlationId: payload.correlationId,
+              attempts: attempt,
+              subject: payload.subject,
+            }
+          }, {
+            onConflict: 'event_type,entity_id,recipient'
+          });
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true, 
