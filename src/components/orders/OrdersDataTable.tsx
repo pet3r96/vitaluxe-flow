@@ -226,7 +226,7 @@ export const OrdersDataTable = () => {
       }
     },
     {
-      staleTime: 0, // Always fetch fresh data - critical for orders appearing after checkout
+      staleTime: 30000, // 30 second cache - prevents excessive fetches on filter changes // Always fetch fresh data - critical for orders appearing after checkout
       gcTime: 5 * 60 * 1000,
       refetchOnMount: true,
       refetchOnWindowFocus: false, // Don't refetch on tab switch (performance)

@@ -34,7 +34,11 @@ const Cart = React.memo(function Cart() {
   const [discountCode, setDiscountCode] = useState<string | null>(null);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   const normalizedGroupsRef = useRef<Set<string>>(new Set());
-  const normalizeOnceRef = useRef<{ cartId: string | null; done: boolean; version?: string }>({ cartId: null, done: false });
+  const normalizeOnceRef = useRef<{ cartId: string | null; done: boolean; version?: string }>({ 
+    cartId: null, 
+    done: false,
+    version: undefined 
+  });
   const realtimeChannelRef = useRef<any>(null);
   const invalidationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
