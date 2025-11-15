@@ -185,7 +185,8 @@ Deno.serve(async (req) => {
               .eq('pharmacy_id', pharmacyData.id);
             count = productCount || 0;
           }
-        } else if (role === 'admin' && !isImpersonating) {
+        } else if ((role === 'admin' || role === 'staff') && !isImpersonating) {
+          // Admin AND Staff see all active products
           const { count: productCount } = await supabase
             .from('products')
             .select('*', { count: 'exact', head: true })
