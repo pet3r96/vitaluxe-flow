@@ -257,7 +257,8 @@ const Cart = React.memo(function Cart() {
         normalizedGroupsRef.current.add(key);
       }
     });
-  }, [patientGroups, getEnabledSpeeds, updateShippingSpeedMutation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientGroups, getEnabledSpeeds]); // ✅ Removed updateShippingSpeedMutation to prevent infinite loop
 
   useEffect(() => {
     console.timeEnd('Cart-Render');

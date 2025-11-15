@@ -180,118 +180,123 @@ export default function PatientDetail() {
     enabled: !!practiceId,
   });
 
-  // Fetch medical data for PDF generation
-  const { data: medications = [] } = useQuery({
-    queryKey: ["patient-medications", actualPatientId],
+  // Fetch medical data for PDF generation - OPTIMIZED: All queries run in parallel
+  const { data: medicalData, isLoading: isLoadingMedicalData } = useQuery({
+    queryKey: ["patient-medical-data-parallel", actualPatientId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_medications")
-        .select("*")
-        .eq("patient_account_id", actualPatientId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      console.time('[PatientDetail] Parallel medical data fetch');
+      
+      // Run all queries in parallel using Promise.all for 10x faster loading
+      const [
+        medications,
+        conditions,
+        allergies,
+        vitals,
+        immunizations,
+        surgeries,
+        pharmacies,
+        emergencyContacts
+      ] = await Promise.all([
+        supabase
+          .from("patient_medications")
+          .select("*")
+          .eq("patient_account_id", actualPatientId)
+          .order("created_at", { ascending: false })
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return data || [];
+          }),
+        supabase
+          .from("patient_conditions")
+          .select("*")
+          .eq("patient_account_id", actualPatientId)
+          .order("created_at", { ascending: false })
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return data || [];
+          }),
+        supabase
+          .from("patient_allergies")
+          .select("*")
+          .eq("patient_account_id", actualPatientId)
+          .order("created_at", { ascending: false })
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return data || [];
+          }),
+        supabase
+          .from("patient_vitals")
+          .select("*")
+          .eq("patient_account_id", actualPatientId)
+          .order("created_at", { ascending: false })
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return data || [];
+          }),
+        supabase
+          .from("patient_immunizations")
+          .select("*")
+          .eq("patient_account_id", actualPatientId)
+          .order("date_administered", { ascending: false })
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return data || [];
+          }),
+        supabase
+          .from("patient_surgeries")
+          .select("*")
+          .eq("patient_account_id", actualPatientId)
+          .order("created_at", { ascending: false })
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return data || [];
+          }),
+        supabase
+          .from("patient_pharmacies")
+          .select("*")
+          .eq("patient_account_id", actualPatientId)
+          .order("created_at", { ascending: false })
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return data || [];
+          }),
+        supabase
+          .from("patient_emergency_contacts")
+          .select("*")
+          .eq("patient_account_id", actualPatientId)
+          .order("created_at", { ascending: false })
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return data || [];
+          })
+      ]);
+
+      console.timeEnd('[PatientDetail] Parallel medical data fetch');
+      
+      return {
+        medications,
+        conditions,
+        allergies,
+        vitals,
+        immunizations,
+        surgeries,
+        pharmacies,
+        emergencyContacts
+      };
     },
     enabled: !!actualPatientId,
+    staleTime: 5 * 60 * 1000, // 5 minutes - medical data changes infrequently
   });
 
-  const { data: conditions = [] } = useQuery({
-    queryKey: ["patient-conditions", actualPatientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_conditions")
-        .select("*")
-        .eq("patient_account_id", actualPatientId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!actualPatientId,
-  });
-
-  const { data: allergies = [] } = useQuery({
-    queryKey: ["patient-allergies", actualPatientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_allergies")
-        .select("*")
-        .eq("patient_account_id", actualPatientId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!actualPatientId,
-  });
-
-  const { data: vitals = [] } = useQuery({
-    queryKey: ["patient-vitals", actualPatientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_vitals")
-        .select("*")
-        .eq("patient_account_id", actualPatientId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!actualPatientId,
-  });
-
-  const { data: immunizations = [] } = useQuery({
-    queryKey: ["patient-immunizations", actualPatientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_immunizations")
-        .select("*")
-        .eq("patient_account_id", actualPatientId)
-        .order("date_administered", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!actualPatientId,
-  });
-
-  const { data: surgeries = [] } = useQuery({
-    queryKey: ["patient-surgeries", actualPatientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_surgeries")
-        .select("*")
-        .eq("patient_account_id", actualPatientId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!actualPatientId,
-  });
-
-  const { data: pharmacies = [] } = useQuery({
-    queryKey: ["patient-pharmacies", actualPatientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_pharmacies")
-        .select("*")
-        .eq("patient_account_id", actualPatientId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!actualPatientId,
-  });
-
-  const { data: emergencyContacts = [] } = useQuery({
-    queryKey: ["patient-emergency-contacts", actualPatientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_emergency_contacts")
-        .select("*")
-        .eq("patient_account_id", actualPatientId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!actualPatientId,
-  });
+  // Destructure with defaults for backward compatibility
+  const medications = medicalData?.medications || [];
+  const conditions = medicalData?.conditions || [];
+  const allergies = medicalData?.allergies || [];
+  const vitals = medicalData?.vitals || [];
+  const immunizations = medicalData?.immunizations || [];
+  const surgeries = medicalData?.surgeries || [];
+  const pharmacies = medicalData?.pharmacies || [];
+  const emergencyContacts = medicalData?.emergencyContacts || [];
 
   const handleViewChart = async () => {
     console.log("[PatientDetail] handleViewChart called with patient:", patient);

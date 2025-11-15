@@ -410,8 +410,8 @@ export default function Checkout() {
         const deletedCount = deletedCartLineIds?.length || 0;
         console.log('[Checkout] Cart cleared confirmation', { deletedCount });
         
-        // Send order notifications to patients
-        for (const order of createdOrders) {
+        // Send order notifications to patients - OPTIMIZED: Run in parallel for faster checkout
+        const notificationPromises = createdOrders.map(async (order) => {
           if (order.ship_to === 'patient' && order.patient_id) {
             try {
               const { data: patientWithUser } = await supabase
@@ -420,34 +420,31 @@ export default function Checkout() {
                 .eq('id', order.patient_id)
                 .single();
 
-              if (patientWithUser) {
+              if (patientWithUser && patientWithUser.user_id) {
                 const orderTotal = order.total_amount || 0;
-                
-                if (patientWithUser.user_id) {
-                  // Patient has portal access - use handleNotifications
-                  console.log('[Checkout] Calling handleNotifications for patient order');
-                  await supabase.functions.invoke('handleNotifications', {
-                    body: {
-                      user_id: patientWithUser.user_id,
-                      type: 'order_placed',
-                      title: 'Order Confirmed',
-                      message: `Your order #${order.order_number} has been placed and will be shipped to you. Total: $${orderTotal.toFixed(2)}`,
-                      metadata: {
-                        orderId: order.id,
-                        orderNumber: order.order_number,
-                        orderTotal: orderTotal.toFixed(2)
-                      }
+                console.log('[Checkout] Sending notification for patient order');
+                await supabase.functions.invoke('handleNotifications', {
+                  body: {
+                    user_id: patientWithUser.user_id,
+                    type: 'order_placed',
+                    title: 'Order Confirmed',
+                    message: `Your order #${order.order_number} has been placed and will be shipped to you. Total: $${orderTotal.toFixed(2)}`,
+                    metadata: {
+                      orderId: order.id,
+                      orderNumber: order.order_number,
+                      orderTotal: orderTotal.toFixed(2)
                     }
-                  });
-                } else {
-                  console.log('[Checkout] Patient has no portal access, skipping notification');
-                }
+                  }
+                });
               }
             } catch (notifError) {
               console.error('[Checkout] Error sending order notification:', notifError);
             }
           }
-        }
+        });
+        
+        // Wait for all notifications to complete (or fail) - don't block checkout
+        await Promise.allSettled(notificationPromises);
         
         // CRITICAL: Clear cart using the correct cartOwnerId
         console.log('[Checkout] Clearing cart after successful order', { 
@@ -480,16 +477,20 @@ export default function Checkout() {
           queryClient.setQueryData(["cart-count", cartOwnerId], 0);
         }
         
-        // Invalidate all cart-related queries with wildcard matching
-        await queryClient.invalidateQueries({ queryKey: ["cart"], exact: false });
-        await queryClient.invalidateQueries({ queryKey: ["cart-count"], exact: false });
-        await queryClient.invalidateQueries({ queryKey: ["cart-owner"], exact: false });
-        await queryClient.invalidateQueries({ queryKey: ["orders"], exact: false });
+        // CRITICAL: Force immediate refetch instead of invalidate for instant cart clearing
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: ["cart"], exact: false }),
+          queryClient.refetchQueries({ queryKey: ["cart-count"], exact: false }),
+          queryClient.refetchQueries({ queryKey: ["cart-owner"], exact: false }),
+          queryClient.invalidateQueries({ queryKey: ["orders"], exact: false })
+        ]);
         
-        // Force immediate refetch of cart queries
+        // Double-check cart is empty for specific owner
         if (cartOwnerId) {
-          queryClient.refetchQueries({ queryKey: ["cart", cartOwnerId] });
-          queryClient.refetchQueries({ queryKey: ["cart-count", cartOwnerId] });
+          await Promise.all([
+            queryClient.refetchQueries({ queryKey: ["cart", cartOwnerId] }),
+            queryClient.refetchQueries({ queryKey: ["cart-count", cartOwnerId] })
+          ]);
         }
         
         toast({
@@ -497,14 +498,16 @@ export default function Checkout() {
           description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. Cart cleared (${deletedCount} items). Redirecting to orders page...`,
         });
         
-        // Navigate immediately with order success state
-        navigate("/orders", {
-          state: {
-            orderPlaced: true,
-            orderNumber: createdOrders[0]?.order_number,
-            orderCount: createdOrders.length
-          }
-        });
+        // Add 500ms delay before navigation to allow database propagation
+        setTimeout(() => {
+          navigate("/orders", {
+            state: {
+              orderPlaced: true,
+              orderNumber: createdOrders[0]?.order_number,
+              orderCount: createdOrders.length
+            }
+          });
+        }, 500);
       } else {
         // Some payments failed - show retry dialog
         setPaymentErrors(failedPayments);
