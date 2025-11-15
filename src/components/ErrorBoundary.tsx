@@ -6,6 +6,7 @@ import { AlertCircle } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -110,6 +111,11 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public render() {
+    // Support custom fallback prop
+    if (this.state.hasError && this.props.fallback) {
+      return this.props.fallback;
+    }
+
     if (this.state.hasError) {
       const isChunkError = 
         this.state.error?.message?.includes('Failed to fetch') ||
@@ -117,6 +123,12 @@ export class ErrorBoundary extends Component<Props, State> {
         this.state.error?.message?.includes('dynamically imported module') ||
         this.state.error?.message?.includes('Importing a module script failed') ||
         this.state.error?.name === 'ChunkLoadError';
+
+      // Detect cart-specific errors
+      const isCartError = 
+        window.location.pathname === '/cart' ||
+        this.state.error?.message?.includes('cart') ||
+        this.state.error?.message?.includes('Cart');
 
       const isCacheIssue = isChunkError;
 
@@ -127,12 +139,14 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-6 w-6 text-destructive" />
                 <CardTitle>
-                  {isCacheIssue ? "App Update Detected" : "Something went wrong"}
+                  {isCacheIssue ? "App Update Detected" : isCartError ? "Cart Error" : "Something went wrong"}
                 </CardTitle>
               </div>
               <CardDescription>
                 {isCacheIssue 
                   ? "We've recently upgraded VitaLuxe with new features and improvements. Please refresh your browser to get the latest version."
+                  : isCartError
+                  ? "Unable to load your cart. This may be due to a temporary account configuration issue."
                   : "An unexpected error occurred. Our team has been notified and will investigate."}
               </CardDescription>
             </CardHeader>
@@ -166,8 +180,17 @@ export class ErrorBoundary extends Component<Props, State> {
                   {isCacheIssue ? "Refresh Now" : "Reload Page"}
                 </Button>
                 {!isCacheIssue && (
-                  <Button onClick={this.handleReset} className="flex-1">
-                    Return to Dashboard
+                  <Button 
+                    onClick={() => {
+                      if (isCartError) {
+                        window.location.href = '/products';
+                      } else {
+                        this.handleReset();
+                      }
+                    }} 
+                    className="flex-1"
+                  >
+                    {isCartError ? "Return to Products" : "Return to Dashboard"}
                   </Button>
                 )}
               </div>

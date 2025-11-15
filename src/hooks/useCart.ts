@@ -170,7 +170,7 @@ export function useCart(
     },
     enabled: !!userId && enabled,
     staleTime,
-    gcTime: 0, // Don't cache at all - prevent stale cart after order
+    gcTime: 1000, // Keep in memory for 1 second for immediate re-render after checkout
     refetchOnWindowFocus,
     refetchOnMount,
   });

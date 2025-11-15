@@ -38,6 +38,21 @@ export async function resolveCartOwnerUserId(
 
     if (!provider) {
       console.warn('[CartOwnerResolver] No active provider found for practice:', practiceId);
+      
+      // CRITICAL FIX: Check if this staff user IS a provider themselves
+      const { data: staffAsProvider, error: providerError } = await supabase
+        .from('providers')
+        .select('user_id, practice_id')
+        .eq('user_id', userId)
+        .eq('active', true)
+        .maybeSingle();
+      
+      if (!providerError && staffAsProvider) {
+        console.log('[CartOwnerResolver] Staff IS a provider - using their user_id:', userId);
+        return userId;
+      }
+      
+      console.error('[CartOwnerResolver] CRITICAL: No provider found for staff/practice user. practiceId:', practiceId, 'userId:', userId);
       return null;
     }
 
