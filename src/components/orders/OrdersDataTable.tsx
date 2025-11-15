@@ -212,7 +212,7 @@ export const OrdersDataTable = () => {
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-orders-page', {
           body: {
             page: 1,
-            pageSize: 50,
+            pageSize: 20,
             practiceId: scopeId,
             role: normalizedRole,
             status: undefined,
