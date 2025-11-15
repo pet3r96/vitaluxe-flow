@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 
 export interface CartLine {
   id: string;
@@ -35,73 +36,57 @@ export interface Cart {
 }
 
 interface UseCartOptions {
-  /**
-   * Additional select fields for products
-   */
   productFields?: string;
-  /**
-   * Whether to include pharmacy data
-   */
   includePharmacy?: boolean;
-  /**
-   * Whether to include provider data
-   */
   includeProvider?: boolean;
-  /**
-   * Whether to hydrate patient data from patient_accounts
-   */
   hydratePatients?: boolean;
-  /**
-   * Query is enabled only when this is true
-   */
   enabled?: boolean;
-  /**
-   * How long to consider the cache fresh (ms)
-   */
   staleTime?: number;
-  /**
-   * Whether to refetch on window focus
-   */
   refetchOnWindowFocus?: boolean;
-  /**
-   * Whether to refetch on mount
-   */
   refetchOnMount?: boolean;
 }
 
-/**
- * Centralized hook for fetching cart data
- * Eliminates duplicate cart-fetching logic across components
- */
 export function useCart(
   userId: string | null,
   options: UseCartOptions = {}
 ) {
-  const {
-    productFields = "name, dosage, sig, image_url, base_price, requires_prescription",
-    includePharmacy = false,
-    includeProvider = false,
-    hydratePatients = false,
-    enabled = true,
-    staleTime = 5000,
-    refetchOnWindowFocus = false,
-    refetchOnMount = true,
-  } = options;
+  // Stable defaults - memoized to prevent queryKey changes
+  const stableOptions = useMemo(() => {
+    return {
+      productFields: options.productFields || "name, dosage, sig, image_url, base_price, requires_prescription",
+      includePharmacy: options.includePharmacy ?? false,
+      includeProvider: options.includeProvider ?? false,
+      hydratePatients: options.hydratePatients ?? false,
+      enabled: options.enabled ?? true,
+      staleTime: options.staleTime ?? 5000,
+      refetchOnWindowFocus: options.refetchOnWindowFocus ?? false,
+      refetchOnMount: options.refetchOnMount ?? true,
+    };
+  }, [
+    options.productFields,
+    options.includePharmacy,
+    options.includeProvider,
+    options.hydratePatients,
+    options.enabled,
+    options.staleTime,
+    options.refetchOnWindowFocus,
+    options.refetchOnMount,
+  ]);
 
   return useQuery({
-    queryKey: ["cart", userId, productFields, includePharmacy, includeProvider, hydratePatients],
+    // Simplified queryKey - only userId changes frequently
+    queryKey: ["cart", userId],
     queryFn: async (): Promise<Cart> => {
       if (!userId) return { id: '', lines: [] };
 
       try {
-        // Use edge function for cart operations
         const { data, error } = await supabase.functions.invoke('get-cart', {
           body: {
             cartOwnerId: userId,
-            productFields,
-            includePharmacy,
-            includeProvider,
-            hydratePatients
+            productFields: stableOptions.productFields,
+            includePharmacy: stableOptions.includePharmacy,
+            includeProvider: stableOptions.includeProvider,
+            hydratePatients: stableOptions.hydratePatients
           }
         });
 
@@ -116,10 +101,10 @@ export function useCart(
         return { id: '', lines: [] };
       }
     },
-    enabled: !!userId && enabled,
-    staleTime,
-    gcTime: 1000, // Keep in memory for 1 second for immediate re-render after checkout
-    refetchOnWindowFocus,
-    refetchOnMount,
+    enabled: !!userId && stableOptions.enabled,
+    staleTime: stableOptions.staleTime,
+    gcTime: 1000,
+    refetchOnWindowFocus: stableOptions.refetchOnWindowFocus,
+    refetchOnMount: stableOptions.refetchOnMount,
   });
 }
