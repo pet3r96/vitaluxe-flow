@@ -268,7 +268,15 @@ const Cart = React.memo(function Cart() {
     realtimeChannelRef.current = channel;
 
     return () => {
-      console.log('[Cart] Cleaning up realtime subscription');
+      console.log('[Cart] Cleaning up realtime subscription and pending timers');
+      
+      // Clear any pending invalidation timers
+      if (invalidationTimerRef.current) {
+        clearTimeout(invalidationTimerRef.current);
+        invalidationTimerRef.current = null;
+      }
+      
+      // Remove realtime channel
       if (realtimeChannelRef.current) {
         supabase.removeChannel(realtimeChannelRef.current);
         realtimeChannelRef.current = null;
@@ -295,7 +303,11 @@ const Cart = React.memo(function Cart() {
 
     // Check if rates are loaded and available
     if (ratesLoading || !pharmacyRatesMap || Object.keys(pharmacyRatesMap).length === 0) {
-      console.log('[Cart] Skipping normalization - rates not loaded yet');
+      console.log('[Cart] Skipping normalization - rates not loaded yet', {
+        ratesLoading,
+        hasRatesMap: !!pharmacyRatesMap,
+        ratesCount: Object.keys(pharmacyRatesMap || {}).length
+      });
       return;
     }
 

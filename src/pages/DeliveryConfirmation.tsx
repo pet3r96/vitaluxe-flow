@@ -326,8 +326,8 @@ export default function DeliveryConfirmation() {
     // },
     onSuccess: (data) => {
       console.log('[DeliveryConfirmation] Patient address saved and routed, invalidating cache');
-      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
-      queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+      queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
       
       if (data.patientId) {
         toast.success("Patient address updated, saved, and routed to pharmacy");
