@@ -7,7 +7,7 @@ import { ShoppingCart, Trash2, Package, FileCheck, Clock, AlertTriangle } from "
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
 import { DiscountCodeInput } from "@/components/orders/DiscountCodeInput";
 import { ShippingSpeedSelector } from "@/components/cart/ShippingSpeedSelector";
@@ -391,7 +391,7 @@ const Cart = React.memo(function Cart() {
     );
   }
 
-  if (cartError && !isLoading) {
+  if (cartError && !isLoadingCart) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Alert variant="destructive">
@@ -641,82 +641,14 @@ const Cart = React.memo(function Cart() {
   );
 });
 
-const CartWithErrorBoundary = () => (
-  <ErrorBoundary
-    fallback={
-      <div className="container mx-auto p-6">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Cart Error
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground">
-              Unable to load your cart. This may be due to a temporary issue with your account configuration.
-            </p>
-            <div className="flex gap-2">
-              <Button onClick={() => window.location.href = '/products'}>
-                Return to Products
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    const { data: authData } = await supabase.auth.getUser();
-                    if (authData.user) {
-                      // Get user role
-                      const { data: roleData } = await supabase
-                        .from('user_roles')
-                        .select('role')
-                        .eq('user_id', authData.user.id)
-                        .single();
-                      
-                      const userRole = roleData?.role || '';
-                      
-                      // Get practice_id for staff users
-                      let practiceId: string | null = null;
-                      if (userRole === 'staff') {
-                        const { data: staffData } = await supabase
-                          .from('practice_staff')
-                          .select('practice_id')
-                          .eq('user_id', authData.user.id)
-                          .single();
-                        practiceId = staffData?.practice_id || null;
-                      }
-                      
-                      // Resolve cart owner properly (handles staff/practice users)
-                      const { resolveCartOwnerUserId } = await import("@/lib/cartOwnerResolver");
-                      const cartOwnerId = await resolveCartOwnerUserId(
-                        authData.user.id, 
-                        userRole, 
-                        practiceId
-                      );
-                      
-                      if (cartOwnerId) {
-                        await supabase.functions.invoke('clear-cart', {
-                          body: { cartOwnerId }
-                        });
-                      }
-                    }
-                    window.location.href = '/products';
-                  } catch (err) {
-                    console.error('Failed to clear cart:', err);
-                    window.location.href = '/products';
-                  }
-                }}
-              >
-                Clear Cart & Return to Products
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    }
-  >
-    <Cart />
-  </ErrorBoundary>
-);
+const CartWithErrorBoundary = () => {
+  const location = useLocation();
+  
+  return (
+    <ErrorBoundary key={`${location.pathname}-${location.key}`}>
+      <Cart />
+    </ErrorBoundary>
+  );
+};
 
 export default CartWithErrorBoundary;

@@ -12,16 +12,27 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  lastPathname?: string;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
+    lastPathname: typeof window !== 'undefined' ? window.location.pathname : undefined,
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
+  }
+
+  public componentDidUpdate() {
+    // Auto-reset error state on route change
+    const currentPathname = typeof window !== 'undefined' ? window.location.pathname : undefined;
+    if (this.state.hasError && currentPathname !== this.state.lastPathname) {
+      console.log('[ErrorBoundary] Route changed, resetting error state');
+      this.setState({ hasError: false, error: null, lastPathname: currentPathname });
+    }
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -111,11 +122,6 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public render() {
-    // Support custom fallback prop
-    if (this.state.hasError && this.props.fallback) {
-      return this.props.fallback;
-    }
-
     if (this.state.hasError) {
       const isChunkError = 
         this.state.error?.message?.includes('Failed to fetch') ||
@@ -123,6 +129,52 @@ export class ErrorBoundary extends Component<Props, State> {
         this.state.error?.message?.includes('dynamically imported module') ||
         this.state.error?.message?.includes('Importing a module script failed') ||
         this.state.error?.name === 'ChunkLoadError';
+
+      // For chunk/cold-start errors, ALWAYS show refresh UI (ignore custom fallback)
+      if (isChunkError) {
+        const isCacheIssue = true;
+        
+        return (
+          <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+            <Card className="max-w-lg w-full">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-6 w-6 text-destructive" />
+                  <CardTitle>App Update Detected</CardTitle>
+                </div>
+                <CardDescription>
+                  We've recently upgraded VitaLuxe with new features and improvements. Please refresh your browser to get the latest version.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg space-y-2">
+                  <p className="text-sm font-medium">Quick Refresh Options:</p>
+                  <ul className="text-sm space-y-1 ml-4 list-disc text-muted-foreground">
+                    <li><strong>Windows:</strong> Press <kbd className="px-1.5 py-0.5 bg-muted/50 rounded">Ctrl+Shift+R</kbd></li>
+                    <li><strong>Mac:</strong> Press <kbd className="px-1.5 py-0.5 bg-muted/50 rounded">Cmd+Shift+R</kbd></li>
+                    <li><strong>Or:</strong> Click the button below</li>
+                  </ul>
+                </div>
+                
+                <Button 
+                  onClick={() => {
+                    sessionStorage.clear();
+                    window.location.reload();
+                  }} 
+                  className="w-full"
+                >
+                  Refresh Now
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      }
+
+      // For non-chunk errors, use custom fallback if provided
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
 
       // Detect cart-specific errors
       const isCartError = 
