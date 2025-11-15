@@ -171,7 +171,7 @@ export const OrdersDataTable = () => {
       // Normalize effectiveRole before checking (provider -> doctor)
       const normalizedRole = effectiveRole === 'provider' ? 'doctor' : effectiveRole;
       
-      if (normalizedRole === "admin" || normalizedRole === "doctor" || normalizedRole === "practice") {
+      if (normalizedRole === "admin" || normalizedRole === "doctor" || normalizedRole === "practice" || normalizedRole === "staff") {
         console.time(`OrdersEdgeFunctionQuery-${normalizedRole}`);
         console.log(`[OrdersDataTable] Using edge function for role: ${normalizedRole}`);
         
@@ -191,6 +191,18 @@ export const OrdersDataTable = () => {
           }
           scopeId = effectivePracticeId;
           console.log(`[OrdersDataTable] Practice role - scopeId (practice_id):`, scopeId);
+        } else if (normalizedRole === 'staff') {
+          // Staff: need to get their practice_id from providers table
+          if (!effectivePracticeId) {
+            toast({
+              title: "Configuration Error",
+              description: "Practice context is missing. Please contact support.",
+              variant: "destructive"
+            });
+            throw new Error('Missing practice context for staff user');
+          }
+          scopeId = effectivePracticeId;
+          console.log(`[OrdersDataTable] Staff role - scopeId (practice_id):`, scopeId);
         }
         // Admin: scopeId remains null (no filter)
         
