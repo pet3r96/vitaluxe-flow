@@ -43,6 +43,7 @@ const Cart = React.memo(function Cart() {
   });
   const realtimeChannelRef = useRef<any>(null);
   const invalidationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const normalizationInFlightRef = useRef(false);
   const isInitializedRef = useRef(false);
   
   // Custom hooks
@@ -259,6 +260,12 @@ const Cart = React.memo(function Cart() {
         (payload) => {
           console.log('[Cart] Realtime update received:', payload);
           
+          // Skip invalidation if normalization is in progress to prevent loops
+          if (normalizationInFlightRef.current) {
+            console.log('[Cart] Skipping realtime invalidation - normalization in progress');
+            return;
+          }
+          
           // Debounce invalidations to prevent cascading loops
           if (invalidationTimerRef.current) {
             clearTimeout(invalidationTimerRef.current);
@@ -402,6 +409,7 @@ const Cart = React.memo(function Cart() {
 
     // Execute normalizations SEQUENTIALLY to avoid burst load
     (async () => {
+      normalizationInFlightRef.current = true;
       try {
         for (const { lineIds, targetSpeed, groupKey } of normalizationPlan) {
           console.log('[Cart] Normalizing group:', groupKey);
@@ -418,6 +426,8 @@ const Cart = React.memo(function Cart() {
           description: "Some shipping speeds couldn't be updated. Your cart is still valid.",
           variant: "default",
         });
+      } finally {
+        normalizationInFlightRef.current = false;
       }
     })();
   }, [cart?.id]); // Only run when cart ID changes - prevents infinite loops

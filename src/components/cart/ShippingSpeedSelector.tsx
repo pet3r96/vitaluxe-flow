@@ -30,12 +30,8 @@ export const ShippingSpeedSelector = ({
     ? allOptions.filter(opt => enabledOptions.includes(opt.value))
     : allOptions;
 
-  // Auto-select if only one option is available
-  useEffect(() => {
-    if (visibleOptions.length === 1 && value !== visibleOptions[0].value) {
-      onChange(visibleOptions[0].value);
-    }
-  }, [visibleOptions, value, onChange]);
+  // Note: Auto-selection removed to prevent render loops
+  // Parent component (Cart.tsx) handles normalization once per cart version
 
   if (isLoading) {
     return (
