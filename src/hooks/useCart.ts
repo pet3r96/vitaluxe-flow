@@ -74,10 +74,13 @@ export function useCart(
   ]);
 
   return useQuery({
-    // Simplified queryKey - only userId changes frequently
-    queryKey: ["cart", userId],
+    // Include all options in query key for proper cache isolation
+    queryKey: ["cart", userId, stableOptions.includePharmacy, stableOptions.includeProvider, stableOptions.hydratePatients],
     queryFn: async (): Promise<Cart> => {
-      if (!userId) return { id: '', lines: [] };
+      if (!userId) {
+        console.log('[useCart] No userId provided, returning empty cart');
+        return { id: '', lines: [] };
+      }
 
       try {
         const { data, error } = await supabase.functions.invoke('get-cart', {
@@ -102,9 +105,11 @@ export function useCart(
       }
     },
     enabled: !!userId && stableOptions.enabled,
-    staleTime: stableOptions.staleTime,
+    staleTime: 1000, // 1 second cache for immediate updates
     gcTime: 1000,
-    refetchOnWindowFocus: stableOptions.refetchOnWindowFocus,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     refetchOnMount: stableOptions.refetchOnMount,
+    retry: 1, // Only retry once on failure
   });
 }

@@ -34,7 +34,7 @@ const Cart = React.memo(function Cart() {
   const [discountCode, setDiscountCode] = useState<string | null>(null);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   const normalizedGroupsRef = useRef<Set<string>>(new Set());
-  const normalizeOnceRef = useRef<{ cartId: string | null; done: boolean }>({ cartId: null, done: false });
+  const normalizeOnceRef = useRef<{ cartId: string | null; done: boolean; version?: string }>({ cartId: null, done: false });
   const realtimeChannelRef = useRef<any>(null);
   const invalidationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
@@ -284,7 +284,7 @@ const Cart = React.memo(function Cart() {
     };
   }, [cartOwnerId, cart?.id]); // Minimal deps - don't include queryClient
 
-  // Auto-normalize shipping speeds - RUNS ONLY ONCE per cart load
+  // Auto-normalize shipping speeds - RUNS ONLY ONCE per cart version
   useEffect(() => {
     console.log('[Cart] Effect triggered - deps:', { 
       cartId: cart?.id, 
@@ -311,16 +311,25 @@ const Cart = React.memo(function Cart() {
       return;
     }
 
-    // CRITICAL: Early exit if already done for this cart
-    if (normalizeOnceRef.current.cartId === cart.id && normalizeOnceRef.current.done) {
-      console.log('[Cart] Normalization already completed for cart:', cart.id);
+    // Compute cart version hash from line IDs, quantities, and shipping speeds
+    const cartVersion = cart.lines
+      .map((l: any) => `${l.id}:${l.quantity}:${l.shipping_speed}`)
+      .sort()
+      .join('|');
+
+    // CRITICAL: Early exit if already normalized for this exact cart version
+    if (normalizeOnceRef.current.cartId === cart.id && 
+        normalizeOnceRef.current.done && 
+        normalizeOnceRef.current.version === cartVersion) {
+      console.log('[Cart] Normalization already completed for this cart version');
       return;
     }
 
-    // Reset if cart changed or undefined
-    if (!cart.id || normalizeOnceRef.current.cartId !== cart.id) {
-      console.log('[Cart] Cart ID changed or undefined, resetting normalization state');
-      normalizeOnceRef.current = { cartId: cart.id, done: false };
+    // Reset if cart changed or version changed
+    if (!cart.id || normalizeOnceRef.current.cartId !== cart.id || 
+        normalizeOnceRef.current.version !== cartVersion) {
+      console.log('[Cart] Cart version changed, resetting normalization state');
+      normalizeOnceRef.current = { cartId: cart.id, done: false, version: cartVersion };
       normalizedGroupsRef.current.clear();
     }
 

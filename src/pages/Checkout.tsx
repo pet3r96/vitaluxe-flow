@@ -392,38 +392,34 @@ export default function Checkout() {
         // Wait for all notifications to complete (or fail) - don't block checkout
         await Promise.allSettled(notificationPromises);
         
-        // CRITICAL: Clear cart using the correct cartOwnerId
+        // CRITICAL: Clear cart using edge function (belt & suspenders)
         console.log('[Checkout] Clearing cart after successful order', { 
           cartOwnerId, 
           effectiveUserId,
           deletedCount 
         });
         
-        // Explicitly delete remaining cart lines from database (belt & suspenders)
-        if (cart?.id) {
+        // Call clear-cart edge function to ensure all lines are removed
+        if (cartOwnerId) {
           try {
-            const { error: deleteError } = await supabase
-              .from('cart_lines')
-              .delete()
-              .eq('cart_id', cart.id);
+            const { error: clearError } = await supabase.functions.invoke('clear-cart', {
+              body: { cartOwnerId }
+            });
             
-            if (deleteError) {
-              console.error('[Checkout] Error deleting cart lines:', deleteError);
+            if (clearError) {
+              console.error('[Checkout] Error clearing cart via function:', clearError);
             } else {
-              console.log('[Checkout] Successfully deleted all cart lines from DB');
+              console.log('[Checkout] Successfully cleared cart via edge function');
             }
           } catch (err) {
-            console.error('[Checkout] Exception deleting cart lines:', err);
+            console.error('[Checkout] Exception calling clear-cart:', err);
           }
         }
         
-        // CRITICAL: Force immediate refetch of all cart-related queries for instant clearing
-        await queryClient.refetchQueries({ 
-          predicate: (query) => {
-            const key = query.queryKey[0];
-            return key === 'cart' || key === 'cart-count' || key === 'cart-owner';
-          }
-        });
+        // CRITICAL: Invalidate cart queries using correct cartOwnerId
+        queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+        queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
+        queryClient.invalidateQueries({ queryKey: ["cart-owner"] });
         
         // Force refetch orders (not just invalidate) to ensure fresh data
         await queryClient.refetchQueries({ 

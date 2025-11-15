@@ -77,30 +77,45 @@ export const ReceiptDownloadButton = ({
         throw new Error(errorMessage);
       }
 
-      if (!data?.url) {
-        throw new Error('No download URL received from server');
+      // Handle direct URL download
+      if (data?.url) {
+        console.log('[ReceiptDownloadButton] Using direct URL download');
+        const response = await fetch(data.url);
+        if (!response.ok) {
+          throw new Error('Failed to download receipt file');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = data.fileName || `receipt_${orderId.slice(0, 8)}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        toast({
+          title: "Receipt downloaded",
+          description: "Your receipt has been downloaded successfully."
+        });
+      } 
+      // Handle base64 fallback
+      else if (data?.base64) {
+        console.log('[ReceiptDownloadButton] Using base64 fallback');
+        const { downloadPdfFromBase64 } = await import('@/lib/pdfGenerator');
+        downloadPdfFromBase64(
+          data.base64, 
+          data.fileName || `receipt_${orderId.slice(0, 8)}.pdf`
+        );
+
+        toast({
+          title: "Receipt downloaded",
+          description: "Receipt generated successfully using backup method."
+        });
+      } else {
+        throw new Error('No download URL or data received from server');
       }
-
-      // Download the PDF
-      const response = await fetch(data.url);
-      if (!response.ok) {
-        throw new Error('Failed to download receipt file');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = data.fileName || `receipt_${orderId.slice(0, 8)}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast({
-        title: "Receipt downloaded",
-        description: "Your receipt has been downloaded successfully."
-      });
 
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
