@@ -526,7 +526,7 @@ export default function Checkout() {
       if (updateError) throw updateError;
 
       // Refetch cart data to update UI
-      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
       
       toast({
         title: "Prescription Uploaded",
