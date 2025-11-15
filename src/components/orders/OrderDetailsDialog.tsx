@@ -53,13 +53,13 @@ export const OrderDetailsDialog = ({
   const [regeneratingUrls, setRegeneratingUrls] = useState(false);
 
   // Determine if user can view PHI (HIPAA compliance)
-  const canViewPHI = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
+  const canViewPHI = ['doctor', 'provider', 'staff', 'pharmacy', 'admin'].includes(effectiveRole || '');
 
   // Receipt downloads restricted to practice staff, pharmacies, and admins (not reps)
-  const canDownloadReceipt = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
+  const canDownloadReceipt = ['doctor', 'provider', 'staff', 'pharmacy', 'admin'].includes(effectiveRole || '');
 
   // Prescription downloads restricted to practice staff, pharmacies, and admins (not reps)
-  const canDownloadPrescription = ['doctor', 'provider', 'pharmacy', 'admin'].includes(effectiveRole || '');
+  const canDownloadPrescription = ['doctor', 'provider', 'staff', 'pharmacy', 'admin'].includes(effectiveRole || '');
 
   // Lazy-load full order details when dialog opens
   const { data: fullOrderDetails } = useQuery({
