@@ -51,9 +51,9 @@ export const useCartCount = (cartOwnerId: string | null) => {
       return data?.count || 0;
     },
     enabled: !!cartOwnerId,
-    staleTime: 5000, // 5 second cache to prevent excessive fetches
+    staleTime: 0, // Always fresh - refetch on invalidation
     gcTime: 10000,
-    refetchOnMount: false, // Use cache when available
-    refetchOnWindowFocus: false,
+    refetchOnMount: true, // Refetch to ensure accuracy
+    refetchOnWindowFocus: true, // Update when user returns to tab
   });
 };
