@@ -158,13 +158,9 @@ serve(async (req) => {
         shipping_speed,
         tracking_number,
         provider_id,
-        providers!order_lines_provider_id_fkey (
+        providers (
           id,
-          user_id,
-          profiles!providers_user_id_fkey (
-            name,
-            email
-          )
+          user_id
         ),
         products (
           name,
@@ -175,6 +171,32 @@ serve(async (req) => {
         )
       `)
       .eq('order_id', order_id);
+
+    if (linesError) {
+      console.error('[generate-order-receipt] Order lines fetch error:', linesError);
+      return errorResponse('Failed to fetch order lines', 500);
+    }
+
+    if (!orderLines || orderLines.length === 0) {
+      console.error('[generate-order-receipt] No order lines found for order:', order_id);
+      return errorResponse('Order has no items', 404);
+    }
+
+    // Fetch provider profile information separately for first order line
+    let providerProfile = null;
+    const firstLine: any = orderLines[0];
+    const provider: any = Array.isArray(firstLine?.providers) ? firstLine.providers[0] : firstLine?.providers;
+    const providerId = provider?.user_id;
+    
+    if (providerId) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('name, email')
+        .eq('user_id', providerId)
+        .maybeSingle();
+      
+      providerProfile = profileData;
+    }
 
     if (linesError) {
       console.error('[generate-order-receipt] Order lines fetch error:', linesError);
@@ -273,11 +295,6 @@ serve(async (req) => {
     yPos += 6;
 
     doc.setFont('helvetica', 'normal');
-    // Get provider from first order line (providers is an array from the join)
-    const firstLine = orderLines[0];
-    const provider = Array.isArray(firstLine?.providers) ? firstLine.providers[0] : firstLine?.providers;
-    const providerProfile = Array.isArray(provider?.profiles) ? provider.profiles[0] : provider?.profiles;
-
     if (providerProfile && providerProfile.name) {
       doc.text(providerProfile.name, 20, yPos);
       yPos += 5;
