@@ -268,7 +268,18 @@ const Cart = React.memo(function Cart() {
 
   // Auto-normalize shipping speeds - RUNS ONLY ONCE per cart load
   useEffect(() => {
-    if (!cart?.id || !cart.lines || ratesLoading) {
+    console.log('[Cart] Effect triggered - deps:', { 
+      cartId: cart?.id, 
+      isEmpty, 
+      ratesLoading,
+      linesCount: cart?.lines?.length,
+      refDone: normalizeOnceRef.current.done,
+      refCartId: normalizeOnceRef.current.cartId
+    });
+
+    // CRITICAL: Guard against empty cart or loading states
+    if (!cart?.id || !cart.lines || ratesLoading || cartLines.length === 0) {
+      console.log('[Cart] Skipping normalization - cart empty or loading');
       return;
     }
 
@@ -278,8 +289,9 @@ const Cart = React.memo(function Cart() {
       return;
     }
 
-    // Reset if cart changed
-    if (normalizeOnceRef.current.cartId !== cart.id) {
+    // Reset if cart changed or undefined
+    if (!cart.id || normalizeOnceRef.current.cartId !== cart.id) {
+      console.log('[Cart] Cart ID changed or undefined, resetting normalization state');
       normalizeOnceRef.current = { cartId: cart.id, done: false };
       normalizedGroupsRef.current.clear();
     }
@@ -351,7 +363,7 @@ const Cart = React.memo(function Cart() {
         });
       }
     })();
-  }, [cart?.id, isEmpty, ratesLoading]); // Minimal stable dependencies
+  }, [cart?.id, ratesLoading]); // Removed isEmpty to prevent infinite loops
 
   useEffect(() => {
     console.timeEnd('Cart-Render');
