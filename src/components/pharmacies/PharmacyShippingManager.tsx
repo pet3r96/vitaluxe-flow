@@ -39,7 +39,7 @@ export const PharmacyShippingManager = () => {
     queryFn: async () => {
       if (!pharmacyData?.id) return [];
 
-      // OPTIMIZED: Only fetch fields needed for list display + limit to most recent 150
+      // OPTIMIZED: Only fetch fields needed for list display + limit to most recent 50
       const { data, error } = await supabase
         .from('order_lines')
         .select(`
@@ -49,7 +49,7 @@ export const PharmacyShippingManager = () => {
           tracking_number,
           patient_name,
           created_at,
-          orders (
+          orders!inner (
             id,
             created_at,
             payment_status,
@@ -60,25 +60,31 @@ export const PharmacyShippingManager = () => {
           )
         `)
         .eq('assigned_pharmacy_id', pharmacyData.id)
+        .neq('orders.payment_status', 'payment_failed')
         .order('created_at', { ascending: false })
-        .limit(150); // Limit to most recent 150 orders for performance
+        .limit(50); // Reduced to 50 for faster initial load
       
       if (error) {
         toast.error('Failed to load orders');
         throw error;
       }
       
-      // Filter out order lines from orders with payment_failed status
-      const filteredData = data?.filter(orderLine => 
-        orderLine.orders?.payment_status !== 'payment_failed'
-      ) || [];
-      
-      return filteredData;
+      return data || [];
     },
     enabled: !!pharmacyData?.id,
-    staleTime: 2 * 60 * 1000, // 2 minutes - orders change frequently
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes - reduced refetch frequency
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
+
+  // Early loading state for better UX
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-[600px] w-full" />
+      </div>
+    );
+  }
 
   // Filter orders based on active tab (client-side)
   const filteredOrders = useMemo(() => {
