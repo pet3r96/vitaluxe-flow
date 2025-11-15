@@ -15,23 +15,25 @@ export const emailStyles = `
   .container { 
     max-width: 600px; 
     margin: 0 auto; 
+    background-color: #0B0B0B;
   }
   .header { 
-    background: linear-gradient(135deg, #8E6E1E 0%, #C8A64B 50%, #E2C977 100%); 
-    padding: 30px 20px; 
+    background: linear-gradient(135deg, #C8A64B 0%, #E2C977 100%); 
+    padding: 40px 20px; 
     text-align: center; 
+    border-bottom: none;
   }
   .header h1 { 
     margin: 0; 
     color: #0B0B0B; 
-    font-size: 28px; 
+    font-size: 32px; 
     font-weight: bold; 
-    letter-spacing: 2px; 
+    letter-spacing: 4px; 
   }
   .content { 
     background-color: #1A1A1A; 
     padding: 40px 30px; 
-    border: 1px solid #292929; 
+    border: none;
   }
   .content h2 { 
     color: #E2C977; 
