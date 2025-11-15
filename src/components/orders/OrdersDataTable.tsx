@@ -170,33 +170,22 @@ export const OrdersDataTable = () => {
         );
       }
 
-      // USE EDGE FUNCTION FOR SIMPLE ROLES (admin, doctor, practice)
-      // These roles have straightforward filtering that the edge function handles efficiently
-      // Normalize effectiveRole before checking (provider -> doctor)
-      const normalizedRole = effectiveRole === 'provider' ? 'doctor' : effectiveRole;
+      // USE EDGE FUNCTION FOR SIMPLE ROLES (admin, practice, staff)
+      // Map provider and doctor to practice-level view to show ALL practice orders
+      const normalizedRole = (effectiveRole === 'provider' || effectiveRole === 'doctor') ? 'practice' : effectiveRole;
       
-      if (normalizedRole === "admin" || normalizedRole === "doctor" || normalizedRole === "practice" || normalizedRole === "staff") {
+      if (normalizedRole === "admin" || normalizedRole === "practice" || normalizedRole === "staff") {
         console.time(`OrdersEdgeFunctionQuery-${normalizedRole}`);
         console.log(`[OrdersDataTable] Using edge function for role: ${normalizedRole}`);
         
         // Compute scopeId based on normalized role
         let scopeId: string | null = null;
-        if (normalizedRole === 'doctor') {
-          scopeId = effectiveUserId;
-          console.log(`[OrdersDataTable] Doctor role - scopeId (user_id):`, scopeId);
-        } else if (normalizedRole === 'practice') {
-          if (!effectivePracticeId) {
-            toast({
-              title: "Configuration Error",
-              description: "Practice context is missing. Please contact support.",
-              variant: "destructive"
-            });
-            throw new Error('Missing practice context for practice user');
-          }
-          scopeId = effectivePracticeId;
-          console.log(`[OrdersDataTable] Practice role - scopeId (practice_id):`, scopeId);
+        if (normalizedRole === 'practice') {
+          // For doctors, effectivePracticeId may be null; use their own user id as practice id
+          scopeId = effectivePracticeId || effectiveUserId;
+          console.log(`[OrdersDataTable] Practice-level scopeId:`, scopeId);
         } else if (normalizedRole === 'staff') {
-          // Staff: need to get their practice_id from providers table
+          // Staff: must use their practice_id
           if (!effectivePracticeId) {
             toast({
               title: "Configuration Error",
