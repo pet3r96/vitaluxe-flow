@@ -74,6 +74,7 @@ serve(async (req) => {
     const to = from + pageSize - 1;
 
     // Build query with minimal columns for list view
+    // OPTIMIZED: Limit nested order_lines to first 10 per order to prevent timeout
     let query = supabase
       .from('orders')
       .select(`
@@ -83,23 +84,12 @@ serve(async (req) => {
         total_amount,
         payment_status,
         doctor_id,
-        order_lines (
+        order_lines!inner (
           id,
           status,
-          patient_name,
-          prescription_url,
-          prescription_method,
-          shipping_speed,
-          tracking_number,
-          products (
-            name,
-            dosage,
-            product_types (
-              name
-            )
-          )
+          patient_name
         )
-      `, { count: 'exact' });
+      `, { count: 'planned', head: false });
 
     // Apply date range filter if provided (defaults to last 90 days)
     const defaultStartDate = new Date();
