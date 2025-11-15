@@ -132,10 +132,17 @@ serve(async (req) => {
         total_amount,
         payment_status,
         doctor_id,
+        ship_to,
         order_lines (
           id,
           status,
-          patient_name
+          patient_name,
+          patient_id,
+          shipping_speed,
+          products (
+            name,
+            product_types ( name )
+          )
         )
       `, { count: 'planned', head: false })
       .not('status', 'is', null) // Use partial index
