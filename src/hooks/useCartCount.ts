@@ -1,7 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useCartCount = (cartOwnerId: string | null) => {
+  const queryClient = useQueryClient();
+
+  // Listen for impersonation changes and invalidate immediately
+  useEffect(() => {
+    const handleImpersonationChange = () => {
+      console.log('[useCartCount] Impersonation changed - invalidating cart queries');
+      queryClient.invalidateQueries({ queryKey: ["cart-count"] });
+      queryClient.invalidateQueries({ queryKey: ["cart-owner"] });
+    };
+
+    window.addEventListener("impersonation-changed", handleImpersonationChange);
+    return () => window.removeEventListener("impersonation-changed", handleImpersonationChange);
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ["cart-count", cartOwnerId],
     queryFn: async () => {
@@ -34,9 +49,9 @@ export const useCartCount = (cartOwnerId: string | null) => {
       return count || 0;
     },
     enabled: !!cartOwnerId,
-    staleTime: 1000, // Allow 1 second cache for faster UI
-    gcTime: 5000, // Keep count in memory for 5 seconds max
-    refetchOnMount: true, // Always check cart on mount
-    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    staleTime: 0, // No cache - always fetch fresh to ensure accuracy
+    gcTime: 5000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 };
