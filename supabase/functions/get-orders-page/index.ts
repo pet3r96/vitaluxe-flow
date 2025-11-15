@@ -25,6 +25,9 @@ const isUUID = (str: string): boolean => {
 };
 
 serve(async (req) => {
+  const requestStart = Date.now();
+  console.log(`[get-orders-page] ⏱️ Request started at ${new Date().toISOString()}`);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -611,10 +614,14 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[get-orders-page] ❌ Unexpected error:', error);
+    const duration = Date.now() - requestStart;
+    console.error(`[get-orders-page] ❌ ERROR after ${duration}ms:`, error);
     return new Response(
       JSON.stringify({ error: parseErr(error) }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+  } finally {
+    const totalDuration = Date.now() - requestStart;
+    console.log(`[get-orders-page] ⏱️ Request completed in ${totalDuration}ms`);
   }
 });

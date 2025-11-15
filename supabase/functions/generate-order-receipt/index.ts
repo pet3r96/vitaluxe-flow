@@ -11,6 +11,9 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  const requestStart = Date.now();
+  console.log(`[generate-order-receipt] ⏱️ Request started at ${new Date().toISOString()}`);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -496,6 +499,9 @@ serve(async (req) => {
 
     // Fallback to Supabase Storage if S3 upload failed
     if (!receiptUrl) {
+      console.log(`[generate-order-receipt] ⏱️ Storage upload started`);
+      const storageStart = Date.now();
+      
       const { error: uploadError } = await supabase.storage
         .from('receipts')
         .upload(filePath, pdfBuffer, {
@@ -519,6 +525,8 @@ serve(async (req) => {
       }
 
       receiptUrl = signedUrlData.signedUrl;
+      const storageDuration = Date.now() - storageStart;
+      console.log(`[generate-order-receipt] ✅ Storage upload completed in ${storageDuration}ms`);
       console.log('Receipt uploaded to Supabase Storage:', fileName);
     }
 
@@ -538,7 +546,8 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Error in generate-order-receipt:', error);
+    const duration = Date.now() - requestStart;
+    console.error(`[generate-order-receipt] ❌ ERROR after ${duration}ms:`, error);
     
     // Log error to audit logs
     try {
@@ -567,5 +576,8 @@ serve(async (req) => {
         status: 500
       }
     );
+  } finally {
+    const totalDuration = Date.now() - requestStart;
+    console.log(`[generate-order-receipt] ⏱️ Request completed in ${totalDuration}ms`);
   }
 });
