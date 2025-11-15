@@ -35,16 +35,51 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
         }
       });
 
+      // Handle 404 patient_account_not_found gracefully (not a real error, just means no account exists)
       if (error) {
-        console.error('[usePatientPracticeSubscription] Edge function error:', error);
-        throw error;
-      }
-
-      if (!result?.success) {
-        console.error('[usePatientPracticeSubscription] Invalid response:', result);
+        console.warn('[usePatientPracticeSubscription] Edge function error:', error);
+        
+        // Check if this is the expected "no patient account" case
+        if (error.message?.includes('patient_account_not_found') || 
+            result?.status === 'patient_account_not_found' ||
+            result?.reason === 'patient_account_not_found') {
+          return {
+            isSubscribed: false,
+            status: "patient_account_not_found",
+            practiceId: null,
+            practiceName: null,
+            reason: "patient_account_not_found"
+          };
+        }
+        
+        // For other errors, return error state without throwing
         return {
           isSubscribed: false,
           status: "error",
+          practiceId: null,
+          practiceName: null,
+          reason: error.message || "unknown_error"
+        };
+      }
+
+      if (!result?.success) {
+        console.warn('[usePatientPracticeSubscription] Non-success response:', result);
+        
+        // Handle patient_account_not_found specifically
+        if (result?.status === 'patient_account_not_found' || 
+            result?.reason === 'patient_account_not_found') {
+          return {
+            isSubscribed: false,
+            status: "patient_account_not_found",
+            practiceId: null,
+            practiceName: null,
+            reason: "patient_account_not_found"
+          };
+        }
+        
+        return {
+          isSubscribed: false,
+          status: result?.status || "error",
           practiceId: null,
           practiceName: null,
           reason: result?.reason || "unknown_error"
@@ -89,7 +124,7 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
     staleTime: 0, // Always fetch fresh data for subscription checks
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
-    retry: 1,
+    retry: false, // Don't retry on patient_account_not_found errors
   });
 
   return {
