@@ -415,8 +415,16 @@ export const OrdersDataTable = () => {
 
   const handlePrescriptionDownload = async (prescriptionUrl: string, productName: string) => {
     try {
+      toast({
+        title: "Downloading prescription...",
+        description: "Please wait"
+      });
+
       const response = await fetch(prescriptionUrl);
       if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Prescription link has expired. Please contact support to regenerate.');
+        }
         throw new Error('Failed to download prescription');
       }
       
@@ -434,8 +442,18 @@ export const OrdersDataTable = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+
+      toast({
+        title: "Download Complete",
+        description: `${productName} prescription downloaded successfully`
+      });
+    } catch (error: any) {
       logger.error('Prescription download error', error);
+      toast({
+        title: "Download Failed",
+        description: error.message || "Unable to download prescription",
+        variant: "destructive"
+      });
     }
   };
 

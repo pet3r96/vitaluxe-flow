@@ -12,7 +12,7 @@ interface OrderStatusHistoryProps {
 }
 
 export const OrderStatusHistory = ({ orderId }: OrderStatusHistoryProps) => {
-  const { data: statusHistory, isLoading } = useQuery({
+  const { data: statusHistory, isLoading, error } = useQuery({
     queryKey: ["order-status-history", orderId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -46,7 +46,37 @@ export const OrderStatusHistory = ({ orderId }: OrderStatusHistoryProps) => {
   };
 
   if (isLoading) {
-    return <div>Loading history...</div>;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Status History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Loading history...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Status History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">
+            Unable to load status history. You may not have permission to view this information.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (!statusHistory || statusHistory.length === 0) {
