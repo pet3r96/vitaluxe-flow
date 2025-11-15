@@ -92,7 +92,7 @@ const Cart = React.memo(function Cart() {
     includeProvider: true,
     enabled: !!cartOwnerId && !showStaffLoading && !showStaffNoAccess,
     staleTime: 5000,
-    refetchOnMount: true,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   }), [cartOwnerId, showStaffLoading, showStaffNoAccess]);
 
