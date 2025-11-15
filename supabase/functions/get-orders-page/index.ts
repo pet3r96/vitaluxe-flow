@@ -237,13 +237,13 @@ serve(async (req) => {
       
       console.log(`[get-orders-page] 🔍 Provider filter: provider_id = ${providerRecord.id}`);
       
-      // Fetch order IDs from order_lines where provider_id matches
+      // Fetch order IDs using security definer function (bypasses expensive RLS)
       const { data: orderIds, error: orderIdsError } = await supabase
-        .from('order_lines')
-        .select('order_id')
-        .eq('provider_id', providerRecord.id)
-        .gte('created_at', dateFrom)
-        .limit(2000); // Safety limit
+        .rpc('get_order_lines_by_provider', {
+          provider_uuid: providerRecord.id,
+          from_date: dateFrom,
+          limit_count: 2000
+        });
       
       if (orderIdsError) {
         console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
@@ -253,7 +253,7 @@ serve(async (req) => {
         );
       }
       
-      const uniqueOrderIds = [...new Set(orderIds?.map(ol => ol.order_id) || [])];
+      const uniqueOrderIds = [...new Set(orderIds?.map((row: any) => row.order_id) || [])];
       
       if (uniqueOrderIds.length === 0) {
         console.log('[get-orders-page] ℹ️ No orders found for provider');
@@ -276,14 +276,13 @@ serve(async (req) => {
     } else if (roleNorm === 'practice' || roleNorm === 'staff') {
       console.log(`[get-orders-page] ${roleNorm === 'staff' ? 'Staff' : 'Practice'} filter: doctor_id = ${practiceId}`);
       
-      // TWO-PHASE: Fetch order IDs first
+      // Fetch order IDs using security definer function (bypasses expensive RLS)
       const { data: orderIds, error: orderIdsError } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('doctor_id', practiceId)
-        .gte('created_at', dateFrom)
-        .not('status', 'is', null)
-        .limit(2000);
+        .rpc('get_orders_by_practice', {
+          practice_uuid: practiceId,
+          from_date: dateFrom,
+          limit_count: 2000
+        });
       
       if (orderIdsError) {
         console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
@@ -293,7 +292,7 @@ serve(async (req) => {
         );
       }
       
-      const uniqueOrderIds = orderIds?.map(o => o.id) || [];
+      const uniqueOrderIds = orderIds?.map((row: any) => row.id) || [];
       
       if (uniqueOrderIds.length === 0) {
         console.log(`[get-orders-page] ℹ️ No orders found for ${roleNorm}`);
@@ -347,13 +346,13 @@ serve(async (req) => {
       
       console.log(`[get-orders-page] 🔍 Pharmacy filter: assigned_pharmacy_id = ${pharmacyRecord.id}`);
       
-      // Fetch order IDs from order_lines
+      // Fetch order IDs using security definer function (bypasses expensive RLS)
       const { data: orderIds, error: orderIdsError } = await supabase
-        .from('order_lines')
-        .select('order_id')
-        .eq('assigned_pharmacy_id', pharmacyRecord.id)
-        .gte('created_at', dateFrom)
-        .limit(2000);
+        .rpc('get_order_lines_by_pharmacy', {
+          pharmacy_uuid: pharmacyRecord.id,
+          from_date: dateFrom,
+          limit_count: 2000
+        });
       
       if (orderIdsError) {
         console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
@@ -363,7 +362,7 @@ serve(async (req) => {
         );
       }
       
-      const uniqueOrderIds = [...new Set(orderIds?.map(ol => ol.order_id) || [])];
+      const uniqueOrderIds = [...new Set(orderIds?.map((row: any) => row.order_id) || [])];
       
       if (uniqueOrderIds.length === 0) {
         console.log('[get-orders-page] ℹ️ No orders found for pharmacy');

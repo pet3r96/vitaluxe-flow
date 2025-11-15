@@ -9759,6 +9759,38 @@ export type Database = {
         }[]
       }
       get_my_topline_rep_id: { Args: never; Returns: string }
+      get_order_lines_by_pharmacy: {
+        Args: { from_date: string; limit_count?: number; pharmacy_uuid: string }
+        Returns: {
+          created_at: string
+          order_id: string
+        }[]
+      }
+      get_order_lines_by_provider: {
+        Args: { from_date: string; limit_count?: number; provider_uuid: string }
+        Returns: {
+          created_at: string
+          order_id: string
+        }[]
+      }
+      get_order_lines_for_rep: {
+        Args: {
+          from_date: string
+          limit_count?: number
+          practice_ids: string[]
+        }
+        Returns: {
+          created_at: string
+          order_id: string
+        }[]
+      }
+      get_orders_by_practice: {
+        Args: { from_date: string; limit_count?: number; practice_uuid: string }
+        Returns: {
+          created_at: string
+          id: string
+        }[]
+      }
       get_patient_appointments_with_details: {
         Args: { p_user_id: string }
         Returns: Json
