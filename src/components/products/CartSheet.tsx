@@ -35,17 +35,17 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
     queryKey: ['cart-owner', effectiveUserId, effectiveRole, effectivePracticeId],
     queryFn: () => resolveCartOwnerUserId(effectiveUserId!, effectiveRole!, effectivePracticeId),
     enabled: !!effectiveUserId && !!effectiveRole,
-    staleTime: 0, // No cache - instant updates on impersonation/role change
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    staleTime: 30000, // 30 second cache
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   const { data: cartData, isLoading: loadingCart } = useCart(cartOwnerId, {
     productFields: "id, name, dosage, image_url",
     enabled: !!cartOwnerId && open,
-    staleTime: 0,
+    staleTime: 5000, // 5 second cache
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 
   const isLoading = resolvingOwner || loadingCart;
@@ -63,8 +63,8 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
-      queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+      queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update quantity");
@@ -83,11 +83,11 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
       toast.success("Item removed from cart");
       // Optimistic update: decrement count immediately
       queryClient.setQueryData(
-        ["cart-count", effectiveUserId],
+        ["cart-count", cartOwnerId],
         (old: number | undefined) => Math.max((old || 0) - 1, 0)
       );
-      queryClient.invalidateQueries({ queryKey: ["cart", effectiveUserId] });
-      queryClient.invalidateQueries({ queryKey: ["cart-count", effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+      queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to remove item");
