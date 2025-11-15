@@ -275,6 +275,12 @@ export const RepPracticesDataTable = () => {
 
   // Auto-heal: detect and fix missing rep_practice_links
   useEffect(() => {
+    // Only run auto-heal for actual rep users
+    const isRepUser = effectiveRole === "topline" || effectiveRole === "downline";
+    if (!isRepUser) {
+      return;
+    }
+
     const currentLinks = practices?.length || 0;
     const expected = expectedCount || 0;
 
@@ -305,9 +311,16 @@ export const RepPracticesDataTable = () => {
           setIsRepairing(false);
         });
     }
-  }, [practices?.length, expectedCount, isRepairing, queryClient]);
+  }, [practices?.length, expectedCount, isRepairing, queryClient, effectiveRole]);
 
   const handleRepairLinks = async () => {
+    // Guard: Only allow rep users to repair links
+    const isRepUser = effectiveRole === "topline" || effectiveRole === "downline";
+    if (!isRepUser) {
+      toast.error("This action is only available for sales representatives");
+      return;
+    }
+
     setIsRepairing(true);
     try {
       const { data, error } = await supabase.functions.invoke('backfill-rep-links');
