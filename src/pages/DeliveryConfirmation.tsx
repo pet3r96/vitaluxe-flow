@@ -127,20 +127,20 @@ export default function DeliveryConfirmation() {
       });
       
       // Update cart_lines with structured address
-      const { data, error } = await supabase
-        .from("cart_lines")
-        .update({
-          patient_address_street: address.street,
-          patient_address_city: address.city,
-          patient_address_state: address.state,
-          patient_address_zip: address.zip,
-          patient_address_formatted: address.formatted,
-          patient_address_validated: address.status === 'verified',
-          patient_address_validation_source: address.source || 'manual',
-          patient_address: null, // Clear legacy field
-        })
-        .in("id", lineIds)
-        .select('id');
+      const { data, error } = await supabase.functions.invoke('update-cart-address', {
+        body: {
+          lineIds,
+          address: {
+            street: address.street,
+            city: address.city,
+            state: address.state,
+            zip: address.zip,
+            formatted: address.formatted,
+            validated: address.status === 'verified',
+            validationSource: address.source || 'manual'
+          }
+        }
+      });
 
       if (error) {
         console.error('[DeliveryConfirmation] Cart lines update error:', error);
@@ -272,17 +272,22 @@ export default function DeliveryConfirmation() {
         const formattedAddress = address.formatted || 
           `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
         
-        // Update cart line with routing results and formatted address
-        const { error: updateError } = await supabase
-          .from("cart_lines")
-          .update({
-            destination_state: address.state.toUpperCase(),
-            assigned_pharmacy_id: routing.pharmacy_id,
-            patient_address: formattedAddress,
-            patient_address_validated: address.status === 'verified',
-            patient_address_validation_source: address.source || 'manual',
-          })
-          .eq("id", meta.id);
+        // Update cart line with routing results and formatted address via edge function
+        const { error: updateError } = await supabase.functions.invoke('update-cart-address', {
+          body: {
+            lineIds: [meta.id],
+            address: {
+              street: address.street,
+              city: address.city,
+              state: address.state.toUpperCase(),
+              zip: address.zip,
+              formatted: formattedAddress,
+              validated: address.status === 'verified',
+              validationSource: address.source || 'manual'
+            },
+            assignedPharmacyId: routing.pharmacy_id
+          }
+        });
         
         if (updateError) {
           console.error(`[DeliveryConfirmation] Failed to update routing for line ${meta.id}:`, updateError);

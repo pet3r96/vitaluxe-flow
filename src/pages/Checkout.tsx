@@ -513,11 +513,13 @@ export default function Checkout() {
 
     if (urlError) throw urlError;
 
-    // Update cart line with prescription URL
-    const { error: updateError } = await supabase
-      .from("cart_lines")
-      .update({ prescription_url: urlData.signedUrl })
-      .eq("id", lineId);
+    // Update cart line with prescription URL via edge function
+    const { error: updateError } = await supabase.functions.invoke('update-cart-prescription', {
+      body: {
+        lineId,
+        prescriptionUrl: urlData.signedUrl
+      }
+    });
 
       if (updateError) throw updateError;
 

@@ -37,13 +37,30 @@ serve(async (req) => {
     }
 
     const { 
-      cartOwnerId, 
-      productId, 
-      quantity = 1, 
-      patientId, 
-      patientName, 
+      cartOwnerId,
+      productId,
+      quantity = 1,
+      patientId,
+      patientName,
       destinationState,
-      providerId 
+      providerId,
+      patientEmail,
+      patientPhone,
+      patientAddress,
+      patientAddressStreet,
+      patientAddressCity,
+      patientAddressState,
+      patientAddressZip,
+      patientAddressValidated,
+      patientAddressValidationSource,
+      priceSnapshot,
+      assignedPharmacyId,
+      prescriptionUrl,
+      customSig,
+      customDosage,
+      orderNotes,
+      prescriptionMethod,
+      genderAtBirth
     } = await req.json();
 
     if (!cartOwnerId || !productId || !patientName || !destinationState) {
@@ -91,18 +108,39 @@ serve(async (req) => {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
+    const insertData: any = {
+      cart_id: cart.id,
+      product_id: productId,
+      quantity,
+      patient_id: patientId,
+      patient_name: patientName,
+      destination_state: destinationState,
+      provider_id: providerId,
+      expires_at: expiresAt.toISOString()
+    };
+
+    // Add optional fields if provided
+    if (patientEmail !== undefined) insertData.patient_email = patientEmail;
+    if (patientPhone !== undefined) insertData.patient_phone = patientPhone;
+    if (patientAddress !== undefined) insertData.patient_address = patientAddress;
+    if (patientAddressStreet !== undefined) insertData.patient_address_street = patientAddressStreet;
+    if (patientAddressCity !== undefined) insertData.patient_address_city = patientAddressCity;
+    if (patientAddressState !== undefined) insertData.patient_address_state = patientAddressState;
+    if (patientAddressZip !== undefined) insertData.patient_address_zip = patientAddressZip;
+    if (patientAddressValidated !== undefined) insertData.patient_address_validated = patientAddressValidated;
+    if (patientAddressValidationSource !== undefined) insertData.patient_address_validation_source = patientAddressValidationSource;
+    if (priceSnapshot !== undefined) insertData.price_snapshot = priceSnapshot;
+    if (assignedPharmacyId !== undefined) insertData.assigned_pharmacy_id = assignedPharmacyId;
+    if (prescriptionUrl !== undefined) insertData.prescription_url = prescriptionUrl;
+    if (customSig !== undefined) insertData.custom_sig = customSig;
+    if (customDosage !== undefined) insertData.custom_dosage = customDosage;
+    if (orderNotes !== undefined) insertData.order_notes = orderNotes;
+    if (prescriptionMethod !== undefined) insertData.prescription_method = prescriptionMethod;
+    if (genderAtBirth !== undefined) insertData.gender_at_birth = genderAtBirth;
+
     const { data: cartLine, error: insertError } = await supabase
       .from("cart_lines")
-      .insert({
-        cart_id: cart.id,
-        product_id: productId,
-        quantity,
-        patient_id: patientId,
-        patient_name: patientName,
-        destination_state: destinationState,
-        provider_id: providerId,
-        expires_at: expiresAt.toISOString()
-      })
+      .insert(insertData)
       .select("id")
       .single();
 

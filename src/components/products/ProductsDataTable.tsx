@@ -305,23 +305,6 @@ export const ProductsDataTable = () => {
         return;
       }
 
-      let { data: cart } = await supabase
-        .from("cart")
-        .select("id")
-        .eq("doctor_id", cartOwnerForDb)
-        .single();
-
-      if (!cart) {
-        const { data: newCart, error: cartError } = await supabase
-          .from("cart")
-          .insert({ doctor_id: cartOwnerForDb })
-          .select("id")
-          .single();
-
-        if (cartError) throw cartError;
-        cart = newCart;
-      }
-
       // ORDER CONTEXT: For providers, use resolved practice ID for shipping/routing
       // (cart stays linked to provider's user_id above)
       const { data: userRoleData } = await supabase
@@ -403,34 +386,34 @@ export const ProductsDataTable = () => {
 
         console.log(`✅ Pharmacy routed: ${routingResult.reason}`);
 
-        const { error } = await supabase
-          .from("cart_lines" as any)
-          .insert({
-            cart_id: cart.id,
-            product_id: productForCart.id,
-            patient_id: null,
-            provider_id: actualProviderId,
-            patient_name: "Practice Order",
-            patient_email: null,
-            patient_phone: null,
-            patient_address: null,
+        const { error } = await supabase.functions.invoke('add-to-cart', {
+          body: {
+            cartOwnerId: cartOwnerForDb,
+            productId: productForCart.id,
+            patientId: null,
+            providerId: actualProviderId,
+            patientName: "Practice Order",
+            patientEmail: null,
+            patientPhone: null,
+            patientAddress: null,
             quantity: quantity,
-            price_snapshot: correctPrice,
-            destination_state: destinationState,
-            assigned_pharmacy_id: routingResult.pharmacy_id,
-            prescription_url: prescriptionUrl,
-            custom_sig: customSig,
-            custom_dosage: customDosage,
-            order_notes: orderNotes,
-            prescription_method: prescriptionMethod,
-          });
+            priceSnapshot: correctPrice,
+            destinationState: destinationState,
+            assignedPharmacyId: routingResult.pharmacy_id,
+            prescriptionUrl: prescriptionUrl,
+            customSig: customSig,
+            customDosage: customDosage,
+            orderNotes: orderNotes,
+            prescriptionMethod: prescriptionMethod,
+          }
+        });
 
         if (error) throw error;
       } else {
         // Patient order - fetch from patient_accounts table (patientId is patient_accounts.id from dialog)
         const { data: patientRecord, error: patientError } = await supabase
           .from("patient_accounts")
-          .select("id, name, first_name, last_name, email, phone, address_street, address_city, address_state, address_zip, user_id")
+          .select("id, name, first_name, last_name, email, phone, address_street, address_city, address_state, address_zip, user_id, gender_at_birth")
           .eq("id", patientId!)
           .single();
         
@@ -505,33 +488,34 @@ export const ProductsDataTable = () => {
           patientRecord.address_zip
         );
 
-        const { error } = await supabase
-          .from("cart_lines" as any)
-          .insert({
-            cart_id: cart.id,
-            product_id: productForCart.id,
-            patient_id: patientRecord.id, // Use patient_accounts.id for foreign key
-            provider_id: actualProviderId,
-            patient_name: patientRecord.name || "Unknown",
-            patient_email: patientRecord.email,
-            patient_phone: patientRecord.phone,
-            patient_address: null, // Clear legacy field
-            patient_address_street: patientRecord.address_street || null,
-            patient_address_city: patientRecord.address_city || null,
-            patient_address_state: patientRecord.address_state || null,
-            patient_address_zip: patientRecord.address_zip || null,
-            patient_address_validated: hasCompleteAddress,
-            patient_address_validation_source: hasCompleteAddress ? 'patient_record' : null,
+        const { error } = await supabase.functions.invoke('add-to-cart', {
+          body: {
+            cartOwnerId: cartOwnerForDb,
+            productId: productForCart.id,
+            patientId: patientRecord.id,
+            providerId: actualProviderId,
+            patientName: patientRecord.name || "Unknown",
+            patientEmail: patientRecord.email,
+            patientPhone: patientRecord.phone,
+            patientAddress: null,
+            patientAddressStreet: patientRecord.address_street || null,
+            patientAddressCity: patientRecord.address_city || null,
+            patientAddressState: patientRecord.address_state || null,
+            patientAddressZip: patientRecord.address_zip || null,
+            patientAddressValidated: hasCompleteAddress,
+            patientAddressValidationSource: hasCompleteAddress ? 'patient_record' : null,
             quantity: quantity,
-            price_snapshot: correctPrice,
-            destination_state: destinationState,
-            assigned_pharmacy_id: routingResult.pharmacy_id,
-            prescription_url: prescriptionUrl,
-            custom_sig: customSig,
-            custom_dosage: customDosage,
-            order_notes: orderNotes,
-            prescription_method: prescriptionMethod,
-          });
+            priceSnapshot: correctPrice,
+            destinationState: destinationState,
+            assignedPharmacyId: routingResult.pharmacy_id,
+            prescriptionUrl: prescriptionUrl,
+            customSig: customSig,
+            customDosage: customDosage,
+            orderNotes: orderNotes,
+            prescriptionMethod: prescriptionMethod,
+            genderAtBirth: patientRecord.gender_at_birth,
+          }
+        });
 
         if (error) throw error;
       }
