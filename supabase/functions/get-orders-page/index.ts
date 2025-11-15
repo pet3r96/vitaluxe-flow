@@ -126,7 +126,7 @@ serve(async (req) => {
     const to = from + safePageSize - 1;
 
     // Build base query with minimal columns for list view
-    // Use count: 'planned' for performance (estimated count, fast)
+    // Simplified query without nested product joins for better performance
     let query = supabase
       .from('orders')
       .select(`
@@ -137,19 +137,16 @@ serve(async (req) => {
         payment_status,
         doctor_id,
         ship_to,
-        order_lines!inner (
+        order_lines (
           id,
           status,
           patient_name,
           patient_id,
           shipping_speed,
-          products (
-            name,
-            product_types ( name )
-          )
-      )
-    `, { count: 'planned', head: false })
-    .not('status', 'is', null); // Use partial index
+          product_id
+        )
+      `, { count: 'exact' })
+      .not('status', 'is', null);
 
   // Apply date range filter
     if (dateFrom) {
