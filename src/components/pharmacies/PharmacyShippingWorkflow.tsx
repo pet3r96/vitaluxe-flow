@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { ShipmentTrackingCard } from "@/components/orders/ShipmentTrackingCard";
 import { getCurrentCSRFToken } from "@/lib/csrf";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PharmacyShippingWorkflowProps {
   orderId: string;
@@ -146,6 +147,24 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
     staleTime: 1 * 60 * 1000, // 1 minute - order details don't change often
     gcTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Safety check: Show loading state if order data is not available
+  if (isLoading || !order) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading Order Details...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-60 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Check if order has Rx required products
   const hasRxRequiredProducts = order?.lines?.some(line => line.products?.requires_prescription === true);

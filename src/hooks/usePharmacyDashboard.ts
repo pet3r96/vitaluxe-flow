@@ -19,7 +19,10 @@ export function usePharmacyDashboard(effectiveUserId: string | null, effectiveRo
 
       const { data, error } = await supabase.functions.invoke<PharmacyDashboardStats>(
         'get-pharmacy-dashboard-stats',
-        { method: 'POST' }
+        { 
+          method: 'POST',
+          body: { effectiveUserId }
+        }
       );
 
       if (error) {

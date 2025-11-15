@@ -28,13 +28,19 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    console.log('[get-pharmacy-dashboard-stats] 👤 User ID:', user.id);
+    // Parse request body for effectiveUserId (for impersonation support)
+    const { effectiveUserId } = await req.json().catch(() => ({ effectiveUserId: null }));
+    
+    // Use effectiveUserId if provided (for impersonation), otherwise use JWT user
+    const userIdToQuery = effectiveUserId || user.id;
+
+    console.log('[get-pharmacy-dashboard-stats] 👤 Query User ID:', userIdToQuery, effectiveUserId ? '(impersonation)' : '(direct)');
 
     // Get pharmacy ID for this user
     const { data: pharmacy } = await supabaseClient
       .from('pharmacies')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', userIdToQuery)
       .maybeSingle();
 
     if (!pharmacy) {
