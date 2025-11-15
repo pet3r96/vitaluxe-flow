@@ -439,3 +439,24 @@ verify_jwt = false
 
 [functions.test-baremeds-auth]
 verify_jwt = false
+
+[functions.get-cart]
+verify_jwt = true
+
+[functions.get-cart-count]
+verify_jwt = true
+
+[functions.add-to-cart]
+verify_jwt = true
+
+[functions.update-cart-lines]
+verify_jwt = true
+
+[functions.remove-cart-line]
+verify_jwt = true
+
+[functions.clear-cart]
+verify_jwt = true
+
+[functions.update-shipping-speed]
+verify_jwt = true
