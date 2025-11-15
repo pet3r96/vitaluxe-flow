@@ -170,11 +170,11 @@ export const OrdersDataTable = () => {
         );
       }
 
-      // USE EDGE FUNCTION FOR SIMPLE ROLES (admin, practice, staff)
+      // USE EDGE FUNCTION FOR OPTIMIZED ROLES (admin, practice, staff, topline, downline)
       // Map provider and doctor to practice-level view to show ALL practice orders
       const normalizedRole = (effectiveRole === 'provider' || effectiveRole === 'doctor') ? 'practice' : effectiveRole;
       
-      if (normalizedRole === "admin" || normalizedRole === "practice" || normalizedRole === "staff") {
+      if (["admin", "practice", "staff", "topline", "downline"].includes(normalizedRole)) {
         console.time(`OrdersEdgeFunctionQuery-${normalizedRole}`);
         console.log(`[OrdersDataTable] Using edge function for role: ${normalizedRole}`);
         
@@ -196,6 +196,10 @@ export const OrdersDataTable = () => {
           }
           scopeId = effectivePracticeId;
           console.log(`[OrdersDataTable] Staff role - scopeId (practice_id):`, scopeId);
+        } else if (normalizedRole === 'topline' || normalizedRole === 'downline') {
+          // For reps, scopeId is their own user ID (edge function will lookup rep record)
+          scopeId = effectiveUserId;
+          console.log(`[OrdersDataTable] ${normalizedRole} role - scopeId:`, scopeId);
         }
         // Admin: scopeId remains null (no filter)
         
@@ -347,100 +351,7 @@ export const OrdersDataTable = () => {
         query = query.eq("doctor_id", staffData.practice_id);
       }
 
-      // Filter by downline rep if role is downline
-      if (effectiveRole === "downline") {
-        // Get the downline's rep record first
-        const { data: downlineRep } = await supabase
-          .from("reps")
-          .select("id")
-          .eq("user_id", effectiveUserId)
-          .eq("role", "downline")
-          .maybeSingle();
-        
-        if (!downlineRep) {
-          setQueryMetadata({
-            hasRepRecord: false,
-            practiceCount: 0,
-            practiceNames: [],
-            isEmpty: true,
-            emptyReason: 'no_rep'
-          });
-          return [];
-        }
-        
-        // Get practices linked to this downline via rep_practice_links
-        const { data: practiceLinks } = await supabase
-          .from("rep_practice_links")
-          .select("practice_id, profiles:practice_id(name)")
-          .eq("rep_id", downlineRep.id);
-        
-        const practiceIds = practiceLinks?.map(pl => pl.practice_id) || [];
-        const practiceNames = practiceLinks?.map(pl => (pl as any).profiles?.name).filter(Boolean) || [];
-        
-        if (practiceIds.length === 0) {
-          setQueryMetadata({
-            hasRepRecord: true,
-            practiceCount: 0,
-            practiceNames: [],
-            isEmpty: true,
-            emptyReason: 'no_practices'
-          });
-          return [];
-        }
-        
-        // Store metadata for display
-        setQueryMetadata({
-          hasRepRecord: true,
-          practiceCount: practiceIds.length,
-          practiceNames,
-          isEmpty: false,
-          emptyReason: null
-        });
-        
-        query = query.in("doctor_id", practiceIds);
-      }
-
-      // Filter by topline rep if role is topline
-      if (effectiveRole === "topline") {
-        // First get the topline's rep ID
-        const { data: toplineRep } = await supabase
-          .from("reps")
-          .select("id")
-          .eq("user_id", effectiveUserId)
-          .eq("role", "topline")
-          .maybeSingle();
-        
-        if (!toplineRep) {
-          return []; // No rep record found
-        }
-        
-        // Get all downlines assigned to this topline
-        const { data: downlines } = await supabase
-          .from("reps")
-          .select("user_id")
-          .eq("role", "downline")
-          .eq("assigned_topline_id", toplineRep.id);
-        
-        const downlineUserIds = downlines?.map(d => d.user_id) || [];
-        
-        // Add the topline's own user_id to also catch practices linked directly
-        const allUserIds = [effectiveUserId, ...downlineUserIds];
-        
-        // Get practices linked to any of these users
-        const { data: practices } = await supabase
-          .from("profiles")
-          .select("id")
-          .in("linked_topline_id", allUserIds)
-          .eq("active", true);
-        
-        const practiceIds = practices?.map(p => p.id) || [];
-        
-        if (practiceIds.length === 0) {
-          return []; // No practices assigned, no orders
-        }
-        
-        query = query.in("doctor_id", practiceIds);
-      }
+      // Topline and Downline now use edge function - removed old query code
 
       const { data, error } = await query
         .neq('payment_status', 'payment_failed')

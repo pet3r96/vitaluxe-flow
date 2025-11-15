@@ -30,12 +30,21 @@ export const usePracticeRxPrivileges = () => {
       }
       
       const providers = data?.providers || [];
-      const providersWithNpi = providers.filter((p: any) => p.profiles?.npi) || [];
+      
+      // Robust NPI check - handle both nested and flat structure
+      const providersWithNpi = providers.filter((p: any) => {
+        const npi = p.profiles?.npi || p.npi;
+        return npi && String(npi).trim().length > 0;
+      }) || [];
       
       console.info('[usePracticeRxPrivileges] Provider counts:', {
         total: providers.length,
         withNPI: providersWithNpi.length,
-        canOrderRx: providersWithNpi.length > 0
+        canOrderRx: providersWithNpi.length > 0,
+        sampleProvider: providers[0] ? {
+          hasProfilesNpi: !!providers[0].profiles?.npi,
+          hasFlatNpi: !!providers[0].npi
+        } : null
       });
       
       return {

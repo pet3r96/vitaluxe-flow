@@ -297,6 +297,124 @@ serve(async (req) => {
       console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for pharmacy`);
       query = query.in('id', uniqueOrderIds);
       
+    } else if (roleNorm === 'Downline') {
+      // Downline rep: lookup rep record, get linked practices
+      console.log(`[get-orders-page] Downline role - practiceId (user_id): ${practiceId}`);
+      
+      const { data: repData, error: repError } = await supabase
+        .from('reps')
+        .select('id')
+        .eq('user_id', practiceId)
+        .eq('role', 'downline')
+        .maybeSingle();
+      
+      if (repError || !repData) {
+        console.warn('[get-orders-page] Downline rep record not found:', repError?.message || 'No data');
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            totalCount: 0,
+            page: page,
+            pageSize: safePageSize,
+            totalPages: 0,
+            hasNextPage: false,
+            metadata: { hasRepRecord: false, emptyReason: 'no_rep' }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const { data: practiceLinks, error: linksError } = await supabase
+        .from('rep_practice_links')
+        .select('practice_id')
+        .eq('rep_id', repData.id)
+        .limit(5000);
+      
+      const practiceIds = practiceLinks?.map(pl => pl.practice_id) || [];
+      
+      if (practiceIds.length === 0) {
+        console.warn('[get-orders-page] No practices linked to downline rep:', repData.id);
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            totalCount: 0,
+            page: page,
+            pageSize: safePageSize,
+            totalPages: 0,
+            hasNextPage: false,
+            metadata: { hasRepRecord: true, practiceCount: 0, emptyReason: 'no_practices' }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[get-orders-page] ✅ Downline ${repData.id}: found ${practiceIds.length} practices`);
+      query = query.in('doctor_id', practiceIds);
+      
+    } else if (roleNorm === 'Topline') {
+      // Topline rep: lookup rep record, get all downlines + their practices
+      console.log(`[get-orders-page] Topline role - practiceId (user_id): ${practiceId}`);
+      
+      const { data: repData, error: repError } = await supabase
+        .from('reps')
+        .select('id')
+        .eq('user_id', practiceId)
+        .eq('role', 'topline')
+        .maybeSingle();
+      
+      if (repError || !repData) {
+        console.warn('[get-orders-page] Topline rep record not found:', repError?.message || 'No data');
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            totalCount: 0,
+            page: page,
+            pageSize: safePageSize,
+            totalPages: 0,
+            hasNextPage: false,
+            metadata: { hasRepRecord: false, emptyReason: 'no_rep' }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Get all downline reps under this topline
+      const { data: downlineReps } = await supabase
+        .from('reps')
+        .select('id')
+        .eq('assigned_topline_id', repData.id)
+        .eq('role', 'downline');
+      
+      const allRepIds = [repData.id, ...(downlineReps?.map(r => r.id) || [])];
+      
+      // Get all practices linked to these reps
+      const { data: practiceLinks } = await supabase
+        .from('rep_practice_links')
+        .select('practice_id')
+        .in('rep_id', allRepIds)
+        .limit(5000);
+      
+      const practiceIds = [...new Set(practiceLinks?.map(pl => pl.practice_id) || [])];
+      
+      if (practiceIds.length === 0) {
+        console.warn('[get-orders-page] No practices linked to topline/downlines:', repData.id);
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            totalCount: 0,
+            page: page,
+            pageSize: safePageSize,
+            totalPages: 0,
+            hasNextPage: false,
+            metadata: { hasRepRecord: true, practiceCount: 0, emptyReason: 'no_practices' }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[get-orders-page] ✅ Topline ${repData.id}: found ${practiceIds.length} practices across ${allRepIds.length} reps`);
+      query = query.in('doctor_id', practiceIds);
+      
     } else if (roleNorm === 'admin') {
       // Admin sees all orders - no filter
       console.log('[get-orders-page] Admin role - no filtering');
