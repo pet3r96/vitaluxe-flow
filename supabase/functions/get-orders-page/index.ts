@@ -144,12 +144,11 @@ serve(async (req) => {
             name,
             product_types ( name )
           )
-        )
-      `, { count: 'exact', head: false })
-      .not('status', 'is', null) // Use partial index
-      .limit(1, { foreignTable: 'order_lines' }); // Only fetch 1 order_line per order
+      )
+    `, { count: 'exact', head: false })
+    .not('status', 'is', null); // Use partial index
 
-    // Apply date range filter
+  // Apply date range filter
     if (dateFrom) {
       query = query.gte('created_at', dateFrom);
     }
