@@ -141,15 +141,26 @@ serve(async (req) => {
       console.log(`[get-orders-page] 🔍 Provider filter: provider_id = ${providerRecord.id} (user: ${practiceId})`);
       
       // Get order IDs that have this provider in any order line
+      // PERFORMANCE: Only fetch recent orders to prevent full table scan
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      
+      console.log(`[get-orders-page] 🔍 Fetching order_lines since ${ninetyDaysAgo.toISOString()}`);
+      
       const { data: orderLineData, error: orderLineError } = await supabase
         .from('order_lines')
         .select('order_id')
-        .eq('provider_id', providerRecord.id);
+        .eq('provider_id', providerRecord.id)
+        .gte('created_at', ninetyDaysAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1000);
       
       if (orderLineError) {
         console.error('[get-orders-page] ❌ Error fetching order_lines:', orderLineError);
         throw orderLineError;
       }
+      
+      console.log(`[get-orders-page] ✅ Found ${orderLineData?.length || 0} order_lines in last 90 days`);
       
       const orderIds = [...new Set(orderLineData?.map(ol => ol.order_id) || [])];
       
