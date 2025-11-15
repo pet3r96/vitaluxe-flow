@@ -34,7 +34,8 @@ export const useCartCount = (cartOwnerId: string | null) => {
       return count || 0;
     },
     enabled: !!cartOwnerId,
-    staleTime: 0, // Always fetch fresh data - no caching lag
+    staleTime: 1000, // Allow 1 second cache for faster UI
+    gcTime: 5000, // Keep count in memory for 5 seconds max
     refetchOnMount: true, // Always check cart on mount
     refetchOnWindowFocus: true, // Refetch when user returns to tab
   });

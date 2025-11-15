@@ -471,34 +471,23 @@ export default function Checkout() {
           }
         }
         
-        // Set empty cart data immediately (optimistic update) - use cartOwnerId
-        if (cartOwnerId) {
-          queryClient.setQueryData(["cart", cartOwnerId], { id: '', lines: [] });
-          queryClient.setQueryData(["cart-count", cartOwnerId], 0);
-        }
+        // CRITICAL: Force immediate refetch of all cart-related queries for instant clearing
+        await queryClient.refetchQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return key === 'cart' || key === 'cart-count' || key === 'cart-owner';
+          }
+        });
         
-        // CRITICAL: Force immediate refetch instead of invalidate for instant cart clearing
-        await Promise.all([
-          queryClient.refetchQueries({ queryKey: ["cart"], exact: false }),
-          queryClient.refetchQueries({ queryKey: ["cart-count"], exact: false }),
-          queryClient.refetchQueries({ queryKey: ["cart-owner"], exact: false }),
-          queryClient.invalidateQueries({ queryKey: ["orders"], exact: false })
-        ]);
-        
-        // Double-check cart is empty for specific owner
-        if (cartOwnerId) {
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: ["cart", cartOwnerId] }),
-            queryClient.refetchQueries({ queryKey: ["cart-count", cartOwnerId] })
-          ]);
-        }
+        // Also invalidate orders to show new orders
+        await queryClient.invalidateQueries({ queryKey: ["orders"] });
         
         toast({
           title: "Order Placed Successfully! 🎉",
           description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. Cart cleared (${deletedCount} items). Redirecting to orders page...`,
         });
         
-        // Add 500ms delay before navigation to allow database propagation
+        // Navigate after ensuring cart queries complete
         setTimeout(() => {
           navigate("/orders", {
             state: {
@@ -507,7 +496,7 @@ export default function Checkout() {
               orderCount: createdOrders.length
             }
           });
-        }, 500);
+        }, 100);
       } else {
         // Some payments failed - show retry dialog
         setPaymentErrors(failedPayments);

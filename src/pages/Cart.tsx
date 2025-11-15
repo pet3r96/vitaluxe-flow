@@ -557,7 +557,54 @@ const Cart = React.memo(function Cart() {
 });
 
 const CartWithErrorBoundary = () => (
-  <ErrorBoundary>
+  <ErrorBoundary
+    fallback={
+      <div className="container mx-auto p-6">
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Cart Error
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Unable to load your cart. This may be due to a temporary issue with your account configuration.
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={() => window.location.href = '/products'}>
+                Return to Products
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const { data } = await supabase.auth.getUser();
+                    if (data.user) {
+                      const { data: cart } = await supabase
+                        .from('cart')
+                        .select('id')
+                        .eq('doctor_id', data.user.id)
+                        .maybeSingle();
+                      if (cart) {
+                        await supabase.from('cart_lines').delete().eq('cart_id', cart.id);
+                      }
+                    }
+                    window.location.href = '/products';
+                  } catch (err) {
+                    console.error('Failed to clear cart:', err);
+                    window.location.href = '/products';
+                  }
+                }}
+              >
+                Clear Cart & Return to Products
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }
+  >
     <Cart />
   </ErrorBoundary>
 );
