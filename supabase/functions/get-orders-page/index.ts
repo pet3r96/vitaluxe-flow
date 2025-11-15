@@ -125,8 +125,7 @@ serve(async (req) => {
     const from = (page - 1) * safePageSize;
     const to = from + safePageSize - 1;
 
-    // Build base query with minimal columns for list view
-    // Simplified query without nested product joins for better performance
+    // Build optimized query with estimated count for performance
     let query = supabase
       .from('orders')
       .select(`
@@ -136,16 +135,8 @@ serve(async (req) => {
         total_amount,
         payment_status,
         doctor_id,
-        ship_to,
-        order_lines (
-          id,
-          status,
-          patient_name,
-          patient_id,
-          shipping_speed,
-          product_id
-        )
-      `, { count: 'exact' })
+        ship_to
+      `, { count: 'estimated', head: false })
       .not('status', 'is', null);
 
   // Apply date range filter
@@ -579,8 +570,31 @@ serve(async (req) => {
       );
     }
 
+    // Fetch order_lines separately with pagination to avoid join overhead
+    const orderIds = orders?.map(o => o.id) || [];
+    let orderLinesData: any[] = [];
+    
+    if (orderIds.length > 0) {
+      const { data: lines, error: linesError } = await supabase
+        .from('order_lines')
+        .select('id, order_id, status, patient_name, patient_id, shipping_speed, product_id')
+        .in('order_id', orderIds);
+      
+      if (linesError) {
+        console.error('[get-orders-page] Order lines error:', linesError);
+      } else {
+        orderLinesData = lines || [];
+      }
+    }
+
+    // Attach order_lines to orders
+    const ordersWithLines = (orders || []).map(order => ({
+      ...order,
+      order_lines: orderLinesData.filter(line => line.order_id === order.id)
+    }));
+
     const duration = performance.now() - startTime;
-    console.log(`[get-orders-page] ✅ SUCCESS: ${orders?.length || 0} orders fetched in ${duration.toFixed(2)}ms (total: ${count || 0})`);
+    console.log(`[get-orders-page] ✅ SUCCESS: ${ordersWithLines?.length || 0} orders fetched in ${duration.toFixed(2)}ms (total: ${count || 0})`);
 
     // Performance warning
     if (duration > 1000) {
@@ -601,7 +615,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        orders: orders || [],
+        orders: ordersWithLines || [],
         total: count || 0,
         page,
         pageSize: safePageSize,

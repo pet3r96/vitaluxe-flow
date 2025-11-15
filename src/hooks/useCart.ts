@@ -74,8 +74,8 @@ export function useCart(
   ]);
 
   return useQuery({
-    // Include all options in query key for proper cache isolation
-    queryKey: ["cart", userId, stableOptions.includePharmacy, stableOptions.includeProvider, stableOptions.hydratePatients],
+    // Use cartOwnerId consistently with useCartCount
+    queryKey: ["cart", userId],
     queryFn: async (): Promise<Cart> => {
       if (!userId) {
         console.log('[useCart] No userId provided, returning empty cart');

@@ -30,11 +30,14 @@ export const useAddToCart = () => {
       return data;
     },
     onSuccess: (_, variables) => {
-      console.log('[useAddToCart] Success, invalidating queries');
-      // Invalidate cart queries to refresh data - use specific cart owner ID
-      queryClient.invalidateQueries({ queryKey: ["cart", variables.cartOwnerId] });
-      queryClient.invalidateQueries({ queryKey: ["cart-count", variables.cartOwnerId] });
-      queryClient.invalidateQueries({ queryKey: ["cart-owner"] });
+      console.log('[useAddToCart] Success, invalidating cart queries for:', variables.cartOwnerId);
+      // Invalidate all cart-related queries with consistent key
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === 'cart' || key === 'cart-count' || key === 'cart-owner';
+        }
+      });
     }
   });
 };

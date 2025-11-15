@@ -534,7 +534,7 @@ serve(async (req) => {
       }
     }
 
-    // CRITICAL: Clear cart lines after successful order placement
+    // CRITICAL: Clear cart lines atomically after successful order placement
     let deletedCartLineIds: string[] = [];
     if (failedPayments.length === 0) {
       console.log(`[place-order] Clearing cart_lines for cart_id: ${cart_id}`);
@@ -546,14 +546,6 @@ serve(async (req) => {
 
       if (deleteError) {
         console.error("[place-order] Failed to clear cart:", deleteError);
-        // Non-fatal: aggressively expire remaining lines so clients won't see them
-        const { error: expireError } = await supabaseAdmin
-          .from("cart_lines")
-          .update({ expires_at: new Date().toISOString() })
-          .eq("cart_id", cart_id);
-        if (expireError) {
-          console.error("[place-order] Failed to expire residual cart lines:", expireError);
-        }
       } else {
         deletedCartLineIds = (deletedLines || []).map((l: any) => l.id);
         console.log(`[place-order] ✅ Successfully cleared ${deletedCartLineIds.length} cart lines`);

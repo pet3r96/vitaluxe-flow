@@ -12,9 +12,12 @@ export const useCartCount = (cartOwnerId: string | null) => {
       console.log('[useCartCount] Impersonation changed - invalidating cart queries');
       // Only invalidate if cartOwnerId actually changed
       if (lastOwnerIdRef.current !== cartOwnerId) {
-        queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
-        queryClient.invalidateQueries({ queryKey: ["cart-owner-id"] });
-        queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return key === 'cart' || key === 'cart-count' || key === 'cart-owner' || key === 'cart-owner-id';
+          }
+        });
         lastOwnerIdRef.current = cartOwnerId;
       }
     };
