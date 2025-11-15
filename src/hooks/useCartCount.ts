@@ -1,21 +1,32 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useCartCount = (cartOwnerId: string | null) => {
   const queryClient = useQueryClient();
+  const lastOwnerIdRef = useRef<string | null>(null);
 
-  // Listen for impersonation changes and invalidate immediately
+  // Listen for impersonation changes - only invalidate if owner changed
   useEffect(() => {
     const handleImpersonationChange = () => {
       console.log('[useCartCount] Impersonation changed - invalidating cart queries');
-      queryClient.invalidateQueries({ queryKey: ["cart-count"] });
-      queryClient.invalidateQueries({ queryKey: ["cart-owner"] });
+      // Only invalidate if cartOwnerId actually changed
+      if (lastOwnerIdRef.current !== cartOwnerId) {
+        queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
+        queryClient.invalidateQueries({ queryKey: ["cart-owner-id"] });
+        queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+        lastOwnerIdRef.current = cartOwnerId;
+      }
     };
 
     window.addEventListener("impersonation-changed", handleImpersonationChange);
     return () => window.removeEventListener("impersonation-changed", handleImpersonationChange);
-  }, [queryClient]);
+  }, [queryClient, cartOwnerId]);
+
+  // Track owner changes
+  useEffect(() => {
+    lastOwnerIdRef.current = cartOwnerId;
+  }, [cartOwnerId]);
 
   return useQuery({
     queryKey: ["cart-count", cartOwnerId],
@@ -40,9 +51,9 @@ export const useCartCount = (cartOwnerId: string | null) => {
       return data?.count || 0;
     },
     enabled: !!cartOwnerId,
-    staleTime: 0, // No cache - always fetch fresh to ensure accuracy
-    gcTime: 5000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    staleTime: 5000, // 5 second cache to prevent excessive fetches
+    gcTime: 10000,
+    refetchOnMount: false, // Use cache when available
+    refetchOnWindowFocus: false,
   });
 };

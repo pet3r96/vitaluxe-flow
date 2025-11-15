@@ -35,6 +35,8 @@ const Cart = React.memo(function Cart() {
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   const normalizedGroupsRef = useRef<Set<string>>(new Set());
   const normalizeOnceRef = useRef<{ cartId: string | null; done: boolean }>({ cartId: null, done: false });
+  const realtimeChannelRef = useRef<any>(null);
+  const isInitializedRef = useRef(false);
   
   // Custom hooks
   const { feePercentage, calculateMerchantFee } = useMerchantFee();
@@ -52,7 +54,7 @@ const Cart = React.memo(function Cart() {
   const showStaffLoading = checkingPrivileges && isStaffAccount;
   const showStaffNoAccess = isStaffAccount && !canOrder && !checkingPrivileges;
 
-  // Resolve cart owner - with instant updates on role/impersonation change
+  // Resolve cart owner - cached to prevent loops
   const { data: cartOwnerId, isLoading: isLoadingCartOwner, error: cartOwnerError } = useQuery({
     queryKey: ["cart-owner-id", effectiveUserId, effectiveRole, effectivePracticeId],
     queryFn: async () => {
@@ -67,24 +69,27 @@ const Cart = React.memo(function Cart() {
       return ownerId;
     },
     enabled: !!effectiveUserId && !showStaffLoading,
-    staleTime: 0, // No cache - instant updates on impersonation/role change
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    staleTime: 30000, // 30 second cache - prevents excessive resolver calls
+    gcTime: 60000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     retry: 2,
   });
 
   console.log('[Cart] Cart owner resolved:', cartOwnerId, 'error:', cartOwnerError);
 
-  // Cart data query - always call with enabled flag
-  const { data: cart, isLoading: isLoadingCart, error: cartError } = useCart(cartOwnerId || '', {
+  // Cart data query with stable options
+  const cartOptions = useMemo(() => ({
     productFields: "name, dosage, image_url",
     includePharmacy: true,
     includeProvider: true,
     enabled: !!cartOwnerId && !showStaffLoading && !showStaffNoAccess,
-    staleTime: 0, // Always fetch fresh
+    staleTime: 5000,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
-  });
+    refetchOnWindowFocus: false,
+  }), [cartOwnerId, showStaffLoading, showStaffNoAccess]);
+
+  const { data: cart, isLoading: isLoadingCart, error: cartError } = useCart(cartOwnerId || '', cartOptions);
   
   const isLoading = isLoadingCartOwner || isLoadingCart;
 
@@ -213,30 +218,27 @@ const Cart = React.memo(function Cart() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
-      // Optimized: Update cache directly instead of invalidating to prevent refetch loops
-      queryClient.setQueryData(["cart", cartOwnerId], (oldData: any) => {
-        if (!oldData?.lines) return oldData;
-        return {
-          ...oldData,
-          lines: oldData.lines.map((line: any) => 
-            data.lineIds.includes(line.id) 
-              ? { ...line, shipping_speed: data.shipping_speed }
-              : line
-          )
-        };
-      });
+    onSuccess: () => {
+      // DO NOT invalidate queries here - creates loop
+      // Realtime subscription will handle updates
+      console.log('[Cart] Shipping speed updated successfully');
     },
   });
 
-  // All effects
+  // Realtime subscription - SINGLE STABLE CHANNEL
   useEffect(() => {
     if (!cartOwnerId || !cart?.id) return;
 
-    console.log('Setting up realtime subscription for cart:', cart.id);
+    // Prevent duplicate subscriptions
+    if (realtimeChannelRef.current) {
+      console.log('[Cart] Realtime subscription already exists');
+      return;
+    }
+
+    console.log('[Cart] Setting up realtime subscription for cart:', cart.id);
 
     const channel = supabase
-      .channel('cart-changes')
+      .channel(`cart-changes-${cart.id}`) // Unique channel name per cart
       .on(
         'postgres_changes',
         {
@@ -246,17 +248,23 @@ const Cart = React.memo(function Cart() {
           filter: `cart_id=eq.${cart.id}`
         },
         (payload) => {
-          console.log('Cart realtime update received:', payload);
+          console.log('[Cart] Realtime update received:', payload);
           queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+          queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
         }
       )
       .subscribe();
 
+    realtimeChannelRef.current = channel;
+
     return () => {
-      console.log('Cleaning up cart realtime subscription');
-      supabase.removeChannel(channel);
+      console.log('[Cart] Cleaning up realtime subscription');
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+        realtimeChannelRef.current = null;
+      }
     };
-  }, [cartOwnerId, cart?.id, queryClient]);
+  }, [cartOwnerId, cart?.id]); // Minimal deps - don't include queryClient
 
   // Auto-normalize shipping speeds - RUNS ONLY ONCE per cart load
   useEffect(() => {
@@ -343,7 +351,7 @@ const Cart = React.memo(function Cart() {
         });
       }
     })();
-  }, [cart?.id, cart?.lines, ratesLoading, pharmacyRatesMap, updateShippingSpeedMutation, toast]);
+  }, [cart?.id, isEmpty, ratesLoading]); // Minimal stable dependencies
 
   useEffect(() => {
     console.timeEnd('Cart-Render');
