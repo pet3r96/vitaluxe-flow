@@ -129,58 +129,6 @@ export default function Checkout() {
     return calculateMerchantFee(subtotal - discount, shipping);
   }, [cart?.lines, discountPercentage, calculateMerchantFee, location.state?.merchantFeeAmount]);
 
-  // Helper to fetch fresh cart snapshot at mutation time
-  const fetchCartSnapshot = async () => {
-    // Guard against calling during unmount
-    if (!isMounted || !effectiveUserId) {
-      throw new Error("Component is not ready");
-    }
-    
-    const { data: cartData, error: cartError } = await supabase
-      .from("cart")
-      .select("id")
-      .eq("doctor_id", effectiveUserId)
-      .maybeSingle();
-
-    if (cartError) throw cartError;
-    if (!cartData) return null;
-
-    const { data: linesRaw, error: linesError } = await supabase
-      .from("cart_lines")
-      .select(`
-        *,
-        product:products(name, dosage, sig, image_url, base_price, requires_prescription)
-      `)
-      .eq("cart_id", cartData.id)
-      .gte("expires_at", new Date().toISOString());
-
-    if (linesError) throw linesError;
-    
-    const lines = (linesRaw || []) as any[];
-
-    // Manually hydrate patient data from patient_accounts table
-    const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
-    if (patientIds.length > 0) {
-      const { data: patients, error: patientsError } = await supabase
-        .from('patient_accounts')
-        .select('id, name, first_name, last_name, address_street, address_city, address_state, address_zip, address_formatted')
-        .in('id', patientIds);
-      
-      if (!patientsError && patients) {
-        const patientMap = new Map(patients.map((p: any) => [p.id, p]));
-        for (const line of lines) {
-          if (line.patient_id) {
-            const patient = patientMap.get(line.patient_id) || null;
-            line.patient = patient;
-            line.patient_name = patient?.name || line.patient_name; // Preserve patient_name for validation
-          }
-        }
-      }
-    }
-    
-    return { id: cartData.id, lines: lines || [] };
-  };
-
   const hasPracticeOrder = (cart?.lines || []).some(
     (line: any) => line.patient_name === "Practice Order"
   );
@@ -274,14 +222,12 @@ export default function Checkout() {
         throw new Error("Navigation in progress. Please wait and try again.");
       }
       
-      // Always ensure we have a usable cart snapshot at the moment of click
-      const latestCart = (cart?.lines && cart.lines.length > 0) ? cart : await fetchCartSnapshot();
-      
-      if (!latestCart || !latestCart.id) {
+      // Use current cart data from useCart hook
+      if (!cart || !cart.id || !cart.lines || cart.lines.length === 0) {
         throw new Error("Cart is empty or unavailable");
       }
 
-      const linesAll = (latestCart.lines as any[]) || [];
+      const linesAll = (cart.lines as any[]) || [];
 
       // If there are any practice lines, make sure profile is loaded before proceeding
       const practiceLines = linesAll.filter((line) => line.patient_name === "Practice Order");
@@ -369,14 +315,14 @@ export default function Checkout() {
       }
 
       logger.info('Starting checkout via edge function', logger.sanitize({ 
-        cart_id: latestCart.id,
+        cart_id: cart.id,
         total_lines: linesAll.length 
       }));
 
       // Call the optimized edge function
       const { data, error } = await supabase.functions.invoke('place-order', {
         body: {
-          cart_id: latestCart.id,
+          cart_id: cart.id,
           payment_method_id: selectedPaymentMethodId,
           discount_code: discountCode,
           discount_percentage: discountPercentage,

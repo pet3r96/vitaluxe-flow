@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCart } from "@/hooks/useCart";
+import { resolveCartOwnerUserId } from "@/lib/cartOwnerResolver";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +19,7 @@ import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 export default function DeliveryConfirmation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, effectiveUserId, effectivePracticeId, isProviderAccount, isStaffAccount: isStaff } = useAuth();
+  const { user, effectiveUserId, effectivePracticeId, effectiveRole, isProviderAccount, isStaffAccount: isStaff } = useAuth();
   const queryClient = useQueryClient();
   const { canOrder, isLoading: checkingPrivileges, isStaffAccount } = useStaffOrderingPrivileges();
   
@@ -46,50 +48,20 @@ export default function DeliveryConfirmation() {
     shippingPreview?: number;
   };
 
-  // Fetch cart data with patient groupings
-  const { data: cartData, isLoading: cartLoading } = useQuery({
-    queryKey: ["cart", effectiveUserId],
-    enabled: !!effectiveUserId,
-    queryFn: async () => {
-      const { data: cart, error: cartError } = await supabase
-        .from("cart")
-        .select("id")
-        .eq("doctor_id", effectiveUserId!)
-        .single();
+  // Resolve cart owner and fetch cart data
+  const { data: cartOwnerId } = useQuery({
+    queryKey: ['cart-owner', effectiveUserId, effectiveRole, effectivePracticeId],
+    queryFn: () => resolveCartOwnerUserId(effectiveUserId!, effectiveRole!, effectivePracticeId),
+    enabled: !!effectiveUserId && !!effectiveRole,
+    staleTime: 5 * 60 * 1000,
+  });
 
-      if (cartError) throw cartError;
-
-      const { data: linesRaw, error: linesError } = await supabase
-        .from("cart_lines")
-        .select(`
-          *,
-          product:products(*)
-        `)
-        .eq("cart_id", cart.id);
-
-      if (linesError) throw linesError;
-
-      const lines = (linesRaw || []) as any[];
-
-      // Manually hydrate patient records since there is no FK constraint
-      const patientIds = Array.from(new Set(lines.map((l: any) => l.patient_id).filter(Boolean)));
-      if (patientIds.length > 0) {
-        const { data: patients, error: patientsError } = await supabase
-          .from('patient_accounts')
-          .select('id, name, first_name, last_name, address_street, address_city, address_state, address_zip, address_formatted')
-          .in('id', patientIds);
-        if (!patientsError && patients) {
-          const patientMap = new Map(patients.map((p: any) => [p.id, p]));
-          for (const line of lines) {
-            if (line.patient_id) {
-              line.patient = patientMap.get(line.patient_id) || null;
-            }
-          }
-        }
-      }
-
-      return { cart, lines };
-    },
+  // Fetch cart data using useCart hook
+  const { data: cartData, isLoading: cartLoading } = useCart(cartOwnerId, {
+    includePharmacy: true,
+    includeProvider: true,
+    hydratePatients: true,
+    enabled: !!cartOwnerId,
   });
 
   // Fetch practice profile for practice shipping address
