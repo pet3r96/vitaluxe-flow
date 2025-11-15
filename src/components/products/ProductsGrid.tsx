@@ -193,8 +193,11 @@ export const ProductsGrid = () => {
     }
   };
 
-  const filteredProducts = useMemo(() => 
-    products?.filter((product) => {
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    
+    return products.filter((product) => {
+      // Critical: Filter out any null/undefined products
       if (!product) return false;
       
       const matchesSearch =
@@ -213,9 +216,8 @@ export const ProductsGrid = () => {
       const canSeeProduct = viewingAsAdmin || !product?.requires_prescription || canOrderRx;
       
       return matchesSearch && matchesType && matchesPrescription && canSeeProduct;
-    }), 
-    [products, searchQuery, productTypeFilter, prescriptionFilter, canOrderRx, viewingAsAdmin]
-  );
+    });
+  }, [products, searchQuery, productTypeFilter, prescriptionFilter, canOrderRx, viewingAsAdmin]);
 
   const productCounts = useMemo(() => {
     if (!products) return {
@@ -233,6 +235,9 @@ export const ProductsGrid = () => {
     };
 
     products.forEach(product => {
+      // Critical null check to prevent crashes
+      if (!product) return;
+      
       if (product.product_type_id) {
         counts.byType[product.product_type_id] = (counts.byType[product.product_type_id] || 0) + 1;
       }
@@ -914,7 +919,7 @@ export const ProductsGrid = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
-            {paginatedProducts?.map((product) => (
+            {paginatedProducts?.filter(p => p != null).map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
