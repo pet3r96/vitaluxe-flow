@@ -273,6 +273,12 @@ verify_jwt = true
 [functions.get-subscription-details]
 verify_jwt = true
 
+[functions.patient-practice-context]
+verify_jwt = true
+
+[functions.practice-context]
+verify_jwt = true
+
 [functions.check-trial-payment-reminders]
 verify_jwt = false
 
