@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 interface PatientAppointmentsListProps {
   patientId: string;
@@ -155,6 +157,24 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
     return true;
   }) || [];
 
+  // Pagination state
+  const pagination = usePagination({
+    totalItems: filteredAppointments.length,
+    itemsPerPage: 15,
+    initialPage: 1
+  });
+
+  // Paginated appointments
+  const paginatedAppointments = filteredAppointments.slice(
+    pagination.startIndex,
+    pagination.endIndex
+  );
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    pagination.goToPage(1);
+  }, [statusFilter]);
+
   if (!appointments || appointments.length === 0) {
     return (
       <Card className="border-dashed">
@@ -221,7 +241,7 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
         </Card>
       ) : (
         <>
-          {filteredAppointments.map((appointment) => (
+          {paginatedAppointments.map((appointment) => (
             <Card 
               key={appointment.id} 
               className="hover:shadow-md transition-all cursor-pointer hover:border-primary/50"
@@ -290,6 +310,20 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
             </CardContent>
           </Card>
         ))}
+
+        {/* Pagination Controls */}
+        {filteredAppointments.length > 15 && (
+          <DataTablePagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            onPageChange={pagination.goToPage}
+            hasNextPage={pagination.hasNextPage}
+            hasPrevPage={pagination.hasPrevPage}
+            totalItems={filteredAppointments.length}
+            startIndex={pagination.startIndex}
+            endIndex={pagination.endIndex}
+          />
+        )}
         </>
       )}
 

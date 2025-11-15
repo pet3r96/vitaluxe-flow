@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validatePhone } from "@/lib/validators";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AddRepRequestDialogProps {
   open: boolean;
@@ -17,6 +18,7 @@ interface AddRepRequestDialogProps {
 
 export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepRequestDialogProps) => {
   const { user, effectiveRole } = useAuth();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({ phone: "" });
   const [formData, setFormData] = useState({
@@ -94,6 +96,11 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
         }]);
 
       if (error) throw error;
+
+      // Invalidate queries for immediate UI update
+      queryClient.invalidateQueries({ 
+        queryKey: ['rep-pending-reps', user.id] 
+      });
 
       toast.success("Representative request submitted for admin approval");
       onSuccess?.();

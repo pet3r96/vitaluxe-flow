@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AddPracticeRequestDialogProps {
   open: boolean;
@@ -19,6 +20,7 @@ interface AddPracticeRequestDialogProps {
 
 export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddPracticeRequestDialogProps) => {
   const { user, effectiveRole, effectiveUserId } = useAuth();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [npiVerificationStatus, setNpiVerificationStatus] = useState<
     null | "verifying" | "verified" | "failed"
@@ -117,6 +119,11 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
         }]);
 
       if (error) throw error;
+
+      // Invalidate queries for immediate UI update
+      queryClient.invalidateQueries({ 
+        queryKey: ['rep-pending-practices', effectiveUserId] 
+      });
 
       toast.success("Practice request submitted for admin approval");
       onSuccess?.();
