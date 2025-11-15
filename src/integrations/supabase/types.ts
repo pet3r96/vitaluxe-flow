@@ -10058,6 +10058,8 @@ export type Database = {
       refresh_rep_productivity_summary: { Args: never; Returns: undefined }
       refresh_security_events_summary: { Args: never; Returns: undefined }
       refresh_video_usage_by_practice: { Args: never; Returns: undefined }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       sync_practice_address_to_providers: {
         Args: { p_practice_id: string }
         Returns: undefined
