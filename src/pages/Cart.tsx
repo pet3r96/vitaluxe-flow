@@ -36,6 +36,7 @@ const Cart = React.memo(function Cart() {
   const normalizedGroupsRef = useRef<Set<string>>(new Set());
   const normalizeOnceRef = useRef<{ cartId: string | null; done: boolean }>({ cartId: null, done: false });
   const realtimeChannelRef = useRef<any>(null);
+  const invalidationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
   
   // Custom hooks
@@ -249,8 +250,17 @@ const Cart = React.memo(function Cart() {
         },
         (payload) => {
           console.log('[Cart] Realtime update received:', payload);
-          queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
-          queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
+          
+          // Debounce invalidations to prevent cascading loops
+          if (invalidationTimerRef.current) {
+            clearTimeout(invalidationTimerRef.current);
+          }
+          
+          invalidationTimerRef.current = setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+            queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
+            invalidationTimerRef.current = null;
+          }, 500); // Wait 500ms before invalidating
         }
       )
       .subscribe();
@@ -278,8 +288,14 @@ const Cart = React.memo(function Cart() {
     });
 
     // CRITICAL: Guard against empty cart or loading states
-    if (!cart?.id || !cart.lines || ratesLoading || cartLines.length === 0) {
+    if (!cart?.id || !cart.lines || cartLines.length === 0) {
       console.log('[Cart] Skipping normalization - cart empty or loading');
+      return;
+    }
+
+    // Check if rates are loaded and available
+    if (ratesLoading || !pharmacyRatesMap || Object.keys(pharmacyRatesMap).length === 0) {
+      console.log('[Cart] Skipping normalization - rates not loaded yet');
       return;
     }
 
@@ -324,7 +340,12 @@ const Cart = React.memo(function Cart() {
       }
 
       const rates = pharmacyRatesMap?.[group.pharmacy_id];
-      const enabledSpeeds = rates ? Object.keys(rates) as ('ground' | '2day' | 'overnight')[] : [];
+      if (!rates || Object.keys(rates).length === 0) {
+        console.log('[Cart] No rates available for pharmacy:', group.pharmacy_id);
+        return; // Skip this group
+      }
+
+      const enabledSpeeds = Object.keys(rates) as ('ground' | '2day' | 'overnight')[];
       
       if (enabledSpeeds.length > 0 && !enabledSpeeds.includes(group.shipping_speed)) {
         const targetSpeed = enabledSpeeds[0];
@@ -363,7 +384,7 @@ const Cart = React.memo(function Cart() {
         });
       }
     })();
-  }, [cart?.id, ratesLoading]); // Removed isEmpty to prevent infinite loops
+  }, [cart?.id]); // Only run when cart ID changes - prevents infinite loops
 
   useEffect(() => {
     console.timeEnd('Cart-Render');

@@ -31,8 +31,8 @@ export const useAddToCart = () => {
     },
     onSuccess: (_, variables) => {
       console.log('[useAddToCart] Success, invalidating queries');
-      // Invalidate cart queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      // Invalidate cart queries to refresh data - use specific cart owner ID
+      queryClient.invalidateQueries({ queryKey: ["cart", variables.cartOwnerId] });
       queryClient.invalidateQueries({ queryKey: ["cart-count", variables.cartOwnerId] });
       queryClient.invalidateQueries({ queryKey: ["cart-owner"] });
     }
