@@ -479,24 +479,35 @@ export default function Checkout() {
           }
         });
         
-        // Also invalidate orders to show new orders
-        await queryClient.invalidateQueries({ queryKey: ["orders"] });
+        // Force refetch orders (not just invalidate) to ensure fresh data
+        await queryClient.refetchQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return key === 'orders';
+          }
+        });
+
+        // Also invalidate for good measure
+        await queryClient.invalidateQueries({ 
+          predicate: (query) => query.queryKey[0] === 'orders'
+        });
         
         toast({
           title: "Order Placed Successfully! 🎉",
           description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. Cart cleared (${deletedCount} items). Redirecting to orders page...`,
         });
         
-        // Navigate after ensuring cart queries complete
+        // Navigate after ensuring cache updates propagate
         setTimeout(() => {
           navigate("/orders", {
             state: {
               orderPlaced: true,
               orderNumber: createdOrders[0]?.order_number,
-              orderCount: createdOrders.length
+              orderCount: createdOrders.length,
+              _forceRefresh: Date.now() // Cache buster
             }
           });
-        }, 100);
+        }, 300);
       } else {
         // Some payments failed - show retry dialog
         setPaymentErrors(failedPayments);

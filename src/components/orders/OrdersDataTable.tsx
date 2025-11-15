@@ -526,10 +526,10 @@ export const OrdersDataTable = () => {
       }
     },
     {
-      staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
+      staleTime: 0, // Always fetch fresh data - critical for orders appearing after checkout
       gcTime: 5 * 60 * 1000,
       refetchOnMount: true,
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false, // Don't refetch on tab switch (performance)
       retry: 3, // Retry up to 3 times
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
       enabled: !!effectiveRole && !!effectiveUserId && !!user, // Only run when auth data is available

@@ -49,15 +49,21 @@ export function TodayAppointmentsWidget() {
     queryKey: ["widget-providers", effectivePracticeId, effectiveRole, effectiveUserId],
     enabled: !!effectivePracticeId,
     queryFn: async (): Promise<any[]> => {
-      // Fetch provider records for this practice
-      const { data: providerRecords, error: provErr } = await supabase
+      // Single query with join for better performance (combines 2 sequential queries)
+      const { data: providers, error } = await supabase
         .from("providers")
-        .select("id, user_id, active, practice_id")
+        .select(`
+          id,
+          user_id,
+          active,
+          practice_id,
+          profiles:user_id(id, full_name, name, prescriber_name, email)
+        `)
         .eq("practice_id", effectivePracticeId)
         .eq("active", true);
 
-      if (provErr) throw provErr;
-      const records = providerRecords || [];
+      if (error) throw error;
+      const records = providers || [];
 
       // If provider account, restrict to themselves
       const filtered = effectiveRole === "provider"
@@ -66,18 +72,9 @@ export function TodayAppointmentsWidget() {
 
       if (filtered.length === 0) return [];
 
-      // Fetch profile names for these providers
-      const userIds = filtered.map((p: any) => p.user_id);
-      const { data: profiles, error: profErr } = await supabase
-        .from("profiles")
-        .select("id, full_name, name, prescriber_name, email")
-        .in("id", userIds);
-
-      if (profErr) throw profErr;
-
-      const byId = new Map((profiles || []).map((pr: any) => [pr.id, pr]));
+      // Transform to expected format with profile data already joined
       return filtered.map((p: any) => {
-        const prof = byId.get(p.user_id);
+        const prof = p.profiles;
         
         // Priority: prescriber_name > full_name > name (if not email) > derive from email
         let display = "Provider";

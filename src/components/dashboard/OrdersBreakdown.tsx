@@ -20,12 +20,19 @@ export function OrdersBreakdown({ data: externalData }: OrdersBreakdownProps) {
     queryFn: async () => {
       if (!effectiveUserId) return null;
 
+      // Calculate 90-day date range for performance
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 90);
+
       // Use optimized RPC function for server-side aggregation
       const { data: statusCounts, error } = await supabase
         .rpc('get_orders_by_status' as any, {
           p_user_id: effectiveUserId,
           p_role: effectiveRole,
-          p_practice_id: effectivePracticeId || null
+          p_practice_id: effectivePracticeId || null,
+          p_start_date: startDate.toISOString(),
+          p_end_date: endDate.toISOString()
         });
 
       if (error) {
