@@ -391,18 +391,25 @@ export const ProductsGrid = () => {
       // Use effective retail price (with overrides) or fallback to product defaults
       correctPrice = effectiveRetailPrice ?? productForCart.retail_price ?? productForCart.base_price;
 
-      // CART OPERATIONS: Always use effectiveUserId (provider's or practice's user_id)
-      // This ensures providers see their own cart items
+      // CRITICAL FIX: Use cartOwnerId for cart operations (resolved by cartOwnerResolver)
+      // Staff/Practice users share practice cart, Providers use their own cart
+      const cartOwnerForDb = cartOwnerId || effectiveUserId;
+      
+      if (!cartOwnerForDb) {
+        toast.error("Unable to determine cart owner. Please contact support.");
+        return;
+      }
+
       let { data: cart } = await supabase
         .from("cart")
         .select("id")
-        .eq("doctor_id", effectiveUserId)
+        .eq("doctor_id", cartOwnerForDb)
         .single();
 
       if (!cart) {
         const { data: newCart, error: cartError } = await supabase
           .from("cart")
-          .insert({ doctor_id: effectiveUserId })
+          .insert({ doctor_id: cartOwnerForDb })
           .select("id")
           .single();
 
