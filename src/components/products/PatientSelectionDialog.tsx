@@ -52,6 +52,11 @@ export const PatientSelectionDialog = ({
   product,
   onAddToCart,
 }: PatientSelectionDialogProps) => {
+  // Safety guard: return null if no product
+  if (!product) {
+    return null;
+  }
+
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const navigate = useNavigate();
   const { canOrderRx, providerCount, providersWithNpiCount } = usePracticeRxPrivileges();
@@ -301,7 +306,7 @@ export const PatientSelectionDialog = ({
 
   const handleContinue = () => {
     // Only require provider for RX products
-    if (product.requires_prescription && !selectedProviderId) {
+    if (product?.requires_prescription && !selectedProviderId) {
       toast.error("Please select a provider for prescription products");
       return;
     }
@@ -333,17 +338,17 @@ export const PatientSelectionDialog = ({
     const capturedPrescriptionPreview = prescriptionPreview;
     
     // Validate prescription requirements on Page 2
-    if (product.requires_prescription && prescriptionMethod === null) {
+    if (product?.requires_prescription && prescriptionMethod === null) {
       toast.error("Please select a prescription method");
       return;
     }
     
-    if (product.requires_prescription && prescriptionMethod === 'upload' && !prescriptionFile) {
+    if (product?.requires_prescription && prescriptionMethod === 'upload' && !prescriptionFile) {
       toast.error("Please upload a prescription file");
       return;
     }
     
-    if (product.requires_prescription && prescriptionMethod === 'written' && !capturedPrescriptionPreview) {
+    if (product?.requires_prescription && prescriptionMethod === 'written' && !capturedPrescriptionPreview) {
       toast.error("Please write and generate the prescription");
       return;
     }
@@ -353,11 +358,11 @@ export const PatientSelectionDialog = ({
     let prescriptionUrl = null;
     
     // If prescription was written, use the captured generated URL
-    if (product.requires_prescription && prescriptionMethod === 'written' && capturedPrescriptionPreview) {
+    if (product?.requires_prescription && prescriptionMethod === 'written' && capturedPrescriptionPreview) {
       prescriptionUrl = capturedPrescriptionPreview;
     }
     // If prescription was uploaded, upload the file
-    else if (product.requires_prescription && prescriptionFile) {
+    else if (product?.requires_prescription && prescriptionFile) {
       setUploadingPrescription(true);
       try {
         const fileExt = prescriptionFile.name.split(".").pop();
@@ -396,7 +401,7 @@ export const PatientSelectionDialog = ({
     
     // Get the provider's user_id (for RX products) or use practice owner (for non-RX)
     let providerUserId: string;
-    if (product.requires_prescription) {
+    if (product?.requires_prescription) {
       const selectedProvider = providers?.find((p: any) => p.id === selectedProviderId);
       if (!selectedProvider?.user_id) {
         toast.error("Unable to find provider information. Please try again.");
@@ -425,7 +430,7 @@ export const PatientSelectionDialog = ({
 
   const selectedPatient = patients?.find(p => p.id === selectedPatientId);
   const showNoPatientWarning = shipTo === 'patient' && (!patients || patients.length === 0);
-  const noActiveProviders = effectiveRole === "doctor" && providers && providers.length === 0 && product.requires_prescription;
+  const noActiveProviders = effectiveRole === "doctor" && providers && providers.length === 0 && product?.requires_prescription;
 
   if (noActiveProviders) {
     return (

@@ -2,17 +2,34 @@ import { ProvidersDataTable } from "@/components/providers/ProvidersDataTable";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePracticeRxPrivileges } from "@/hooks/usePracticeRxPrivileges";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Info } from "lucide-react";
 
 const Providers = () => {
   const { effectiveRole, isProviderAccount, isStaffAccount } = useAuth();
-  const { canOrderRx, hasProviders, providerCount, providersWithNpiCount } = usePracticeRxPrivileges();
+  const { canOrderRx, hasProviders, providerCount, providersWithNpiCount, isLoading } = usePracticeRxPrivileges();
 
   // Only practices and staff (not provider accounts) can access this page
   if ((effectiveRole !== 'doctor' && effectiveRole !== 'staff') || isProviderAccount) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">You do not have access to this page.</p>
+      </div>
+    );
+  }
+
+  // Show loading state while fetching provider data
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">My Providers</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+            Manage medical providers for your practice
+          </p>
+        </div>
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
