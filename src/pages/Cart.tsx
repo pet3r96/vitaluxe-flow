@@ -90,10 +90,8 @@ const Cart = React.memo(function Cart() {
     return [...new Set(cart.lines.map(line => line.assigned_pharmacy_id).filter(Boolean))] as string[];
   }, [cart?.lines]);
 
-  // Fetch shipping rates - always call with enabled flag
-  const { data: pharmacyRatesMap = {}, isLoading: ratesLoading } = useMultiplePharmacyRates(uniquePharmacyIds, {
-    enabled: uniquePharmacyIds.length > 0 && !isLoading,
-  });
+  // Fetch shipping rates
+  const { data: pharmacyRatesMap = {}, isLoading: ratesLoading } = useMultiplePharmacyRates(uniquePharmacyIds);
 
   // All memoized values
   const cartLines = useMemo(() => (cart?.lines && Array.isArray(cart.lines)) ? cart.lines : [], [cart?.lines]);
@@ -145,7 +143,7 @@ const Cart = React.memo(function Cart() {
   }, [patientGroups, pharmacyRatesMap]);
 
   const merchantFee = useMemo(() => {
-    return calculateMerchantFee(subtotalAfterDiscount + shippingPreview);
+    return calculateMerchantFee(subtotalAfterDiscount, shippingPreview);
   }, [calculateMerchantFee, subtotalAfterDiscount, shippingPreview]);
 
   const grandTotal = useMemo(() => {
@@ -488,8 +486,9 @@ const Cart = React.memo(function Cart() {
                         const lineIds = group.lines.map((l: any) => l.id);
                         updateShippingSpeedMutation.mutate({ lineIds, shipping_speed: speed });
                       }}
-                      enabledSpeeds={getEnabledSpeeds(group.pharmacy_id)}
-                      rates={pharmacyRatesMap[group.pharmacy_id] || {}}
+                      patientName={group.patient_name}
+                      enabledOptions={getEnabledSpeeds(group.pharmacy_id)}
+                      isLoading={ratesLoading}
                     />
                   </CardContent>
                 </Card>
@@ -505,6 +504,9 @@ const Cart = React.memo(function Cart() {
               <CardContent className="space-y-4">
                 <DiscountCodeInput
                   onDiscountApplied={handleDiscountApplied}
+                  onDiscountRemoved={handleRemoveDiscount}
+                  currentCode={discountCode || undefined}
+                  currentPercentage={discountPercentage}
                 />
                 
                 <Separator />
