@@ -54,7 +54,8 @@ serve(async (req) => {
       );
     }
 
-    const { order_id } = requestData;
+    const { order_id, effectiveUserId } = requestData;
+    const userIdToQuery = effectiveUserId || user.id;
 
     if (!order_id) {
       throw new Error('order_id is required');
@@ -99,6 +100,13 @@ serve(async (req) => {
     }
 
     // Check authorization - user must be admin, practice owner, or staff of practice
+    // Get user's profile to check practice ownership
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', userIdToQuery)
+      .maybeSingle();
+
     const { data: userRole } = await supabase
       .from('user_roles')
       .select('role')
@@ -106,7 +114,8 @@ serve(async (req) => {
       .maybeSingle();
 
     const isAdmin = userRole?.role === 'admin';
-    const isPracticeOwner = order.doctor_id === user.id;
+    // Fix: Compare user's profile ID with order.doctor_id (both are profile IDs)
+    const isPracticeOwner = userProfile?.id === order.doctor_id;
     
     // Check if user is staff of this practice
     let isStaffOfPractice = false;
@@ -114,7 +123,7 @@ serve(async (req) => {
       const { data: staffData } = await supabase
         .from('providers')
         .select('practice_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userIdToQuery)
         .eq('active', true)
         .maybeSingle();
       
@@ -136,7 +145,7 @@ serve(async (req) => {
       isStaffOfPractice
     });
 
-    // Fetch order lines
+    // Fetch order lines with provider information
     const { data: orderLines, error: linesError } = await supabase
       .from('order_lines')
       .select(`
@@ -148,6 +157,15 @@ serve(async (req) => {
         prescription_method,
         shipping_speed,
         tracking_number,
+        provider_id,
+        providers!order_lines_provider_id_fkey (
+          id,
+          user_id,
+          profiles!providers_user_id_fkey (
+            name,
+            email
+          )
+        ),
         products (
           name,
           dosage,
@@ -245,6 +263,31 @@ serve(async (req) => {
         doc.text(`Phone: ${practice.phone}`, 20, yPos);
         yPos += 5;
       }
+    }
+
+    yPos += 10;
+
+    // Prescribing Provider section
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRESCRIBING PROVIDER:', 20, yPos);
+    yPos += 6;
+
+    doc.setFont('helvetica', 'normal');
+    // Get provider from first order line (providers is an array from the join)
+    const firstLine = orderLines[0];
+    const provider = Array.isArray(firstLine?.providers) ? firstLine.providers[0] : firstLine?.providers;
+    const providerProfile = Array.isArray(provider?.profiles) ? provider.profiles[0] : provider?.profiles;
+
+    if (providerProfile && providerProfile.name) {
+      doc.text(providerProfile.name, 20, yPos);
+      yPos += 5;
+      if (providerProfile.email) {
+        doc.text(`Email: ${providerProfile.email}`, 20, yPos);
+        yPos += 5;
+      }
+    } else {
+      doc.text('N/A', 20, yPos);
+      yPos += 5;
     }
 
     yPos += 10;

@@ -4,6 +4,7 @@ import { FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logApplicationError } from "@/lib/errorLogger";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ReceiptDownloadButtonProps {
   orderId: string;
@@ -24,13 +25,17 @@ export const ReceiptDownloadButton = ({
 }: ReceiptDownloadButtonProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const { effectiveUserId } = useAuth();
 
   const handleDownloadReceipt = async () => {
     try {
       setIsGenerating(true);
 
       const { data, error } = await supabase.functions.invoke('generate-order-receipt', {
-        body: { order_id: orderId }
+        body: { 
+          order_id: orderId,
+          effectiveUserId
+        }
       });
 
       if (error) {
