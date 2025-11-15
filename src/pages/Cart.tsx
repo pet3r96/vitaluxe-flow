@@ -34,6 +34,7 @@ const Cart = React.memo(function Cart() {
   const [discountCode, setDiscountCode] = useState<string | null>(null);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   const normalizedGroupsRef = useRef<Set<string>>(new Set());
+  const normalizeOnceRef = useRef<{ cartId: string | null; done: boolean }>({ cartId: null, done: false });
   
   // Custom hooks
   const { feePercentage, calculateMerchantFee } = useMerchantFee();
@@ -209,9 +210,21 @@ const Cart = React.memo(function Cart() {
         .update({ shipping_speed })
         .in("id", lineIds);
       if (error) throw error;
+      return { lineIds, shipping_speed };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+    onSuccess: (data) => {
+      // Optimized: Update cache directly instead of invalidating to prevent refetch loops
+      queryClient.setQueryData(["cart", cartOwnerId], (oldData: any) => {
+        if (!oldData?.lines) return oldData;
+        return {
+          ...oldData,
+          lines: oldData.lines.map((line: any) => 
+            data.lineIds.includes(line.id) 
+              ? { ...line, shipping_speed: data.shipping_speed }
+              : line
+          )
+        };
+      });
     },
   });
 
@@ -244,21 +257,64 @@ const Cart = React.memo(function Cart() {
     };
   }, [cartOwnerId, cart?.id, queryClient]);
 
+  // Auto-normalize shipping speeds - RUNS ONLY ONCE per cart load
   useEffect(() => {
+    if (!cart?.id || ratesLoading) {
+      return;
+    }
+
+    // Check if we've already normalized this cart
+    if (normalizeOnceRef.current.cartId === cart.id && normalizeOnceRef.current.done) {
+      return;
+    }
+
+    // Reset if cart changed
+    if (normalizeOnceRef.current.cartId !== cart.id) {
+      normalizeOnceRef.current = { cartId: cart.id, done: false };
+      normalizedGroupsRef.current.clear();
+    }
+
+    console.log('[Cart] Auto-normalization check starting for cart:', cart.id);
+
+    // Build normalization plan
+    const normalizationPlan: Array<{ lineIds: string[]; targetSpeed: 'ground' | '2day' | 'overnight'; groupKey: string }> = [];
+    
     patientGroups.forEach((group: any) => {
       const key = `${group.patient_id || 'practice'}_${group.pharmacy_id || 'unknown'}`;
-      if (normalizedGroupsRef.current.has(key)) return;
       const enabled = getEnabledSpeeds(group.pharmacy_id);
+      
       if (enabled && enabled.length > 0 && !enabled.includes(group.shipping_speed)) {
-        const newSpeed = enabled[0];
+        const targetSpeed = enabled[0];
         const lineIds = group.lines.map((l: any) => l.id);
-        console.log('[Cart] Normalizing shipping speed', { key, from: group.shipping_speed, to: newSpeed, lineCount: lineIds.length });
-        updateShippingSpeedMutation.mutate({ lineIds, shipping_speed: newSpeed });
-        normalizedGroupsRef.current.add(key);
+        normalizationPlan.push({ lineIds, targetSpeed, groupKey: key });
+        console.log('[Cart] Will normalize group:', { key, from: group.shipping_speed, to: targetSpeed, lineCount: lineIds.length });
       }
     });
+
+    if (normalizationPlan.length === 0) {
+      console.log('[Cart] No normalization needed');
+      normalizeOnceRef.current.done = true;
+      return;
+    }
+
+    console.log('[Cart] Executing normalization plan for', normalizationPlan.length, 'groups');
+
+    // Execute all normalizations
+    Promise.all(
+      normalizationPlan.map(({ lineIds, targetSpeed, groupKey }) => {
+        normalizedGroupsRef.current.add(groupKey);
+        return updateShippingSpeedMutation.mutateAsync({ lineIds, shipping_speed: targetSpeed });
+      })
+    ).then(() => {
+      console.log('[Cart] Normalization complete for cart:', cart.id);
+      normalizeOnceRef.current.done = true;
+    }).catch((error) => {
+      console.error('[Cart] Normalization failed:', error);
+      normalizeOnceRef.current.done = true; // Mark done even on error to prevent infinite retries
+    });
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patientGroups, getEnabledSpeeds]); // ✅ Removed updateShippingSpeedMutation to prevent infinite loop
+  }, [cart?.id, ratesLoading]); // ONLY depend on cart.id and ratesLoading
 
   useEffect(() => {
     console.timeEnd('Cart-Render');
@@ -579,15 +635,45 @@ const CartWithErrorBoundary = () => (
                 variant="outline"
                 onClick={async () => {
                   try {
-                    const { data } = await supabase.auth.getUser();
-                    if (data.user) {
-                      const { data: cart } = await supabase
-                        .from('cart')
-                        .select('id')
-                        .eq('doctor_id', data.user.id)
-                        .maybeSingle();
-                      if (cart) {
-                        await supabase.from('cart_lines').delete().eq('cart_id', cart.id);
+                    const { data: authData } = await supabase.auth.getUser();
+                    if (authData.user) {
+                      // Get user role
+                      const { data: roleData } = await supabase
+                        .from('user_roles')
+                        .select('role')
+                        .eq('user_id', authData.user.id)
+                        .single();
+                      
+                      const userRole = roleData?.role || '';
+                      
+                      // Get practice_id for staff users
+                      let practiceId: string | null = null;
+                      if (userRole === 'staff') {
+                        const { data: staffData } = await supabase
+                          .from('practice_staff')
+                          .select('practice_id')
+                          .eq('user_id', authData.user.id)
+                          .single();
+                        practiceId = staffData?.practice_id || null;
+                      }
+                      
+                      // Resolve cart owner properly (handles staff/practice users)
+                      const { resolveCartOwnerUserId } = await import("@/lib/cartOwnerResolver");
+                      const cartOwnerId = await resolveCartOwnerUserId(
+                        authData.user.id, 
+                        userRole, 
+                        practiceId
+                      );
+                      
+                      if (cartOwnerId) {
+                        const { data: cart } = await supabase
+                          .from('cart')
+                          .select('id')
+                          .eq('doctor_id', cartOwnerId)
+                          .maybeSingle();
+                        if (cart) {
+                          await supabase.from('cart_lines').delete().eq('cart_id', cart.id);
+                        }
                       }
                     }
                     window.location.href = '/products';
