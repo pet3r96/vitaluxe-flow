@@ -730,7 +730,7 @@ export const OrdersDataTable = () => {
                             Boolean(l.products?.requires_prescription)
                           );
                           
-                          if (!["doctor", "provider", "pharmacy", "admin"].includes(effectiveRole || "") || !hasAnyScript) {
+                          if (!["doctor", "provider", "staff", "pharmacy", "admin"].includes(effectiveRole || "") || !hasAnyScript) {
                             return null;
                           }
 
