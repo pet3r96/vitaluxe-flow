@@ -99,9 +99,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    const practiceId = providerResult.status === 'fulfilled' 
+    // If role is staff, get practice_id from practice_staff table
+    let staffPracticeId = null;
+    if (role === 'staff') {
+      const { data: staffData } = await supabase
+        .from('practice_staff')
+        .select('practice_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (staffData?.practice_id) {
+        staffPracticeId = staffData.practice_id;
+      }
+    }
+
+    const practiceId = staffPracticeId || (providerResult.status === 'fulfilled' 
       ? providerResult.value.data?.practice_id 
-      : null;
+      : null);
 
     const canImpersonate = impersonationResult.status === 'fulfilled' 
       ? impersonationResult.value.data === true 

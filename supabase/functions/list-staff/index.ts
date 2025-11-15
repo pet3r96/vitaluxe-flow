@@ -63,12 +63,11 @@ Deno.serve(async (req) => {
       practiceId = user.id;
       practiceIdSource = 'computed-doctor';
     } else if (roles.includes('staff')) {
-      // Staff: look up their practice_id from unified providers table to see other staff in same practice
+      // Staff: look up their practice_id from practice_staff table
       const { data: staffData } = await supabase
-        .from('providers')
+        .from('practice_staff')
         .select('practice_id')
         .eq('user_id', user.id)
-        .eq('role_type', 'staff')
         .maybeSingle();
       practiceId = staffData?.practice_id || null;
       practiceIdSource = 'computed-staff';
@@ -89,9 +88,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch staff from unified providers table (role_type != 'provider')
+    // Fetch staff from practice_staff table
     let staffQuery = supabase
-      .from('providers')
+      .from('practice_staff')
       .select(`
         id,
         user_id,
@@ -101,7 +100,6 @@ Deno.serve(async (req) => {
         active,
         created_at
       `)
-      .neq('role_type', 'provider')
       .order('created_at', { ascending: false });
 
     if (practiceId) {

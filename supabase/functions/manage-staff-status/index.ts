@@ -66,26 +66,12 @@ Deno.serve(async (req) => {
 
     // Ownership check for non-admins
     if (!isAdmin) {
-      // Try to find by user_id first in unified providers table
-      let { data: staffRecord } = await supabase
-        .from('providers')
-        .select('practice_id, id')
+      // Get the staff member's practice_id from practice_staff table
+      const { data: staffRecord } = await supabase
+        .from('practice_staff')
+        .select('practice_id, user_id')
         .eq('user_id', staffId)
-        .eq('role_type', 'staff')
         .maybeSingle();
-
-      // Fallback: try by id if not found by user_id
-      if (!staffRecord) {
-        console.log(`[manage-staff-status] Staff not found by user_id, trying by id`);
-        const fallback = await supabase
-          .from('providers')
-          .select('practice_id, id')
-          .eq('id', staffId)
-          .eq('role_type', 'staff')
-          .maybeSingle();
-        
-        staffRecord = fallback.data;
-      }
 
       if (!staffRecord) {
         console.error(`[manage-staff-status] Staff record not found for staffId=${staffId}`);
@@ -109,29 +95,13 @@ Deno.serve(async (req) => {
     if (active !== undefined) updateData.active = active;
     if (canOrder !== undefined) updateData.can_order = canOrder;
 
-    // Attempt update by user_id first in unified providers table
-    let { data, error } = await supabaseAdmin
-      .from('providers')
+    // Update staff status in practice_staff table
+    const { data, error } = await supabaseAdmin
+      .from('practice_staff')
       .update(updateData)
       .eq('user_id', staffId)
-      .eq('role_type', 'staff')
       .select()
       .maybeSingle();
-
-    // Fallback: try by id if no rows affected
-    if (!data && !error) {
-      console.log(`[manage-staff-status] No rows updated by user_id, trying by id`);
-      const fallback = await supabaseAdmin
-        .from('providers')
-        .update(updateData)
-        .eq('id', staffId)
-        .eq('role_type', 'staff')
-        .select()
-        .maybeSingle();
-      
-      data = fallback.data;
-      error = fallback.error;
-    }
 
     if (error) {
       console.error('[manage-staff-status] Error updating staff status:', error);
