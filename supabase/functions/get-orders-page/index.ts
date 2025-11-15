@@ -369,7 +369,7 @@ serve(async (req) => {
       console.log(`[get-orders-page] ✅ Downline ${repData.id}: found ${practiceIds.length} practices`);
       query = query.in('doctor_id', practiceIds);
       
-    } else if (roleNorm === 'Topline') {
+    } else if (roleNorm === 'topline') {
       // Topline rep: lookup rep record, get all downlines + their practices
       console.log(`[get-orders-page] Topline role - practiceId (user_id): ${practiceId}`);
       
