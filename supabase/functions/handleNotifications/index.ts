@@ -4,6 +4,7 @@ import { mapNotificationTypeToEventType } from "../_shared/notificationMapping.t
 import { sendNotificationSms } from "../_shared/notificationSmsSender.ts";
 import { generateNotificationEmailHTML, generateNotificationEmailText } from "../_shared/emailTemplates.ts";
 import { logNotificationDelivery } from "../_shared/notificationLogger.ts";
+import { shouldCheckPracticeSettings, getNotificationCategory } from "../_shared/notificationTypeClassifier.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,6 +64,16 @@ serve(async (req) => {
     // Step 1: Map notification_type to event_type
     const eventType = mapNotificationTypeToEventType(payload.notification_type);
     console.log(`[handleNotifications] Type mapping: ${payload.notification_type} → ${eventType}`);
+
+    // Determine if this notification should respect practice settings
+    const respectPracticeSettings = shouldCheckPracticeSettings(payload.notification_type);
+    const notificationCategory = getNotificationCategory(payload.notification_type);
+    
+    console.log('[handleNotifications] Notification classification:', {
+      type: payload.notification_type,
+      category: notificationCategory,
+      respectsPracticeSettings: respectPracticeSettings
+    });
 
     // Step 2: Fetch user preferences
     const { data: preferences, error: prefError } = await supabase
@@ -219,7 +230,12 @@ serve(async (req) => {
     }
 
     // Enhanced debug logging for channel decisions
+    const shouldSendEmail = emailEnabled && profile?.email && (!respectPracticeSettings || practiceEmailEnabled);
+    const shouldSendSms = smsEnabled && userPhone && (!respectPracticeSettings || practiceSmsEnabled);
+    
     console.log('[handleNotifications] Channel decisions:', {
+      notificationCategory,
+      respectsPracticeSettings: respectPracticeSettings,
       userPreferences: { emailEnabled, smsEnabled, inAppEnabled },
       practiceSettings: { practiceEmailEnabled, practiceSmsEnabled },
       userContact: { 
@@ -228,14 +244,26 @@ serve(async (req) => {
         phoneNormalized: userPhone ? normalizePhoneToE164(userPhone).substring(0, 5) + '***' : null
       },
       willSend: {
-        email: emailEnabled && practiceEmailEnabled && !!profile?.email,
-        sms: smsEnabled && practiceSmsEnabled && !!userPhone,
+        email: shouldSendEmail,
+        sms: shouldSendSms,
         inApp: inAppEnabled
       }
     });
 
     // Step 6: Send email if enabled
-    if (emailEnabled && practiceEmailEnabled && profile?.email) {
+    console.log('[handleNotifications] Email decision:', {
+      notificationType: payload.notification_type,
+      userPreference: emailEnabled,
+      practiceSettings: practiceEmailEnabled,
+      respectsPractice: respectPracticeSettings,
+      finalDecision: shouldSendEmail,
+      blockReason: !shouldSendEmail ? 
+        (!emailEnabled ? 'user_disabled' : 
+         !profile?.email ? 'no_email' : 
+         'practice_disabled_automation') : null
+    });
+    
+    if (shouldSendEmail) {
       const recipientName = profile.full_name || profile.name || 'Valued User';
       const emailSubject = payload.title || 'Notification from Vitaluxe';
 
@@ -293,13 +321,37 @@ serve(async (req) => {
           errorMessage: error.message
         });
       }
-    } else if (emailEnabled && !practiceEmailEnabled) {
-      console.log('[handleNotifications] Email blocked by practice settings');
-      results.errors.push('Email disabled at practice level');
+    } else {
+      const blockReason = !emailEnabled ? 'User disabled email notifications' :
+                          !profile?.email ? 'No email address on file' :
+                          respectPracticeSettings && !practiceEmailEnabled ? 
+                            'Practice disabled automation emails' : 'Unknown';
+      
+      console.log(`[handleNotifications] Email not sent: ${blockReason}`);
+      
+      if (!emailEnabled) {
+        results.errors.push('Email disabled by user preference');
+      } else if (respectPracticeSettings && !practiceEmailEnabled) {
+        results.errors.push('Email disabled by practice automation settings');
+      } else if (!profile?.email) {
+        results.errors.push('No email address on file');
+      }
     }
 
     // Step 7: Send SMS if enabled
-    if (smsEnabled && practiceSmsEnabled && userPhone) {
+    console.log('[handleNotifications] SMS decision:', {
+      notificationType: payload.notification_type,
+      userPreference: smsEnabled,
+      practiceSettings: practiceSmsEnabled,
+      respectsPractice: respectPracticeSettings,
+      finalDecision: shouldSendSms,
+      blockReason: !shouldSendSms ? 
+        (!smsEnabled ? 'user_disabled' : 
+         !userPhone ? 'no_phone' : 
+         'practice_disabled_automation') : null
+    });
+    
+    if (shouldSendSms) {
       const normalizedPhone = normalizePhoneToE164(userPhone);
       console.log(`[handleNotifications] Sending SMS to ${normalizedPhone.substring(0, 5)}***`);
       
@@ -332,12 +384,21 @@ serve(async (req) => {
         errorMessage: smsResult.error,
         supabaseClient: supabase
       });
-    } else if (smsEnabled && !practiceSmsEnabled) {
-      console.log('[handleNotifications] SMS blocked by practice settings');
-      results.errors.push('SMS disabled at practice level');
-    } else if (smsEnabled && !userPhone) {
-      console.log('[handleNotifications] SMS enabled but no phone number found');
-      results.errors.push('No phone number available');
+    } else {
+      const blockReason = !smsEnabled ? 'User disabled SMS notifications' :
+                          !userPhone ? 'No phone number on file' :
+                          respectPracticeSettings && !practiceSmsEnabled ? 
+                            'Practice disabled automation SMS' : 'Unknown';
+      
+      console.log(`[handleNotifications] SMS not sent: ${blockReason}`);
+      
+      if (!smsEnabled) {
+        results.errors.push('SMS disabled by user preference');
+      } else if (respectPracticeSettings && !practiceSmsEnabled) {
+        results.errors.push('SMS disabled by practice automation settings');
+      } else if (!userPhone) {
+        results.errors.push('No phone number available');
+      }
     }
 
     console.log('[handleNotifications] Completed:', results);

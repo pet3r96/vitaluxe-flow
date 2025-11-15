@@ -103,9 +103,29 @@ export function PracticeNotificationSettings({ practiceId }: PracticeNotificatio
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              These settings control notifications for <strong>all patients</strong> in your practice. 
-              Disabling email or SMS will prevent patients from receiving those notification types, 
-              even if they have enabled them in their personal preferences. In-app notifications will always work.
+              <div className="space-y-2">
+                <p>
+                  These settings control <strong>only automated practice workflows</strong>, such as:
+                </p>
+                <ul className="list-disc ml-5 text-sm space-y-1">
+                  <li>Appointment reminders</li>
+                  <li>Follow-up reminders</li>
+                  <li>Subscription reminders</li>
+                </ul>
+                <p className="mt-2">
+                  <strong>These settings do NOT affect:</strong>
+                </p>
+                <ul className="list-disc ml-5 text-sm space-y-1">
+                  <li>Direct messages from providers to patients</li>
+                  <li>Order notifications</li>
+                  <li>Payment notifications</li>
+                  <li>System or security alerts</li>
+                  <li>Individual user notification preferences</li>
+                </ul>
+                <p className="mt-2 text-muted-foreground">
+                  Each user can still control their own notification preferences independently.
+                </p>
+              </div>
             </AlertDescription>
           </Alert>
 
