@@ -80,17 +80,7 @@ export const PharmacyShippingManager = () => {
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Early loading state for better UX
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-[600px] w-full" />
-      </div>
-    );
-  }
-
-  // Filter orders based on active tab (client-side)
+  // Filter orders based on active tab (client-side) - MUST BE BEFORE EARLY RETURNS
   const filteredOrders = useMemo(() => {
     if (!allOrders) return [];
 
@@ -112,7 +102,7 @@ export const PharmacyShippingManager = () => {
     return allOrders;
   }, [allOrders, activeTab]);
 
-  // Clear selection when filtered orders change or active tab changes
+  // Clear selection when filtered orders change or active tab changes - MUST BE BEFORE EARLY RETURNS
   useEffect(() => {
     // Case 1: No orders for current filter
     if (!filteredOrders || filteredOrders.length === 0) {
@@ -125,6 +115,16 @@ export const PharmacyShippingManager = () => {
       setSelectedOrderId(null);
     }
   }, [filteredOrders, activeTab, selectedOrderId]);
+
+  // Early loading state for better UX - AFTER all hooks
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-[600px] w-full" />
+      </div>
+    );
+  }
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {

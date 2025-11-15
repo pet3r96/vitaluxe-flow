@@ -1,4 +1,4 @@
-import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,8 +21,25 @@ Deno.serve(async (req) => {
   try {
     console.log('[get-pharmacy-dashboard-stats] 🚀 Starting batched pharmacy dashboard fetch');
     
-    const supabaseClient = createAuthClient(req.headers.get('Authorization'));
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    // Use admin client to bypass RLS (handles impersonation correctly)
+    const supabaseClient = createAdminClient();
+    
+    // Still verify JWT for authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Missing Authorization header');
+    }
+    
+    // Create a temporary auth client just to verify the JWT
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.74.0');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    
+    const { data: { user }, error: userError } = await authClient.auth.getUser();
     
     if (userError || !user) {
       throw new Error('Unauthorized');
