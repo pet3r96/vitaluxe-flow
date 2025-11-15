@@ -32,8 +32,10 @@ import { logger } from "@/lib/logger";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { OrderQueryMetadata } from "@/types/domain/orders";
+import { count, mark, time, timeEnd } from "@/diag";
 
 export const OrdersDataTable = () => {
+  count('OrdersDataTable:render');
   const { effectiveRole, effectiveUserId, effectivePracticeId, user, session } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -83,6 +85,8 @@ export const OrdersDataTable = () => {
   const { data: orders, isLoading, refetch, error } = useRealtimeQuery(
     ["orders", effectiveRole, effectiveUserId, effectivePracticeId],
     async () => {
+      time('Orders:load');
+      mark('Orders:query-start', { role: effectiveRole, userId: effectiveUserId });
       const queryStart = Date.now();
       console.time('OrdersQuery');
       console.log('[OrdersDataTable] Query starting for role:', effectiveRole);
@@ -197,6 +201,9 @@ export const OrdersDataTable = () => {
         }
         
         console.log(`[OrdersDataTable] ✅ Edge function returned ${edgeData.orders.length} orders`);
+        console.timeEnd(`OrdersEdgeFunctionQuery-${effectiveRole}`);
+        timeEnd('Orders:load');
+        mark('Orders:query-complete', { count: edgeData.orders.length, duration: Date.now() - queryStart });
         
         // Warn if edge function returns 0 orders (potential filtering issue)
         if (edgeData.orders.length === 0 && edgeData.total === 0) {
@@ -226,9 +233,9 @@ export const OrdersDataTable = () => {
       }
     },
     {
-      staleTime: 30000, // 30 second cache - prevents excessive fetches on filter changes // Always fetch fresh data - critical for orders appearing after checkout
+      staleTime: 60000, // 60 second cache - improved performance
       gcTime: 5 * 60 * 1000,
-      refetchOnMount: true,
+      refetchOnMount: false, // Performance: rely on cache and realtime updates
       refetchOnWindowFocus: false, // Don't refetch on tab switch (performance)
       refetchOnReconnect: true, // Refetch when reconnecting
       retry: 3, // Retry up to 3 times

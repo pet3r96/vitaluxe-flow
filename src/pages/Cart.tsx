@@ -19,8 +19,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMultiplePharmacyRates } from "@/hooks/useMultiplePharmacyRates";
 import React from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { count, mark, time, timeEnd } from "@/diag";
 
 const Cart = React.memo(function Cart() {
+  count('Cart:render');
   console.time('Cart-Render');
   console.log('[Cart] Render start');
   
@@ -230,17 +232,19 @@ const Cart = React.memo(function Cart() {
     },
   });
 
-  // Realtime subscription - SINGLE STABLE CHANNEL
-  useEffect(() => {
-    if (!cartOwnerId || !cart?.id) return;
+    // Realtime subscription - SINGLE STABLE CHANNEL
+    useEffect(() => {
+      if (!cartOwnerId || !cart?.id) return;
 
-    // Prevent duplicate subscriptions
-    if (realtimeChannelRef.current) {
-      console.log('[Cart] Realtime subscription already exists');
-      return;
-    }
+      // Prevent duplicate subscriptions
+      if (realtimeChannelRef.current) {
+        mark('Cart:realtime-skip', { reason: 'subscription exists', cartId: cart.id });
+        console.log('[Cart] Realtime subscription already exists');
+        return;
+      }
 
-    console.log('[Cart] Setting up realtime subscription for cart:', cart.id);
+      mark('Cart:realtime-subscribe', { cartId: cart.id });
+      console.log('[Cart] Setting up realtime subscription for cart:', cart.id);
 
     const channel = supabase
       .channel(`cart-changes-${cart.id}`) // Unique channel name per cart
@@ -325,6 +329,7 @@ const Cart = React.memo(function Cart() {
     if (normalizeOnceRef.current.cartId === cart.id && 
         normalizeOnceRef.current.done && 
         normalizeOnceRef.current.version === cartVersion) {
+      mark('Cart:normalization-skip', { reason: 'same version', version: cartVersion });
       console.log('[Cart] Normalization already completed for this cart version');
       return;
     }
@@ -332,6 +337,7 @@ const Cart = React.memo(function Cart() {
     // Reset if cart changed or version changed
     if (!cart.id || normalizeOnceRef.current.cartId !== cart.id || 
         normalizeOnceRef.current.version !== cartVersion) {
+      mark('Cart:normalization-reset', { oldVersion: normalizeOnceRef.current.version, newVersion: cartVersion });
       console.log('[Cart] Cart version changed, resetting normalization state');
       normalizeOnceRef.current = { cartId: cart.id, done: false, version: cartVersion };
       normalizedGroupsRef.current.clear();
@@ -353,6 +359,8 @@ const Cart = React.memo(function Cart() {
       }
       groups.get(key).lines.push(line);
     });
+
+    mark('Cart:normalization-start', { cartId: cart.id, version: cartVersion, groupCount: groups.size });
 
     // Build normalization plan - SKIP groups already normalized
     const normalizationPlan: Array<{ lineIds: string[]; targetSpeed: 'ground' | '2day' | 'overnight'; groupKey: string }> = [];
@@ -387,6 +395,7 @@ const Cart = React.memo(function Cart() {
     }
 
     console.log('[Cart] Executing normalization plan for', normalizationPlan.length, 'groups');
+    mark('Cart:normalization-execute', { planSize: normalizationPlan.length });
 
     // Mark done IMMEDIATELY to prevent re-entrancy
     normalizeOnceRef.current.done = true;
@@ -399,8 +408,10 @@ const Cart = React.memo(function Cart() {
           normalizedGroupsRef.current.add(groupKey);
           await updateShippingSpeedMutation.mutateAsync({ lineIds, shipping_speed: targetSpeed });
         }
+        mark('Cart:normalization-complete', { cartId: cart.id });
         console.log('[Cart] Normalization complete for cart:', cart.id);
       } catch (error) {
+        mark('Cart:normalization-error', { error: String(error) });
         console.error('[Cart] Normalization failed:', error);
         toast({
           title: "Shipping speed adjustment",
