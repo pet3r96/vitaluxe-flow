@@ -714,28 +714,50 @@ export const OrdersDataTable = () => {
                           />
                         )}
 
-                        {/* Download Prescription Button (practice staff, pharmacy, admin only - NOT reps) */}
-                        {effectiveRole !== "pharmacy" && 
-                         effectiveRole !== "topline" && 
-                         effectiveRole !== "downline" && 
-                         order.order_lines?.some((line: any) => line.prescription_url) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const lineWithRx = order.order_lines?.find((l: any) => l.prescription_url);
-                              if (lineWithRx) {
-                                handlePrescriptionDownload(
-                                  lineWithRx.prescription_url,
-                                  lineWithRx.products?.name || 'prescription'
-                                );
-                              }
-                            }}
-                            title="Download Prescription"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        )}
+                        {/* Script Action - doctors/providers/pharmacy/admin only */}
+                        {(() => {
+                          const hasAnyScript = order.order_lines?.some((l: any) =>
+                            Boolean(l.prescription_url) ||
+                            Boolean(l.prescription_url_encrypted) ||
+                            Boolean(l.prescription_url_indicator) ||
+                            Boolean(l.products?.requires_prescription)
+                          );
+                          
+                          if (!["doctor", "provider", "pharmacy", "admin"].includes(effectiveRole || "") || !hasAnyScript) {
+                            return null;
+                          }
+
+                          const directUrl = order.order_lines?.find((l: any) => l.prescription_url)?.prescription_url;
+                          
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (directUrl) {
+                                        const line = order.order_lines.find((l: any) => l.prescription_url);
+                                        handlePrescriptionDownload(directUrl, line?.products?.name || 'prescription');
+                                      } else {
+                                        setSelectedOrder(order);
+                                        setDetailsOpen(true);
+                                      }
+                                    }}
+                                    className="h-8 px-2"
+                                    aria-label="View prescription"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Script</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                   </TableRow>

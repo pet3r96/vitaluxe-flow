@@ -43,7 +43,7 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
   const { data: cartData, isLoading: loadingCart } = useCart(cartOwnerId, {
     productFields: "id, name, dosage, image_url",
     enabled: !!cartOwnerId && open,
-    staleTime: 1000, // 1 second cache - better immediate feedback
+    staleTime: 1000,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
   });

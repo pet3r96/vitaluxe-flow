@@ -61,7 +61,24 @@ serve(async (req) => {
       throw new Error('order_id is required');
     }
 
-    console.log('Generating receipt for order:', order_id);
+    console.log('[generate-receipt] Generating receipt for order:', order_id);
+
+    // Create admin client for storage operations
+    const adminClient = createAdminClient();
+    
+    // Ensure receipts bucket exists (idempotent)
+    try {
+      await adminClient.storage.createBucket('receipts', { 
+        public: false, 
+        fileSizeLimit: 20971520 // 20MB
+      });
+      console.log('[generate-receipt] Receipts bucket ensured');
+    } catch (bucketError: any) {
+      // Ignore if bucket already exists
+      if (!bucketError.message?.includes('already exists')) {
+        console.warn('[generate-receipt] Bucket creation warning:', bucketError.message);
+      }
+    }
 
     // Fetch order data
     const { data: order, error: orderError } = await supabase

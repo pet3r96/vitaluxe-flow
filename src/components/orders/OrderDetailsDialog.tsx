@@ -539,10 +539,15 @@ export const OrderDetailsDialog = ({
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Doctor</p>
-              <p className="font-medium">{order.profiles?.prescriber_name || order.profiles?.full_name || order.profiles?.name || "N/A"}</p>
-            </div>
+            {(() => {
+              const doctorName = order.profiles?.prescriber_name || order.profiles?.full_name || order.profiles?.name || null;
+              return doctorName ? (
+                <div>
+                  <p className="text-sm text-muted-foreground">Doctor</p>
+                  <p className="font-medium">{doctorName}</p>
+                </div>
+              ) : null;
+            })()}
             {effectiveRole !== "pharmacy" && (
               <div className="col-span-2">
                 <div className="p-4 bg-muted/50 rounded-lg space-y-2">
