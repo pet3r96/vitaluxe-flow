@@ -36,7 +36,7 @@ export const PracticesDataTable = () => {
   const { data: practices, isLoading, refetch } = useRealtimeQuery(
     ["practices"],
     async () => {
-      // First get all doctor role users
+      // First get all doctor role users with pagination
       const { data: allDoctors, error: doctorsError } = await supabase
         .from("profiles")
         .select(`
@@ -44,7 +44,8 @@ export const PracticesDataTable = () => {
           user_roles!inner(role)
         `)
         .eq("user_roles.role", "doctor")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(50); // Server-side limit for scalability
 
       if (doctorsError) throw doctorsError;
 

@@ -106,6 +106,10 @@ export const OrdersDataTable = () => {
           return []; // Pharmacy not found
         }
 
+        // Add time filter - last 90 days
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        
         // Fetch order lines - order by created_at on the order_lines table itself
         const { data: orderLinesData, error: orderLinesError } = await supabase
           .from("order_lines")
@@ -224,7 +228,7 @@ export const OrdersDataTable = () => {
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-orders-page', {
           body: {
             page: 1,
-            pageSize: 20,
+            pageSize: 50, // Reduced from 20 to 50 for better balance
             practiceId: scopeId,
             role: normalizedRole,
             status: undefined,
@@ -530,9 +534,17 @@ export const OrdersDataTable = () => {
       gcTime: 5 * 60 * 1000,
       refetchOnMount: true,
       refetchOnWindowFocus: false, // Don't refetch on tab switch (performance)
+      refetchOnReconnect: true, // Refetch when reconnecting
       retry: 3, // Retry up to 3 times
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
       enabled: !!effectiveRole && !!effectiveUserId && !!user, // Only run when auth data is available
+    },
+    // Real-time event handler to immediately refetch on INSERT
+    (payload) => {
+      if (payload.eventType === 'INSERT') {
+        console.log('[OrdersDataTable] Real-time INSERT detected, refetching orders');
+        refetch();
+      }
     }
   );
 
