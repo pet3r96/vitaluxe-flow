@@ -403,23 +403,6 @@ export const ProductsGrid = () => {
         return;
       }
 
-      let { data: cart } = await supabase
-        .from("cart")
-        .select("id")
-        .eq("doctor_id", cartOwnerForDb)
-        .single();
-
-      if (!cart) {
-        const { data: newCart, error: cartError } = await supabase
-          .from("cart")
-          .insert({ doctor_id: cartOwnerForDb })
-          .select("id")
-          .single();
-
-        if (cartError) throw cartError;
-        cart = newCart;
-      }
-
       // ORDER CONTEXT: For providers, resolve practice_id for shipping/routing/profits
       // For staff, use effectivePracticeId directly for practice context
       // (but cart stays linked to provider's/staff's user_id above)
@@ -563,27 +546,27 @@ export const ProductsGrid = () => {
         // Success - pharmacy found, proceed with insertion
         console.log(`✅ Pharmacy routed: ${routingResult.reason}`);
 
-        const { error } = await supabase
-          .from("cart_lines" as any)
-          .insert({
-            cart_id: cart.id,
-            product_id: productForCart.id,
-            patient_id: null,
-            provider_id: actualProviderId,
-            patient_name: "Practice Order",
-            patient_email: null,
-            patient_phone: null,
-            patient_address: null,
+        const { error } = await supabase.functions.invoke('add-to-cart', {
+          body: {
+            cartOwnerId: cartOwnerForDb,
+            productId: productForCart.id,
+            patientId: null,
+            providerId: actualProviderId,
+            patientName: "Practice Order",
+            patientEmail: null,
+            patientPhone: null,
+            patientAddress: null,
             quantity: quantity,
-            price_snapshot: correctPrice,
-            destination_state: destinationState,
-            assigned_pharmacy_id: routingResult.pharmacy_id,
-            prescription_url: prescriptionUrl,
-            custom_sig: customSig,
-            custom_dosage: customDosage,
-            order_notes: orderNotes,
-            prescription_method: prescriptionMethod,
-          });
+            priceSnapshot: correctPrice,
+            destinationState: destinationState,
+            assignedPharmacyId: routingResult.pharmacy_id,
+            prescriptionUrl: prescriptionUrl,
+            customSig: customSig,
+            customDosage: customDosage,
+            orderNotes: orderNotes,
+            prescriptionMethod: prescriptionMethod,
+          }
+        });
 
         if (error) throw error;
       } else {
@@ -709,34 +692,34 @@ export const ProductsGrid = () => {
           patientRecord.address_zip
         );
 
-        const { error } = await supabase
-          .from("cart_lines" as any)
-          .insert({
-            cart_id: cart.id,
-            product_id: productForCart.id,
-            patient_id: patientRecord.id, // Use patients.id for foreign key
-            provider_id: actualProviderId,
-            patient_name: patientRecord.name || "Unknown",
-            patient_email: patientRecord.email,
-            patient_phone: patientRecord.phone,
-            patient_address: null, // Clear legacy field
-            patient_address_street: patientRecord.address_street || null,
-            patient_address_city: patientRecord.address_city || null,
-            patient_address_state: patientRecord.address_state || null,
-            patient_address_zip: patientRecord.address_zip || null,
-            patient_address_validated: hasCompleteAddress,
-            patient_address_validation_source: hasCompleteAddress ? 'patient_record' : null,
-            gender_at_birth: patientRecord.gender_at_birth || null,
+        const { error } = await supabase.functions.invoke('add-to-cart', {
+          body: {
+            cartOwnerId: cartOwnerForDb,
+            productId: productForCart.id,
+            patientId: patientRecord.id,
+            providerId: actualProviderId,
+            patientName: patientRecord.name || "Unknown",
+            patientEmail: patientRecord.email,
+            patientPhone: patientRecord.phone,
+            patientAddress: null,
+            patientAddressStreet: patientRecord.address_street || null,
+            patientAddressCity: patientRecord.address_city || null,
+            patientAddressState: patientRecord.address_state || null,
+            patientAddressZip: patientRecord.address_zip || null,
+            patientAddressValidated: hasCompleteAddress,
+            patientAddressValidationSource: hasCompleteAddress ? 'patient_record' : null,
+            genderAtBirth: patientRecord.gender_at_birth || null,
             quantity: quantity,
-            price_snapshot: correctPrice,
-            destination_state: destinationState,
-            assigned_pharmacy_id: routingResult.pharmacy_id,
-            prescription_url: prescriptionUrl,
-            custom_sig: customSig,
-            custom_dosage: customDosage,
-            order_notes: orderNotes,
-            prescription_method: prescriptionMethod,
-          });
+            priceSnapshot: correctPrice,
+            destinationState: destinationState,
+            assignedPharmacyId: routingResult.pharmacy_id,
+            prescriptionUrl: prescriptionUrl,
+            customSig: customSig,
+            customDosage: customDosage,
+            orderNotes: orderNotes,
+            prescriptionMethod: prescriptionMethod,
+          }
+        });
 
         if (error) throw error;
       }
@@ -746,47 +729,21 @@ export const ProductsGrid = () => {
       // CRITICAL FIX: Use cartOwnerId for optimistic updates (not effectiveUserId)
       const resolvedCartOwnerId = cartOwnerId || effectiveUserId;
       
+      console.log('[ProductsGrid] 🔍 Invalidating cart queries with:', { 
+        resolvedCartOwnerId, 
+        effectiveUserId,
+        cartOwnerId
+      });
+
       // Optimistic update: increment count immediately
       queryClient.setQueryData(
         ["cart-count", resolvedCartOwnerId],
         (old: number | undefined) => (old || 0) + quantity
       );
       
-      // Optimistic update: push item into cart cache for instant UI
-      queryClient.setQueryData(["cart", resolvedCartOwnerId], (old: any) => {
-        const patientName = shipToPractice ? 'Practice Order' : (patientId ? 'Patient Order' : 'Practice Order');
-        const productMeta = {
-          id: productForCart.id,
-          name: productForCart.name,
-          dosage: (productForCart as any).dosage,
-          image_url: (productForCart as any).image_url,
-        };
-        const optimisticItem = {
-          id: `temp_${Date.now()}`,
-          cart_id: cart.id,
-          product_id: productForCart.id,
-          product: productMeta,
-          patient_name: patientName,
-          quantity,
-          price_snapshot: correctPrice,
-          destination_state: 'XX',
-          created_at: new Date().toISOString(),
-        };
-        if (!old) {
-          return { id: cart.id, lines: [optimisticItem] };
-        }
-        if (old.items) {
-          return { ...old, items: [...old.items, optimisticItem] };
-        }
-        if (old.lines) {
-          return { ...old, lines: [...old.lines, optimisticItem] };
-        }
-        return { ...old, lines: [optimisticItem] };
-      });
-      
-      // Immediately invalidate to force fresh fetch with correct data from DB
-      await queryClient.invalidateQueries({ queryKey: ["cart-count", resolvedCartOwnerId] });
-      await queryClient.invalidateQueries({ queryKey: ["cart", resolvedCartOwnerId] });
+      // Then refetch to sync with server
+      queryClient.refetchQueries({ queryKey: ["cart-count", resolvedCartOwnerId], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ["cart", resolvedCartOwnerId], type: 'active' });
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error adding to cart", error);

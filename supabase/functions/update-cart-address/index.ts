@@ -36,28 +36,44 @@ serve(async (req) => {
       );
     }
 
-    const { lineId, patientAddress, patientAddressStreet, patientAddressCity, patientAddressState, patientAddressZip } = await req.json();
+    const { lineIds, address, assignedPharmacyId } = await req.json();
 
-    console.log('[update-cart-address] Updating line:', lineId);
+    console.log('[update-cart-address] Updating address for lines:', lineIds);
 
-    if (!lineId) {
+    if (!lineIds || !Array.isArray(lineIds) || lineIds.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'lineId required' }),
+        JSON.stringify({ error: 'lineIds array required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!address) {
+      return new Response(
+        JSON.stringify({ error: 'address object required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const updateData: any = {};
-    if (patientAddress !== undefined) updateData.patient_address = patientAddress;
-    if (patientAddressStreet !== undefined) updateData.patient_address_street = patientAddressStreet;
-    if (patientAddressCity !== undefined) updateData.patient_address_city = patientAddressCity;
-    if (patientAddressState !== undefined) updateData.patient_address_state = patientAddressState;
-    if (patientAddressZip !== undefined) updateData.patient_address_zip = patientAddressZip;
+    if (address.street !== undefined) updateData.patient_address_street = address.street;
+    if (address.city !== undefined) updateData.patient_address_city = address.city;
+    if (address.state !== undefined) {
+      updateData.patient_address_state = address.state;
+      updateData.destination_state = address.state; // Also update destination_state for routing
+    }
+    if (address.zip !== undefined) updateData.patient_address_zip = address.zip;
+    if (address.formatted !== undefined) {
+      updateData.patient_address_formatted = address.formatted;
+      updateData.patient_address = address.formatted; // Also update legacy field
+    }
+    if (address.validated !== undefined) updateData.patient_address_validated = address.validated;
+    if (address.validationSource !== undefined) updateData.patient_address_validation_source = address.validationSource;
+    if (assignedPharmacyId !== undefined) updateData.assigned_pharmacy_id = assignedPharmacyId;
 
     const { error: updateError } = await supabase
       .from("cart_lines")
       .update(updateData)
-      .eq("id", lineId);
+      .in("id", lineIds);
 
     if (updateError) {
       console.error('[update-cart-address] Update error:', updateError);
