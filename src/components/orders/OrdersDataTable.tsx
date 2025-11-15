@@ -514,7 +514,7 @@ export const OrdersDataTable = () => {
       }
     },
     {
-      staleTime: 60 * 1000, // 60 seconds
+      staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
       gcTime: 5 * 60 * 1000,
       refetchOnMount: true,
       refetchOnWindowFocus: true,

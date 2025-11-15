@@ -2,24 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Sample data - replace with real data from your backend
-const data = [
-  { name: "Jan", revenue: 4000 },
-  { name: "Feb", revenue: 3000 },
-  { name: "Mar", revenue: 5000 },
-  { name: "Apr", revenue: 4500 },
-  { name: "May", revenue: 6000 },
-  { name: "Jun", revenue: 5500 },
-  { name: "Jul", revenue: 7000 },
-];
+import { useRevenueData } from "@/hooks/useRevenueData";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface RevenueChartProps {
   className?: string;
 }
 
 export function RevenueChart({ className }: RevenueChartProps) {
-  const cardClass = className ?? "col-span-2"; // Default spans 2 columns (non-admin layouts)
+  const cardClass = className ?? "col-span-2";
+  const { data, isLoading } = useRevenueData();
   return (
     <Card variant="modern" className={cn(cardClass)}>
       <CardHeader>
@@ -32,8 +24,11 @@ export function RevenueChart({ className }: RevenueChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={data}>
+        {isLoading ? (
+          <Skeleton className="h-[300px] w-full" />
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={data}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
@@ -71,6 +66,7 @@ export function RevenueChart({ className }: RevenueChartProps) {
             />
           </AreaChart>
         </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

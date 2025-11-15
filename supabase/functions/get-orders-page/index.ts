@@ -55,7 +55,7 @@ serve(async (req) => {
     }
 
     const userId = user.id;
-    const { page = 1, pageSize = 50, status, search, practiceId, role } = await req.json();
+    const { page = 1, pageSize = 50, status, search, practiceId, role, startDate, endDate } = await req.json();
 
     // Normalize role: provider -> doctor
     const roleNorm = role === 'provider' ? 'doctor' : role;
@@ -101,6 +101,17 @@ serve(async (req) => {
         )
       `, { count: 'exact' });
 
+    // Apply date range filter if provided (defaults to last 90 days)
+    const defaultStartDate = new Date();
+    defaultStartDate.setDate(defaultStartDate.getDate() - 90);
+    const dateFrom = startDate || defaultStartDate.toISOString();
+    if (dateFrom) {
+      query = query.gte('created_at', dateFrom);
+    }
+    if (endDate) {
+      query = query.lte('created_at', endDate);
+    }
+
     // CRITICAL: Filter by role FIRST (before pagination)
     console.log(`[get-orders-page] 🎯 Filtering by role: ${role}`);
     
@@ -112,6 +123,7 @@ serve(async (req) => {
         .select('id')
         .eq('user_id', practiceId)
         .eq('active', true)
+        .limit(1)
         .maybeSingle();
       
       if (providerError) {
