@@ -99,7 +99,7 @@ serve(async (req) => {
         reason: 'patient_account_not_found',
         practice: null,
         message: 'No patient account exists for this user. Please contact your practice to create one.'
-      }, 404);
+      }, 200);
     }
 
     if (!patientAccount.practice_id) {
@@ -111,7 +111,7 @@ serve(async (req) => {
         reason: 'no_practice_assigned',
         practice: null,
         message: 'Your patient account is not yet linked to a practice. Please contact your practice administrator.'
-      }, 404);
+      }, 200);
     }
 
     const practiceId = patientAccount.practice_id;

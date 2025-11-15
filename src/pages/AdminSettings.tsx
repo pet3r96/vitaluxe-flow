@@ -12,12 +12,13 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock } from "lucide-react";
+import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { FactoryResetManager } from "@/components/admin/FactoryResetManager";
 import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
 import { UsageBillingDashboard } from "@/components/admin/UsageBillingDashboard";
+import { SubscriptionDiagnostics } from "@/components/admin/SubscriptionDiagnostics";
 
 const AdminSettings = () => {
   return (
@@ -74,6 +75,10 @@ const AdminSettings = () => {
           <TabsTrigger value="utilities" className="gap-2">
             <Wrench className="h-4 w-4" />
             Utilities
+          </TabsTrigger>
+          <TabsTrigger value="diagnostics" className="gap-2">
+            <Stethoscope className="h-4 w-4" />
+            Diagnostics
           </TabsTrigger>
           <TabsTrigger value="price-overrides" className="gap-2">
             <DollarSign className="h-4 w-4" />
@@ -225,6 +230,10 @@ const AdminSettings = () => {
           <AdminPasswordChange />
           <TestPasswordManager />
           <OrphanedUserFixer />
+        </TabsContent>
+
+        <TabsContent value="diagnostics" className="space-y-4">
+          <SubscriptionDiagnostics />
         </TabsContent>
 
         <TabsContent value="price-overrides" className="space-y-4">

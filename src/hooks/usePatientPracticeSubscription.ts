@@ -28,8 +28,8 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
         };
       }
 
-      // Call consolidated edge function
-      const { data: result, error } = await supabase.functions.invoke('patient-practice-context', {
+      // Call unified practice context function
+      const { data: result, error } = await supabase.functions.invoke('practice-context', {
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -90,30 +90,27 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
       if (!result.practice) {
         return {
           isSubscribed: false,
-          status: "no_practice",
+          status: result.subscription?.status || "no_practice",
           practiceId: null,
           practiceName: null,
           reason: result.reason || "no_practice_assigned"
         };
       }
 
-      // Defensive fallback: if status is active/trial but isSubscribed is false, trust the status
-      let computedIsSubscribed = result.isSubscribed ?? false;
-      if (!computedIsSubscribed && ['active', 'trial', 'suspended'].includes(result.status)) {
-        console.debug('[usePatientPracticeSubscription] Status indicates access but isSubscribed=false, applying fallback');
-        computedIsSubscribed = true;
-      }
+      // Use the subscription data from unified function - NO fallback logic
+      const isSubscribed = result.subscription?.isSubscribed ?? false;
+      const status = result.subscription?.status || "unknown";
 
       console.debug('[usePatientPracticeSubscription] Final result:', {
-        status: result.status,
-        isSubscribed: computedIsSubscribed,
+        status,
+        isSubscribed,
         practiceId: result.practice.id,
         practiceName: result.practice.name
       });
 
       return {
-        isSubscribed: computedIsSubscribed,
-        status: result.status || "unknown",
+        isSubscribed,
+        status,
         practiceId: result.practice.id,
         practiceName: result.practice.name,
         reason: undefined

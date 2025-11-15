@@ -39,7 +39,10 @@ export const PharmacyShippingManager = () => {
     queryFn: async () => {
       if (!pharmacyData?.id) return [];
 
-      // OPTIMIZED: Only fetch fields needed for list display + limit to most recent 50
+      // OPTIMIZED: Add time-based filter for faster queries (last 30 days by default)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const { data, error } = await supabase
         .from('order_lines')
         .select(`
@@ -61,8 +64,9 @@ export const PharmacyShippingManager = () => {
         `)
         .eq('assigned_pharmacy_id', pharmacyData.id)
         .neq('orders.payment_status', 'payment_failed')
+        .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
-        .limit(50); // Reduced to 50 for faster initial load
+        .limit(100); // Increased from 50 with time filter
       
       if (error) {
         toast.error('Failed to load orders');
