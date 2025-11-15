@@ -17,6 +17,8 @@ export function RecentActivityWidget({ className, activities: externalActivities
   const { data: activities, isLoading } = useQuery({
     queryKey: ["recent-activity", effectivePracticeId, effectiveRole, effectiveUserId],
     enabled: !externalActivities && !!effectiveUserId,
+    staleTime: 2 * 60 * 1000, // 2 minutes cache
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!effectiveUserId) return [] as any[];
       
