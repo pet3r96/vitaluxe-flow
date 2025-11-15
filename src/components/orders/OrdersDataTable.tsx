@@ -427,7 +427,37 @@ export const OrdersDataTable = () => {
         description: "Please wait"
       });
 
-      const response = await fetch(prescriptionUrl);
+      // Check if URL is expired (extract expiration from URL)
+      const urlObj = new URL(prescriptionUrl);
+      const expiresAt = urlObj.searchParams.get('Expires');
+      const isExpired = expiresAt && parseInt(expiresAt) * 1000 < Date.now();
+
+      let downloadUrl = prescriptionUrl;
+
+      // If URL is expired, refresh it
+      if (isExpired) {
+        console.log('[OrdersDataTable] Prescription URL expired, refreshing...');
+        
+        // Extract path from URL
+        const match = prescriptionUrl.match(/\/prescriptions\/(.+?)(\?|$)/);
+        if (!match || !match[1]) {
+          throw new Error('Invalid prescription URL format');
+        }
+        const prescriptionPath = match[1];
+
+        const { data, error } = await supabase.functions.invoke('refresh-prescription-url', {
+          body: { prescriptionPath }
+        });
+
+        if (error || !data?.signedUrl) {
+          throw new Error('Failed to refresh prescription URL');
+        }
+
+        downloadUrl = data.signedUrl;
+        console.log('[OrdersDataTable] Prescription URL refreshed successfully');
+      }
+
+      const response = await fetch(downloadUrl);
       if (!response.ok) {
         if (response.status === 403) {
           throw new Error('Prescription link has expired. Please contact support to regenerate.');
@@ -440,7 +470,7 @@ export const OrdersDataTable = () => {
       const link = document.createElement('a');
       link.href = url;
       
-      const urlParts = prescriptionUrl.split('/');
+      const urlParts = downloadUrl.split('/');
       const filename = urlParts[urlParts.length - 1].split('?')[0];
       const extension = filename.includes('.') ? filename.split('.').pop() : 'pdf';
       link.download = `prescription_${productName.replace(/\s+/g, '_')}.${extension}`;

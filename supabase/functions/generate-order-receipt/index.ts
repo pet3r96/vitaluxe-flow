@@ -25,17 +25,23 @@ serve(async (req) => {
       return errorResponse('Unauthorized - Missing credentials', 401);
     }
 
-    const { createAuthClient } = await import('../_shared/supabaseAdmin.ts');
-    const supabase = createAuthClient(authHeader);
+    // Set timeout protection (30 seconds)
+    const timeoutPromise = new Promise<Response>((_, reject) => {
+      setTimeout(() => reject(new Error('Receipt generation timeout')), 30000);
+    });
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const receiptPromise = (async () => {
+      const { createAuthClient } = await import('../_shared/supabaseAdmin.ts');
+      const supabase = createAuthClient(authHeader);
 
-    if (authError || !user) {
-      console.error('[generate-order-receipt] Auth error:', authError);
-      return errorResponse('Unauthorized - Invalid session', 401);
-    }
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    console.log('[generate-order-receipt] User authenticated:', user.id);
+      if (authError || !user) {
+        console.error('[generate-order-receipt] Auth error:', authError);
+        return errorResponse('Unauthorized - Invalid session', 401);
+      }
+
+      console.log('[generate-order-receipt] User authenticated:', user.id);
 
     // Parse and validate JSON
     let requestData;
@@ -165,8 +171,8 @@ serve(async (req) => {
       isStaffOfPractice
     });
 
-    // Fetch order lines with provider information
-    const { data: orderLines, error: linesError } = await supabase
+    // Fetch order lines with provider information using admin client for efficiency
+    const { data: orderLines, error: linesError } = await adminClient
       .from('order_lines')
       .select(`
         id,
@@ -178,10 +184,6 @@ serve(async (req) => {
         shipping_speed,
         tracking_number,
         provider_id,
-        providers (
-          id,
-          user_id
-        ),
         products (
           name,
           dosage,
@@ -192,40 +194,34 @@ serve(async (req) => {
       `)
       .eq('order_id', order_id);
 
-    if (linesError) {
+    if (linesError || !orderLines || orderLines.length === 0) {
       console.error('[generate-order-receipt] Order lines fetch error:', linesError);
-      return errorResponse('Failed to fetch order lines', 500);
+      return errorResponse('Failed to fetch order lines', linesError ? 500 : 404);
     }
 
-    if (!orderLines || orderLines.length === 0) {
-      console.error('[generate-order-receipt] No order lines found for order:', order_id);
-      return errorResponse('Order has no items', 404);
-    }
-
-    // Fetch provider profile information separately for first order line
+    // Fetch provider profile information for first order line (if exists)
     let providerProfile = null;
     const firstLine: any = orderLines[0];
-    const provider: any = Array.isArray(firstLine?.providers) ? firstLine.providers[0] : firstLine?.providers;
-    const providerId = provider?.user_id;
-    
-    if (providerId) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('name, email')
-        .eq('user_id', providerId)
+    if (firstLine?.provider_id) {
+      const { data: providerData } = await adminClient
+        .from('providers')
+        .select(`
+          id,
+          user_id,
+          profiles!providers_user_id_fkey (
+            name,
+            email
+          )
+        `)
+        .eq('id', firstLine.provider_id)
         .maybeSingle();
       
-      providerProfile = profileData;
-    }
-
-    if (linesError) {
-      console.error('[generate-order-receipt] Order lines fetch error:', linesError);
-      return errorResponse('Failed to fetch order lines', 500);
-    }
-
-    if (!orderLines || orderLines.length === 0) {
-      console.error('[generate-order-receipt] No order lines found for order:', order_id);
-      return errorResponse('Order has no items', 404);
+      if (providerData?.profiles) {
+        const profile = Array.isArray(providerData.profiles) 
+          ? providerData.profiles[0] 
+          : providerData.profiles;
+        providerProfile = profile;
+      }
     }
 
     // Generate PDF
@@ -544,6 +540,10 @@ serve(async (req) => {
         status: 200
       }
     );
+    })(); // Close the receiptPromise async function
+
+    // Race between timeout and receipt generation
+    return await Promise.race([receiptPromise, timeoutPromise]);
 
   } catch (error: any) {
     const duration = Date.now() - requestStart;
