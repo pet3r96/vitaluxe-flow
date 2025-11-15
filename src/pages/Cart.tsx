@@ -52,7 +52,7 @@ const Cart = React.memo(function Cart() {
   const showStaffLoading = checkingPrivileges && isStaffAccount;
   const showStaffNoAccess = isStaffAccount && !canOrder && !checkingPrivileges;
 
-  // Resolve cart owner
+  // Resolve cart owner - with instant updates on role/impersonation change
   const { data: cartOwnerId, isLoading: isLoadingCartOwner, error: cartOwnerError } = useQuery({
     queryKey: ["cart-owner-id", effectiveUserId, effectiveRole, effectivePracticeId],
     queryFn: async () => {
@@ -67,6 +67,9 @@ const Cart = React.memo(function Cart() {
       return ownerId;
     },
     enabled: !!effectiveUserId && !showStaffLoading,
+    staleTime: 0, // No cache - instant updates on impersonation/role change
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
     retry: 2,
   });
 
@@ -78,7 +81,7 @@ const Cart = React.memo(function Cart() {
     includePharmacy: true,
     includeProvider: true,
     enabled: !!cartOwnerId && !showStaffLoading && !showStaffNoAccess,
-    staleTime: 0,
+    staleTime: 0, // Always fetch fresh
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });

@@ -84,12 +84,14 @@ export const ProductsGrid = () => {
   // Providers and doctors always have ordering privileges, but reps and admins cannot order
   const canOrder = (isProvider || staffCanOrder) && !isRep && !isAdmin;
   
-  // Resolve cart owner for accurate cart count
+  // Resolve cart owner for accurate cart count - with instant updates on role/impersonation change
   const { data: cartOwnerId } = useQuery({
     queryKey: ['cart-owner', effectiveUserId, effectiveRole, effectivePracticeId],
     queryFn: () => resolveCartOwnerUserId(effectiveUserId!, effectiveRole!, effectivePracticeId),
     enabled: !!effectiveUserId && !!effectiveRole,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // No cache - always resolve fresh for instant updates
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
   
   const { data: cartCount } = useCartCount(cartOwnerId);

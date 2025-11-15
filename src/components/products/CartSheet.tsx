@@ -30,12 +30,14 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  // Resolve the correct cart owner based on role
+  // Resolve the correct cart owner based on role - with instant updates
   const { data: cartOwnerId, isLoading: resolvingOwner } = useQuery({
     queryKey: ['cart-owner', effectiveUserId, effectiveRole, effectivePracticeId],
     queryFn: () => resolveCartOwnerUserId(effectiveUserId!, effectiveRole!, effectivePracticeId),
     enabled: !!effectiveUserId && !!effectiveRole,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 0, // No cache - instant updates on impersonation/role change
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const { data: cartData, isLoading: loadingCart } = useCart(cartOwnerId, {
