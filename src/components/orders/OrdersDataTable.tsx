@@ -81,7 +81,7 @@ export const OrdersDataTable = () => {
   });
 
   const { data: orders, isLoading, refetch, error } = useRealtimeQuery(
-    ["orders", effectiveRole, effectiveUserId, user?.id],
+    ["orders", effectiveRole, effectiveUserId, effectivePracticeId],
     async () => {
       const queryStart = Date.now();
       console.time('OrdersQuery');
@@ -94,97 +94,18 @@ export const OrdersDataTable = () => {
           authUid: user?.id 
         }));
 
-      // For pharmacy users - fetch order_lines assigned to them
-      if (effectiveRole === "pharmacy") {
-        const { data: pharmacyData } = await supabase
-          .from("pharmacies")
-          .select("id")
-          .eq("user_id", effectiveUserId)
-          .maybeSingle();
+      // USE SINGLE EDGE FUNCTION FOR ALL ROLES
+      if (["admin", "practice", "doctor", "provider", "staff", "pharmacy", "topline", "downline"].includes(effectiveRole)) {
+        console.time(`OrdersEdgeFunctionQuery-${effectiveRole}`);
+        console.log(`[OrdersDataTable] Using edge function for role: ${effectiveRole}`);
         
-        if (!pharmacyData) {
-          return []; // Pharmacy not found
-        }
-
-        // Add time filter - last 90 days
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-        
-        // Fetch order lines - order by created_at on the order_lines table itself
-        const { data: orderLinesData, error: orderLinesError } = await supabase
-          .from("order_lines")
-          .select(`
-            id,
-            order_id,
-            status,
-            tracking_number,
-            created_at,
-            patient_name,
-            patient_id,
-            shipping_speed,
-            products(name, product_types(name)),
-            orders!inner(
-              id,
-              created_at,
-              payment_status,
-              ship_to,
-              status,
-              status_manual_override,
-              profiles:doctor_id(name, company)
-            )
-          `)
-          .eq("assigned_pharmacy_id", pharmacyData.id)
-          .neq("orders.payment_status", "payment_failed")
-          .order("created_at", { ascending: false })
-          .limit(50); // OPTIMIZED: Reduced from 200 to 50 for better performance
-
-        if (orderLinesError) {
-          logger.error('Pharmacy order lines query error', orderLinesError);
-          throw orderLinesError;
-        }
-
-        // Transform data - group order_lines by order
-        const ordersMap = new Map();
-        (orderLinesData as any)?.forEach((line: any) => {
-          const orderId = line.orders.id;
-          if (!ordersMap.has(orderId)) {
-            ordersMap.set(orderId, {
-              ...line.orders,
-              order_lines: []
-            });
-          }
-          const { orders: _, ...lineWithoutOrders } = line;
-          ordersMap.get(orderId).order_lines.push(lineWithoutOrders);
-        });
-        
-        const queryDuration = Date.now() - queryStart;
-        logger.info('Pharmacy order lines query COMPLETE', { 
-          duration: queryDuration,
-          lineCount: orderLinesData?.length || 0,
-          orderCount: ordersMap.size
-        });
-        
-        // Sort orders by created_at descending
-        return Array.from(ordersMap.values()).sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      }
-
-      // USE EDGE FUNCTION FOR OPTIMIZED ROLES (admin, practice, staff, topline, downline)
-      // Map provider and doctor to practice-level view to show ALL practice orders
-      const normalizedRole = (effectiveRole === 'provider' || effectiveRole === 'doctor') ? 'practice' : effectiveRole;
-      
-      if (["admin", "practice", "staff", "topline", "downline"].includes(normalizedRole)) {
-        console.time(`OrdersEdgeFunctionQuery-${normalizedRole}`);
-        console.log(`[OrdersDataTable] Using edge function for role: ${normalizedRole}`);
-        
-        // Compute scopeId based on normalized role
+        // Compute scopeId based on actual role (NO NORMALIZATION)
         let scopeId: string | null = null;
-        if (normalizedRole === 'practice') {
-          // For doctors, effectivePracticeId may be null; use their own user id as practice id
+        if (effectiveRole === "doctor" || effectiveRole === "practice") {
+          // Practice owner / doctor – use practice ID if available, otherwise fallback to userId
           scopeId = effectivePracticeId || effectiveUserId;
           console.log(`[OrdersDataTable] Practice-level scopeId:`, scopeId);
-        } else if (normalizedRole === 'staff') {
+        } else if (effectiveRole === "staff") {
           // Staff: must use their practice_id
           if (!effectivePracticeId) {
             toast({
@@ -196,15 +117,23 @@ export const OrdersDataTable = () => {
           }
           scopeId = effectivePracticeId;
           console.log(`[OrdersDataTable] Staff role - scopeId (practice_id):`, scopeId);
-        } else if (normalizedRole === 'topline' || normalizedRole === 'downline') {
+        } else if (effectiveRole === "topline" || effectiveRole === "downline") {
           // For reps, scopeId is their own user ID (edge function will lookup rep record)
           scopeId = effectiveUserId;
-          console.log(`[OrdersDataTable] ${normalizedRole} role - scopeId:`, scopeId);
+          console.log(`[OrdersDataTable] ${effectiveRole} role - scopeId:`, scopeId);
+        } else if (effectiveRole === "provider") {
+          // Provider – use their user ID; edge function will look up provider record
+          scopeId = effectiveUserId;
+          console.log(`[OrdersDataTable] Provider role - scopeId:`, scopeId);
+        } else if (effectiveRole === "pharmacy") {
+          // Pharmacy – use their user ID; edge function will look up pharmacy record
+          scopeId = effectiveUserId;
+          console.log(`[OrdersDataTable] Pharmacy role - scopeId:`, scopeId);
         }
         // Admin: scopeId remains null (no filter)
         
         console.log(`[OrdersDataTable] Invoking edge function:`, {
-          roleNormalized: normalizedRole,
+          role: effectiveRole,
           scopeId,
           authUserId: user?.id,
           statusFilter,
@@ -225,7 +154,7 @@ export const OrdersDataTable = () => {
             page: 1,
             pageSize: 50,
             practiceId: scopeId,
-            role: normalizedRole,
+            role: effectiveRole, // Send actual role, no normalization
             status: statusFilter !== 'all' ? statusFilter : undefined,
             search: searchQuery || undefined
           },

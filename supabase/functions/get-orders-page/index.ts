@@ -88,8 +88,9 @@ serve(async (req) => {
     // Input validation: clamp pageSize between 1 and 50
     const safePageSize = Math.min(Math.max(Number(rawPageSize) || 25, 1), 50);
 
-    // Normalize role: provider -> doctor
-    const roleNorm = role === 'provider' ? 'doctor' : role;
+    // NO ROLE NORMALIZATION - keep roles separate
+    const roleNorm = role;
+    console.log('[get-orders-page] Incoming role:', roleNorm);
 
     // Default to last 90 days if no startDate provided
     const defaultStartDate = new Date();
@@ -160,11 +161,21 @@ serve(async (req) => {
     console.log(`[get-orders-page] 🎯 Filtering by role: ${roleNorm}`);
     
     if (roleNorm === 'doctor') {
+      // DOCTOR = practice owner
+      // Filter by orders for this practice owner
+      console.log('[get-orders-page] Doctor (practice owner) filter. practiceId:', practiceId, 'userId:', userId);
+      
+      // Use practiceId if provided, fallback to userId
+      const doctorFilterId = practiceId || userId;
+      query = query.eq('doctor_id', doctorFilterId);
+      
+    } else if (roleNorm === 'provider') {
+      // PROVIDER = regular prescriber
       // Get provider ID for this user
       const { data: providerRecord, error: providerError } = await supabase
         .from('providers')
-        .select('id')
-        .eq('user_id', practiceId)
+        .select('id, practice_id')
+        .eq('user_id', practiceId || userId)
         .eq('active', true)
         .maybeSingle();
       
@@ -193,7 +204,7 @@ serve(async (req) => {
       
       console.log(`[get-orders-page] 🔍 Provider filter: provider_id = ${providerRecord.id}`);
       
-      // Fetch order IDs from order_lines
+      // Fetch order IDs from order_lines where provider_id matches
       const { data: orderIds, error: orderIdsError } = await supabase
         .from('order_lines')
         .select('order_id')
@@ -226,7 +237,7 @@ serve(async (req) => {
         );
       }
       
-      console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for provider`);
+      console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} unique orders for provider`);
       query = query.in('id', uniqueOrderIds);
       
     } else if (roleNorm === 'practice' || roleNorm === 'staff') {
@@ -304,7 +315,7 @@ serve(async (req) => {
       console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for pharmacy`);
       query = query.in('id', uniqueOrderIds);
       
-    } else if (roleNorm === 'Downline') {
+    } else if (roleNorm === 'downline') {
       // Downline rep: lookup rep record, get linked practices
       console.log(`[get-orders-page] Downline role - practiceId (user_id): ${practiceId}`);
       
