@@ -173,8 +173,8 @@ const Cart = React.memo(function Cart() {
   }, []);
 
   const handleCheckout = useCallback(() => {
-    console.log('[Cart] Navigating to checkout');
-    navigate("/checkout", {
+    console.log('[Cart] Navigating to delivery confirmation');
+    navigate("/delivery-confirmation", {
       state: {
         discountCode,
         discountPercentage,
