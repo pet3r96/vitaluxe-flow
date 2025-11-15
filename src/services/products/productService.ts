@@ -9,8 +9,8 @@ import type { ProductQueryParams } from "@/types/domain/products";
 export async function fetchProducts(params: ProductQueryParams) {
   const { effectiveUserId, effectiveRole, effectivePracticeId, isImpersonating } = params;
   
-  // Staff and admin bypass product visibility filtering (see all products)
-  const viewingAsAdmin = (effectiveRole === "admin" || effectiveRole === "staff") && !isImpersonating;
+  // Only admin (not impersonating) bypasses product visibility filtering
+  const viewingAsAdmin = (effectiveRole === "admin") && !isImpersonating;
 
   let query = supabase
     .from("products")

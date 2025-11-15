@@ -63,12 +63,13 @@ Deno.serve(async (req) => {
       practiceId = user.id;
       practiceIdSource = 'computed-doctor';
     } else if (roles.includes('staff')) {
-      // Staff: look up their practice_id to see other staff in same practice
+      // Staff: look up their practice_id from unified providers table to see other staff in same practice
       const { data: staffData } = await supabase
-        .from('practice_staff')
+        .from('providers')
         .select('practice_id')
         .eq('user_id', user.id)
-        .single();
+        .eq('role_type', 'staff')
+        .maybeSingle();
       practiceId = staffData?.practice_id || null;
       practiceIdSource = 'computed-staff';
     } else {
@@ -127,7 +128,7 @@ Deno.serve(async (req) => {
         .eq('role', 'staff');
       
       if (orphanedStaff && orphanedStaff.length > 0) {
-        console.warn(`⚠️ Found ${orphanedStaff.length} staff users in user_roles without practice_staff records!`);
+        console.warn(`⚠️ Found ${orphanedStaff.length} staff users in user_roles without providers records!`);
       }
       
       return new Response(JSON.stringify({ staff: [] }), {

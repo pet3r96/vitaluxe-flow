@@ -60,12 +60,13 @@ Deno.serve(async (req) => {
       practiceId = user.id;
       practiceIdSource = 'computed-doctor';
     } else if (roles.includes('staff')) {
-      // Staff: look up their practice_id
+      // Staff: look up their practice_id from unified providers table
       const { data: staffData } = await supabaseClient
-        .from('practice_staff')
+        .from('providers')
         .select('practice_id')
         .eq('user_id', user.id)
-        .single();
+        .eq('role_type', 'staff')
+        .maybeSingle();
       
       console.log('[list-providers] Staff lookup:', {
         userId: user.id,
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
       });
       
       if (!staffData || !staffData.practice_id) {
-        console.warn('[list-providers] ⚠️ Staff has no active practice_staff record');
+        console.warn('[list-providers] ⚠️ Staff has no active providers record');
         return new Response(
           JSON.stringify({ providers: [], error: 'Staff membership not found' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
