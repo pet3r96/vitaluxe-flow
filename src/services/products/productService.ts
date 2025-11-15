@@ -41,8 +41,9 @@ export async function fetchProducts(params: ProductQueryParams) {
     if (visibleProductIds.length > 0) {
       query = query.in("id", visibleProductIds);
     } else {
-      // No visible products for this user
-      return [];
+      // Fallback: rely on RLS to return permitted products for this user/practice
+      // Do not early-return empty to avoid false negatives when RPC is misconfigured
+      console.warn('[productService] No visible product IDs from RPC, falling back to RLS-only select');
     }
   }
 
