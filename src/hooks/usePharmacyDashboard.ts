@@ -49,10 +49,10 @@ export function usePharmacyDashboard(effectiveUserId: string | null, effectiveRo
       return data;
     },
     enabled: !!effectiveUserId && effectiveRole === 'pharmacy',
-    staleTime: 0, // Always refetch on mount to avoid stale zeros
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    refetchInterval: 30000,
+    staleTime: 5 * 60 * 1000, // 5 minutes - avoid unnecessary refetches
+    refetchOnWindowFocus: false, // Don't refetch on tab switch
+    refetchOnMount: false, // Use cached data if available
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
     retry: false, // Don't retry when pharmacy not found
   });
 }

@@ -116,14 +116,13 @@ serve(async (req) => {
     console.log(`[get-orders-page] 🎯 Filtering by role: ${role}`);
     
     if (role === 'doctor') {
-      // For providers: practiceId parameter contains their user_id
-      // Need to map user_id -> provider.id -> filter by order_lines.provider_id
+      // OPTIMIZED: Use efficient query with new composite index
+      // Get provider ID for this user
       const { data: providerRecord, error: providerError } = await supabase
         .from('providers')
         .select('id')
         .eq('user_id', practiceId)
         .eq('active', true)
-        .limit(1)
         .maybeSingle();
       
       if (providerError) {
@@ -150,33 +149,24 @@ serve(async (req) => {
         );
       }
       
-      console.log(`[get-orders-page] 🔍 Provider filter: provider_id = ${providerRecord.id} (user: ${practiceId})`);
+      console.log(`[get-orders-page] 🔍 Provider filter: provider_id = ${providerRecord.id}`);
       
-      // Get order IDs that have this provider in any order line
-      // PERFORMANCE: Only fetch recent orders to prevent full table scan
-      const ninetyDaysAgo = new Date();
-      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-      
-      console.log(`[get-orders-page] 🔍 Fetching order_lines since ${ninetyDaysAgo.toISOString()}`);
-      
-      const { data: orderLineData, error: orderLineError } = await supabase
+      // OPTIMIZED: Uses idx_order_lines_provider_created_order index
+      const { data: orderIds, error: orderIdsError } = await supabase
         .from('order_lines')
         .select('order_id')
         .eq('provider_id', providerRecord.id)
-        .gte('created_at', ninetyDaysAgo.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(1000);
+        .gte('created_at', dateFrom)
+        .limit(1000); // Safety limit
       
-      if (orderLineError) {
-        console.error('[get-orders-page] ❌ Error fetching order_lines:', orderLineError);
-        throw orderLineError;
+      if (orderIdsError) {
+        console.error('[get-orders-page] ❌ Error fetching order IDs:', orderIdsError);
+        throw orderIdsError;
       }
       
-      console.log(`[get-orders-page] ✅ Found ${orderLineData?.length || 0} order_lines in last 90 days`);
+      const uniqueOrderIds = [...new Set(orderIds?.map(ol => ol.order_id) || [])];
       
-      const orderIds = [...new Set(orderLineData?.map(ol => ol.order_id) || [])];
-      
-      if (orderIds.length === 0) {
+      if (uniqueOrderIds.length === 0) {
         console.log('[get-orders-page] ℹ️ No orders found for provider');
         return new Response(
           JSON.stringify({
@@ -192,18 +182,82 @@ serve(async (req) => {
         );
       }
       
-      console.log(`[get-orders-page] ✅ Found ${orderIds.length} unique orders for provider`);
-      query = query.in('id', orderIds);
-    } else if (role === 'practice') {
-      // Practice owners see orders where doctor_id = their user_id
-      // This matches RLS policy: auth.uid() = doctor_id
-      console.log(`[get-orders-page] Practice filter: doctor_id = ${practiceId}`);
+      console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for provider`);
+      query = query.in('id', uniqueOrderIds);
+    } else if (role === 'practice' || role === 'staff') {
+      // Practice owners and staff see orders where doctor_id = practice owner's user_id
+      // OPTIMIZED: Uses idx_orders_doctor_status_created index
+      console.log(`[get-orders-page] ${role === 'staff' ? 'Staff' : 'Practice'} filter: doctor_id = ${practiceId}`);
       query = query.eq('doctor_id', practiceId);
-    } else if (role === 'staff') {
-      // Staff see orders for their practice (where doctor_id = practice owner's user_id)
-      // RLS policy checks: practice_staff.practice_id = orders.doctor_id
-      console.log(`[get-orders-page] Staff filter: doctor_id = ${practiceId}`);
-      query = query.eq('doctor_id', practiceId);
+    } else if (role === 'pharmacy') {
+      // ADDED: Pharmacy role handling
+      // Get pharmacy ID for this user
+      const { data: pharmacyRecord, error: pharmacyError } = await supabase
+        .from('pharmacies')
+        .select('id')
+        .eq('user_id', practiceId)
+        .eq('active', true)
+        .maybeSingle();
+      
+      if (pharmacyError) {
+        console.error('[get-orders-page] ❌ Error fetching pharmacy:', pharmacyError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch pharmacy record' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (!pharmacyRecord) {
+        console.warn('[get-orders-page] ⚠️ No active pharmacy found for user');
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            total: 0,
+            page,
+            pageSize,
+            totalPages: 0,
+            hasNextPage: false,
+            debug: { reason: 'no_pharmacy_record', userId: practiceId }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[get-orders-page] 🔍 Pharmacy filter: assigned_pharmacy_id = ${pharmacyRecord.id}`);
+      
+      // Filter orders by pharmacy assignment in order_lines
+      const { data: orderIds, error: orderIdsError } = await supabase
+        .from('order_lines')
+        .select('order_id')
+        .eq('assigned_pharmacy_id', pharmacyRecord.id)
+        .gte('created_at', dateFrom)
+        .limit(1000);
+      
+      if (orderIdsError) {
+        console.error('[get-orders-page] ❌ Error fetching order IDs:', orderIdsError);
+        throw orderIdsError;
+      }
+      
+      const uniqueOrderIds = [...new Set(orderIds?.map(ol => ol.order_id) || [])];
+      
+      if (uniqueOrderIds.length === 0) {
+        console.log('[get-orders-page] ℹ️ No orders found for pharmacy');
+        return new Response(
+          JSON.stringify({
+            orders: [],
+            total: 0,
+            page,
+            pageSize,
+            totalPages: 0,
+            hasNextPage: false,
+            debug: { reason: 'no_orders', pharmacyId: pharmacyRecord.id }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for pharmacy`);
+      query = query.in('id', uniqueOrderIds);
     } else if (role === 'admin') {
       // Admin sees all orders - no filter
       console.log('[get-orders-page] Admin role - no filtering');
@@ -240,8 +294,8 @@ serve(async (req) => {
     const duration = performance.now() - startTime;
     console.log(`[get-orders-page] ✅ SUCCESS: ${orders?.length || 0} orders fetched in ${duration.toFixed(2)}ms (total: ${count || 0})`);
 
-    if (duration > 2000) {
-      console.warn(`[get-orders-page] ⚠️ SLOW QUERY: ${duration.toFixed(2)}ms`);
+    if (duration > 1000) {
+      console.warn(`[get-orders-page] ⚠️ SLOW QUERY: ${duration.toFixed(2)}ms - check indexes and filters`);
     }
     
     // Diagnostic warning if no orders found
