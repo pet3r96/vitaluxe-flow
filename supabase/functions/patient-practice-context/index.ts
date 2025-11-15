@@ -95,9 +95,10 @@ serve(async (req) => {
       return sendResponse({ 
         success: false, 
         isSubscribed: false,
-        status: 'no_patient_account',
-        reason: 'no_patient_account',
-        practice: null
+        status: 'patient_account_not_found',
+        reason: 'patient_account_not_found',
+        practice: null,
+        message: 'No patient account exists for this user. Please contact your practice to create one.'
       }, 404);
     }
 
@@ -108,7 +109,8 @@ serve(async (req) => {
         isSubscribed: false,
         status: 'no_practice_assigned',
         reason: 'no_practice_assigned',
-        practice: null
+        practice: null,
+        message: 'Your patient account is not yet linked to a practice. Please contact your practice administrator.'
       }, 404);
     }
 

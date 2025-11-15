@@ -66,6 +66,20 @@ export const ProductsGrid = () => {
   // Only real non-impersonating admins bypass visibility filtering
   const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
 
+  // Fetch product types for dynamic filtering
+  const { data: productTypes } = useQuery({
+    queryKey: ["product-types"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("product_types")
+        .select("id, name")
+        .eq("active", true)
+        .order("name");
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   const { canOrder: staffCanOrder, isStaffAccount } = useStaffOrderingPrivileges();
   // Providers and doctors always have ordering privileges, but reps and admins cannot order
   const canOrder = (isProvider || staffCanOrder) && !isRep && !isAdmin;
@@ -789,14 +803,11 @@ export const ProductsGrid = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types ({productCounts.all})</SelectItem>
-              <SelectItem value="Vitamins">Vitamins ({productCounts.byType["Vitamins"] || 0})</SelectItem>
-              <SelectItem value="R & D Products">R & D Products ({productCounts.byType["R & D Products"] || 0})</SelectItem>
-              <SelectItem value="Peptides">Peptides ({productCounts.byType["Peptides"] || 0})</SelectItem>
-              <SelectItem value="GLP 1">GLP 1 ({productCounts.byType["GLP 1"] || 0})</SelectItem>
-              <SelectItem value="GLP 2">GLP 2 ({productCounts.byType["GLP 2"] || 0})</SelectItem>
-              <SelectItem value="GLP 3">GLP 3 ({productCounts.byType["GLP 3"] || 0})</SelectItem>
-              <SelectItem value="Supplies">Supplies ({productCounts.byType["Supplies"] || 0})</SelectItem>
-              <SelectItem value="Vitamin IV's">Vitamin IV's ({productCounts.byType["Vitamin IV's"] || 0})</SelectItem>
+              {productTypes?.map(type => (
+                <SelectItem key={type.id} value={type.id}>
+                  {type.name} ({productCounts.byType[type.id] || 0})
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           

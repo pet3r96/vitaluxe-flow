@@ -18,6 +18,8 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useEffect, useCallback } from "react";
 import { realtimeManager } from "@/lib/realtimeManager";
+import { usePatientPracticeSubscription } from "@/hooks/usePatientPracticeSubscription";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function TabbedAppointmentsWidget() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -25,6 +27,9 @@ export function TabbedAppointmentsWidget() {
   const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  // Check subscription status for patients
+  const { isSubscribed, status, loading: subscriptionLoading } = usePatientPracticeSubscription();
 
   // Today's Appointments Query
   const { data: appointments, isLoading: appointmentsLoading } = useQuery({
@@ -250,6 +255,20 @@ export function TabbedAppointmentsWidget() {
 
   return (
     <>
+      {/* Show error for patients with subscription issues */}
+      {effectiveRole === "patient" && !subscriptionLoading && !isSubscribed && status !== "no_session" && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {status === "patient_account_not_found" 
+              ? "Your patient account is not set up. Please contact your practice for assistance."
+              : status === "no_practice_assigned"
+              ? "Your account is not yet linked to a practice. Please contact your practice administrator."
+              : "Unable to load your appointment data. Please try again later or contact your practice."}
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Card variant="modern" className="h-full">
         <CardHeader className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20">
           <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
