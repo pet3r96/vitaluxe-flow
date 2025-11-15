@@ -24,6 +24,17 @@ export function usePharmacyDashboard(effectiveUserId: string | null, effectiveRo
 
       if (error) {
         console.error('[usePharmacyDashboard] ❌ Error:', error);
+        // Return empty stats instead of throwing when pharmacy not found
+        if (error.message?.includes('Pharmacy not found')) {
+          console.warn('[usePharmacyDashboard] ⚠️ No pharmacy record found, returning empty stats');
+          return {
+            ordersCount: 0,
+            pendingOrdersCount: 0,
+            productsCount: 0,
+            recentActivity: [],
+            ordersByStatus: {}
+          };
+        }
         throw error;
       }
 
@@ -37,5 +48,6 @@ export function usePharmacyDashboard(effectiveUserId: string | null, effectiveRo
     enabled: !!effectiveUserId && effectiveRole === 'pharmacy',
     staleTime: 30 * 1000, // 30 seconds
     refetchOnWindowFocus: true,
+    retry: false, // Don't retry when pharmacy not found
   });
 }
