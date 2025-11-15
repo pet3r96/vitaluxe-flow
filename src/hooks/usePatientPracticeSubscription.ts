@@ -12,7 +12,7 @@ interface PatientPracticeSubscriptionStatus {
 }
 
 export function usePatientPracticeSubscription(): PatientPracticeSubscriptionStatus {
-  const { effectiveUserId, session } = useAuth();
+  const { effectiveUserId, session, effectiveRole } = useAuth();
 
   const { data, isLoading } = useQuery({
     queryKey: ["patient-practice-subscription", effectiveUserId],
@@ -84,7 +84,8 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
         reason: undefined
       };
     },
-    enabled: !!effectiveUserId && !!session?.access_token,
+    // CRITICAL: Only enable for patient role users
+    enabled: !!effectiveUserId && !!session?.access_token && effectiveRole === 'patient',
     staleTime: 0, // Always fetch fresh data for subscription checks
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
