@@ -62,6 +62,11 @@ Deno.serve(async (req) => {
     // Execute all queries in parallel
     const promises: Promise<void>[] = [];
 
+    // Time filter - last 30 days for performance
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+
     // 1. Orders Count
     promises.push(
       (async () => {
@@ -73,7 +78,8 @@ Deno.serve(async (req) => {
             .select('*', { count: 'exact', head: true })
             .neq('status', 'cancelled')
             .neq('payment_status', 'payment_failed')
-            .eq('doctor_id', targetUserId);
+            .eq('doctor_id', targetUserId)
+            .gte('created_at', thirtyDaysAgoISO); // Add time filter
           count = orderCount || 0;
         } else if (role === 'provider') {
           const { data: providerData } = await supabase
@@ -151,7 +157,8 @@ Deno.serve(async (req) => {
             .from('orders')
             .select('*', { count: 'exact', head: true })
             .neq('status', 'cancelled')
-            .neq('payment_status', 'payment_failed');
+            .neq('payment_status', 'payment_failed')
+            .gte('created_at', thirtyDaysAgoISO); // Add time filter
           count = orderCount || 0;
         }
         

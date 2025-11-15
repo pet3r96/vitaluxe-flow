@@ -111,7 +111,7 @@ export function RecentActivityWidget({ className, activities: externalActivities
             .order('updated_at', { ascending: false })
             .limit(10),
           
-          // Threads where admin is participant
+          // Threads where admin is participant - using proper supabase-js syntax
           supabase
             .from('thread_participants')
             .select(`
@@ -124,7 +124,7 @@ export function RecentActivityWidget({ className, activities: externalActivities
               )
             `)
             .eq('user_id', effectiveUserId)
-            .order('message_threads.updated_at', { ascending: false })
+            .order('updated_at', { foreignTable: 'message_threads', ascending: false })
             .limit(10)
         ]);
 
