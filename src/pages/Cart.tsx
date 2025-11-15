@@ -41,8 +41,6 @@ const Cart = React.memo(function Cart() {
     done: false,
     version: undefined 
   });
-  const realtimeChannelRef = useRef<any>(null);
-  const invalidationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const normalizationInFlightRef = useRef(false);
   const isInitializedRef = useRef(false);
   
@@ -227,77 +225,16 @@ const Cart = React.memo(function Cart() {
       return data;
     },
     onSuccess: () => {
-      // DO NOT invalidate queries here - creates loop
-      // Realtime subscription will handle updates
+      // Invalidate immediately for consistent updates
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === 'cart' || key === 'cart-count';
+        }
+      });
       console.log('[Cart] Shipping speed updated successfully');
     },
   });
-
-    // Realtime subscription - SINGLE STABLE CHANNEL
-    useEffect(() => {
-      if (!cartOwnerId || !cart?.id) return;
-
-      // Prevent duplicate subscriptions
-      if (realtimeChannelRef.current) {
-        mark('Cart:realtime-skip', { reason: 'subscription exists', cartId: cart.id });
-        console.log('[Cart] Realtime subscription already exists');
-        return;
-      }
-
-      mark('Cart:realtime-subscribe', { cartId: cart.id });
-      console.log('[Cart] Setting up realtime subscription for cart:', cart.id);
-
-    const channel = supabase
-      .channel(`cart-changes-${cart.id}`) // Unique channel name per cart
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'cart_lines',
-          filter: `cart_id=eq.${cart.id}`
-        },
-        (payload) => {
-          console.log('[Cart] Realtime update received:', payload);
-          
-          // Skip invalidation if normalization is in progress to prevent loops
-          if (normalizationInFlightRef.current) {
-            console.log('[Cart] Skipping realtime invalidation - normalization in progress');
-            return;
-          }
-          
-          // Debounce invalidations to prevent cascading loops
-          if (invalidationTimerRef.current) {
-            clearTimeout(invalidationTimerRef.current);
-          }
-          
-          invalidationTimerRef.current = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
-            queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
-            invalidationTimerRef.current = null;
-          }, 500); // Wait 500ms before invalidating
-        }
-      )
-      .subscribe();
-
-    realtimeChannelRef.current = channel;
-
-    return () => {
-      console.log('[Cart] Cleaning up realtime subscription and pending timers');
-      
-      // Clear any pending invalidation timers
-      if (invalidationTimerRef.current) {
-        clearTimeout(invalidationTimerRef.current);
-        invalidationTimerRef.current = null;
-      }
-      
-      // Remove realtime channel
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current);
-        realtimeChannelRef.current = null;
-      }
-    };
-  }, [cartOwnerId, cart?.id]); // Minimal deps - don't include queryClient
 
   // Auto-normalize shipping speeds - RUNS ONLY ONCE per cart version
   useEffect(() => {

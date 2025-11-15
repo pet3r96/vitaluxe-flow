@@ -416,10 +416,13 @@ export default function Checkout() {
           }
         }
         
-        // CRITICAL: Invalidate cart queries using correct cartOwnerId
-        queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
-        queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
-        queryClient.invalidateQueries({ queryKey: ["cart-owner"] });
+        // CRITICAL: Invalidate all cart-related queries
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return key === 'cart' || key === 'cart-count' || key === 'cart-owner';
+          }
+        });
         
         // Force refetch orders (not just invalidate) to ensure fresh data
         await queryClient.refetchQueries({ 
@@ -524,7 +527,12 @@ export default function Checkout() {
       if (updateError) throw updateError;
 
       // Refetch cart data to update UI
-      queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === 'cart';
+        }
+      });
       
       toast({
         title: "Prescription Uploaded",
