@@ -49,9 +49,9 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseServiceKey) {
       console.error('[get-orders-page] Missing Supabase envs');
       return new Response(
         JSON.stringify({ error: 'Server misconfiguration' }),
@@ -59,11 +59,21 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey, {
+    // Use service role to bypass RLS - authorization handled by edge function logic
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    // Create anon client for auth verification only
+    const supabaseAnon = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
       global: { headers: { Authorization: authHeader } }
     });
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    // Verify auth using anon client
+    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token);
     if (userError || !user) {
       console.error('[get-orders-page] Auth failed:', userError?.message);
       return new Response(
