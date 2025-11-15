@@ -6,6 +6,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to extract meaningful error messages
+const parseErr = (e: any): string => {
+  if (typeof e?.message === 'string') return e.message;
+  if (typeof e?.error === 'string') return e.error;
+  if (typeof e?.details === 'string') return e.details;
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return 'Unknown error occurred';
+  }
+};
+
+// Helper to check if string looks like UUID v4
+const isUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -55,26 +73,56 @@ serve(async (req) => {
     }
 
     const userId = user.id;
-    const { page = 1, pageSize = 50, status, search, practiceId, role, startDate, endDate } = await req.json();
+    const body = await req.json();
+    const { 
+      page = 1, 
+      pageSize: rawPageSize = 50, 
+      status, 
+      search, 
+      practiceId, 
+      role, 
+      startDate, 
+      endDate 
+    } = body;
+
+    // Input validation: clamp pageSize between 1 and 50
+    const safePageSize = Math.min(Math.max(Number(rawPageSize) || 25, 1), 50);
 
     // Normalize role: provider -> doctor
     const roleNorm = role === 'provider' ? 'doctor' : role;
 
+    // Default to last 90 days if no startDate provided
+    const defaultStartDate = new Date();
+    defaultStartDate.setDate(defaultStartDate.getDate() - 90);
+    const dateFrom = startDate || defaultStartDate.toISOString();
+    
+    // Validate date range
+    if (endDate && dateFrom && new Date(dateFrom) > new Date(endDate)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid date range: startDate must be before endDate' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`[get-orders-page] 🔍 Request:`, { 
       page, 
-      pageSize, 
-      role, 
+      pageSize: safePageSize, 
+      role: roleNorm, 
       scopeId: practiceId,
-      authUserId: userId 
+      authUserId: userId,
+      status,
+      search: search ? `"${search.substring(0, 20)}..."` : null,
+      dateFrom,
+      endDate
     });
     const startTime = performance.now();
 
-    // Calculate offset for pagination
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+    // Calculate pagination
+    const from = (page - 1) * safePageSize;
+    const to = from + safePageSize - 1;
 
-    // Build query with minimal columns for list view
-    // OPTIMIZED: Limit nested order_lines to first 10 per order to prevent timeout
+    // Build base query with minimal columns for list view
+    // CRITICAL: Remove !inner to prevent row inflation, limit nested to 1 row
     let query = supabase
       .from('orders')
       .select(`
@@ -84,17 +132,16 @@ serve(async (req) => {
         total_amount,
         payment_status,
         doctor_id,
-        order_lines!inner (
+        order_lines (
           id,
           status,
           patient_name
         )
-      `, { count: 'planned', head: false });
+      `, { count: 'planned', head: false })
+      .not('status', 'is', null) // Use partial index
+      .limit(1, { foreignTable: 'order_lines' }); // Only fetch 1 order_line per order
 
-    // Apply date range filter if provided (defaults to last 90 days)
-    const defaultStartDate = new Date();
-    defaultStartDate.setDate(defaultStartDate.getDate() - 90);
-    const dateFrom = startDate || defaultStartDate.toISOString();
+    // Apply date range filter
     if (dateFrom) {
       query = query.gte('created_at', dateFrom);
     }
@@ -102,11 +149,10 @@ serve(async (req) => {
       query = query.lte('created_at', endDate);
     }
 
-    // CRITICAL: Filter by role FIRST (before pagination)
-    console.log(`[get-orders-page] 🎯 Filtering by role: ${role}`);
+    // Role-based filtering
+    console.log(`[get-orders-page] 🎯 Filtering by role: ${roleNorm}`);
     
-    if (role === 'doctor') {
-      // OPTIMIZED: Use efficient query with new composite index
+    if (roleNorm === 'doctor') {
       // Get provider ID for this user
       const { data: providerRecord, error: providerError } = await supabase
         .from('providers')
@@ -116,9 +162,9 @@ serve(async (req) => {
         .maybeSingle();
       
       if (providerError) {
-        console.error('[get-orders-page] ❌ Error fetching provider:', providerError);
+        console.error('[get-orders-page] ❌ Error fetching provider:', parseErr(providerError));
         return new Response(
-          JSON.stringify({ error: 'Failed to fetch provider record' }),
+          JSON.stringify({ error: `Failed to fetch provider record: ${parseErr(providerError)}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -130,10 +176,9 @@ serve(async (req) => {
             orders: [],
             total: 0,
             page,
-            pageSize,
+            pageSize: safePageSize,
             totalPages: 0,
             hasNextPage: false,
-            debug: { reason: 'no_provider_record', userId: practiceId }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -141,17 +186,20 @@ serve(async (req) => {
       
       console.log(`[get-orders-page] 🔍 Provider filter: provider_id = ${providerRecord.id}`);
       
-      // OPTIMIZED: Uses idx_order_lines_provider_created_order index
+      // Fetch order IDs from order_lines
       const { data: orderIds, error: orderIdsError } = await supabase
         .from('order_lines')
         .select('order_id')
         .eq('provider_id', providerRecord.id)
         .gte('created_at', dateFrom)
-        .limit(1000); // Safety limit
+        .limit(2000); // Safety limit
       
       if (orderIdsError) {
-        console.error('[get-orders-page] ❌ Error fetching order IDs:', orderIdsError);
-        throw orderIdsError;
+        console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
+        return new Response(
+          JSON.stringify({ error: `Failed to fetch order IDs: ${parseErr(orderIdsError)}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       
       const uniqueOrderIds = [...new Set(orderIds?.map(ol => ol.order_id) || [])];
@@ -163,10 +211,9 @@ serve(async (req) => {
             orders: [],
             total: 0,
             page,
-            pageSize,
+            pageSize: safePageSize,
             totalPages: 0,
             hasNextPage: false,
-            debug: { reason: 'no_orders', providerId: providerRecord.id }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -174,13 +221,13 @@ serve(async (req) => {
       
       console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for provider`);
       query = query.in('id', uniqueOrderIds);
-    } else if (role === 'practice' || role === 'staff') {
-      // Practice owners and staff see orders where doctor_id = practice owner's user_id
-      // OPTIMIZED: Uses idx_orders_doctor_status_created index
-      console.log(`[get-orders-page] ${role === 'staff' ? 'Staff' : 'Practice'} filter: doctor_id = ${practiceId}`);
+      
+    } else if (roleNorm === 'practice' || roleNorm === 'staff') {
+      // Practice/staff filter by doctor_id
+      console.log(`[get-orders-page] ${roleNorm === 'staff' ? 'Staff' : 'Practice'} filter: doctor_id = ${practiceId}`);
       query = query.eq('doctor_id', practiceId);
-    } else if (role === 'pharmacy') {
-      // ADDED: Pharmacy role handling
+      
+    } else if (roleNorm === 'pharmacy') {
       // Get pharmacy ID for this user
       const { data: pharmacyRecord, error: pharmacyError } = await supabase
         .from('pharmacies')
@@ -190,9 +237,9 @@ serve(async (req) => {
         .maybeSingle();
       
       if (pharmacyError) {
-        console.error('[get-orders-page] ❌ Error fetching pharmacy:', pharmacyError);
+        console.error('[get-orders-page] ❌ Error fetching pharmacy:', parseErr(pharmacyError));
         return new Response(
-          JSON.stringify({ error: 'Failed to fetch pharmacy record' }),
+          JSON.stringify({ error: `Failed to fetch pharmacy record: ${parseErr(pharmacyError)}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -204,10 +251,9 @@ serve(async (req) => {
             orders: [],
             total: 0,
             page,
-            pageSize,
+            pageSize: safePageSize,
             totalPages: 0,
             hasNextPage: false,
-            debug: { reason: 'no_pharmacy_record', userId: practiceId }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -215,17 +261,20 @@ serve(async (req) => {
       
       console.log(`[get-orders-page] 🔍 Pharmacy filter: assigned_pharmacy_id = ${pharmacyRecord.id}`);
       
-      // Filter orders by pharmacy assignment in order_lines
+      // Fetch order IDs from order_lines
       const { data: orderIds, error: orderIdsError } = await supabase
         .from('order_lines')
         .select('order_id')
         .eq('assigned_pharmacy_id', pharmacyRecord.id)
         .gte('created_at', dateFrom)
-        .limit(1000);
+        .limit(2000);
       
       if (orderIdsError) {
-        console.error('[get-orders-page] ❌ Error fetching order IDs:', orderIdsError);
-        throw orderIdsError;
+        console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
+        return new Response(
+          JSON.stringify({ error: `Failed to fetch order IDs: ${parseErr(orderIdsError)}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       
       const uniqueOrderIds = [...new Set(orderIds?.map(ol => ol.order_id) || [])];
@@ -237,10 +286,9 @@ serve(async (req) => {
             orders: [],
             total: 0,
             page,
-            pageSize,
+            pageSize: safePageSize,
             totalPages: 0,
             hasNextPage: false,
-            debug: { reason: 'no_orders', pharmacyId: pharmacyRecord.id }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -248,27 +296,71 @@ serve(async (req) => {
       
       console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for pharmacy`);
       query = query.in('id', uniqueOrderIds);
-    } else if (role === 'admin') {
+      
+    } else if (roleNorm === 'admin') {
       // Admin sees all orders - no filter
       console.log('[get-orders-page] Admin role - no filtering');
     } else {
-      console.warn(`[get-orders-page] ⚠️ Unknown role: ${role}, defaulting to practice filter`);
+      console.warn(`[get-orders-page] ⚠️ Unknown role: ${roleNorm}, defaulting to practice filter`);
       query = query.eq('doctor_id', practiceId);
     }
 
-    // Apply additional filters (after role filter, before pagination)
+    // Status filter
     if (status && status !== 'all') {
       console.log(`[get-orders-page] Filtering by status: ${status}`);
       query = query.eq('status', status);
     }
 
-    if (search) {
-      console.log(`[get-orders-page] Filtering by search: ${search}`);
-      // Search in patient name or order ID
-      query = query.or(`id.ilike.%${search}%,patient_accounts.first_name.ilike.%${search}%,patient_accounts.last_name.ilike.%${search}%`);
+    // Two-phase search implementation
+    if (search && search.trim().length >= 3) {
+      const searchTerm = search.trim();
+      console.log(`[get-orders-page] Applying search: "${searchTerm}"`);
+      
+      // Phase 1: Check if search looks like UUID
+      if (isUUID(searchTerm)) {
+        console.log('[get-orders-page] Search is UUID - filtering by order ID');
+        query = query.eq('id', searchTerm);
+      } else {
+        // Phase 2: Search by patient name in order_lines
+        console.log('[get-orders-page] Search is text - looking up patient names');
+        const { data: searchOrderIds, error: searchError } = await supabase
+          .from('order_lines')
+          .select('order_id')
+          .ilike('patient_name', `%${searchTerm}%`)
+          .gte('created_at', dateFrom)
+          .limit(2000);
+        
+        if (searchError) {
+          console.error('[get-orders-page] ❌ Search error:', parseErr(searchError));
+          return new Response(
+            JSON.stringify({ error: `Search failed: ${parseErr(searchError)}` }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        const searchUniqueOrderIds = [...new Set(searchOrderIds?.map(ol => ol.order_id) || [])];
+        
+        if (searchUniqueOrderIds.length === 0) {
+          console.log('[get-orders-page] ℹ️ No orders match search term');
+          return new Response(
+            JSON.stringify({
+              orders: [],
+              total: 0,
+              page,
+              pageSize: safePageSize,
+              totalPages: 0,
+              hasNextPage: false,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log(`[get-orders-page] ✅ Found ${searchUniqueOrderIds.length} orders matching search`);
+        query = query.in('id', searchUniqueOrderIds);
+      }
     }
 
-    // CRITICAL: Apply ordering and pagination LAST
+    // Apply ordering and pagination
     query = query
       .order('created_at', { ascending: false })
       .range(from, to);
@@ -277,20 +369,31 @@ serve(async (req) => {
     const { data: orders, error: ordersError, count } = await query;
 
     if (ordersError) {
-      console.error('[get-orders-page] ❌ Query error:', ordersError);
-      throw ordersError;
+      console.error('[get-orders-page] ❌ Query error:', parseErr(ordersError));
+      return new Response(
+        JSON.stringify({ error: `Query failed: ${parseErr(ordersError)}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const duration = performance.now() - startTime;
     console.log(`[get-orders-page] ✅ SUCCESS: ${orders?.length || 0} orders fetched in ${duration.toFixed(2)}ms (total: ${count || 0})`);
 
+    // Performance warning
     if (duration > 1000) {
       console.warn(`[get-orders-page] ⚠️ SLOW QUERY: ${duration.toFixed(2)}ms - check indexes and filters`);
     }
     
-    // Diagnostic warning if no orders found
+    // Diagnostic logging for empty results
     if (count === 0) {
-      console.warn(`[get-orders-page] ⚠️ Zero orders returned - check filters (role: ${role}, scopeId: ${practiceId})`);
+      console.warn(`[get-orders-page] ⚠️ Zero orders returned`, {
+        role: roleNorm,
+        scopeId: practiceId,
+        status,
+        search,
+        dateFrom,
+        endDate
+      });
     }
 
     return new Response(
@@ -298,17 +401,16 @@ serve(async (req) => {
         orders: orders || [],
         total: count || 0,
         page,
-        pageSize,
-        totalPages: Math.ceil((count || 0) / pageSize),
+        pageSize: safePageSize,
+        totalPages: Math.ceil((count || 0) / safePageSize),
         hasNextPage: to < (count || 0) - 1,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[get-orders-page] Error:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[get-orders-page] ❌ Unexpected error:', error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: parseErr(error) }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

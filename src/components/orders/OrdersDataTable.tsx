@@ -202,7 +202,9 @@ export const OrdersDataTable = () => {
         console.log(`[OrdersDataTable] Invoking edge function:`, {
           roleNormalized: normalizedRole,
           scopeId,
-          authUserId: user?.id
+          authUserId: user?.id,
+          statusFilter,
+          searchQuery
         });
         
         if (!session?.access_token) {
@@ -217,11 +219,11 @@ export const OrdersDataTable = () => {
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-orders-page', {
           body: {
             page: 1,
-            pageSize: 50, // Reduced from 20 to 50 for better balance
+            pageSize: 50,
             practiceId: scopeId,
             role: normalizedRole,
-            status: undefined,
-            search: undefined
+            status: statusFilter !== 'all' ? statusFilter : undefined,
+            search: searchQuery || undefined
           },
           headers: {
             Authorization: `Bearer ${session.access_token}`
