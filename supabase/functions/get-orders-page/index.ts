@@ -87,9 +87,16 @@ serve(async (req) => {
           id,
           status,
           patient_name,
+          prescription_url,
+          prescription_method,
+          shipping_speed,
+          tracking_number,
           products (
             name,
-            dosage
+            dosage,
+            product_types (
+              name
+            )
           )
         )
       `, { count: 'exact' });
