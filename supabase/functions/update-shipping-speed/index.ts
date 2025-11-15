@@ -38,12 +38,20 @@ serve(async (req) => {
 
     const { lineIds, shipping_speed } = await req.json();
 
-    console.log('[update-shipping-speed] Updating lines:', lineIds, 'to speed:', shipping_speed);
+    // Normalize to unique UUIDs
+    const uniqueLineIds = [...new Set(lineIds || [])].filter((id: any) => typeof id === 'string' && id.length > 0);
 
-    if (!lineIds || !Array.isArray(lineIds) || lineIds.length === 0) {
+    console.log('[update-shipping-speed] Request:', {
+      originalCount: lineIds?.length || 0,
+      uniqueCount: uniqueLineIds.length,
+      shipping_speed
+    });
+
+    if (uniqueLineIds.length === 0) {
+      console.log('[update-shipping-speed] No valid line IDs, returning success (idempotent)');
       return new Response(
-        JSON.stringify({ error: 'lineIds array required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, updated: 0, message: 'No lines to update' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -54,21 +62,33 @@ serve(async (req) => {
       );
     }
 
-    // Update shipping speed for all lines
-    const { error: updateError } = await supabase
+    // Update shipping speed ONLY for lines where it differs (idempotent)
+    const { data: updatedLines, error: updateError } = await supabase
       .from("cart_lines")
       .update({ shipping_speed })
-      .in("id", lineIds);
+      .in("id", uniqueLineIds)
+      .neq("shipping_speed", shipping_speed)
+      .select("id");
 
     if (updateError) {
       console.error('[update-shipping-speed] Update error:', updateError);
       throw updateError;
     }
 
-    console.log('[update-shipping-speed] Success');
+    const updatedCount = updatedLines?.length || 0;
+    console.log('[update-shipping-speed] Success:', {
+      uniqueLineIds: uniqueLineIds.length,
+      updatedCount,
+      shipping_speed
+    });
 
     return new Response(
-      JSON.stringify({ success: true, lineIds, shipping_speed }),
+      JSON.stringify({ 
+        success: true, 
+        lineIds: uniqueLineIds, 
+        updated: updatedCount,
+        shipping_speed 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
