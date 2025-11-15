@@ -60,12 +60,12 @@ Deno.serve(async (req) => {
       practiceId = user.id;
       practiceIdSource = 'computed-doctor';
     } else if (roles.includes('staff')) {
-      // Staff: look up their practice_id from unified providers table
+      // Staff: look up their practice_id from practice_staff table
       const { data: staffData } = await supabaseClient
-        .from('providers')
+        .from('practice_staff')
         .select('practice_id')
         .eq('user_id', user.id)
-        .eq('role_type', 'staff')
+        .eq('active', true)
         .maybeSingle();
       
       console.log('[list-providers] Staff lookup:', {
