@@ -164,8 +164,9 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         setSelectedDate(data.suggestedDate);
         setSelectedTime(data.suggestedTime);
         
-        // Format a better message
-        const date = new Date(data.suggestedDate);
+        // Format a better message - parse date without timezone conversion
+        const [year, month, dayNum] = data.suggestedDate.split('-').map(Number);
+        const date = new Date(year, month - 1, dayNum); // Local date at midnight
         const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
         const monthName = date.toLocaleDateString('en-US', { month: 'long' });
         const day = date.getDate();
