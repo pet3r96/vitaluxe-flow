@@ -1860,6 +1860,7 @@ export type Database = {
           body: string
           created_at: string | null
           id: string
+          message_type: string | null
           sender_id: string
           thread_id: string
         }
@@ -1867,6 +1868,7 @@ export type Database = {
           body: string
           created_at?: string | null
           id?: string
+          message_type?: string | null
           sender_id: string
           thread_id: string
         }
@@ -1874,6 +1876,7 @@ export type Database = {
           body?: string
           created_at?: string | null
           id?: string
+          message_type?: string | null
           sender_id?: string
           thread_id?: string
         }
@@ -1991,31 +1994,37 @@ export type Database = {
       }
       notification_preferences: {
         Row: {
+          channels: Json | null
           created_at: string | null
           email_enabled: boolean | null
           event_type: string
           id: string
           in_app_enabled: boolean | null
+          role: string | null
           sms_enabled: boolean | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          channels?: Json | null
           created_at?: string | null
           email_enabled?: boolean | null
           event_type: string
           id?: string
           in_app_enabled?: boolean | null
+          role?: string | null
           sms_enabled?: boolean | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          channels?: Json | null
           created_at?: string | null
           email_enabled?: boolean | null
           event_type?: string
           id?: string
           in_app_enabled?: boolean | null
+          role?: string | null
           sms_enabled?: boolean | null
           updated_at?: string | null
           user_id?: string
@@ -3730,14 +3739,18 @@ export type Database = {
           attachments: Json | null
           blood_type: string | null
           created_at: string
+          created_by_user_id: string | null
           current_medications: Json | null
           date_recorded: string | null
           description: string | null
           id: string
           medical_conditions: Json | null
           metadata: Json | null
+          patient_account_id: string | null
           patient_id: string
+          primary_value: string | null
           provider_id: string | null
+          record_data: Json | null
           record_type: string
           title: string
           updated_at: string
@@ -3748,14 +3761,18 @@ export type Database = {
           attachments?: Json | null
           blood_type?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           current_medications?: Json | null
           date_recorded?: string | null
           description?: string | null
           id?: string
           medical_conditions?: Json | null
           metadata?: Json | null
+          patient_account_id?: string | null
           patient_id: string
+          primary_value?: string | null
           provider_id?: string | null
+          record_data?: Json | null
           record_type: string
           title: string
           updated_at?: string
@@ -3766,20 +3783,59 @@ export type Database = {
           attachments?: Json | null
           blood_type?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           current_medications?: Json | null
           date_recorded?: string | null
           description?: string | null
           id?: string
           medical_conditions?: Json | null
           metadata?: Json | null
+          patient_account_id?: string | null
           patient_id?: string
+          primary_value?: string | null
           provider_id?: string | null
+          record_data?: Json | null
           record_type?: string
           title?: string
           updated_at?: string
           vital_signs?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "patient_medical_vault_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_account_health"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
           {
             foreignKeyName: "patient_medical_vault_patient_id_fkey"
             columns: ["patient_id"]
@@ -6029,6 +6085,105 @@ export type Database = {
           },
         ]
       }
+      prescriptions: {
+        Row: {
+          created_at: string
+          dosage: string | null
+          id: string
+          medication_name: string
+          patient_account_id: string
+          practice_id: string
+          provider_id: string | null
+          quantity: number | null
+          refills_allowed: number | null
+          sig: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dosage?: string | null
+          id?: string
+          medication_name: string
+          patient_account_id: string
+          practice_id: string
+          provider_id?: string | null
+          quantity?: number | null
+          refills_allowed?: number | null
+          sig?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dosage?: string | null
+          id?: string
+          medication_name?: string
+          patient_account_id?: string
+          practice_id?: string
+          provider_id?: string | null
+          quantity?: number | null
+          refills_allowed?: number | null
+          sig?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescriptions_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_account_health"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "prescriptions_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "prescriptions_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "prescriptions_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_pharmacies: {
         Row: {
           created_at: string | null
@@ -7752,7 +7907,9 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          practice_id: string | null
           setting_key: string
+          setting_type: string | null
           setting_value: Json
           updated_at: string | null
           updated_by: string | null
@@ -7761,7 +7918,9 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          practice_id?: string | null
           setting_key: string
+          setting_type?: string | null
           setting_value: Json
           updated_at?: string | null
           updated_by?: string | null
@@ -7770,12 +7929,29 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          practice_id?: string | null
           setting_key?: string
+          setting_type?: string | null
           setting_value?: Json
           updated_at?: string | null
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "system_settings_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_settings_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       temp_password_tokens: {
         Row: {
@@ -8546,6 +8722,8 @@ export type Database = {
           csrf_token: string
           expires_at: string
           id: string
+          impersonated_user_id: string | null
+          session_type: string | null
           updated_at: string
           user_id: string
         }
@@ -8554,6 +8732,8 @@ export type Database = {
           csrf_token: string
           expires_at: string
           id?: string
+          impersonated_user_id?: string | null
+          session_type?: string | null
           updated_at?: string
           user_id: string
         }
@@ -8562,6 +8742,8 @@ export type Database = {
           csrf_token?: string
           expires_at?: string
           id?: string
+          impersonated_user_id?: string | null
+          session_type?: string | null
           updated_at?: string
           user_id?: string
         }
