@@ -109,18 +109,14 @@ export function MedicalVaultView({
   const { data: medications } = useQuery({
     queryKey: ["patient-medications", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("patient_medical_vault")
-        .select("id, record_data, created_at")
+        .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("category", "medication")
+        .eq("record_type", "medication")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data?.map((item: any) => ({
-        id: item.id,
-        created_at: item.created_at,
-        ...(item.record_data || {})
-      })) || [];
+      return data || [];
     },
     enabled: !!patientAccountId,
   });
@@ -128,18 +124,14 @@ export function MedicalVaultView({
   const { data: conditions } = useQuery({
     queryKey: ["patient-conditions", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("patient_medical_vault")
-        .select("id, record_data, created_at")
+        .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("category", "condition")
+        .eq("record_type", "condition")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data?.map((item: any) => ({
-        id: item.id,
-        created_at: item.created_at,
-        ...(item.record_data || {})
-      })) || [];
+      return data || [];
     },
     enabled: !!patientAccountId,
   });
@@ -147,18 +139,14 @@ export function MedicalVaultView({
   const { data: allergies } = useQuery({
     queryKey: ["patient-allergies", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("patient_medical_vault")
-        .select("id, record_data, created_at")
+        .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("category", "allergy")
+        .eq("record_type", "allergy")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data?.map((item: any) => ({
-        id: item.id,
-        created_at: item.created_at,
-        ...(item.record_data || {})
-      })) || [];
+      return data || [];
     },
     enabled: !!patientAccountId,
   });
@@ -166,19 +154,14 @@ export function MedicalVaultView({
   const { data: vitals } = useQuery({
     queryKey: ["patient-vitals", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("patient_medical_vault")
-        .select("id, record_data, created_at")
+        .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("category", "vitals")
+        .eq("record_type", "vital")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data?.map((item: any) => ({
-        id: item.id,
-        created_at: item.created_at,
-        date_recorded: item.created_at,
-        ...(item.record_data || {})
-      })) || [];
+      return data || [];
     },
     enabled: !!patientAccountId,
   });
@@ -186,18 +169,14 @@ export function MedicalVaultView({
   const { data: immunizations } = useQuery({
     queryKey: ["patient-immunizations", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("patient_medical_vault")
-        .select("id, record_data, created_at")
+        .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("category", "immunization")
+        .eq("record_type", "immunization")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data?.map((item: any) => ({
-        id: item.id,
-        created_at: item.created_at,
-        ...(item.record_data || {})
-      })) || [];
+      return data || [];
     },
     enabled: !!patientAccountId,
   });
@@ -205,18 +184,14 @@ export function MedicalVaultView({
   const { data: surgeries } = useQuery({
     queryKey: ["patient-surgeries", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("patient_medical_vault")
-        .select("id, record_data, created_at")
+        .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("category", "surgery")
+        .eq("record_type", "surgery")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data?.map((item: any) => ({
-        id: item.id,
-        created_at: item.created_at,
-        ...(item.record_data || {})
-      })) || [];
+      return data || [];
     },
     enabled: !!patientAccountId,
   });
@@ -224,18 +199,14 @@ export function MedicalVaultView({
   const { data: pharmacies } = useQuery({
     queryKey: ["patient-pharmacies", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("patient_medical_vault" as any)
-        .select("id, record_data, created_at")
+      const { data, error } = await supabase
+        .from("patient_medical_vault")
+        .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("category", "pharmacy")
-        .order("created_at", { ascending: false }) as any;
+        .eq("record_type", "pharmacy")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data as any)?.map((item: any) => ({
-        id: item.id,
-        created_at: item.created_at,
-        ...(item.record_data || {})
-      })) || [];
+      return data || [];
     },
     enabled: !!patientAccountId,
   });
@@ -243,18 +214,14 @@ export function MedicalVaultView({
   const { data: emergencyContacts } = useQuery({
     queryKey: ["patient-emergency-contacts", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("patient_medical_vault" as any)
-        .select("id, record_data, created_at")
+      const { data, error } = await supabase
+        .from("patient_medical_vault")
+        .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("category", "emergency_contact")
+        .eq("record_type", "emergency_contact")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data?.map((item: any) => ({
-        id: item.id,
-        created_at: item.created_at,
-        ...(item.record_data || {})
-      })) || [];
+      return data || [];
     },
     enabled: !!patientAccountId,
   });
@@ -305,14 +272,14 @@ export function MedicalVaultView({
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patientAccount,
-        medications || [],
-        conditions || [],
-        allergies || [],
-        vitals || [],
-        immunizations || [],
-        surgeries || [],
-        pharmacies || [],
-        emergencyContacts || []
+        medications as any || [],
+        conditions as any || [],
+        allergies as any || [],
+        vitals as any || [],
+        immunizations as any || [],
+        surgeries as any || [],
+        pharmacies as any || [],
+        emergencyContacts as any || []
       );
       
       const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -368,14 +335,14 @@ export function MedicalVaultView({
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patientAccount,
-        medications || [],
-        conditions || [],
-        allergies || [],
-        vitals || [],
-        immunizations || [],
-        surgeries || [],
-        pharmacies || [],
-        emergencyContacts || []
+        medications as any || [],
+        conditions as any || [],
+        allergies as any || [],
+        vitals as any || [],
+        immunizations as any || [],
+        surgeries as any || [],
+        pharmacies as any || [],
+        emergencyContacts as any || []
       );
       const pdfUrl = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');

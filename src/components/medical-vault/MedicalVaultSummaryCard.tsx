@@ -18,32 +18,32 @@ export function MedicalVaultSummaryCard({ patientAccountId, onViewVault }: Medic
     queryKey: ['medical-vault-counts', patientAccountId],
     queryFn: async () => {
       const [medications, conditions, allergies, vitals] = await Promise.all([
-        (supabase as any)
+        supabase
           .from('patient_medical_vault')
           .select('id', { count: 'exact', head: true })
           .eq('patient_account_id', patientAccountId)
-          .eq('category', 'medication'),
-        (supabase as any)
+          .eq('record_type', 'medication'),
+        supabase
           .from('patient_medical_vault')
           .select('id', { count: 'exact', head: true })
           .eq('patient_account_id', patientAccountId)
-          .eq('category', 'condition'),
-        (supabase as any)
+          .eq('record_type', 'condition'),
+        supabase
           .from('patient_medical_vault')
           .select('id, record_data')
           .eq('patient_account_id', patientAccountId)
-          .eq('category', 'allergy'),
-        (supabase as any)
+          .eq('record_type', 'allergy'),
+        supabase
           .from('patient_medical_vault')
           .select('id, record_data')
           .eq('patient_account_id', patientAccountId)
-          .eq('category', 'vitals')
+          .eq('record_type', 'vital')
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
       ]);
       
-      const hasNKA = allergies.data?.some((a: any) => a.record_data?.nka) || false;
+      const hasNKA = allergies.data?.some((a) => (a.record_data as any)?.nka) || false;
       const allergyCount = hasNKA ? 0 : (allergies.data?.length || 0);
 
       return {
