@@ -175,7 +175,10 @@ export default function PatientInbox() {
     [messages]
   );
 
-  // urgency column removed
+  const urgentCount = useMemo(() => 
+    (messages as any)?.filter((m: any) => m.urgency === 'urgent' && !m.resolved).length || 0,
+    [messages]
+  );
 
   const markReadMutation = useMutation({
     mutationFn: async (messageId: string) => {

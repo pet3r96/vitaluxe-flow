@@ -208,7 +208,7 @@ export default function PatientMedicalVault() {
         conditions as any || [],
         allergies as any || [],
         vitals as any || [],
-        immunizations || [],
+        immunizations as any || [],
         surgeries || [],
         pharmacies || [],
         emergencyContacts || []
@@ -305,7 +305,7 @@ export default function PatientMedicalVault() {
         conditions as any || [],
         allergies as any || [],
         vitals as any || [],
-        immunizations || [],
+        immunizations as any || [],
         surgeries || [],
         pharmacies || [],
         emergencyContacts || []
