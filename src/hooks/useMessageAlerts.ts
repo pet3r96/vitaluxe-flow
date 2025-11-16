@@ -37,15 +37,12 @@ export function useMessageAlerts() {
     if (!user) return;
 
     try {
-      // TODO: Remove (as any) when message_thread_read_status is added to Supabase types
-      await (supabase as any)
+      await supabase
         .from('message_thread_read_status')
         .upsert({
           thread_id: threadId,
           user_id: user.id,
           last_read_at: new Date().toISOString(),
-          last_read_message_id: lastMessageId,
-          updated_at: new Date().toISOString()
         }, {
           onConflict: 'thread_id,user_id'
         });

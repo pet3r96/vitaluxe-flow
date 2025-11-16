@@ -7,8 +7,7 @@ export const useMultiplePharmacyRates = (pharmacyIds: string[]) => {
     queryFn: async () => {
       if (pharmacyIds.length === 0) return {};
       
-      // TODO: Remove (as any) when pharmacy_shipping_rates is added to Supabase types
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('pharmacy_shipping_rates')
         .select('pharmacy_id, shipping_speed, rate, enabled')
         .in('pharmacy_id', pharmacyIds)
@@ -19,7 +18,7 @@ export const useMultiplePharmacyRates = (pharmacyIds: string[]) => {
       // Convert to nested map: { pharmacyId: { ground: 15.00, 2day: 25.00, overnight: 40.00 } }
       const ratesMap: Record<string, Record<string, number>> = {};
       
-      (data as any)?.forEach((rate: any) => {
+      data?.forEach((rate) => {
         if (!ratesMap[rate.pharmacy_id]) {
           ratesMap[rate.pharmacy_id] = {};
         }
