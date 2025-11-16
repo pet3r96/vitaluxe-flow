@@ -109,6 +109,21 @@ const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
 const AgoraDebugSuite = lazy(() => import("./pages/dev/AgoraDebugSuite"));
 
+// Admin pages
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const Practices = lazy(() => import("./pages/admin/Practices"));
+const Patients = lazy(() => import("./pages/admin/Patients"));
+const Pharmacies = lazy(() => import("./pages/admin/Pharmacies"));
+const Orders = lazy(() => import("./pages/admin/Orders"));
+const PatientChat = lazy(() => import("./pages/admin/PatientChat"));
+const Reports = lazy(() => import("./pages/admin/Reports"));
+const RepProductivity = lazy(() => import("./pages/admin/RepProductivity"));
+const ProductCatalog = lazy(() => import("./pages/admin/ProductCatalog"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const Security = lazy(() => import("./pages/admin/Security"));
+const TermsManagement = lazy(() => import("./pages/admin/TermsManagement"));
+const PracticeAuditLog = lazy(() => import("./pages/admin/PracticeAuditLog"));
+
 <Route
   path="/dev/agora-debug"
   element={
@@ -241,6 +256,21 @@ const App = () => {
                                             />
                             <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
                             <Route path="/shipping" element={<PharmacyShipping />} />
+                            
+                            {/* Admin Routes */}
+                            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                            <Route path="/admin/practices" element={<Practices />} />
+                            <Route path="/admin/patients" element={<Patients />} />
+                            <Route path="/admin/pharmacies" element={<Pharmacies />} />
+                            <Route path="/admin/orders" element={<Orders />} />
+                            <Route path="/admin/patient-chat" element={<PatientChat />} />
+                            <Route path="/admin/reports" element={<Reports />} />
+                            <Route path="/admin/rep-productivity" element={<RepProductivity />} />
+                            <Route path="/admin/product-catalog" element={<ProductCatalog />} />
+                            <Route path="/admin/settings" element={<AdminSettings />} />
+                            <Route path="/admin/security" element={<Security />} />
+                            <Route path="/admin/terms-management" element={<TermsManagement />} />
+                            <Route path="/admin/audit-log" element={<PracticeAuditLog />} />
                                             {/* Video Consultations temporarily disabled - feature coming soon */}
                                             {/* <Route
                                               path="/video-consultations"
