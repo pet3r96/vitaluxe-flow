@@ -7,8 +7,8 @@ export const usePharmacyShippingRates = (pharmacyId: string | null) => {
     queryFn: async () => {
       if (!pharmacyId) return {};
       
-      const { data, error } = await supabase
-        .from('pharmacy_shipping_rates')
+      const { data, error } = await (supabase
+        .from('pharmacy_shipping_rates') as any)
         .select('shipping_speed, rate, enabled')
         .eq('pharmacy_id', pharmacyId)
         .eq('enabled', true);
