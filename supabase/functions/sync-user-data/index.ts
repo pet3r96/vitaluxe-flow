@@ -381,18 +381,15 @@ serve(async (req) => {
               toplineIdForLink = downlineDetails?.assigned_topline_id || null;
             }
             
-            // Upsert rep_practice_link with assigned_topline_id (works for both toplines and downlines)
+            // Update practice's linked_topline_id instead of creating link records
             const { error: linkError } = await supabaseAdmin
-              .from('rep_practice_links')
-              .upsert({
-                rep_id: repRecord.id,
-                practice_id: practice.id,
-                assigned_topline_id: toplineIdForLink
-              }, { onConflict: 'rep_id,practice_id' });
+              .from('profiles')
+              .update({ linked_topline_id: practice.linked_topline_id })
+              .eq('id', practice.id);
 
             if (!linkError) {
               repLinksAdded++;
-              console.log(`Linked practice ${practice.name} to ${repRecord.role} rep ${repRecord.id}`);
+              console.log(`Linked practice ${practice.name} to rep ${practice.linked_topline_id}`);
             } else {
               errors.push(`Failed to link practice ${practice.name}: ${linkError.message}`);
             }

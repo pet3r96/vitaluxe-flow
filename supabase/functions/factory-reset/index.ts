@@ -145,7 +145,7 @@ serve(async (req) => {
         
         // Communication
         messages: await getCount('messages'),
-        thread_participants: await getCount('thread_participants'),
+        internal_message_recipients: await getCount('internal_message_recipients'),
         message_threads: await getCount('message_threads'),
         notifications: await getCount('notifications', 'non_admin'),
         
