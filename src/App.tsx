@@ -112,8 +112,6 @@ const PharmacyApiLogs = lazy(() => import("./pages/PharmacyApiLogs"));
 // Phase 6: Removed Reports, Security, AdminDiscountCodes, PracticeAuditLog, AdminAlerts, InternalChat (tables dropped)
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
-const RepProductivityReport = lazy(() => import("./components/reports/RepProductivityReport"));
-const DownlinePerformanceView = lazy(() => import("./components/reports/DownlinePerformanceView"));
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"), "DashboardRouter");
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
