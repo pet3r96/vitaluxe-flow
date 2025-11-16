@@ -46,7 +46,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
           .from('orders')
           .select(`
             *,
-            profiles (
+            profiles!doctor_id (
               name,
               company,
               address_street,

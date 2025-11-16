@@ -43,7 +43,7 @@ export const PharmacyShippingManager = () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('order_lines')
         .select(`
           id,
@@ -56,7 +56,7 @@ export const PharmacyShippingManager = () => {
             id,
             created_at,
             payment_status,
-            profiles (
+            profiles!doctor_id (
               name,
               company
             )
