@@ -56,7 +56,7 @@ export function PatientEngagementSummaryCard({
       const nowIso = new Date().toISOString();
       
       const [notes, plans, upcoming, followups, docs] = await Promise.all([
-        ((supabase as any)
+        (supabase as any)
           .from("patient_notes")
           .select("id", { count: "exact", head: true })
           .eq("patient_account_id", patientAccountId)

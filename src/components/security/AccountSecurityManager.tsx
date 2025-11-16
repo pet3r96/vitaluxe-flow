@@ -13,7 +13,7 @@ export const AccountSecurityManager = () => {
   const { data: lockouts, isLoading, refetch } = useQuery({
     queryKey: ["account-lockouts"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("account_lockouts")
         .select("*")
         .is("unlocked_at", null)
@@ -40,7 +40,7 @@ export const AccountSecurityManager = () => {
   const paginatedLockouts = lockouts?.slice(startIndex, endIndex);
 
   const handleUnlock = async (lockoutId: string) => {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("account_lockouts")
       .update({
         unlocked_at: new Date().toISOString(),
