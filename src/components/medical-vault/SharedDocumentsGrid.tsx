@@ -28,7 +28,7 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   const { data: patientDocs, isLoading: loadingPatientDocs } = useQuery({
     queryKey: ['shared-patient-documents', patientAccountId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('patient_medical_vault')
         .select('*')
         .eq('patient_account_id', patientAccountId)

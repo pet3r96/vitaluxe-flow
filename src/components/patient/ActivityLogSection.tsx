@@ -75,15 +75,15 @@ export function ActivityLogSection() {
       setLoadingMore(true);
       
       // Get total count
-      const { count } = await (supabase
-        .from('active_sessions') as any)
+      const { count } = await (supabase as any)
+        .from('active_sessions')
         .select('*', { count: 'exact', head: true });
       
       setTotalCount(count || 0);
 
       // Fetch sessions with limit
-      const { data, error } = await (supabase
-        .from('active_sessions') as any)
+      const { data, error } = await (supabase as any)
+        .from('active_sessions')
         .select('id, last_activity, ip_address, user_agent')
         .order('last_activity', { ascending: false })
         .limit(limit || displayLimit);
@@ -126,8 +126,8 @@ export function ActivityLogSection() {
       }
 
       // Delete all sessions except the current one
-      const { error } = await (supabase
-        .from('active_sessions') as any)
+      const { error } = await (supabase as any)
+        .from('active_sessions')
         .delete()
         .neq('id', currentSession.access_token); // Keep current session
 

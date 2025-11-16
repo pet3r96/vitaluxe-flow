@@ -18,7 +18,7 @@ export function MedicalVaultSummaryCard({ patientAccountId, onViewVault }: Medic
     queryKey: ['medical-vault-counts', patientAccountId],
     queryFn: async () => {
       const [medications, conditions, allergies, vitals] = await Promise.all([
-        supabase
+        (supabase as any)
           .from('patient_medical_vault')
           .select('id', { count: 'exact', head: true })
           .eq('patient_account_id', patientAccountId)
