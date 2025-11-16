@@ -124,12 +124,12 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         }
         
         // Fetch rep assignments
-        const { data: repData } = await supabase
-          .from("product_rep_assignments")
+        const { data: repData } = await (supabase
+          .from("product_rep_assignments") as any)
           .select("topline_rep_id")
           .eq("product_id", product.id);
         
-        const assignedReps = repData?.map(a => a.topline_rep_id) || [];
+        const assignedReps = repData?.map((a: any) => a.topline_rep_id) || [];
         setFormData(prev => ({
           ...prev,
           scope_type: assignedReps.length > 0 ? "scoped" : "global",

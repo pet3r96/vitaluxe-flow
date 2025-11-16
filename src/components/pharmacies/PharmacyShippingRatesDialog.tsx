@@ -99,8 +99,8 @@ export const PharmacyShippingRatesDialog = ({
       }
 
       // Upsert rates for all speeds
-      const { error } = await supabase
-        .from('pharmacy_shipping_rates')
+      const { error } = await (supabase
+        .from('pharmacy_shipping_rates') as any)
         .upsert(updates, { onConflict: 'pharmacy_id,shipping_speed' });
 
       if (error) throw error;
