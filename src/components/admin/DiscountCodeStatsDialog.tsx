@@ -19,11 +19,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, DollarSign, ShoppingCart, Percent, Users } from "lucide-react";
 import { format } from "date-fns";
+import type { DiscountCode, DiscountCodeStats, DiscountCodeOrder } from "@/types/dashboard";
 
 interface DiscountCodeStatsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  discountCode?: any;
+  discountCode?: DiscountCode;
 }
 
 export const DiscountCodeStatsDialog = ({
@@ -31,22 +32,22 @@ export const DiscountCodeStatsDialog = ({
   onOpenChange,
   discountCode,
 }: DiscountCodeStatsDialogProps) => {
-  const { data: stats } = useQuery({
+  const { data: stats } = useQuery<DiscountCodeStats>({
     queryKey: ["discount-code-stats", discountCode?.code],
     queryFn: async () => {
-      if (!discountCode?.code) return null;
+      if (!discountCode?.code) return { total_uses: 0, unique_users: 0, total_discount_amount: 0, total_orders: 0 };
 
       const { data, error } = await supabase.rpc("get_discount_code_stats", {
         p_code: discountCode.code,
       });
 
       if (error) throw error;
-      return data?.[0] || { total_uses: 0, unique_users: 0, total_discount_amount: 0, total_orders: 0 };
+      return (data?.[0] || { total_uses: 0, unique_users: 0, total_discount_amount: 0, total_orders: 0 }) as DiscountCodeStats;
     },
     enabled: !!discountCode?.code && open,
   });
 
-  const { data: recentOrders } = useQuery({
+  const { data: recentOrders } = useQuery<DiscountCodeOrder[]>({
     queryKey: ["discount-code-recent-orders", discountCode?.code],
     queryFn: async () => {
       if (!discountCode?.code) return [];
@@ -60,7 +61,7 @@ export const DiscountCodeStatsDialog = ({
           discount_amount,
           discount_percentage,
           status,
-          profiles:doctor_id (
+          profiles!orders_doctor_id_fkey (
             name,
             email
           )
@@ -70,7 +71,7 @@ export const DiscountCodeStatsDialog = ({
         .limit(10);
 
       if (error) throw error;
-      return data;
+      return data as DiscountCodeOrder[];
     },
     enabled: !!discountCode?.code && open,
   });
@@ -116,7 +117,7 @@ export const DiscountCodeStatsDialog = ({
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{(stats as any)?.unique_users || 0}</div>
+                <div className="text-2xl font-bold">{stats?.unique_users || 0}</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Different customers who used this code
                 </p>

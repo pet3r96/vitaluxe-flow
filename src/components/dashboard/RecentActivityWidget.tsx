@@ -4,19 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, FileText, Calendar, Package, CheckCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-
-interface ActivityItem {
-  type: string;
-  icon: any;
-  description: string;
-  time: string;
-}
-
-interface RecentActivityWidgetProps {
-  className?: string;
-  activities?: ActivityItem[];
-  isPharmacy?: boolean;
-}
+import type { 
+  ActivityItem, 
+  RecentActivityWidgetProps,
+  OrderLineActivity,
+  MessageThreadActivity
+} from "@/types/dashboard";
+import type { ProviderDocument } from "@/types/subscriptions";
 
 export function RecentActivityWidget({ className, activities: externalActivities, isPharmacy }: RecentActivityWidgetProps) {
   const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
@@ -54,7 +48,7 @@ export function RecentActivityWidget({ className, activities: externalActivities
         const combined: ActivityItem[] = [];
         const seenOrders = new Set();
 
-        orderLines?.forEach((line: any) => {
+        orderLines?.forEach((line: OrderLineActivity) => {
           if (!seenOrders.has(line.order_id)) {
             seenOrders.add(line.order_id);
             combined.push({
@@ -74,7 +68,7 @@ export function RecentActivityWidget({ className, activities: externalActivities
           .order('updated_at', { ascending: false })
           .limit(5);
 
-        messages?.forEach((msg: any) => {
+        messages?.forEach((msg: MessageThreadActivity) => {
           combined.push({
             type: "message",
             icon: FileText,
@@ -185,15 +179,15 @@ export function RecentActivityWidget({ className, activities: externalActivities
       // Get recent documents (if accessible)
       const { data: documents } = await supabase
         .from("provider_documents" as any)
-        .select("id, document_name, status, updated_at, practice_id")
+        .select("id, document_name, document_type, uploaded_at")
         .eq("practice_id", effectivePracticeId)
-        .order("updated_at", { ascending: false })
-        .limit(5) as any;
+        .order("uploaded_at", { ascending: false })
+        .limit(10);
 
-      // Combine and sort all activities
-      const combined: any[] = [];
+      // Combine all activities
+      const combined: ActivityItem[] = [];
 
-      orders?.forEach((order) => {
+      orders?.forEach((order: any) => {
         combined.push({
           type: "order",
           icon: Package,
@@ -202,7 +196,7 @@ export function RecentActivityWidget({ className, activities: externalActivities
         });
       });
 
-      appointments?.forEach((appt) => {
+      appointments?.forEach((appt: any) => {
         const patientName = appt.patient_accounts 
           ? `${appt.patient_accounts.first_name || ''} ${appt.patient_accounts.last_name || ''}`.trim() || 'Patient'
           : 'Patient';
@@ -214,12 +208,12 @@ export function RecentActivityWidget({ className, activities: externalActivities
         });
       });
 
-      documents?.forEach((doc) => {
+      (documents || []).forEach((doc: any) => {
         combined.push({
-          type: "document",
+          type: 'document',
           icon: FileText,
-          description: `Document "${doc.document_name}" ${doc.status}`,
-          time: doc.updated_at,
+          description: `Document: ${doc.document_name}`,
+          time: doc.uploaded_at,
         });
       });
 

@@ -6,11 +6,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Bell, XCircle, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import type { AdminAlert } from "@/types/dashboard";
 
 export const AdminAlertsPanel = () => {
   const navigate = useNavigate();
 
-  const { data: alerts } = useQuery({
+  const { data: alerts } = useQuery<AdminAlert[]>({
     queryKey: ["admin-alerts-unresolved"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -24,7 +25,7 @@ export const AdminAlertsPanel = () => {
         .limit(10);
 
       if (error) throw error;
-      return data;
+      return data as AdminAlert[];
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });
@@ -71,7 +72,7 @@ export const AdminAlertsPanel = () => {
                     <div key={alert.id} className="p-3 bg-destructive/10 rounded-lg text-sm">
                       <div className="font-medium">{alert.title}</div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {(alert.pharmacies as any)?.name} • {format(new Date(alert.created_at), "MMM d, HH:mm")}
+                        {alert.pharmacies?.name} • {format(new Date(alert.created_at), "MMM d, HH:mm")}
                       </div>
                     </div>
                   ))}
@@ -88,7 +89,7 @@ export const AdminAlertsPanel = () => {
                     <div key={alert.id} className="p-3 bg-yellow-500/10 rounded-lg text-sm">
                       <div className="font-medium">{alert.title}</div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {(alert.pharmacies as any)?.name} • {format(new Date(alert.created_at), "MMM d, HH:mm")}
+                        {alert.pharmacies?.name} • {format(new Date(alert.created_at), "MMM d, HH:mm")}
                       </div>
                     </div>
                   ))}
