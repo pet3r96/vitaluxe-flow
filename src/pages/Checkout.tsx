@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { parseCheckoutAttestation, type CheckoutAttestationData } from "@/types/jsonb";
 import { useCart } from "@/hooks/useCart";
 import { resolveCartOwnerUserId } from "@/lib/cartOwnerResolver";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -201,17 +202,17 @@ export default function Checkout() {
   });
 
   // Fetch checkout attestation
-  const { data: checkoutAttestation } = useQuery({
+  const { data: checkoutAttestation } = useQuery<CheckoutAttestationData | null>({
     queryKey: ["checkout-attestation"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("checkout_attestation" as any)
         .select("*")
         .eq("is_active", true)
         .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return parseCheckoutAttestation(data);
     },
   });
 
@@ -1043,10 +1044,10 @@ export default function Checkout() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
               <AlertCircle className="h-5 w-5" />
-              {(checkoutAttestation as any).title}
+              {checkoutAttestation.title}
             </CardTitle>
             <CardDescription>
-              {(checkoutAttestation as any).subtitle}
+              {checkoutAttestation.subtitle}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1055,7 +1056,7 @@ export default function Checkout() {
               <AlertDescription className="text-sm leading-relaxed">
                 By checking the box below, you attest that:
                 <ul className="list-disc ml-6 mt-2 space-y-1">
-                  {((checkoutAttestation as any).content || '').split('\n').map((line: string, idx: number) => {
+                  {checkoutAttestation.content.split('\n').map((line: string, idx: number) => {
                     const cleanedLine = line.trim().replace(/^-\s*/, '');
                     return cleanedLine ? <li key={idx}>{cleanedLine}</li> : null;
                   })}
@@ -1075,7 +1076,7 @@ export default function Checkout() {
                   htmlFor="medical-attestation"
                   className="text-sm font-medium leading-relaxed cursor-pointer"
                 >
-                  {(checkoutAttestation as any).checkbox_text}
+                  {checkoutAttestation.checkbox_text}
                 </Label>
               </div>
             </div>

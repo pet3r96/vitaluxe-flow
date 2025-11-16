@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { parseCheckoutAttestation } from "@/types/jsonb";
+import type { PatientPortalTerms, UserTermsAcceptance } from "@/types/subscriptions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -288,11 +290,14 @@ export default function AdminTermsManagement() {
     }
 
     if (data) {
-      setAttestation(data);
-      setAttestationTitle((data as any).title || '');
-      setAttestationSubtitle((data as any).subtitle || "");
-      setAttestationContent((data as any).content || '');
-      setAttestationCheckboxText((data as any).checkbox_text || '');
+      const attestationData = parseCheckoutAttestation(data);
+      if (attestationData) {
+        setAttestation(data);
+        setAttestationTitle(attestationData.title);
+        setAttestationSubtitle(attestationData.subtitle || "");
+        setAttestationContent(attestationData.content);
+        setAttestationCheckboxText(attestationData.checkbox_text);
+      }
     }
     
     setLoadingAttestation(false);
