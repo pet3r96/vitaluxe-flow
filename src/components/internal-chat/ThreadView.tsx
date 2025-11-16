@@ -19,7 +19,7 @@ export function ThreadView({ selectedMessage, replyText, setReplyText, sendReply
   // Fetch all messages in this thread
   const { data: threadMessages, isLoading } = useQuery({
     queryKey: ["thread-messages", threadId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any[]> => {
       const { data, error } = await supabase
         .from("patient_messages")
         .select(`

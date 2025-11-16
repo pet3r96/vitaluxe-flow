@@ -93,9 +93,9 @@ export const PriceOverrideManager = () => {
   });
 
   // Simplify query to avoid deep type instantiation
-  const { data: existingOverrides, isLoading: overridesLoading } = useQuery<Override[]>({
+  const { data: existingOverrides, isLoading: overridesLoading } = useQuery({
     queryKey: ['price-overrides', selectedRepId],
-    queryFn: async () => {
+    queryFn: async (): Promise<Override[]> => {
       if (!selectedRepId) return [];
       
       const { data, error } = await supabase

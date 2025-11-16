@@ -220,13 +220,6 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
               </p>
             </div>
           ))}
-          
-          {isResolved && firstMsg?.resolution_notes && (
-            <div className="p-3 rounded-lg bg-secondary/50 border-l-4 border-secondary">
-              <p className="text-xs font-semibold mb-1">Resolution Notes:</p>
-              <p className="text-sm">{firstMsg.resolution_notes}</p>
-            </div>
-          )}
         </ScrollArea>
 
         {!isResolved && (

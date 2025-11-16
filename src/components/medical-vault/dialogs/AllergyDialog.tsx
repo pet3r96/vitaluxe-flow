@@ -104,8 +104,8 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
   const mutation = useOptimisticMutation(
     async (data: AllergyFormData) => {
       // Check for conflicts before submission
-      const { data: existingRecords } = await supabase
-        .from("patient_medical_vault")
+      const { data: existingRecords } = await (supabase
+        .from("patient_medical_vault") as any)
         .select("id, record_data")
         .eq("patient_account_id", patientAccountId)
         .eq("record_type", "allergy")
