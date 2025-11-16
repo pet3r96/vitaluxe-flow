@@ -27,11 +27,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Check for token-based password change (public access)
   const searchParams = new URLSearchParams(location.search);
   const hasToken = searchParams.has('token');
-  
-  // Allow public access to change-password with token
-  if (location.pathname === '/change-password' && hasToken) {
-    return <>{children}</>;
-  }
+  const isPublicPasswordChange = location.pathname === '/change-password' && hasToken;
 
   // ===== ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS =====
   // This is critical to avoid "Rendered more hooks than during the previous render" error
@@ -98,6 +94,18 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [user, effectiveRole, passwordStatusChecked]);
 
+  // Role resolution timeout (prevents infinite loading when role doesn't load)
+  useEffect(() => {
+    if (user && !effectiveRole) {
+      const timeout = setTimeout(() => {
+        console.warn('[ProtectedRoute] Role resolution timeout - redirecting to auth');
+        navigate('/auth');
+      }, 5000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [user, effectiveRole, navigate]);
+
   // ===== NOW SAFE TO HAVE CONDITIONAL RETURNS =====
 
   if (initializing) {
@@ -156,9 +164,10 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }
 
-  // While role is being determined, show a lightweight loader
+  // While role is being determined, show a lightweight loader with timeout
   if (user && !effectiveRole) {
     console.log('[ProtectedRoute] Waiting for role resolution');
+    
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -167,6 +176,11 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         </div>
       </div>
     );
+  }
+
+  // Allow public access to change-password with token (no auth required)
+  if (isPublicPasswordChange) {
+    return <>{children}</>;
   }
 
   return <>{children}</>;

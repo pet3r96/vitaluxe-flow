@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 export interface AuditLog {
   id: string;
@@ -34,37 +33,19 @@ export const mapRoleToAuditRole = (effectiveRole: string | null): 'patient' | 'd
   }
 };
 
+// Phase 6: medical_vault_audit_logs table was dropped - audit logging disabled
 export const useAuditLogs = (patientAccountId?: string) => {
   return useQuery({
     queryKey: ["medical-vault-audit-logs", patientAccountId],
     queryFn: async () => {
-      if (!patientAccountId) {
-        console.log('[useAuditLogs] No patientAccountId provided');
-        return [];
-      }
-
-      console.log('[useAuditLogs] Fetching audit logs for:', patientAccountId);
-      
-      const { data, error } = await supabase
-        .from("medical_vault_audit_logs")
-        .select("*")
-        .eq("patient_account_id", patientAccountId)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error('[useAuditLogs] Query error:', error);
-        throw error;
-      }
-      
-      console.log('[useAuditLogs] Found entries:', data?.length || 0, 'entries');
-      return data as AuditLog[];
+      console.log('[useAuditLogs] Audit logging disabled - table dropped in Phase 6');
+      return [];
     },
-    enabled: !!patientAccountId,
-    refetchOnMount: 'always',
+    enabled: false, // Disabled - table no longer exists
   });
 };
 
-// Utility function to log changes
+// Phase 6: medical_vault_audit_logs table was dropped - audit logging disabled
 export const logMedicalVaultChange = async ({
   patientAccountId,
   actionType,
@@ -88,26 +69,6 @@ export const logMedicalVaultChange = async ({
   newData?: any;
   changeSummary?: string;
 }) => {
-  try {
-    const { error } = await supabase
-      .from("medical_vault_audit_logs")
-      .insert({
-        patient_account_id: patientAccountId,
-        action_type: actionType,
-        entity_type: entityType,
-        entity_id: entityId,
-        entity_name: entityName,
-        changed_by_user_id: changedByUserId,
-        changed_by_role: changedByRole,
-        old_data: oldData,
-        new_data: newData,
-        change_summary: changeSummary,
-      });
-
-    if (error) {
-      console.error("Error logging medical vault change:", error);
-    }
-  } catch (error) {
-    console.error("Error logging medical vault change:", error);
-  }
+  // No-op: audit logging disabled after Phase 6 cleanup
+  console.log('[logMedicalVaultChange] Audit logging disabled - table dropped in Phase 6');
 };

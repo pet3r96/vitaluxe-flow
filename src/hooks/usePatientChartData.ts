@@ -34,42 +34,28 @@ export const usePatientChartData = (patientId: string) => {
         }
       : null;
 
-    // Vault tables
-    const vaultTables = [
-      "patient_vitals",
-      "patient_medications",
-      "patient_allergies",
-      "patient_conditions",
-      "patient_surgeries",
-      "patient_immunizations",
-      "patient_pharmacies",
-      "patient_documents",
-      "patient_notes",
-    ];
+    // Fetch all vault records for this patient from consolidated patient_medical_vault
+    const { data: vaultData } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_id", patientId)
+      .order("created_at", { ascending: false });
 
-    const results: Record<string, any[]> = {};
+    const allRecords = vaultData ?? [];
 
-    for (const table of vaultTables) {
-      const { data } = await supabase
-        .from(table as any)
-        .select("*")
-        .eq("patient_account_id", patientId)
-        .order("created_at", { ascending: false });
-
-      results[table] = data ?? [];
-    }
+    // Group records by record_type
+    const groupByType = (type: string) => allRecords.filter(r => r.record_type === type);
 
     setChart({
       patient: identity,
-      vitals: results.patient_vitals,
-      medications: results.patient_medications,
-      allergies: results.patient_allergies,
-      conditions: results.patient_conditions,
-      surgeries: results.patient_surgeries,
-      immunizations: results.patient_immunizations,
-      pharmacies: results.patient_pharmacies,
-      documents: results.patient_documents,
-      notes: results.patient_notes,
+      vitals: groupByType("vital_signs"),
+      medications: groupByType("medication"),
+      allergies: groupByType("allergy"),
+      conditions: groupByType("condition"),
+      surgeries: groupByType("surgery"),
+      immunizations: groupByType("immunization"),
+      documents: groupByType("document"),
+      notes: groupByType("note"),
     });
 
     setLoading(false);
@@ -80,45 +66,49 @@ export const usePatientChartData = (patientId: string) => {
     loadChart();
   }, [patientId]);
 
-  // realtime updates
+  // realtime updates for patient_accounts and patient_medical_vault
   useEffect(() => {
     const channels: any[] = [];
 
-    const tables = [
-      "patient_accounts",
-      "patient_vitals",
-      "patient_medications",
-      "patient_allergies",
-      "patient_conditions",
-      "patient_surgeries",
-      "patient_immunizations",
-      "patient_pharmacies",
-      "patient_documents",
-      "patient_notes",
-    ];
+    // Listen to patient_accounts changes
+    const accountsChannel = supabase
+      .channel(`patient_accounts-${patientId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "patient_accounts",
+          filter: `id=eq.${patientId}`,
+        },
+        () => {
+          console.log(`[Realtime Update] patient_accounts changed → refreshing chart`);
+          loadChart();
+        },
+      )
+      .subscribe();
 
-    for (const table of tables) {
-      const filterField = table === "patient_accounts" ? "id" : "patient_account_id";
+    channels.push(accountsChannel);
 
-      const channel = supabase
-        .channel(`${table}-${patientId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table,
-            filter: `${filterField}=eq.${patientId}`,
-          },
-          () => {
-            console.log(`[Realtime Update] ${table} changed → refreshing chart`);
-            loadChart();
-          },
-        )
-        .subscribe();
+    // Listen to patient_medical_vault changes
+    const vaultChannel = supabase
+      .channel(`patient_medical_vault-${patientId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "patient_medical_vault",
+          filter: `patient_id=eq.${patientId}`,
+        },
+        () => {
+          console.log(`[Realtime Update] patient_medical_vault changed → refreshing chart`);
+          loadChart();
+        },
+      )
+      .subscribe();
 
-      channels.push(channel);
-    }
+    channels.push(vaultChannel);
 
     return () => {
       for (const ch of channels) {

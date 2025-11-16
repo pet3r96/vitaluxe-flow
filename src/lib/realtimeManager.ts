@@ -48,7 +48,7 @@ class RealtimeManager {
     // Reps & Commissions
     'reps': ['all-reps-lookup', 'rep-productivity-view', 'rep-practices', 'current-rep-id'],
     'commissions': ['rep-productivity-view', 'rep-dashboard-stats-batched'],
-    'pending_reps': ['pending-reps'],
+    // 'pending_reps': ['pending-reps'], // Phase 6: table dropped
     
     // Patients
     'patient_accounts': ['patients', 'dashboard-stats-batched', 'orders-page'],
@@ -63,7 +63,7 @@ class RealtimeManager {
     'follow_up_reminders': ['follow-up-reminders'],
     
     // System & Audit
-    'audit_logs': ['audit-logs', 'error-logs'],
+    // 'audit_logs': ['audit-logs', 'error-logs'], // Phase 6: table dropped
     'subscriptions': ['subscription-status', 'dashboard-stats-batched'],
   };
 

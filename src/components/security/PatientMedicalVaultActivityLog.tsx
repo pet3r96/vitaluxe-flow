@@ -36,14 +36,15 @@ interface PatientInfo {
 }
 
 const entityTypeLabels: Record<string, string> = {
-  patient_medications: "Medications",
-  patient_conditions: "Conditions",
-  patient_allergies: "Allergies",
-  patient_vitals: "Vitals",
-  patient_immunizations: "Immunizations",
-  patient_surgeries: "Surgeries",
-  patient_pharmacies: "Pharmacies",
-  patient_emergency_contacts: "Emergency Contacts"
+  patient_medical_vault: "Medical Vault",
+  medication: "Medications",
+  condition: "Conditions",
+  allergy: "Allergies",
+  vital_signs: "Vitals",
+  immunization: "Immunizations",
+  surgery: "Surgeries",
+  document: "Documents",
+  note: "Notes"
 };
 
 const actionTypeColors: Record<string, string> = {

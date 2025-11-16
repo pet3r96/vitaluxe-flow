@@ -227,7 +227,7 @@ const Auth = () => {
           address_verified_at: pharmacyAddress.verified_at,
           statesServiced
         };
-        const { error } = await signUp(email, password, name, role, roleData, providerFullName, prescriberName);
+        const { error } = await signUp(email, password);
         if (error) {
           showError(
             "Sign Up Failed",

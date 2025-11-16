@@ -54,28 +54,14 @@ export interface SuspiciousAccessLog {
  * SECURITY: Log suspicious cross-practice access attempts
  * This function should be called when client-side validation detects potential data leaks
  */
+// Phase 6: audit_logs table was dropped - logging disabled
 export async function logSuspiciousAccess(params: SuspiciousAccessLog): Promise<void> {
-  try {
-    const { error } = await supabase.from('audit_logs').insert({
-      action_type: 'suspicious_cross_practice_access',
-      entity_type: params.resource,
-      details: {
-        user_id: params.userId,
-        attempted_practice: params.attemptedPracticeId,
-        user_practice: params.userPracticeId,
-        timestamp: new Date().toISOString(),
-        ...params.details,
-      }
+  // No-op: audit logging disabled after Phase 6 cleanup
+  import('@/lib/logger').then(({ logger }) => {
+    logger.warn('Suspicious access detected but logging disabled', {
+      userId: params.userId,
+      attemptedPractice: params.attemptedPracticeId,
+      resource: params.resource
     });
-
-    if (error) {
-      import('@/lib/logger').then(({ logger }) => {
-        logger.error('Failed to log suspicious access', error);
-      });
-    }
-  } catch (error) {
-    import('@/lib/logger').then(({ logger }) => {
-      logger.error('Suspicious access logging error', error);
-    });
-  }
+  });
 }
