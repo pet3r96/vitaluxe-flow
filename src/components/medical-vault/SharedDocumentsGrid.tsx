@@ -16,6 +16,41 @@ interface SharedDocumentsGridProps {
   mode: 'patient' | 'practice';
 }
 
+interface PatientDocument {
+  id: string;
+  patient_id: string;
+  created_at: string;
+  docType: 'patient';
+  document_name?: string;
+  document_type?: string;
+  title?: string;
+  file_url?: string;
+  share_with_practice?: boolean;
+  notes?: string;
+}
+
+interface ProviderDocument {
+  id: string;
+  patient_id: string;
+  document_name: string;
+  document_type: string;
+  file_size: number;
+  is_hidden: boolean;
+  notes: string;
+  practice_id: string;
+  share_with_practice: boolean;
+  source: string;
+  uploaded_at: string;
+  uploaded_by?: string;
+  url?: string;
+  document_id?: string;
+  practice_name?: string;
+  uploaded_by_name?: string;
+  docType: 'provider';
+}
+
+type UnifiedDocument = PatientDocument | ProviderDocument;
+
 export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsGridProps) {
   const queryClient = useQueryClient();
   const [previewDoc, setPreviewDoc] = useState<any>(null);
@@ -37,13 +72,19 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
 
       if (error) throw error;
       
-      const documents = (data || []).map((item) => {
+      const documents: PatientDocument[] = (data || []).map((item) => {
         const recordData = (item.record_data || {}) as Record<string, unknown>;
         return {
           id: item.id,
           patient_id: item.patient_account_id,
-          ...recordData,
-          created_at: item.created_at
+          created_at: item.created_at,
+          docType: 'patient' as const,
+          document_name: recordData.document_name as string | undefined,
+          document_type: recordData.document_type as string | undefined,
+          title: recordData.title as string | undefined,
+          file_url: recordData.file_url as string | undefined,
+          share_with_practice: recordData.share_with_practice as boolean | undefined,
+          notes: recordData.notes as string | undefined,
         };
       });
 
@@ -166,17 +207,18 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   };
 
   // All hooks MUST be called before any conditional returns
-  const allDocs = useMemo(() => [
-    ...(patientDocs || []).map(d => ({ ...d, docType: 'patient' as const })),
-    ...(providerDocs || []).map(d => ({ ...d, docType: 'provider' as const })),
+  const allDocs = useMemo<UnifiedDocument[]>(() => [
+    ...(patientDocs || []),
+    ...((providerDocs || []).map(d => ({ ...d, docType: 'provider' as const }))),
   ], [patientDocs, providerDocs]);
 
   // Get unique document types for filter
   const documentTypes = useMemo(() => {
     const types = new Set<string>();
     allDocs.forEach(doc => {
-      if (doc.document_type) {
-        types.add(doc.document_type);
+      const docType = doc.docType === 'patient' ? doc.document_type : doc.document_type;
+      if (docType) {
+        types.add(docType);
       }
     });
     return Array.from(types).sort();
@@ -362,7 +404,9 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
                 </div>
                 
                 <h4 className="font-semibold text-sm mb-1 line-clamp-2">
-                  {doc.document_name || 'Untitled'}
+                  {doc.docType === 'patient' 
+                    ? (doc.document_name || doc.title || 'Untitled')
+                    : doc.document_name}
                 </h4>
                 
                 {doc.document_type && (
@@ -371,11 +415,9 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
                   </p>
                 )}
                 
-                {(doc.created_at || doc.uploaded_at) && (
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Uploaded: {format(new Date(doc.created_at || doc.uploaded_at), 'MMM d, yyyy')}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground mb-3">
+                  Uploaded: {format(new Date(doc.docType === 'patient' ? doc.created_at : doc.uploaded_at), 'MMM d, yyyy')}
+                </p>
 
                 {doc.notes && (
                   <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
