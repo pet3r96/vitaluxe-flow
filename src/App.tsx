@@ -90,29 +90,20 @@ const Staff = lazy(() => import("./pages/Staff"));
 const DeliveryConfirmation = lazy(() => import("./pages/DeliveryConfirmation"));
 const Downlines = lazy(() => import("./pages/Downlines"));
 const MedSpas = lazy(() => import("./pages/MedSpas"));
-const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const AppointmentDebugLogs = lazy(() => import("./pages/AppointmentDebugLogs"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const RepProfitReports = lazy(() => import("./pages/RepProfitReports"));
 const PharmacyApiLogs = lazy(() => import("./pages/PharmacyApiLogs"));
-// Phase 6: Removed Reports, Security, AdminDiscountCodes, PracticeAuditLog, AdminAlerts, InternalChat (tables dropped)
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"), "DashboardRouter");
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
-const VideoRoom = lazy(() => import("./pages/video/VideoRoom"));
 const VideoCallTest = lazy(() => import("./pages/VideoCallTest"));
-const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
 const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
-const PracticePatientMedicalVault = lazyWithRetry(
-  () => import("./pages/practice/PatientMedicalVault"),
-  "PracticePatientMedicalVault",
-);
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
