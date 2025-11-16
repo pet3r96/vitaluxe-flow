@@ -259,7 +259,7 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="font-semibold text-sm truncate">
-                            {latestMsg.patient.name}
+                            {`${latestMsg.patient.first_name} ${latestMsg.patient.last_name}`}
                           </p>
                           {unreadCount > 0 && (
                             <Badge variant="default" className="text-xs">
@@ -297,7 +297,7 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-4 border-b border-border">
               <div>
-                <h3 className="font-semibold">{selectedMessage.patient.name}</h3>
+                <h3 className="font-semibold">{`${selectedMessage.patient.first_name} ${selectedMessage.patient.last_name}`}</h3>
                 <p className="text-sm text-muted-foreground">{selectedMessage.patient.email}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -331,7 +331,7 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
                   <Card key={msg.id} className={`p-4 ${msg.sender_type === 'patient' ? 'bg-accent/50' : ''}`}>
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-medium text-sm">
-                        {msg.sender_type === 'patient' ? selectedMessage.patient.name : 'You'}
+                        {msg.sender_type === 'patient' ? `${selectedMessage.patient.first_name} ${selectedMessage.patient.last_name}` : 'You'}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(msg.created_at), 'MMM d, h:mm a')}
@@ -370,10 +370,10 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
               </div>
             )}
 
-            {selectedMessage.resolved && selectedMessage.resolution_notes && (
+            {selectedMessage.resolved && (selectedMessage as any).resolution_notes && (
               <Card className="p-4 bg-green-500/5 border-green-500/20">
                 <p className="text-sm font-medium text-green-600 mb-1">Resolution Notes:</p>
-                <p className="text-sm">{selectedMessage.resolution_notes}</p>
+                <p className="text-sm">{(selectedMessage as any).resolution_notes}</p>
                 <p className="text-xs text-muted-foreground mt-2">
                   Resolved on {format(new Date(selectedMessage.resolved_at!), 'MMM d, yyyy h:mm a')}
                 </p>
