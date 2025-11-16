@@ -458,9 +458,12 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
               />
               <p className="text-xs text-muted-foreground">bpm</p>
             </div>
-          )}
+          );
+          })()}
 
-          {(selectedVitalType === 'temperature' || (!isTimeSeriesMode && !isBasicVitalMode && vitals?.temperature)) && (
+          {(() => {
+            const vitalData = vitals ? asVital(vitals) : null;
+            return (selectedVitalType === 'temperature' || (!isTimeSeriesMode && !isBasicVitalMode && vitalData?.temperature)) && (
             <div className="space-y-2">
               <Label htmlFor="temperature">Temperature *</Label>
               <div className="flex gap-2">
@@ -538,7 +541,8 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
               />
               <p className="text-xs text-muted-foreground">mg/dL</p>
             </div>
-          )}
+          );
+          })()}
 
           {!isReadOnly && (
             <div className="flex justify-end gap-3 pt-4 border-t">

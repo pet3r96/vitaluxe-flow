@@ -5,10 +5,9 @@ import { Activity, Plus, Edit, Eye, ChevronDown, ChevronUp } from "lucide-react"
 import { format } from "date-fns";
 import { useState } from "react";
 import { VitalsDialog } from "./dialogs/VitalsDialog";
+import { VaultRecordBase } from "@/lib/vault";
 
-interface VitalRecord {
-  id: string;
-  patient_account_id: string;
+interface VitalRecord extends VaultRecordBase {
   vital_type?: string;
   height?: number;
   height_unit?: string;
@@ -24,8 +23,6 @@ interface VitalRecord {
   cholesterol?: number;
   blood_sugar?: number;
   date_recorded?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 interface VitalsSectionProps {
