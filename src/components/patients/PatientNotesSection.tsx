@@ -25,12 +25,12 @@ export function PatientNotesSection({ patientAccountId, patientName }: PatientNo
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<'all' | 'shared' | 'private'>('all');
   
-  const { data: notes = [], isLoading } = usePatientNotes(patientAccountId);
+  const { data: notes = [], isLoading } = usePatientNotes(patientAccountId) as any;
   const deleteNote = useDeletePatientNote();
   const { user } = useAuth();
 
   // Filter notes based on search and filter type
-  const filteredNotes = notes.filter(note => {
+  const filteredNotes = (notes as any)?.filter((note: any) => {
     const matchesSearch = note.note_content.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = 
       filterType === 'all' ? true :

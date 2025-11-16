@@ -21,7 +21,7 @@ const AdminAlerts = () => {
   const { data: alerts, refetch } = useQuery({
     queryKey: ["admin-alerts", typeFilter, severityFilter, resolvedFilter],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("admin_alerts")
         .select(`
           *,

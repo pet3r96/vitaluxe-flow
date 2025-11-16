@@ -62,7 +62,7 @@ export default function AdminTermsManagement() {
     let error: any = null;
 
     if (activeRole === 'patient') {
-      const res = await supabase
+      const res = await (supabase as any)
         .from('patient_portal_terms')
         .select('*')
         .order('version', { ascending: false })
@@ -106,7 +106,7 @@ export default function AdminTermsManagement() {
     setLoadingAcceptances(true);
     try {
       // 1) Fetch acceptances without embedding
-      const { data: accepts, error: aErr } = await supabase
+      const { data: accepts, error: aErr } = await (supabase as any)
         .from('user_terms_acceptances')
         .select('*')
         .order('accepted_at', { ascending: false });
