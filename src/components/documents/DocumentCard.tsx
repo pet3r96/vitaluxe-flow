@@ -37,7 +37,6 @@ export function DocumentCard({ document }: DocumentCardProps) {
 
       if (storageError) throw storageError;
 
-      // Delete record
       const { error } = await supabase
         .from("provider_documents" as any)
         .delete()

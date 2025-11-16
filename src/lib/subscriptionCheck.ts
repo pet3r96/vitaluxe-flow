@@ -1,8 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { PracticeSubscription, SubscriptionUpgradePrompt, SubscriptionStatus as SubscriptionStatusType } from "@/types/subscriptions";
 
 export interface SubscriptionStatus {
   isSubscribed: boolean;
-  status: 'trial' | 'active' | 'cancelled' | 'expired' | 'suspended' | 'payment_failed' | null;
+  status: SubscriptionStatusType | null;
   trialEndsAt: Date | null;
   currentPeriodEnd: Date | null;
   trialDaysRemaining: number | null;
@@ -11,14 +12,14 @@ export interface SubscriptionStatus {
 
 export const hasActiveSubscription = async (practiceId: string): Promise<boolean> => {
   const { data, error } = await supabase
-    .from('practice_subscriptions' as any)
+    .from('practice_subscriptions')
     .select('status, trial_ends_at, current_period_end')
     .eq('practice_id', practiceId)
     .single();
     
-  if (error || !data || typeof data !== 'object') return false;
+  if (error || !data) return false;
   
-  const subscription = data as any;
+  const subscription = data as PracticeSubscription;
   const now = new Date();
   
   if (subscription.status === 'trial' && subscription.trial_ends_at) {
@@ -36,7 +37,7 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
   console.log('[SubscriptionCheck] Checking subscription for practice:', practiceId);
   
   const { data, error } = await supabase
-    .from('practice_subscriptions' as any)
+    .from('practice_subscriptions')
     .select('status, trial_ends_at, current_period_end, grace_period_ends_at')
     .eq('practice_id', practiceId)
     .maybeSingle();
@@ -45,7 +46,7 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
     console.error('[SubscriptionCheck] Query error:', error);
   }
   
-  if (error || !data || typeof data !== 'object') {
+  if (error || !data) {
     console.log('[SubscriptionCheck] No subscription found for practice:', practiceId);
     return {
       isSubscribed: false,
@@ -57,16 +58,17 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
     };
   }
   
+  const subscription = data as PracticeSubscription;
+  
   console.log('[SubscriptionCheck] Found subscription:', {
-    status: (data as any).status,
-    trial_ends_at: (data as any).trial_ends_at,
-    current_period_end: (data as any).current_period_end
+    status: subscription.status,
+    trial_ends_at: subscription.trial_ends_at,
+    current_period_end: subscription.current_period_end
   });
   
-  const subscription = data as any;
   const now = new Date();
   let isSubscribed = false;
-  let trialDaysRemaining = null;
+  let trialDaysRemaining: number | null = null;
   
   if (subscription.status === 'trial' && subscription.trial_ends_at) {
     const trialEnd = new Date(subscription.trial_ends_at);
@@ -87,7 +89,7 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
   
   return {
     isSubscribed,
-    status: subscription.status as any,
+    status: subscription.status,
     trialEndsAt: subscription.trial_ends_at ? new Date(subscription.trial_ends_at) : null,
     currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end) : null,
     trialDaysRemaining,
@@ -106,9 +108,9 @@ export const shouldShowUpgradePrompt = async (practiceId: string): Promise<boole
     .maybeSingle();
     
   if (error) return true;
-  if (!data || typeof data !== 'object') return true;
+  if (!data) return true;
   
-  const prompt = data as any;
+  const prompt = data as unknown as SubscriptionUpgradePrompt;
   if (prompt.permanently_dismissed) return false;
   
   if (prompt.last_shown_at) {
@@ -128,14 +130,14 @@ export const updateUpgradePromptShown = async (practiceId: string): Promise<void
     .eq('practice_id', practiceId)
     .maybeSingle();
     
-  if (existing && typeof existing === 'object') {
-    const prompt = existing as any;
+  if (existing) {
+    const prompt = existing as unknown as SubscriptionUpgradePrompt & { show_count?: number };
     await supabase
       .from('subscription_upgrade_prompts' as any)
       .update({
         last_shown_at: new Date().toISOString(),
         show_count: (prompt.show_count || 0) + 1
-      })
+      } as any)
       .eq('id', prompt.id);
   } else {
     await supabase
@@ -144,7 +146,7 @@ export const updateUpgradePromptShown = async (practiceId: string): Promise<void
         practice_id: practiceId,
         last_shown_at: new Date().toISOString(),
         show_count: 1
-      });
+      } as any);
   }
 };
 
@@ -155,11 +157,11 @@ export const dismissUpgradePromptPermanently = async (practiceId: string): Promi
     .eq('practice_id', practiceId)
     .maybeSingle();
     
-  if (existing && typeof existing === 'object') {
-    const prompt = existing as any;
+  if (existing) {
+    const prompt = existing as unknown as SubscriptionUpgradePrompt;
     await supabase
       .from('subscription_upgrade_prompts' as any)
-      .update({ permanently_dismissed: true })
+      .update({ permanently_dismissed: true } as any)
       .eq('id', prompt.id);
   } else {
     await supabase
@@ -167,6 +169,6 @@ export const dismissUpgradePromptPermanently = async (practiceId: string): Promi
       .insert({
         practice_id: practiceId,
         permanently_dismissed: true
-      });
+      } as any);
   }
 };

@@ -90,7 +90,7 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
 
       const { error } = await supabase
         .from("provider_documents" as any)
-        .update(updates)
+        .update(updates as any)
         .eq("id", document.id);
 
       if (error) throw error;
