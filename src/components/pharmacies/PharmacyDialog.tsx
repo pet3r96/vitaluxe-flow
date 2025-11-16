@@ -78,8 +78,8 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
   useEffect(() => {
     const fetchAssignments = async () => {
       if (pharmacy) {
-        const { data: assignments } = await supabase
-          .from("pharmacy_rep_assignments")
+        const { data: assignments } = await (supabase
+          .from("pharmacy_rep_assignments") as any)
           .select("topline_rep_id")
           .eq("pharmacy_id", pharmacy.id);
         

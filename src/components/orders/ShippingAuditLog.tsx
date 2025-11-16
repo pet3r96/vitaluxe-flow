@@ -22,7 +22,7 @@ export const ShippingAuditLog = ({ orderLineId }: ShippingAuditLogProps) => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      return (data || []) as any[];
     },
   });
 
