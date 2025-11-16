@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { History } from "lucide-react";
 import { format } from "date-fns";
+import type { ShippingAuditLog } from "@/types/domain/database-extensions";
 
 interface ShippingAuditLogProps {
   orderLineId: string;
@@ -22,7 +23,7 @@ export const ShippingAuditLog = ({ orderLineId }: ShippingAuditLogProps) => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as unknown as ShippingAuditLog[];
     },
   });
 
