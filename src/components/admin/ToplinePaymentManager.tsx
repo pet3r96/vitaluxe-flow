@@ -171,10 +171,12 @@ const ToplinePaymentManager = () => {
         .filter(rep => selectedReps.includes(rep.topline_rep_id))
         .reduce((sum, rep) => sum + rep.total_unpaid, 0);
       
-      // Create individual topline payment records directly (without batch_number)
+      // Create individual topline payment records with batch_number
+      const batchNumber = `BATCH-${Date.now()}`;
       const paymentRecords = selectedReps.map(repId => {
         const rep = aggregatedByRep.find(r => r.topline_rep_id === repId);
         return {
+          batch_number: batchNumber,
           topline_rep_id: repId,
           total_amount: rep?.total_unpaid || 0,
           payment_method: paymentMethod,
@@ -187,7 +189,7 @@ const ToplinePaymentManager = () => {
       });
       
       const { data: payments, error: paymentsError } = await supabase
-        .from("topline_payments")
+        .from("rep_payment_batches")
         .insert(paymentRecords)
         .select();
       
@@ -209,12 +211,12 @@ const ToplinePaymentManager = () => {
         }
       }
       
-      return { batch, payments };
+      return { payments };
     },
-    onSuccess: ({ batch }) => {
+    onSuccess: ({ payments }) => {
       toast({
         title: "Payment Completed",
-        description: `Batch ${batch.batch_number} created - ${selectedReps.length} reps marked as paid`
+        description: `Payment batch created - ${selectedReps.length} reps marked as paid`
       });
       queryClient.invalidateQueries({ queryKey: ["unpaid-topline-profits"] });
       queryClient.invalidateQueries({ queryKey: ["payment-history"] });

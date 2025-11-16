@@ -16,26 +16,33 @@ export async function fetchPatientMedicalData(patientId: string): Promise<Patien
   if (accountError) throw accountError;
   if (!account) throw new Error("Patient not found or you don't have access");
 
-  const [medications, conditions, allergies, vitals, immunizations, surgeries, pharmacies, emergencyContacts] = await Promise.all([
-    supabase.from("patient_medications").select("*").eq("patient_account_id", patientId).order("created_at", { ascending: false }).limit(50),
-    supabase.from("patient_conditions").select("*").eq("patient_account_id", patientId).order("created_at", { ascending: false }).limit(50),
-    supabase.from("patient_allergies").select("*").eq("patient_account_id", patientId).order("created_at", { ascending: false }).limit(50),
-    supabase.from("patient_vitals").select("*").eq("patient_account_id", patientId).order("date_recorded", { ascending: false }).limit(20),
-    supabase.from("patient_immunizations").select("*").eq("patient_account_id", patientId).order("date_administered", { ascending: false }).limit(20),
-    supabase.from("patient_surgeries").select("*").eq("patient_account_id", patientId).order("surgery_date", { ascending: false }).limit(20),
-    supabase.from("patient_pharmacies").select("*").eq("patient_account_id", patientId).order("is_preferred", { ascending: false }).limit(10),
-    supabase.from("patient_emergency_contacts").select("*").eq("patient_account_id", patientId).order("contact_order", { ascending: true }).limit(5),
-  ]);
+  // Fetch all medical vault records
+  const { data: vaultRecords } = await supabase
+    .from("patient_medical_vault")
+    .select("*")
+    .eq("patient_account_id", patientId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  // Group records by type
+  const medications = vaultRecords?.filter(r => r.record_type === 'medication').slice(0, 50) || [];
+  const conditions = vaultRecords?.filter(r => r.record_type === 'condition').slice(0, 50) || [];
+  const allergies = vaultRecords?.filter(r => r.record_type === 'allergy').slice(0, 50) || [];
+  const vitals = vaultRecords?.filter(r => r.record_type === 'vital').slice(0, 20) || [];
+  const immunizations = vaultRecords?.filter(r => r.record_type === 'immunization').slice(0, 20) || [];
+  const surgeries = vaultRecords?.filter(r => r.record_type === 'surgery').slice(0, 20) || [];
+  const pharmacies = vaultRecords?.filter(r => r.record_type === 'pharmacy').slice(0, 10) || [];
+  const emergencyContacts = vaultRecords?.filter(r => r.record_type === 'emergency_contact').slice(0, 5) || [];
 
   return {
     account,
-    medications: medications.data || [],
-    conditions: conditions.data || [],
-    allergies: allergies.data || [],
-    vitals: vitals.data || [],
-    immunizations: immunizations.data || [],
-    surgeries: surgeries.data || [],
-    pharmacies: pharmacies.data || [],
-    emergencyContacts: emergencyContacts.data || [],
+    medications,
+    conditions,
+    allergies,
+    vitals,
+    immunizations,
+    surgeries,
+    pharmacies,
+    emergencyContacts,
   };
 }
