@@ -24,8 +24,8 @@ interface PracticeNotificationSettingsProps {
 export function PracticeNotificationSettings({ practiceId }: PracticeNotificationSettingsProps) {
   const { settings, isLoading, updateSettings, isUpdating } = usePracticeNotificationSettings(practiceId);
   
-  const [localEmailEnabled, setLocalEmailEnabled] = useState(settings?.enable_email_notifications ?? true);
-  const [localSmsEnabled, setLocalSmsEnabled] = useState(settings?.enable_sms_notifications ?? true);
+  const [localEmailEnabled, setLocalEmailEnabled] = useState((settings as any)?.enable_email_notifications ?? true);
+  const [localSmsEnabled, setLocalSmsEnabled] = useState((settings as any)?.enable_sms_notifications ?? true);
   const [showDisableDialog, setShowDisableDialog] = useState(false);
   const [pendingChange, setPendingChange] = useState<{ type: 'email' | 'sms'; value: boolean } | null>(null);
 
@@ -72,8 +72,8 @@ export function PracticeNotificationSettings({ practiceId }: PracticeNotificatio
   };
 
   const hasChanges = 
-    localEmailEnabled !== settings?.enable_email_notifications ||
-    localSmsEnabled !== settings?.enable_sms_notifications;
+    localEmailEnabled !== (settings as any)?.enable_email_notifications ||
+    localSmsEnabled !== (settings as any)?.enable_sms_notifications;
 
   if (isLoading) {
     return (
