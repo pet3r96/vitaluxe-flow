@@ -53,61 +53,61 @@ const AdminProfitReports = () => {
 
   // Filter data based on Rx selection
   const filteredProfitDetails = useMemo(() => {
-    if (!profitDetails) return [];
-    
+    if (!profitDetails) return [] as any[];
+    const source = profitDetails as any[];
     if (rxFilter === "non-rx") {
-      return profitDetails.filter(item => !item.is_rx_required);
+      return source.filter((item: any) => !(item as any).is_rx_required);
     } else if (rxFilter === "rx-only") {
-      return profitDetails.filter(item => item.is_rx_required);
+      return source.filter((item: any) => (item as any).is_rx_required);
     }
-    return profitDetails;
+    return source;
   }, [profitDetails, rxFilter]);
 
   const totalAdminProfit = useMemo(() => 
-    filteredProfitDetails
-      ?.filter(item => item.orders?.status !== 'cancelled')
-      .reduce((sum, item) => 
-        sum + parseFloat(item.admin_profit?.toString() || '0'), 0
+    (filteredProfitDetails as any)
+      ?.filter((item: any) => (item as any).orders?.status !== 'cancelled')
+      .reduce((sum: number, item: any) => 
+        sum + parseFloat(((item as any).admin_profit?.toString() || '0')), 0
       ) || 0,
     [filteredProfitDetails]
   );
 
   const pendingAdminProfit = useMemo(() => 
-    filteredProfitDetails
-      ?.filter(item => ['pending', 'processing'].includes(item.orders?.status || '') && item.orders?.status !== 'cancelled')
-      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+    (filteredProfitDetails as any)
+      ?.filter((item: any) => ['pending', 'processing'].includes(((item as any).orders?.status || '')) && (item as any).orders?.status !== 'cancelled')
+      .reduce((sum: number, item: any) => sum + parseFloat(((item as any).admin_profit?.toString() || '0')), 0) || 0,
     [filteredProfitDetails]
   );
 
   const collectedAdminProfit = useMemo(() => 
-    filteredProfitDetails
-      ?.filter(item => ['shipped', 'delivered'].includes(item.orders?.status || '') && item.orders?.status !== 'cancelled')
-      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+    (filteredProfitDetails as any)
+      ?.filter((item: any) => ['shipped', 'delivered'].includes(((item as any).orders?.status || '')) && (item as any).orders?.status !== 'cancelled')
+      .reduce((sum: number, item: any) => sum + parseFloat(((item as any).admin_profit?.toString() || '0')), 0) || 0,
     [filteredProfitDetails]
   );
 
   // Channel-specific profit calculations
   const directProfit = useMemo(() => 
-    filteredProfitDetails
-      ?.filter(item => item.orders?.status !== 'cancelled')
-      .filter(item => !item.topline_id && !item.downline_id)
-      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+    (filteredProfitDetails as any)
+      ?.filter((item: any) => (item as any).orders?.status !== 'cancelled')
+      .filter((item: any) => !(item as any).topline_id && !(item as any).downline_id)
+      .reduce((sum: number, item: any) => sum + parseFloat(((item as any).admin_profit?.toString() || '0')), 0) || 0,
     [filteredProfitDetails]
   );
 
   const toplineOnlyProfit = useMemo(() => 
-    filteredProfitDetails
-      ?.filter(item => item.orders?.status !== 'cancelled')
-      .filter(item => item.topline_id && !item.downline_id)
-      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+    (filteredProfitDetails as any)
+      ?.filter((item: any) => (item as any).orders?.status !== 'cancelled')
+      .filter((item: any) => (item as any).topline_id && !(item as any).downline_id)
+      .reduce((sum: number, item: any) => sum + parseFloat(((item as any).admin_profit?.toString() || '0')), 0) || 0,
     [filteredProfitDetails]
   );
 
   const fullNetworkProfit = useMemo(() => 
-    filteredProfitDetails
-      ?.filter(item => item.orders?.status !== 'cancelled')
-      .filter(item => item.topline_id && item.downline_id)
-      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+    (filteredProfitDetails as any)
+      ?.filter((item: any) => (item as any).orders?.status !== 'cancelled')
+      .filter((item: any) => (item as any).topline_id && (item as any).downline_id)
+      .reduce((sum: number, item: any) => sum + parseFloat(((item as any).admin_profit?.toString() || '0')), 0) || 0,
     [filteredProfitDetails]
   );
 

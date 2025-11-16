@@ -30,14 +30,14 @@ export function PatientNotesSection({ patientAccountId, patientName }: PatientNo
   const { user } = useAuth();
 
   // Filter notes based on search and filter type
-  const filteredNotes = notes.filter(note => {
-    const matchesSearch = note.note_content.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredNotes = (notes as any)?.filter?.((note: any) => {
+    const matchesSearch = (note.note_content || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = 
       filterType === 'all' ? true :
       filterType === 'shared' ? note.share_with_patient :
       !note.share_with_patient;
     return matchesSearch && matchesFilter;
-  });
+  }) || [];
 
   const handleEdit = (note: PatientNote) => {
     setSelectedNote(note);
