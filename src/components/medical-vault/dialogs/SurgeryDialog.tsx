@@ -55,9 +55,9 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
         mode,
       });
       
-      const formattedData = {
+      const recordData = {
         surgery_type: data.surgery_type,
-        surgery_date: `${data.surgery_date}-01`, // Convert YYYY-MM to YYYY-MM-01
+        surgery_date: `${data.surgery_date}-01`,
         surgeon_name: null,
         hospital: null,
         notes: null,
@@ -65,8 +65,8 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
 
       if (mode === "edit" && surgery) {
         const { error } = await supabase
-          .from("patient_surgeries")
-          .update({ ...formattedData, updated_at: new Date().toISOString() })
+          .from("patient_medical_vault")
+          .update({ record_data: recordData, updated_at: new Date().toISOString() })
           .eq("id", surgery.id);
         
         if (error) {
@@ -76,13 +76,14 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
         console.log('[SurgeryDialog] UPDATE success');
       } else {
         const { error } = await supabase
-          .from("patient_surgeries")
+          .from("patient_medical_vault")
           .insert({
-            ...formattedData,
+            record_type: "surgery",
+            record_data: recordData,
             patient_account_id: patientAccountId,
-            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
-            added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+            created_by_user_id: authUser.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         
         if (error) {
           console.error('[SurgeryDialog] INSERT failed:', {

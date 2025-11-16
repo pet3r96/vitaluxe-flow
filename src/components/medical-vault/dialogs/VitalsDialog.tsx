@@ -179,19 +179,17 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
 
       if (mode === "edit" && vitals) {
         const { error } = await supabase
-          .from("patient_vitals")
-          .update({ ...formattedData, updated_at: new Date().toISOString() })
+          .from("patient_medical_vault")
+          .update({ record_data: formattedData, updated_at: new Date().toISOString() })
           .eq("id", vitals.id);
         if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
       } else if (isBasicVitalMode && vitals) {
         // Update existing height/weight record
         const { error } = await supabase
-          .from("patient_vitals")
-          .update({ ...formattedData, updated_at: new Date().toISOString() })
+          .from("patient_medical_vault")
+          .update({ record_data: formattedData, updated_at: new Date().toISOString() })
           .eq("id", vitals.id);
         if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
       } else {
         // Get the authenticated user ID for RLS compliance
         const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -206,13 +204,14 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
         
         // Insert new record
         const { error } = await supabase
-          .from("patient_vitals")
+          .from("patient_medical_vault")
           .insert({
-            ...formattedData,
+            record_type: "vital",
+            record_data: formattedData,
             patient_account_id: patientAccountId,
-            added_by_user_id: authUser.id,  // Use authUser.id instead of user?.id
-            added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+            created_by_user_id: authUser.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         
         if (error) {
           console.error('[VitalsDialog] Insert error:', {
@@ -225,11 +224,10 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
         }
         
         console.log('[VitalsDialog] Insert successful');
-        // Success! No need to verify with SELECT - RLS may block read-after-write
       }
     },
     {
-      queryKey: ["patient-vitals", patientAccountId],
+      queryKey: ["patient-medical-vault", patientAccountId],
       updateFn: (oldData: any, variables) => {
         if (mode === "edit" || (isBasicVitalMode && vitals)) {
           return oldData?.map((item: any) =>

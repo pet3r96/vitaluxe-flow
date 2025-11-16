@@ -64,7 +64,7 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
         mode,
       });
       
-      const formattedData = {
+      const recordData = {
         name: data.name,
         relationship: data.relationship,
         phone: data.phone,
@@ -75,8 +75,8 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
 
       if (mode === "edit" && contact) {
         const { error } = await supabase
-          .from("patient_emergency_contacts")
-          .update({ ...formattedData, updated_at: new Date().toISOString() })
+          .from("patient_medical_vault")
+          .update({ record_data: recordData, updated_at: new Date().toISOString() })
           .eq("id", contact.id);
         
         if (error) {
@@ -86,13 +86,14 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
         console.log('[EmergencyContactDialog] UPDATE success');
       } else {
         const { error } = await supabase
-          .from("patient_emergency_contacts")
+          .from("patient_medical_vault")
           .insert({
-            ...formattedData,
+            record_type: "emergency_contact",
+            record_data: recordData,
             patient_account_id: patientAccountId,
-            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
-            added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+            created_by_user_id: authUser.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         
         if (error) {
           console.error('[EmergencyContactDialog] INSERT failed:', {

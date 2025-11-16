@@ -103,7 +103,7 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
       // Convert YYYY-MM to YYYY-MM-01 for database storage
       const fullDate = data.date_diagnosed + "-01";
       
-      const formattedData = {
+      const recordData = {
         condition_name: data.condition_name,
         description: data.description || null,
         date_diagnosed: fullDate,
@@ -115,8 +115,8 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
 
       if (mode === "edit" && condition) {
         const { error } = await supabase
-          .from("patient_conditions")
-          .update({ ...formattedData, updated_at: new Date().toISOString() })
+          .from("patient_medical_vault")
+          .update({ record_data: recordData, updated_at: new Date().toISOString() })
           .eq("id", condition.id);
         
         if (error) {
@@ -130,14 +130,15 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
         console.log('[ConditionDialog] UPDATE success');
       } else {
         const { error } = await supabase
-          .from("patient_conditions")
+          .from("patient_medical_vault")
           .insert({
-            ...formattedData,
+            record_type: "condition",
+            record_data: recordData,
             patient_account_id: patientAccountId,
             is_active: true,
-            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
-            added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+            created_by_user_id: authUser.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         
         if (error) {
           console.error('[ConditionDialog] INSERT failed:', {

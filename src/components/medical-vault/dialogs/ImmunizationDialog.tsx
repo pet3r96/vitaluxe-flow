@@ -65,8 +65,8 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
 
       if (mode === "edit" && immunization) {
         const { error } = await supabase
-          .from("patient_immunizations")
-          .update({ ...formattedData, updated_at: new Date().toISOString() })
+          .from("patient_medical_vault")
+          .update({ record_data: formattedData, updated_at: new Date().toISOString() })
           .eq("id", immunization.id);
         
         if (error) {
@@ -76,13 +76,14 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
         console.log('[ImmunizationDialog] UPDATE success');
       } else {
         const { error } = await supabase
-          .from("patient_immunizations")
+          .from("patient_medical_vault")
           .insert({
-            ...formattedData,
+            record_type: "immunization",
+            record_data: formattedData,
             patient_account_id: patientAccountId,
-            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
-            added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+            created_by_user_id: authUser.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         
         if (error) {
           console.error('[ImmunizationDialog] INSERT failed:', {

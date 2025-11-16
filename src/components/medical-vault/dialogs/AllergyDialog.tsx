@@ -104,15 +104,21 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
   const mutation = useOptimisticMutation(
     async (data: AllergyFormData) => {
       // Check for conflicts before submission
-      const { data: existingAllergies } = await supabase
-        .from("patient_allergies")
-        .select("id, nka")
+      const { data: existingRecords } = await supabase
+        .from("patient_medical_vault")
+        .select("id, record_data")
         .eq("patient_account_id", patientAccountId)
+        .eq("record_type", "allergy")
         .eq("is_active", true);
+
+      const existingAllergies = existingRecords?.map(r => ({ 
+        id: r.id, 
+        nka: (r.record_data as any)?.nka || false 
+      })) || [];
 
       // If adding NKA, check for existing specific allergies
       if (data.nka) {
-        const hasSpecificAllergies = existingAllergies?.some(a => 
+        const hasSpecificAllergies = existingAllergies.some(a => 
           !a.nka && (mode !== "edit" || a.id !== allergy?.id)
         );
         if (hasSpecificAllergies) {
@@ -120,7 +126,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
         }
       } else {
         // If adding specific allergy, check for existing NKA
-        const hasNKA = existingAllergies?.some(a => 
+        const hasNKA = existingAllergies.some(a => 
           a.nka && (mode !== "edit" || a.id !== allergy?.id)
         );
         if (hasNKA) {
@@ -131,7 +137,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
       // Convert YYYY-MM to YYYY-MM-01 for database storage
       const fullDate = data.date_recorded ? data.date_recorded + "-01" : new Date().toISOString().substring(0, 7) + "-01";
       
-      const formattedData = {
+      const recordData = {
         nka: data.nka || false,
         allergen_name: data.allergen_name || null,
         reaction_type: data.reaction_type || null,
@@ -142,27 +148,26 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
 
       if (mode === "edit" && allergy) {
         const { error } = await supabase
-          .from("patient_allergies")
-          .update({ ...formattedData, updated_at: new Date().toISOString() })
+          .from("patient_medical_vault")
+          .update({ record_data: recordData, updated_at: new Date().toISOString() })
           .eq("id", allergy.id);
         if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
       } else {
         const { error } = await supabase
-          .from("patient_allergies")
+          .from("patient_medical_vault")
           .insert({
-            ...formattedData,
+            record_type: "allergy",
+            record_data: recordData,
             patient_account_id: patientAccountId,
             is_active: true,
-            added_by_user_id: user?.id,
-            added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+            created_by_user_id: user?.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         if (error) throw error;
-        // Success! No need to verify with SELECT - RLS may block read-after-write
       }
     },
     {
-      queryKey: ["patient-allergies", patientAccountId],
+      queryKey: ["patient-medical-vault", patientAccountId],
       updateFn: (oldData: any, variables) => {
         if (mode === "edit") {
           return oldData?.map((item: any) =>
