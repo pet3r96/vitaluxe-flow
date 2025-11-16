@@ -91,7 +91,7 @@ export default function PatientChartDrawer({ open, onClose, patientId }: Props) 
       const userName = profile?.full_name || profile?.name || "Provider";
       const userRole = profile?.staff_role_type || "provider";
 
-      const { error } = await (supabase as any).from("patient_notes").insert({
+      const { error } = await supabase.from("patient_notes").insert({
         patient_account_id: patientId,
         note_content: noteText,
         created_by_user_id: user.id,

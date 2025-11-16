@@ -41,8 +41,7 @@ export function usePatientNotes(patientAccountId: string | undefined) {
     queryKey: ['patient-notes', patientAccountId],
     queryFn: async () => {
       if (!patientAccountId) return [];
-      // TODO: Remove (as any) when patient_notes is added to Supabase types
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('patient_notes')
         .select('*')
         .eq('patient_account_id', patientAccountId)
@@ -66,7 +65,7 @@ export function useSharedPatientNotes(patientAccountId: string | undefined) {
     queryKey: ['patient-shared-notes', patientAccountId],
     queryFn: async () => {
       if (!patientAccountId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('patient_notes')
         .select('*')
         .eq('patient_account_id', patientAccountId)
@@ -91,8 +90,7 @@ export function useCreatePatientNote() {
   
   return useMutation({
     mutationFn: async (noteData: CreatePatientNoteInput) => {
-      // TODO: Remove (as any) when patient_notes is added to Supabase types
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('patient_notes')
         .insert(noteData)
         .select()
@@ -124,8 +122,7 @@ export function useUpdatePatientNote() {
   
   return useMutation({
     mutationFn: async ({ id, note_content, share_with_patient, last_edited_by_user_id, last_edited_by_name }: UpdatePatientNoteInput) => {
-      // TODO: Remove (as any) when patient_notes is added to Supabase types
-      const { data, error} = await (supabase as any)
+      const { data, error} = await supabase
         .from('patient_notes')
         .update({
           note_content,
@@ -161,8 +158,7 @@ export function useDeletePatientNote() {
   
   return useMutation({
     mutationFn: async ({ id, patientAccountId }: { id: string; patientAccountId: string }) => {
-      // TODO: Remove (as any) when patient_notes is added to Supabase types
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('patient_notes')
         .update({ is_active: false })
         .eq('id', id);
