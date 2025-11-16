@@ -121,7 +121,6 @@ const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointmen
 const InternalChat = lazy(() => import("./pages/InternalChat"));
 const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
 const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
-const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
 const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
 const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
@@ -136,7 +135,6 @@ const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"))
 const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
-const PatientDetail = lazyWithRetry(() => import("./pages/PatientDetail"), "PatientDetail");
 const PracticePatientMedicalVault = lazyWithRetry(
   () => import("./pages/practice/PatientMedicalVault"),
   "PracticePatientMedicalVault",
