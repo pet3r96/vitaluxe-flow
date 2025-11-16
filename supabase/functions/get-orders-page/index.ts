@@ -465,14 +465,15 @@ serve(async (req) => {
       
       const allRepIds = [repData.id, ...(downlineReps?.map(r => r.id) || [])];
       
-      // Get all practices linked to these reps
-      const { data: practiceLinks } = await supabase
-        .from('rep_practice_links')
-        .select('practice_id')
-        .in('rep_id', allRepIds)
+      // Get all practices linked to these reps via profiles.linked_topline_id
+      const { data: linkedProfiles } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('linked_topline_id', allRepIds)
+        .eq('role', 'practice')
         .limit(5000);
       
-      const practiceIds = [...new Set(practiceLinks?.map(pl => pl.practice_id) || [])];
+      const practiceIds = [...new Set(linkedProfiles?.map(p => p.id) || [])];
       
       if (practiceIds.length === 0) {
         console.warn('[get-orders-page] No practices linked to topline/downlines:', repData.id);
