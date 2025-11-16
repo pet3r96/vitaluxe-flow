@@ -56,8 +56,8 @@ export function PatientEngagementSummaryCard({
       const nowIso = new Date().toISOString();
       
       const [notes, plans, upcoming, followups, docs] = await Promise.all([
-        (supabase
-          .from("patient_notes") as any)
+        ((supabase as any)
+          .from("patient_notes")
           .select("id", { count: "exact", head: true })
           .eq("patient_account_id", patientAccountId)
           .eq("is_active", true),
@@ -75,7 +75,7 @@ export function PatientEngagementSummaryCard({
               .gte("start_time", nowIso)
               .in("status", ["scheduled", "confirmed", "pending", "checked_in", "being_treated"])
           : Promise.resolve({ count: 0 }),
-        supabase
+        (supabase as any)
           .from("patient_follow_ups")
           .select("id", { count: "exact", head: true })
           .eq("patient_id", patientAccountId),
