@@ -122,42 +122,47 @@ Deno.serve(async (req) => {
       recentAppointmentsRes,
       recentMessagesRes,
     ] = await Promise.all([
-      // Medical vault data (8 queries)
+      // Medical vault data - using patient_medical_vault with record_type filters
       supabaseClient
-        .from('patient_medications')
+        .from('patient_medical_vault')
         .select('id')
         .eq('patient_account_id', patientAccount.id)
-        .eq('is_active', true),
+        .eq('record_type', 'medication'),
       supabaseClient
-        .from('patient_allergies')
+        .from('patient_medical_vault')
         .select('id')
         .eq('patient_account_id', patientAccount.id)
-        .eq('is_active', true),
+        .eq('record_type', 'allergy'),
       supabaseClient
-        .from('patient_conditions')
+        .from('patient_medical_vault')
         .select('id')
         .eq('patient_account_id', patientAccount.id)
-        .eq('is_active', true),
+        .eq('record_type', 'condition'),
       supabaseClient
-        .from('patient_surgeries')
+        .from('patient_medical_vault')
         .select('id')
-        .eq('patient_account_id', patientAccount.id),
+        .eq('patient_account_id', patientAccount.id)
+        .eq('record_type', 'surgery'),
       supabaseClient
-        .from('patient_immunizations')
+        .from('patient_medical_vault')
         .select('id')
-        .eq('patient_account_id', patientAccount.id),
+        .eq('patient_account_id', patientAccount.id)
+        .eq('record_type', 'immunization'),
       supabaseClient
-        .from('patient_vitals')
+        .from('patient_medical_vault')
         .select('id')
-        .eq('patient_account_id', patientAccount.id),
+        .eq('patient_account_id', patientAccount.id)
+        .eq('record_type', 'vital'),
       supabaseClient
-        .from('patient_pharmacies')
+        .from('patient_medical_vault')
         .select('id')
-        .eq('patient_account_id', patientAccount.id),
+        .eq('patient_account_id', patientAccount.id)
+        .eq('record_type', 'pharmacy'),
       supabaseClient
-        .from('patient_emergency_contacts')
+        .from('patient_medical_vault')
         .select('id')
-        .eq('patient_account_id', patientAccount.id),
+        .eq('patient_account_id', patientAccount.id)
+        .eq('record_type', 'emergency_contact'),
       supabaseClient
         .from('patient_medical_vault')
         .select('id, blood_type, updated_at')
