@@ -1861,6 +1861,7 @@ export type Database = {
           created_at: string | null
           id: string
           message_type: string | null
+          metadata: Json | null
           sender_id: string
           thread_id: string
         }
@@ -1869,6 +1870,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           message_type?: string | null
+          metadata?: Json | null
           sender_id: string
           thread_id: string
         }
@@ -1877,6 +1879,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           message_type?: string | null
+          metadata?: Json | null
           sender_id?: string
           thread_id?: string
         }
@@ -2774,6 +2777,7 @@ export type Database = {
           payment_method_used: string | null
           payment_status: string | null
           practice_address: string | null
+          practice_id: string | null
           report_notes: string | null
           ship_to: string | null
           shipping_total: number | null
@@ -2806,6 +2810,7 @@ export type Database = {
           payment_method_used?: string | null
           payment_status?: string | null
           practice_address?: string | null
+          practice_id?: string | null
           report_notes?: string | null
           ship_to?: string | null
           shipping_total?: number | null
@@ -2838,6 +2843,7 @@ export type Database = {
           payment_method_used?: string | null
           payment_status?: string | null
           practice_address?: string | null
+          practice_id?: string | null
           report_notes?: string | null
           ship_to?: string | null
           shipping_total?: number | null
@@ -2871,6 +2877,20 @@ export type Database = {
             columns: ["payment_method_id"]
             isOneToOne: false
             referencedRelation: "practice_payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
         ]
@@ -4533,6 +4553,83 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          created_at: string
+          id: string
+          patient_account_id: string
+          practice_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          patient_account_id: string
+          practice_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          patient_account_id?: string
+          practice_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patients_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: true
+            referencedRelation: "patient_account_health"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "patients_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: true
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: true
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: true
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patients_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: true
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "patients_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
           },
         ]
       }
