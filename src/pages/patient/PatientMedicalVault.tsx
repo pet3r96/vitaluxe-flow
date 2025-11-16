@@ -161,11 +161,12 @@ export default function PatientMedicalVault() {
     queryKey: ["patient-pharmacies", patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return [];
-      const { data, error } = await (supabase as any)
-        .from("patient_pharmacies" as any)
+      const { data, error } = await supabase
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
-        .order("is_preferred", { ascending: false });
+        .eq("record_type", "pharmacy")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -177,11 +178,12 @@ export default function PatientMedicalVault() {
     queryKey: ["patient-emergency-contacts", patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return [];
-      const { data, error } = await (supabase as any)
-        .from("patient_emergency_contacts" as any)
+      const { data, error } = await supabase
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
-        .order("contact_order", { ascending: true });
+        .eq("record_type", "emergency_contact")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -210,8 +212,8 @@ export default function PatientMedicalVault() {
         vitals || [],
         immunizations as any || [],
         surgeries || [],
-        pharmacies || [],
-        emergencyContacts || []
+        pharmacies as any || [],
+        emergencyContacts as any || []
       );
       
       // In-app preview (dialog) using object/embed for better compatibility
@@ -307,8 +309,8 @@ export default function PatientMedicalVault() {
         vitals || [],
         immunizations as any || [],
         surgeries || [],
-        pharmacies || [],
-        emergencyContacts || []
+        pharmacies as any || [],
+        emergencyContacts as any || []
       );
       const pdfUrl = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
