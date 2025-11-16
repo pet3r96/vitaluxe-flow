@@ -300,7 +300,7 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
       
       // Update auth context
       if (isSetup && auth.mark2FAEnrolled) {
-        auth.mark2FAEnrolled(normalizedPhone);
+        auth.mark2FAEnrolled();
       } else {
         auth.mark2FAVerified();
       }

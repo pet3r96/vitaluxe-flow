@@ -11,8 +11,8 @@ export function useUser() {
 }
 
 export function useRole() {
-  const { userRole, effectiveRole, actualRole, impersonatedRole } = useAuthContext();
-  return { userRole, effectiveRole, actualRole, impersonatedRole };
+  const { userRole, effectiveRole, impersonatedRole } = useAuthContext();
+  return { userRole, effectiveRole, impersonatedRole };
 }
 
 export function useSession() {
