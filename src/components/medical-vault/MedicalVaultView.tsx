@@ -108,7 +108,7 @@ export function MedicalVaultView({
   // Fetch all medical data from patient_medical_vault
   const { data: medications } = useQuery({
     queryKey: ["patient-medications", patientAccountId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any[]> => {
       const { data, error } = await supabase
         .from("patient_medical_vault")
         .select("id, record_data, created_at")
