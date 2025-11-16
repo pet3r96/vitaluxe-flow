@@ -7,7 +7,7 @@ export const usePharmacyShippingRates = (pharmacyId: string | null) => {
     queryFn: async () => {
       if (!pharmacyId) return {};
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('pharmacy_shipping_rates')
         .select('shipping_speed, rate, enabled')
         .eq('pharmacy_id', pharmacyId)
@@ -17,7 +17,7 @@ export const usePharmacyShippingRates = (pharmacyId: string | null) => {
       
       // Convert to map: { ground: 15.00, 2day: 25.00, overnight: 40.00 }
       const rateMap: Record<string, number> = {};
-      data?.forEach(rate => {
+      (data as any)?.forEach((rate: any) => {
         rateMap[rate.shipping_speed] = rate.rate;
       });
       
@@ -25,5 +25,5 @@ export const usePharmacyShippingRates = (pharmacyId: string | null) => {
     },
     enabled: !!pharmacyId,
     staleTime: 5 * 60 * 1000,
-  });
+  } as any);
 };

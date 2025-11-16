@@ -39,7 +39,7 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
     queryKey: ["patient-emergency-contacts", patientAccountId],
     queryFn: async () => {
       if (!patientAccountId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccountId)

@@ -1208,10 +1208,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Check if user has temp_password flag set
       const hasTempPassword = profileResult.data?.temp_password || false;
-      const mustChange = passwordStatusResult.data?.must_change_password || false;
+      const mustChange = (passwordStatusResult.data as any)?.must_change_password || false;
       
       // Check if terms are accepted - either in user_password_status OR patient_terms_acceptances
-      const termsAcceptInStatus = passwordStatusResult.data?.terms_accepted || false;
+      const termsAcceptInStatus = (passwordStatusResult.data as any)?.terms_accepted || false;
       const hasPatientTermsAcceptance = patientTermsResult.data !== null;
       const termsAccept = termsAcceptInStatus || hasPatientTermsAcceptance;
 

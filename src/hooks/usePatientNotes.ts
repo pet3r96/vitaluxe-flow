@@ -41,8 +41,8 @@ export function usePatientNotes(patientAccountId: string | undefined) {
     queryKey: ['patient-notes', patientAccountId],
     queryFn: async () => {
       if (!patientAccountId) return [];
-      const { data, error } = await (supabase
-        .from('patient_notes') as any)
+      const { data, error } = await (supabase as any)
+        .from('patient_notes')
         .select('*')
         .eq('patient_account_id', patientAccountId)
         .eq('is_active', true)
@@ -56,7 +56,7 @@ export function usePatientNotes(patientAccountId: string | undefined) {
       return data as unknown as PatientNote[];
     },
     enabled: !!patientAccountId,
-  });
+  } as any);
 }
 
 // Fetch shared notes only (for patient view)
@@ -65,8 +65,8 @@ export function useSharedPatientNotes(patientAccountId: string | undefined) {
     queryKey: ['patient-shared-notes', patientAccountId],
     queryFn: async () => {
       if (!patientAccountId) return [];
-      const { data, error } = await (supabase
-        .from('patient_notes') as any)
+      const { data, error } = await (supabase as any)
+        .from('patient_notes')
         .select('*')
         .eq('patient_account_id', patientAccountId)
         .eq('is_active', true)
@@ -81,7 +81,7 @@ export function useSharedPatientNotes(patientAccountId: string | undefined) {
       return data as unknown as PatientNote[];
     },
     enabled: !!patientAccountId,
-  });
+  } as any);
 }
 
 // Create note mutation
@@ -90,8 +90,8 @@ export function useCreatePatientNote() {
   
   return useMutation({
     mutationFn: async (noteData: CreatePatientNoteInput) => {
-      const { data, error } = await (supabase
-        .from('patient_notes') as any)
+      const { data, error } = await (supabase as any)
+        .from('patient_notes')
         .insert(noteData)
         .select()
         .single();
@@ -122,8 +122,8 @@ export function useUpdatePatientNote() {
   
   return useMutation({
     mutationFn: async ({ id, note_content, share_with_patient, last_edited_by_user_id, last_edited_by_name }: UpdatePatientNoteInput) => {
-      const { data, error} = await (supabase
-        .from('patient_notes') as any)
+      const { data, error} = await (supabase as any)
+        .from('patient_notes')
         .update({
           note_content,
           share_with_patient,
@@ -158,8 +158,8 @@ export function useDeletePatientNote() {
   
   return useMutation({
     mutationFn: async ({ id, patientAccountId }: { id: string; patientAccountId: string }) => {
-      const { error } = await (supabase
-        .from('patient_notes') as any)
+      const { error } = await (supabase as any)
+        .from('patient_notes')
         .update({ is_active: false })
         .eq('id', id);
       

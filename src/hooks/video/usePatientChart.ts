@@ -23,7 +23,7 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("patient_notes")
         .insert({
           patient_account_id: patientId,
@@ -47,7 +47,7 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
   // Update vital signs
   const updateVital = useCallback(async (vital: any) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("patient_medical_vault")
         .insert({
           patient_account_id: patientId,
@@ -87,7 +87,7 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
         .getPublicUrl(filePath);
 
       // Save document record
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("patient_documents")
         .insert({
           patient_id: patientId,
