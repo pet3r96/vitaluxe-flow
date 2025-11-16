@@ -105,7 +105,7 @@ const AppointmentDebugLogs = lazy(() => import("./pages/AppointmentDebugLogs"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const MyDownlines = lazy(() => import("./pages/MyDownlines"));
 const RepProfitReports = lazy(() => import("./pages/RepProfitReports"));
-const ChangePassword = lazy(() => import("./pages/ChangePassword"));
+// Phase 6: ChangePassword removed (user_password_status table dropped)
 const AcceptTerms = lazy(() => import("./pages/AcceptTerms"));
 const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
 const PharmacyApiLogs = lazy(() => import("./pages/PharmacyApiLogs"));
@@ -266,7 +266,7 @@ const App = () => {
                               <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
                                 <AppSidebar />
                                 <main className="flex-1 flex flex-col overflow-y-auto">
-                                  <PatientMobileHeader />
+                                  {/* Phase 6: PatientMobileHeader removed */}
                                   <Topbar />
                                   <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 pt-14 md:pt-4 overflow-x-hidden relative bg-gray-100 dark:bg-stone-900 rounded-none">
                                     <div className="relative z-10">
@@ -322,8 +322,7 @@ const App = () => {
                                             {/* Phase 6: Removed /admin/discount-codes, /admin/practice-audit, /admin/alerts (pages deleted) */}
                                             <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
                                             <Route path="/rep-reports" element={<RepProfitReports />} />
-                                            <Route path="/rep-productivity" element={<RepProductivityReport />} />
-                                            <Route path="/downline-performance" element={<DownlinePerformanceView />} />
+                                            {/* Phase 6: /rep-productivity and /downline-performance removed (reports deleted) */}
                                             <Route path="/shipping" element={<PharmacyShipping />} />
                                             <Route path="/appointments" element={<PatientAppointments />} />
                                             {/* Phase 6: /medical-vault removed (PatientMedicalVault deleted) */}
