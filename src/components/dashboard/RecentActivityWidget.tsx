@@ -5,22 +5,29 @@ import { Activity, FileText, Calendar, Package, CheckCircle } from "lucide-react
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
+interface ActivityItem {
+  type: string;
+  icon: any;
+  description: string;
+  time: string;
+}
+
 interface RecentActivityWidgetProps {
   className?: string;
-  activities?: any[];
+  activities?: ActivityItem[];
   isPharmacy?: boolean;
 }
 
 export function RecentActivityWidget({ className, activities: externalActivities, isPharmacy }: RecentActivityWidgetProps) {
   const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
   
-  const { data: activities, isLoading } = useQuery({
+  const { data: activities, isLoading } = useQuery<ActivityItem[]>({
     queryKey: ["recent-activity", effectivePracticeId, effectiveRole, effectiveUserId],
     enabled: !externalActivities && !!effectiveUserId,
     staleTime: 2 * 60 * 1000, // 2 minutes cache
     refetchOnWindowFocus: false,
     queryFn: async () => {
-      if (!effectiveUserId) return [] as any[];
+      if (!effectiveUserId) return [];
       
       // For pharmacies, get orders and messages
       if (effectiveRole === 'pharmacy') {
@@ -44,7 +51,7 @@ export function RecentActivityWidget({ className, activities: externalActivities
           .order('updated_at', { ascending: false })
           .limit(10);
 
-        const combined: any[] = [];
+        const combined: ActivityItem[] = [];
         const seenOrders = new Set();
 
         orderLines?.forEach((line: any) => {

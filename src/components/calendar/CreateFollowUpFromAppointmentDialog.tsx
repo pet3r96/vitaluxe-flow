@@ -21,11 +21,13 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { addDays, addWeeks, addMonths, format } from "date-fns";
+import { AppointmentWithRelations } from "@/types/appointments";
+import { PracticeAssignableUser } from "@/types/practiceStaff";
 
 interface CreateFollowUpFromAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  appointment: any;
+  appointment: AppointmentWithRelations;
 }
 
 export function CreateFollowUpFromAppointmentDialog({
@@ -47,7 +49,7 @@ export function CreateFollowUpFromAppointmentDialog({
     },
   });
 
-  const { data: staffMembers } = useQuery({
+  const { data: staffMembers } = useQuery<PracticeAssignableUser[]>({
     queryKey: ["staff-members", appointment?.practice_id],
     queryFn: async () => {
       if (!appointment?.practice_id) return [];
@@ -55,7 +57,7 @@ export function CreateFollowUpFromAppointmentDialog({
         p_practice_id: appointment.practice_id,
       });
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!appointment?.practice_id,
   });
@@ -91,8 +93,9 @@ export function CreateFollowUpFromAppointmentDialog({
       toast.success("Follow-up created successfully");
       onOpenChange(false);
     },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to create follow-up");
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Failed to create follow-up";
+      toast.error(message);
     },
   });
 
@@ -132,8 +135,8 @@ export function CreateFollowUpFromAppointmentDialog({
       <DialogContent className="max-w-[95vw] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            Create Follow-Up for {appointment.patient_accounts?.first_name}{' '}
-            {appointment.patient_accounts?.last_name}
+            Create Follow-Up for {appointment.patient_account?.first_name}{' '}
+            {appointment.patient_account?.last_name}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -232,14 +235,14 @@ export function CreateFollowUpFromAppointmentDialog({
                   <SelectValue placeholder="Unassigned - Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(staffMembers as any)?.filter?.((s: any) => s.role === "admin")?.length > 0 && (
+                  {staffMembers && staffMembers.filter(s => s.role === "admin").length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
                         Admin
                       </div>
-                      {(staffMembers as any)
-                        ?.filter?.((s: any) => s.role === "admin")
-                        .map((staff: any) => (
+                      {staffMembers
+                        .filter(s => s.role === "admin")
+                        .map(staff => (
                           <SelectItem key={staff.id} value={staff.id}>
                             {staff.name}
                           </SelectItem>
@@ -247,14 +250,14 @@ export function CreateFollowUpFromAppointmentDialog({
                     </>
                   )}
                   
-                  {(staffMembers as any)?.filter?.((s: any) => s.role === "provider")?.length > 0 && (
+                  {staffMembers && staffMembers.filter(s => s.role === "provider").length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-1 pt-2">
                         Providers
                       </div>
-                      {(staffMembers as any)
-                        ?.filter?.((s: any) => s.role === "provider")
-                        .map((staff: any) => (
+                      {staffMembers
+                        .filter(s => s.role === "provider")
+                        .map(staff => (
                           <SelectItem key={staff.id} value={staff.id}>
                             {staff.name}
                           </SelectItem>
@@ -262,14 +265,14 @@ export function CreateFollowUpFromAppointmentDialog({
                     </>
                   )}
                   
-                  {(staffMembers as any)?.filter?.((s: any) => s.role === "staff")?.length > 0 && (
+                  {staffMembers && staffMembers.filter(s => s.role === "staff").length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-1 pt-2">
                         Staff
                       </div>
-                      {(staffMembers as any)
-                        ?.filter?.((s: any) => s.role === "staff")
-                        .map((staff: any) => (
+                      {staffMembers
+                        .filter(s => s.role === "staff")
+                        .map(staff => (
                           <SelectItem key={staff.id} value={staff.id}>
                             <div className="flex flex-col">
                               <span>{staff.name}</span>
