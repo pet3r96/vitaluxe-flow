@@ -1,0 +1,372 @@
+import { supabase } from "@/integrations/supabase/client";
+import type { 
+  TypedVaultRecord, 
+  MedicationRecordData,
+  ConditionRecordData,
+  AllergyRecordData,
+  VitalRecordData,
+  ImmunizationRecordData,
+  SurgeryRecordData,
+  PharmacyRecordData,
+  EmergencyContactRecordData,
+  DocumentRecordData,
+  NoteRecordData
+} from "@/types/vault/records";
+
+/**
+ * Type-safe vault query builder
+ * Wraps Supabase queries with proper typing for patient_medical_vault records
+ */
+export class VaultQueryBuilder {
+  static async getMedications(patientAccountId: string): Promise<TypedVaultRecord[]> {
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .eq("record_type", "medication")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as TypedVaultRecord[];
+  }
+
+  static async getConditions(patientAccountId: string): Promise<TypedVaultRecord[]> {
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .eq("record_type", "condition")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as TypedVaultRecord[];
+  }
+
+  static async getAllergies(patientAccountId: string): Promise<TypedVaultRecord[]> {
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .eq("record_type", "allergy")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as TypedVaultRecord[];
+  }
+
+  static async getVitals(patientAccountId: string): Promise<TypedVaultRecord[]> {
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .eq("record_type", "vital")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as TypedVaultRecord[];
+  }
+
+  static async getImmunizations(patientAccountId: string): Promise<TypedVaultRecord[]> {
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .eq("record_type", "immunization")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as TypedVaultRecord[];
+  }
+
+  static async getSurgeries(patientAccountId: string): Promise<TypedVaultRecord[]> {
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .eq("record_type", "surgery")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as TypedVaultRecord[];
+  }
+
+  static async getPharmacies(patientAccountId: string): Promise<TypedVaultRecord[]> {
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .eq("record_type", "pharmacy")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as TypedVaultRecord[];
+  }
+
+  static async getEmergencyContacts(patientAccountId: string): Promise<TypedVaultRecord[]> {
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .eq("record_type", "emergency_contact")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as TypedVaultRecord[];
+  }
+
+  static async getDocuments(patientAccountId: string): Promise<TypedVaultRecord[]> {
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .eq("record_type", "document")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as TypedVaultRecord[];
+  }
+
+  static async getNotes(patientAccountId: string): Promise<TypedVaultRecord[]> {
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .eq("record_type", "note")
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as TypedVaultRecord[];
+  }
+
+  // Insert methods with typed record_data
+  static async insertMedication(
+    patientAccountId: string,
+    data: MedicationRecordData
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .insert({
+        patient_account_id: patientAccountId,
+        patient_id: patientAccountId,
+        record_type: "medication",
+        title: data.medication_name || "Medication",
+        record_data: data as any, // Temporary cast until Supabase types support discriminated unions
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  static async insertCondition(
+    patientAccountId: string,
+    data: ConditionRecordData
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .insert({
+        patient_account_id: patientAccountId,
+        patient_id: patientAccountId,
+        record_type: "condition",
+        title: data.condition_name || "Condition",
+        record_data: data as any,
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  static async insertAllergy(
+    patientAccountId: string,
+    data: AllergyRecordData
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .insert({
+        patient_account_id: patientAccountId,
+        patient_id: patientAccountId,
+        record_type: "allergy",
+        title: data.allergen_name || "Allergy",
+        record_data: data as any,
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  static async insertVital(
+    patientAccountId: string,
+    data: VitalRecordData
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .insert({
+        patient_account_id: patientAccountId,
+        patient_id: patientAccountId,
+        record_type: "vital",
+        title: data.vital_type || "Vital Sign",
+        record_data: data as any,
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  static async insertImmunization(
+    patientAccountId: string,
+    data: ImmunizationRecordData
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .insert({
+        patient_account_id: patientAccountId,
+        patient_id: patientAccountId,
+        record_type: "immunization",
+        title: data.vaccine || data.vaccine_name || "Immunization",
+        record_data: data as any,
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  static async insertSurgery(
+    patientAccountId: string,
+    data: SurgeryRecordData
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .insert({
+        patient_account_id: patientAccountId,
+        patient_id: patientAccountId,
+        record_type: "surgery",
+        title: data.procedure || data.surgery_type || "Surgery",
+        record_data: data as any,
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  static async insertPharmacy(
+    patientAccountId: string,
+    data: PharmacyRecordData
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .insert({
+        patient_account_id: patientAccountId,
+        patient_id: patientAccountId,
+        record_type: "pharmacy",
+        title: data.name || data.pharmacy_name || "Pharmacy",
+        record_data: data as any,
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  static async insertEmergencyContact(
+    patientAccountId: string,
+    data: EmergencyContactRecordData
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .insert({
+        patient_account_id: patientAccountId,
+        patient_id: patientAccountId,
+        record_type: "emergency_contact",
+        title: data.name || "Emergency Contact",
+        record_data: data as any,
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  static async insertDocument(
+    patientAccountId: string,
+    data: DocumentRecordData
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .insert({
+        patient_account_id: patientAccountId,
+        patient_id: patientAccountId,
+        record_type: "document",
+        title: data.title || "Document",
+        record_data: data as any,
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  static async insertNote(
+    patientAccountId: string,
+    data: NoteRecordData
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .insert({
+        patient_account_id: patientAccountId,
+        patient_id: patientAccountId,
+        record_type: "note",
+        title: "Note",
+        record_data: data as any,
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  // Update method
+  static async updateRecord(
+    recordId: string,
+    recordType: TypedVaultRecord['record_type'],
+    data: any
+  ): Promise<TypedVaultRecord> {
+    const { data: result, error } = await supabase
+      .from("patient_medical_vault")
+      .update({
+        record_data: data as any,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", recordId)
+      .eq("record_type", recordType)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result as TypedVaultRecord;
+  }
+
+  // Delete method
+  static async deleteRecord(recordId: string): Promise<void> {
+    const { error } = await supabase
+      .from("patient_medical_vault")
+      .delete()
+      .eq("id", recordId);
+    
+    if (error) throw error;
+  }
+}
