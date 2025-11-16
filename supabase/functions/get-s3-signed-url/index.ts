@@ -128,23 +128,27 @@ serve(async (req) => {
 
     // Authorization checks based on bucket
     if (normalizedBucket === 'patient-documents') {
-      // For patient documents bucket
-      const { data: document } = await supabase
-        .from('patient_documents')
-        .select('id, patient_id, share_with_practice')
-        .eq('storage_path', normalizedPath)
+      // For patient documents bucket - query patient_medical_vault with record_type='document'
+      const { data: document } = await (supabase as any)
+        .from('patient_medical_vault')
+        .select('id, patient_account_id, record_data')
+        .eq('record_type', 'document')
+        .contains('record_data', { storage_path: normalizedPath })
         .maybeSingle();
 
       if (!document) {
-        console.error('[get-s3-signed-url] Document not found in patient_documents:', normalizedPath);
+        console.error('[get-s3-signed-url] Document not found in patient_medical_vault:', normalizedPath);
         throw new Error('Document not found');
       }
+
+      const recordData = document.record_data as any;
+      const shareWithPractice = recordData?.share_with_practice || false;
 
       // Get patient's account info
       const { data: patientAccount } = await supabase
         .from('patient_accounts')
         .select('id, user_id, practice_id')
-        .eq('id', document.patient_id)
+        .eq('id', document.patient_account_id)
         .single();
 
       if (!patientAccount) {
@@ -163,7 +167,7 @@ serve(async (req) => {
         }
       } else if (userRole === 'doctor' || userRole === 'provider' || userRole === 'staff') {
         // Practice users can only access shared documents from their practice
-        if (!document.share_with_practice) {
+        if (!shareWithPractice) {
           authResult = { allowed: false, reason: 'document not shared with practice' };
         } else if (!effectivePracticeId) {
           authResult = { allowed: false, reason: 'no practice context' };
