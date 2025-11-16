@@ -100,8 +100,8 @@ describe('Practice Upload - Assigned Document', () => {
       return {} as any;
     });
 
-    const { data } = await supabase
-      .from('provider_document_patients')
+    const { data } = await (supabase as any)
+      .from('provider_document_patients' as any)
       .select('*')
       .eq('document_id', documentId);
 

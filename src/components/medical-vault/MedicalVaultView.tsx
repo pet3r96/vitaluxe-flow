@@ -243,8 +243,8 @@ export function MedicalVaultView({
   const { data: emergencyContacts } = useQuery({
     queryKey: ["patient-emergency-contacts", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_medical_vault")
+      const { data, error } = await (supabase as any)
+        .from("patient_medical_vault" as any)
         .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
         .eq("category", "emergency_contact")

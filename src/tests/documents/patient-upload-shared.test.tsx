@@ -48,7 +48,7 @@ describe('Patient Upload - Shared with Practice', () => {
 
     // Mock insert into patient_documents table
     vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'patient_documents') {
+      if (table === 'patient_documents' as any) {
         return {
           insert: vi.fn().mockReturnThis(),
           select: vi.fn().mockReturnThis(),
@@ -69,8 +69,8 @@ describe('Patient Upload - Shared with Practice', () => {
       return {} as any;
     });
 
-    const { data } = await supabase
-      .from('patient_documents')
+    const { data } = await (supabase as any)
+      .from('patient_documents' as any)
       .insert({
         document_name: 'Insurance Card - Front & Back',
         document_type: 'insurance',
@@ -161,14 +161,14 @@ describe('Patient Upload - Shared with Practice', () => {
       return {} as any;
     });
 
-    const { data } = await supabase
-      .from('patient_documents')
+    const { data } = await (supabase as any)
+      .from('patient_documents' as any)
       .select('*, patients!inner(first_name, last_name, practice_id)')
       .eq('share_with_practice', true)
       .filter('patients.practice_id', 'eq', practiceId);
 
     expect(data).toHaveLength(1);
-    expect(data?.[0]?.share_with_practice).toBe(true);
+    expect((data as any)?.[0]?.share_with_practice).toBe(true);
   });
 
   it('should allow practice to view patient document via signed URL', async () => {
@@ -244,8 +244,8 @@ describe('Patient Upload - Shared with Practice', () => {
       return {} as any;
     });
 
-    const { data } = await supabase
-      .from('patient_documents')
+    const { data } = await (supabase as any)
+      .from('patient_documents' as any)
       .select('*')
       .eq('share_with_practice', true);
 
@@ -309,8 +309,8 @@ describe('Patient Upload - Shared with Practice', () => {
       return {} as any;
     });
 
-    const { data } = await supabase
-      .from('patient_documents')
+    const { data } = await (supabase as any)
+      .from('patient_documents' as any)
       .insert({
         document_name: 'Test Document via Impersonation',
         share_with_practice: true,
