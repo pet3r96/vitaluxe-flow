@@ -56,7 +56,7 @@ export const menus: MenuConfig = {
     {
       title: "Dashboard",
       items: [
-        { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       ],
     },
     {
@@ -65,10 +65,10 @@ export const menus: MenuConfig = {
       icon: Users,
       items: [
         { label: "All Users", href: "/accounts", icon: Users },
-        { label: "Practices", href: "/admin/practices", icon: Building2 },
+        { label: "Practices", href: "/practices", icon: Building2 },
         { label: "Representatives", href: "/representatives", icon: Briefcase },
-        { label: "Patients", href: "/admin/patients", icon: UserSquare2 },
-        { label: "Pharmacies", href: "/admin/pharmacies", icon: Stethoscope },
+        { label: "Patients", href: "/patients", icon: UserSquare2 },
+        { label: "Pharmacies", href: "/pharmacies", icon: Stethoscope },
       ],
     },
     {
@@ -76,12 +76,12 @@ export const menus: MenuConfig = {
       isParent: true,
       icon: BarChart3,
       items: [
-        { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
+        { label: "Orders", href: "/orders", icon: ShoppingCart },
         { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
-        { label: "Patient Chat", href: "/admin/patient-chat", icon: MessageSquare },
-        { label: "Reports", href: "/admin/reports", icon: FileText },
-        { label: "Rep Productivity", href: "/admin/rep-productivity", icon: BarChart3 },
-        { label: "Product Catalog", href: "/admin/product-catalog", icon: Package },
+        { label: "Patient Chat", href: "/support", icon: MessageSquare },
+        { label: "Reports", href: "/reports", icon: FileText },
+        { label: "Rep Productivity", href: "/rep-productivity", icon: BarChart3 },
+        { label: "Product Catalog", href: "/products", icon: Package },
       ],
     },
     {
@@ -89,10 +89,10 @@ export const menus: MenuConfig = {
       isParent: true,
       icon: Settings,
       items: [
-        { label: "Admin Settings", href: "/admin/settings", icon: Settings },
-        { label: "Security", href: "/admin/security", icon: Shield },
-        { label: "Terms Management", href: "/admin/terms-management", icon: FileSignature },
-        { label: "Practice Audit Log", href: "/admin/audit-log", icon: History },
+        { label: "Admin Settings", href: "/admin-settings", icon: Settings },
+        { label: "Security", href: "/security", icon: Shield },
+        { label: "Terms Management", href: "/admin/terms", icon: FileSignature },
+        { label: "Practice Audit Log", href: "/admin/practice-audit", icon: History },
       ],
     },
   ],

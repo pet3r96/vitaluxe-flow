@@ -27,7 +27,7 @@ const roleConfig = {
 };
 
 export function RoleImpersonationDropdown() {
-  const { canImpersonate, effectiveRole, impersonatedUserName, isImpersonating, setImpersonation, clearImpersonation } = useAuth();
+  const { canImpersonate, effectiveRole, impersonatedUserName, isImpersonating, setImpersonation } = useAuth();
 
   // Fetch users grouped by role
   const { data: usersByRole } = useQuery({
@@ -41,21 +41,13 @@ export function RoleImpersonationDropdown() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch all user roles (EXCLUDING admin - admins cannot be impersonated)
+      // Fetch all user roles
       const { data: rolesData, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role")
         .in("role", ["doctor", "provider", "pharmacy", "topline", "downline", "staff"]);
 
       if (rolesError) throw rolesError;
-
-      // Get all admin user IDs to filter them out
-      const { data: adminRoles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "admin");
-      
-      const adminUserIds = new Set((adminRoles || []).map(r => r.user_id));
 
       // Create a map of user_id to profile
       const profileMap = new Map(
@@ -75,8 +67,7 @@ export function RoleImpersonationDropdown() {
 
       rolesData?.forEach((roleItem: any) => {
         const profile = profileMap.get(roleItem.user_id);
-        // CRITICAL: Filter out admins - they cannot be impersonated
-        if (profile && grouped[roleItem.role] && !adminUserIds.has(profile.id)) {
+        if (profile && grouped[roleItem.role]) {
           grouped[roleItem.role].push({
             id: profile.id,
             name: profile.name,
@@ -146,7 +137,7 @@ export function RoleImpersonationDropdown() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => clearImpersonation()}
+          onClick={() => setImpersonation(null)}
           className="gap-2 cursor-pointer"
         >
           <Shield className="h-4 w-4" />
@@ -184,7 +175,7 @@ export function RoleImpersonationDropdown() {
                   {users.map((user) => (
                     <DropdownMenuItem
                       key={user.id}
-                      onClick={() => setImpersonation(user.id, role, user.name)}
+                      onClick={() => setImpersonation(role, user.id, user.name, user.email)}
                       className="gap-2 cursor-pointer"
                     >
                       <span className="flex-1 truncate">

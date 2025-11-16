@@ -4,7 +4,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { UserDropdown } from "./UserDropdown";
 import { RoleImpersonationDropdown } from "./RoleImpersonationDropdown";
 import { ThemeToggle } from "./ThemeToggle";
-// Phase 6: AdminAlertsPanel removed (admin_alerts table dropped)
+import { AdminAlertsPanel } from "@/components/admin/AdminAlertsPanel";
 import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -60,7 +60,8 @@ export function Topbar() {
         {/* Notifications */}
         <NotificationBell />
 
-        {/* Phase 6: Admin Alerts removed (table dropped) */}
+        {/* Admin Alerts - only for admins */}
+        {effectiveRole === 'admin' && <AdminAlertsPanel />}
 
         {/* Theme Toggle */}
         <ThemeToggle />

@@ -108,17 +108,61 @@ Deno.serve(async (req) => {
 
     // Now fetch all dependent data in parallel
     const [
+      medicationsRes,
+      allergiesRes,
+      conditionsRes,
+      surgeriesRes,
+      immunizationsRes,
+      vitalsRes,
+      pharmaciesRes,
+      emergencyContactsRes,
       vaultRes,
       nextAppointmentRes,
       unreadMessagesRes,
       recentAppointmentsRes,
       recentMessagesRes,
     ] = await Promise.all([
-      // Medical vault data - query consolidated patient_medical_vault table
+      // Medical vault data (8 queries)
+      supabaseClient
+        .from('patient_medications')
+        .select('id')
+        .eq('patient_account_id', patientAccount.id)
+        .eq('is_active', true),
+      supabaseClient
+        .from('patient_allergies')
+        .select('id')
+        .eq('patient_account_id', patientAccount.id)
+        .eq('is_active', true),
+      supabaseClient
+        .from('patient_conditions')
+        .select('id')
+        .eq('patient_account_id', patientAccount.id)
+        .eq('is_active', true),
+      supabaseClient
+        .from('patient_surgeries')
+        .select('id')
+        .eq('patient_account_id', patientAccount.id),
+      supabaseClient
+        .from('patient_immunizations')
+        .select('id')
+        .eq('patient_account_id', patientAccount.id),
+      supabaseClient
+        .from('patient_vitals')
+        .select('id')
+        .eq('patient_account_id', patientAccount.id),
+      supabaseClient
+        .from('patient_pharmacies')
+        .select('id')
+        .eq('patient_account_id', patientAccount.id),
+      supabaseClient
+        .from('patient_emergency_contacts')
+        .select('id')
+        .eq('patient_account_id', patientAccount.id),
       supabaseClient
         .from('patient_medical_vault')
-        .select('id, record_type')
-        .eq('patient_id', patientAccount.id),
+        .select('id, blood_type, updated_at')
+        .eq('patient_id', patientAccount.id)
+        .maybeSingle(),
       // Next appointment
       supabaseClient
         .from('patient_appointments')
@@ -154,32 +198,38 @@ Deno.serve(async (req) => {
         .order('created_at', { ascending: false }),
     ]);
 
-    // Process medical vault data from consolidated table
-    const vaultRecords = vaultRes.data || [];
-    const medicationsCount = vaultRecords.filter((r: any) => r.record_type === 'medication').length;
-    const allergiesCount = vaultRecords.filter((r: any) => r.record_type === 'allergy').length;
-    const conditionsCount = vaultRecords.filter((r: any) => r.record_type === 'condition').length;
-    const surgeriesCount = vaultRecords.filter((r: any) => r.record_type === 'surgery').length;
-    const immunizationsCount = vaultRecords.filter((r: any) => r.record_type === 'immunization').length;
-    const vitalsCount = vaultRecords.filter((r: any) => r.record_type === 'vital_signs').length;
-    const documentsCount = vaultRecords.filter((r: any) => r.record_type === 'document').length;
+    // Process medical vault counts
+    const medicationsCount = medicationsRes.data?.length || 0;
+    const allergiesCount = allergiesRes.data?.length || 0;
+    const conditionsCount = conditionsRes.data?.length || 0;
+    const surgeriesCount = surgeriesRes.data?.length || 0;
+    const immunizationsCount = immunizationsRes.data?.length || 0;
+    const vitalsCount = vitalsRes.data?.length || 0;
+    const pharmaciesCount = pharmaciesRes.data?.length || 0;
+    const emergencyContactsCount = emergencyContactsRes.data?.length || 0;
 
-    const has_data = vaultRecords.length > 0;
+    const has_data = medicationsCount > 0 || allergiesCount > 0 || conditionsCount > 0 ||
+                     surgeriesCount > 0 || immunizationsCount > 0 || vitalsCount > 0 ||
+                     pharmaciesCount > 0 || emergencyContactsCount > 0 || !!vaultRes.data?.blood_type;
 
     const medicalVault = {
+      id: vaultRes.data?.id,
+      blood_type: vaultRes.data?.blood_type,
+      updated_at: vaultRes.data?.updated_at,
       medications_count: medicationsCount,
       allergies_count: allergiesCount,
       conditions_count: conditionsCount,
       surgeries_count: surgeriesCount,
       immunizations_count: immunizationsCount,
       vitals_count: vitalsCount,
-      documents_count: documentsCount,
+      pharmacies_count: pharmaciesCount,
+      emergency_contacts_count: emergencyContactsCount,
       has_data,
     };
 
     // Process next appointment - fetch practice branding if appointment exists
     let nextAppointment = null;
-    if (nextAppointmentRes?.data) {
+    if (nextAppointmentRes.data) {
       const { data: branding } = await supabaseClient
         .from('practice_branding')
         .select('practice_name')
@@ -194,14 +244,14 @@ Deno.serve(async (req) => {
 
     // Process recent appointments - fetch practice brandings
     let recentAppointments: any[] = [];
-    if (recentAppointmentsRes?.data && recentAppointmentsRes.data.length > 0) {
-      const practiceIds = Array.from(new Set(recentAppointmentsRes.data.map((a: any) => a.practice_id)));
+    if (recentAppointmentsRes.data && recentAppointmentsRes.data.length > 0) {
+      const practiceIds = Array.from(new Set(recentAppointmentsRes.data.map(a => a.practice_id)));
       const { data: brandings } = await supabaseClient
         .from('practice_branding')
         .select('practice_id, practice_name')
         .in('practice_id', practiceIds);
 
-      recentAppointments = recentAppointmentsRes.data.map((appt: any) => ({
+      recentAppointments = recentAppointmentsRes.data.map(appt => ({
         ...appt,
         practice: {
           name: brandings?.find((b: any) => b.practice_id === appt.practice_id)?.practice_name || 'Practice',
@@ -211,7 +261,7 @@ Deno.serve(async (req) => {
 
     // Process recent messages - get latest by thread
     let recentMessages: any[] = [];
-    if (recentMessagesRes?.data && recentMessagesRes.data.length > 0) {
+    if (recentMessagesRes.data && recentMessagesRes.data.length > 0) {
       const latestByThread = new Map();
       recentMessagesRes.data.forEach((m: any) => {
         const key = m.thread_id || m.id;
@@ -234,7 +284,7 @@ Deno.serve(async (req) => {
         }));
     }
 
-    const unreadMessagesCount = unreadMessagesRes?.data?.length || 0;
+    const unreadMessagesCount = unreadMessagesRes.data?.length || 0;
 
     const dashboardData: DashboardData = {
       patientAccount,

@@ -84,45 +84,76 @@ const lazyWithRetry = (componentImport: () => Promise<any>, componentName: strin
 // Lazy load all page components for better code splitting
 const Auth = lazy(() => import("./pages/Auth"));
 const Accounts = lazy(() => import("./pages/Accounts"));
+const Practices = lazy(() => import("./pages/Practices"));
 const Representatives = lazy(() => import("./pages/Representatives"));
+const Patients = lazy(() => import("./pages/Patients"));
 const Providers = lazy(() => import("./pages/Providers"));
 const Staff = lazy(() => import("./pages/Staff"));
+const Products = lazy(() => import("./pages/Products"));
+const Orders = lazy(() => import("./pages/Orders"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Pharmacies = lazy(() => import("./pages/Pharmacies"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Cart = lazy(() => import("./pages/Cart"));
 const DeliveryConfirmation = lazy(() => import("./pages/DeliveryConfirmation"));
+const Checkout = lazy(() => import("./pages/Checkout"));
 const Downlines = lazy(() => import("./pages/Downlines"));
 const MedSpas = lazy(() => import("./pages/MedSpas"));
+const Profile = lazy(() => import("./pages/Profile"));
+const AdminSettings = lazy(() => import("./pages/AdminSettings"));
+const Subscriptions = lazy(() => import("./pages/Subscriptions"));
+const Security = lazy(() => import("./pages/Security"));
 const AppointmentDebugLogs = lazy(() => import("./pages/AppointmentDebugLogs"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const MyDownlines = lazy(() => import("./pages/MyDownlines"));
+const RepProfitReports = lazy(() => import("./pages/RepProfitReports"));
+const ChangePassword = lazy(() => import("./pages/ChangePassword"));
+const AcceptTerms = lazy(() => import("./pages/AcceptTerms"));
+const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
+const AdminDiscountCodes = lazy(() => import("./pages/AdminDiscountCodes"));
+const PracticeAuditLog = lazy(() => import("./pages/PracticeAuditLog"));
 const PharmacyApiLogs = lazy(() => import("./pages/PharmacyApiLogs"));
+const AdminAlerts = lazy(() => import("./pages/AdminAlerts"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
+const RepProductivityReport = lazy(() => import("./components/reports/RepProductivityReport"));
+const DownlinePerformanceView = lazy(() => import("./components/reports/DownlinePerformanceView"));
+const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"), "DashboardRouter");
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
+const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
+const InternalChat = lazy(() => import("./pages/InternalChat"));
+const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
+const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
+const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
+const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
+const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
+const PatientMobileHeader = lazy(() =>
+  import("./components/patient/PatientMobileHeader").then((m) => ({ default: m.PatientMobileHeader })),
+);
+const VideoRoom = lazy(() => import("./pages/video/VideoRoom"));
 const VideoCallTest = lazy(() => import("./pages/VideoCallTest"));
+const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
+const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
 const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
+const PatientDetail = lazyWithRetry(() => import("./pages/PatientDetail"), "PatientDetail");
+const PracticePatientMedicalVault = lazyWithRetry(
+  () => import("./pages/practice/PatientMedicalVault"),
+  "PracticePatientMedicalVault",
+);
+const PracticePatientIntakeForm = lazy(() => import("./pages/practice/PracticePatientIntakeForm"));
+const Support = lazy(() => import("./pages/Support"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
+const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
+const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
 const AgoraDebugSuite = lazy(() => import("./pages/dev/AgoraDebugSuite"));
-
-// Admin pages
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const Practices = lazy(() => import("./pages/admin/Practices"));
-const Patients = lazy(() => import("./pages/admin/Patients"));
-const Pharmacies = lazy(() => import("./pages/admin/Pharmacies"));
-const Orders = lazy(() => import("./pages/admin/Orders"));
-const PatientChat = lazy(() => import("./pages/admin/PatientChat"));
-const Reports = lazy(() => import("./pages/admin/Reports"));
-const RepProductivity = lazy(() => import("./pages/admin/RepProductivity"));
-const ProductCatalog = lazy(() => import("./pages/admin/ProductCatalog"));
-const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
-const Security = lazy(() => import("./pages/admin/Security"));
-const TermsManagement = lazy(() => import("./pages/admin/TermsManagement"));
-const PracticeAuditLog = lazy(() => import("./pages/admin/PracticeAuditLog"));
 
 <Route
   path="/dev/agora-debug"
@@ -187,11 +218,29 @@ const App = () => {
                       {/* Public Routes */}
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/verify-email" element={<VerifyEmail />} />
+                      <Route path="/change-password" element={<ChangePassword />} />
+                      <Route path="/video-guest/:token" element={<VideoGuestJoin />} />
+                      <Route
+                        path="/accept-terms"
+                        element={
+                          <ProtectedRoute>
+                            <AcceptTerms />
+                          </ProtectedRoute>
+                        }
+                      />
                       <Route
                         path="/patient-onboarding"
                         element={
                           <ProtectedRoute>
                             <PatientOnboarding />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/intake"
+                        element={
+                          <ProtectedRoute>
+                            <PatientIntakeForm />
                           </ProtectedRoute>
                         }
                       />
@@ -206,12 +255,22 @@ const App = () => {
                         }
                       />
 
-                      {/* VIDEO ROUTES */}
+                      {/* ========================================== */}
+                      {/* VIDEO ROUTES - MUST BE BEFORE CATCH-ALL   */}
+                      {/* ========================================== */}
                       <Route
                         path="/video/test"
                         element={
                           <ProtectedRoute>
                             <VideoCallTest />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/video/room"
+                        element={
+                          <ProtectedRoute>
+                            <VideoRoom />
                           </ProtectedRoute>
                         }
                       />
@@ -224,16 +283,28 @@ const App = () => {
                               <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
                                 <AppSidebar />
                                 <main className="flex-1 flex flex-col overflow-y-auto">
+                                  <PatientMobileHeader />
                                   <Topbar />
                                   <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 pt-14 md:pt-4 overflow-x-hidden relative bg-gray-100 dark:bg-stone-900 rounded-none">
                                     <div className="relative z-10">
                                       <Suspense fallback={<PageLoader />}>
                                         <AnimatePresence mode="wait">
                                           <Routes>
-                                            <Route path="/" element={<Navigate to="/patient-dashboard" replace />} />
-                                            <Route path="/dashboard" element={<Navigate to="/patient-dashboard" replace />} />
+                                            <Route path="/" element={<DashboardRouter />} />
+                                            <Route path="/dashboard" element={<DashboardRouter />} />
                                             <Route path="/accounts" element={<Accounts />} />
+                                            <Route path="/practices" element={<Practices />} />
                                             <Route path="/representatives" element={<Representatives />} />
+                                            <Route path="/patients" element={<Patients />} />
+                                            <Route path="/patients/:patientId" element={<PatientDetail />} />
+                                            <Route
+                                              path="/patients/:patientId/intake"
+                                              element={<PracticePatientIntakeForm />}
+                                            />
+                                            <Route
+                                              path="/practice/patients/:patientId/medical-vault"
+                                              element={<PracticePatientMedicalVault />}
+                                            />
                                             <Route path="/providers" element={<Providers />} />
                                             <Route
                                               path="/staff"
@@ -245,32 +316,57 @@ const App = () => {
                                                 </SubscriptionProtectedRoute>
                                               }
                                             />
+                                            <Route path="/products" element={<Products />} />
+                                            <Route path="/orders" element={<Orders />} />
+                                            <Route path="/messages" element={<Messages />} />
+                                            <Route path="/pharmacies" element={<Pharmacies />} />
+                                            <Route path="/reports" element={<Reports />} />
+                                            <Route path="/cart" element={<Cart />} />
                                             <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
-                                            <Route path="/downlines" element={<Downlines />} />
+                                            <Route path="/checkout" element={<Checkout />} />
+                                            <Route path="/order-confirmation" element={<Checkout />} />
+                                            <Route path="/downlines" element={<MyDownlines />} />
                                             <Route path="/med-spas" element={<MedSpas />} />
+                                            <Route path="/profile" element={<Profile />} />
+                                            <Route path="/admin-settings" element={<AdminSettings />} />
+                                            <Route path="/subscriptions" element={<Subscriptions />} />
+                                            <Route path="/security" element={<Security />} />
                                             <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
+                                            <Route path="/support" element={<Support />} />
                                             <Route path="/support-tickets" element={<SupportTickets />} />
                                             <Route
                                               path="/support-tickets/:ticketId"
                                               element={<SupportTicketThread />}
                                             />
-                            <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
-                            <Route path="/shipping" element={<PharmacyShipping />} />
-                            
-                            {/* Admin Routes */}
-                            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                            <Route path="/admin/practices" element={<Practices />} />
-                            <Route path="/admin/patients" element={<Patients />} />
-                            <Route path="/admin/pharmacies" element={<Pharmacies />} />
-                            <Route path="/admin/orders" element={<Orders />} />
-                            <Route path="/admin/patient-chat" element={<PatientChat />} />
-                            <Route path="/admin/reports" element={<Reports />} />
-                            <Route path="/admin/rep-productivity" element={<RepProductivity />} />
-                            <Route path="/admin/product-catalog" element={<ProductCatalog />} />
-                            <Route path="/admin/settings" element={<AdminSettings />} />
-                            <Route path="/admin/security" element={<Security />} />
-                            <Route path="/admin/terms-management" element={<TermsManagement />} />
-                            <Route path="/admin/audit-log" element={<PracticeAuditLog />} />
+                                            <Route path="/admin/terms" element={<AdminTermsManagement />} />
+                                            <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
+                                            <Route path="/admin/practice-audit" element={<PracticeAuditLog />} />
+                                            <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
+                                            <Route path="/admin/alerts" element={<AdminAlerts />} />
+                                            <Route path="/rep-reports" element={<RepProfitReports />} />
+                                            <Route path="/rep-productivity" element={<RepProductivityReport />} />
+                                            <Route path="/downline-performance" element={<DownlinePerformanceView />} />
+                                            <Route path="/shipping" element={<PharmacyShipping />} />
+                                            <Route path="/appointments" element={<PatientAppointments />} />
+                                            <Route path="/medical-vault" element={<PatientMedicalVault />} />
+                                            <Route path="/documents" element={<PatientDocuments />} />
+                                            <Route path="/patient-messages" element={<PatientMessages />} />
+                                            <Route
+                                              path="/practice/patient-inbox"
+                                              element={
+                                                <SubscriptionProtectedRoute>
+                                                  <PatientInbox />
+                                                </SubscriptionProtectedRoute>
+                                              }
+                                            />
+                                            <Route
+                                              path="/practice-calendar"
+                                              element={
+                                                <SubscriptionProtectedRoute>
+                                                  <PracticeCalendar />
+                                                </SubscriptionProtectedRoute>
+                                              }
+                                            />
                                             {/* Video Consultations temporarily disabled - feature coming soon */}
                                             {/* <Route
                                               path="/video-consultations"
@@ -321,7 +417,15 @@ const App = () => {
                                                 </SubscriptionProtectedRoute>
                                               }
                                             />
-                            {/* Patient Inbox removed - now integrated into Messages */}
+                                            <Route
+                                              path="/internal-chat"
+                                              element={
+                                                <SubscriptionProtectedRoute>
+                                                  <InternalChat />
+                                                </SubscriptionProtectedRoute>
+                                              }
+                                            />
+                                            {/* Patient Inbox removed - now integrated into Messages */}
                                             {/* Redirect old practice-patients route to new merged Patients page */}
                                             <Route
                                               path="/practice-patients"
