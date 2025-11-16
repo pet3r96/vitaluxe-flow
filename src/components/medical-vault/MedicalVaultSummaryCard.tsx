@@ -23,17 +23,17 @@ export function MedicalVaultSummaryCard({ patientAccountId, onViewVault }: Medic
           .select('id', { count: 'exact', head: true })
           .eq('patient_account_id', patientAccountId)
           .eq('category', 'medication'),
-        supabase
+        (supabase as any)
           .from('patient_medical_vault')
           .select('id', { count: 'exact', head: true })
           .eq('patient_account_id', patientAccountId)
           .eq('category', 'condition'),
-        supabase
+        (supabase as any)
           .from('patient_medical_vault')
           .select('id, record_data')
           .eq('patient_account_id', patientAccountId)
           .eq('category', 'allergy'),
-        supabase
+        (supabase as any)
           .from('patient_medical_vault')
           .select('id, record_data')
           .eq('patient_account_id', patientAccountId)

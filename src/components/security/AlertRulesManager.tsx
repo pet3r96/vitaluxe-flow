@@ -29,7 +29,7 @@ export const AlertRulesManager = () => {
   const { data: rules, isLoading } = useQuery({
     queryKey: ["alert-rules"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("alert_rules")
         .select("*")
         .order("created_at", { ascending: false });
@@ -42,9 +42,9 @@ export const AlertRulesManager = () => {
   const createRuleMutation = useMutation({
     mutationFn: async (newRule: typeof formData) => {
       const { data: userData } = await supabase.auth.getUser();
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("alert_rules")
-        .insert([{ ...newRule, created_by: userData.user?.id }])
+        .insert([{ ...newRule, created_by: userData.user?.id }] as any)
         .select()
         .single();
       
@@ -74,9 +74,9 @@ export const AlertRulesManager = () => {
 
   const toggleRuleMutation = useMutation({
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("alert_rules")
-        .update({ enabled })
+        .update({ enabled } as any)
         .eq("id", id);
       
       if (error) throw error;

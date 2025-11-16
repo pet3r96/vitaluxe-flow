@@ -12,7 +12,7 @@ export const SecurityEventsTable = () => {
   const { data: events, isLoading } = useQuery({
     queryKey: ["security-events"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("security_events")
         .select("*")
         .order("created_at", { ascending: false })
