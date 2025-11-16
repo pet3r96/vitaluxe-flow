@@ -84,21 +84,12 @@ const lazyWithRetry = (componentImport: () => Promise<any>, componentName: strin
 // Lazy load all page components for better code splitting
 const Auth = lazy(() => import("./pages/Auth"));
 const Accounts = lazy(() => import("./pages/Accounts"));
-const Practices = lazy(() => import("./pages/Practices"));
 const Representatives = lazy(() => import("./pages/Representatives"));
-const Patients = lazy(() => import("./pages/Patients"));
 const Providers = lazy(() => import("./pages/Providers"));
 const Staff = lazy(() => import("./pages/Staff"));
-const Products = lazy(() => import("./pages/Products"));
-const Orders = lazy(() => import("./pages/Orders"));
-const Messages = lazy(() => import("./pages/Messages"));
-const Pharmacies = lazy(() => import("./pages/Pharmacies"));
-const Cart = lazy(() => import("./pages/Cart"));
 const DeliveryConfirmation = lazy(() => import("./pages/DeliveryConfirmation"));
-const Checkout = lazy(() => import("./pages/Checkout"));
 const Downlines = lazy(() => import("./pages/Downlines"));
 const MedSpas = lazy(() => import("./pages/MedSpas"));
-const Profile = lazy(() => import("./pages/Profile"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const AppointmentDebugLogs = lazy(() => import("./pages/AppointmentDebugLogs"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -110,23 +101,18 @@ const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"), "DashboardRouter");
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
-const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
-const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
 const VideoRoom = lazy(() => import("./pages/video/VideoRoom"));
 const VideoCallTest = lazy(() => import("./pages/VideoCallTest"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
-const PatientInbox = lazy(() => import("./pages/practice/PatientInbox"));
 const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"));
 const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
-const PatientDetail = lazyWithRetry(() => import("./pages/PatientDetail"), "PatientDetail");
 const PracticePatientMedicalVault = lazyWithRetry(
   () => import("./pages/practice/PatientMedicalVault"),
   "PracticePatientMedicalVault",
 );
-const Support = lazy(() => import("./pages/Support"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
