@@ -107,14 +107,14 @@ describe('Practice Upload - Unassigned Document', () => {
       return {} as any;
     });
 
-    const { data } = await supabase
-      .from('provider_documents')
+    const { data } = await (supabase as any)
+      .from('provider_documents' as any)
       .select('*')
       .eq('id', documentId)
       .single();
 
     expect(data).toBeDefined();
-    expect(data.document_name).toBe('Practice Internal Memo');
+    expect((data as any).document_name).toBe('Practice Internal Memo');
   });
 
   it('should NOT create provider_document_patients junction record', async () => {
@@ -134,8 +134,8 @@ describe('Practice Upload - Unassigned Document', () => {
       return {} as any;
     });
 
-    const { data } = await supabase
-      .from('provider_document_patients')
+    const { data } = await (supabase as any)
+      .from('provider_document_patients' as any)
       .select('*')
       .eq('document_id', documentId);
 

@@ -100,14 +100,14 @@ describe('Practice Upload - Assigned Document', () => {
       return {} as any;
     });
 
-    const { data } = await supabase
-      .from('provider_document_patients')
+    const { data } = await (supabase as any)
+      .from('provider_document_patients' as any)
       .select('*')
       .eq('document_id', documentId);
 
     expect(data).toHaveLength(1);
-    expect(data[0].patient_id).toBe(patientId);
-    expect(data[0].message).toBe('Please review and schedule follow-up');
+    expect((data as any)[0].patient_id).toBe(patientId);
+    expect((data as any)[0].message).toBe('Please review and schedule follow-up');
   });
 
   it('should create notification for patient', async () => {
