@@ -315,9 +315,8 @@ const App = () => {
                                             <Route path="/products" element={<Products />} />
                                             <Route path="/orders" element={<Orders />} />
                                             <Route path="/messages" element={<Messages />} />
-                                            <Route path="/pharmacies" element={<Pharmacies />} />
-                                            <Route path="/reports" element={<Reports />} />
-                                            <Route path="/cart" element={<Cart />} />
+                            <Route path="/pharmacies" element={<Pharmacies />} />
+                            <Route path="/cart" element={<Cart />} />
                                             <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
                                             <Route path="/checkout" element={<Checkout />} />
                                             <Route path="/order-confirmation" element={<Checkout />} />
@@ -325,21 +324,16 @@ const App = () => {
                                             <Route path="/med-spas" element={<MedSpas />} />
                                             <Route path="/profile" element={<Profile />} />
                                             <Route path="/admin-settings" element={<AdminSettings />} />
-                                            <Route path="/subscriptions" element={<Subscriptions />} />
-                                            <Route path="/security" element={<Security />} />
-                                            <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
+                            <Route path="/subscriptions" element={<Subscriptions />} />
+                            <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
                                             <Route path="/support" element={<Support />} />
                                             <Route path="/support-tickets" element={<SupportTickets />} />
                                             <Route
                                               path="/support-tickets/:ticketId"
                                               element={<SupportTicketThread />}
                                             />
-                                            <Route path="/admin/terms" element={<AdminTermsManagement />} />
-                                            <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
-                                            <Route path="/admin/practice-audit" element={<PracticeAuditLog />} />
-                                            <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
-                                            <Route path="/admin/alerts" element={<AdminAlerts />} />
-                                            <Route path="/rep-reports" element={<RepProfitReports />} />
+                            <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
+                            <Route path="/rep-reports" element={<RepProfitReports />} />
                                             <Route path="/rep-productivity" element={<RepProductivityReport />} />
                                             <Route path="/downline-performance" element={<DownlinePerformanceView />} />
                                             <Route path="/shipping" element={<PharmacyShipping />} />
