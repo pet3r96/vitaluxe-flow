@@ -20,10 +20,11 @@ import { useEffect, useCallback } from "react";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { usePatientPracticeSubscription } from "@/hooks/usePatientPracticeSubscription";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AppointmentWithRelations } from "@/types/appointments";
 
 export function TabbedAppointmentsWidget() {
-  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<AppointmentWithRelations | null>(null);
   const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -32,11 +33,11 @@ export function TabbedAppointmentsWidget() {
   const { isSubscribed, status, loading: subscriptionLoading } = usePatientPracticeSubscription();
 
   // Today's Appointments Query
-  const { data: appointments, isLoading: appointmentsLoading } = useQuery({
+  const { data: appointments, isLoading: appointmentsLoading } = useQuery<AppointmentWithRelations[]>({
     queryKey: ["today-appointments", effectivePracticeId],
     enabled: !!effectivePracticeId,
     queryFn: async () => {
-      if (!effectivePracticeId) return [] as any[];
+      if (!effectivePracticeId) return [];
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
@@ -56,17 +57,17 @@ export function TabbedAppointmentsWidget() {
         .limit(10);
 
       if (error) throw error;
-      return (data || []) as any[];
+      return (data || []) as AppointmentWithRelations[];
     },
     staleTime: 60000,
   });
 
   // Upcoming Appointments Query (Next 7 days, limit 3)
-  const { data: upcomingAppointments, isLoading: upcomingLoading } = useQuery({
+  const { data: upcomingAppointments, isLoading: upcomingLoading } = useQuery<AppointmentWithRelations[]>({
     queryKey: ["upcoming-appointments", effectivePracticeId],
     enabled: !!effectivePracticeId,
     queryFn: async () => {
-      if (!effectivePracticeId) return [] as any[];
+      if (!effectivePracticeId) return [];
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(0, 0, 0, 0);
@@ -87,18 +88,18 @@ export function TabbedAppointmentsWidget() {
         .limit(3);
 
       if (error) throw error;
-      return (data || []) as any[];
+      return (data || []) as AppointmentWithRelations[];
     },
     staleTime: 60000,
   });
 
   // Requested Appointments Query
-  const { data: requestedAppointments = [], refetch: refetchRequested } = useQuery({
+  const { data: requestedAppointments = [], refetch: refetchRequested } = useQuery<any[]>({
     queryKey: ["requested-appointments", effectivePracticeId],
     enabled: !!effectivePracticeId,
     staleTime: 30 * 1000,
     queryFn: async () => {
-      if (!effectivePracticeId) return [] as any[];
+      if (!effectivePracticeId) return [];
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -134,7 +135,7 @@ export function TabbedAppointmentsWidget() {
         .limit(10);
 
       if (error) throw error;
-      return data as any[];
+      return data || [];
     },
   });
 

@@ -20,13 +20,24 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import { PracticeAssignableUser } from "@/types/practiceStaff";
+
+interface FollowUpData {
+  follow_up_date: string;
+  follow_up_time?: string;
+  reason: string;
+  notes?: string;
+  priority: string;
+  assigned_to?: string;
+  [key: string]: any;
+}
 
 interface FollowUpDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patientId: string;
   patientName: string;
-  followUp?: any;
+  followUp?: FollowUpData;
 }
 
 export function FollowUpDialog({
@@ -48,7 +59,7 @@ export function FollowUpDialog({
     },
   });
 
-  const { data: staffMembers } = useQuery({
+  const { data: staffMembers } = useQuery<PracticeAssignableUser[]>({
     queryKey: ["staff-members", patientId],
     queryFn: async () => {
       const user = (await supabase.auth.getUser()).data.user;
@@ -70,7 +81,7 @@ export function FollowUpDialog({
       });
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
@@ -277,14 +288,14 @@ export function FollowUpDialog({
                 <SelectContent>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   
-                  {(staffMembers as any)?.filter?.((s: any) => s.role === "admin")?.length > 0 && (
+                  {staffMembers && staffMembers.filter(s => s.role === "admin").length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
                         Admin
                       </div>
-                      {(staffMembers as any)
-                        ?.filter?.((s: any) => s.role === "admin")
-                        .map((staff: any) => (
+                      {staffMembers
+                        .filter(s => s.role === "admin")
+                        .map(staff => (
                           <SelectItem key={staff.id} value={staff.id}>
                             {staff.name}
                           </SelectItem>
@@ -292,14 +303,14 @@ export function FollowUpDialog({
                     </>
                   )}
                   
-                  {(staffMembers as any)?.filter?.((s: any) => s.role === "provider")?.length > 0 && (
+                  {staffMembers && staffMembers.filter(s => s.role === "provider").length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-1 pt-2">
                         Providers
                       </div>
-                      {(staffMembers as any)
-                        ?.filter?.((s: any) => s.role === "provider")
-                        .map((staff: any) => (
+                      {staffMembers
+                        .filter(s => s.role === "provider")
+                        .map(staff => (
                           <SelectItem key={staff.id} value={staff.id}>
                             {staff.name}
                           </SelectItem>
@@ -307,14 +318,14 @@ export function FollowUpDialog({
                     </>
                   )}
                   
-                  {(staffMembers as any)?.filter?.((s: any) => s.role === "staff")?.length > 0 && (
+                  {staffMembers && staffMembers.filter(s => s.role === "staff").length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-1 pt-2">
                         Staff
                       </div>
-                      {(staffMembers as any)
-                        ?.filter?.((s: any) => s.role === "staff")
-                        .map((staff: any) => (
+                      {staffMembers
+                        .filter(s => s.role === "staff")
+                        .map(staff => (
                           <SelectItem key={staff.id} value={staff.id}>
                             <div className="flex flex-col">
                               <span>{staff.name}</span>

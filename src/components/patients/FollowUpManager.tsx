@@ -17,6 +17,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface FollowUpData {
+  id: string;
+  patient_id: string;
+  follow_up_date: string;
+  follow_up_time?: string;
+  reason: string;
+  notes?: string;
+  priority: string;
+  status: string;
+  assigned_to?: string;
+  completed_at?: string;
+  completed_by?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  due_date: string;
+  subject: string;
+  practice_id: string;
+  assigned_user?: {
+    name?: string;
+    role?: string;
+    role_display?: string;
+  };
+  creator?: {
+    name?: string;
+  };
+}
+
 interface FollowUpManagerProps {
   patientId: string;
   patientName: string;
@@ -26,12 +54,12 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
   console.log("[FollowUpManager] Mounted with patientId:", patientId, "patientName:", patientName);
   
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingFollowUp, setEditingFollowUp] = useState<any>(null);
+  const [editingFollowUp, setEditingFollowUp] = useState<FollowUpData | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const queryClient = useQueryClient();
   const [isOptimisticUpdate, setIsOptimisticUpdate] = useState(false);
 
-  const { data: followUps, isLoading, refetch } = useQuery({
+  const { data: followUps, isLoading, refetch } = useQuery<FollowUpData[]>({
     queryKey: ["patient-follow-ups", patientId, statusFilter],
     queryFn: async () => {
       console.log("[FollowUpManager] Fetching follow-ups for patient:", patientId, "with status filter:", statusFilter);
@@ -56,8 +84,8 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
       }
 
       // Enrich with role information
-      const enrichedData = await Promise.all(
-        (data || []).map(async (followUp: any) => {
+      const enrichedData: FollowUpData[] = await Promise.all(
+        (data || []).map(async (followUp) => {
           if (followUp.assigned_to) {
             const { data: roleData } = await supabase
               .from("user_roles")
@@ -68,8 +96,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
 
             return {
               ...followUp,
-              assigned_user: {
-                ...followUp.assigned_user,
+              assigned_user: followUp.assigned_to ? {
                 role: roleData?.role,
                 role_display:
                   roleData?.role === "admin"
@@ -79,7 +106,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
                     : roleData?.role === "staff"
                     ? "Staff"
                     : roleData?.role,
-              },
+              } : undefined,
             };
           }
           return followUp;

@@ -24,12 +24,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { addWeeks, addMonths, format } from "date-fns";
+import { AppointmentWithRelations, AppointmentServiceType } from "@/types/appointments";
+import { PracticeAssignableUser } from "@/types/practiceStaff";
+import { ProviderOrStaff } from "@/hooks/useProvidersAndStaff";
 
 interface CompleteAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  appointment: any;
-  providers: any[];
+  appointment: AppointmentWithRelations;
+  providers: ProviderOrStaff[];
   rooms: any[];
   onSuccess: () => void;
 }
@@ -67,7 +70,7 @@ export function CompleteAppointmentDialog({
   });
 
   // Fetch staff members for follow-up assignment
-  const { data: staffMembers } = useQuery({
+  const { data: staffMembers } = useQuery<PracticeAssignableUser[]>({
     queryKey: ["staff-members", appointment?.practice_id],
     queryFn: async () => {
       if (!appointment?.practice_id) return [];
@@ -75,13 +78,13 @@ export function CompleteAppointmentDialog({
         p_practice_id: appointment.practice_id,
       });
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!appointment?.practice_id && open,
   });
 
   // Fetch service types
-  const { data: serviceTypes } = useQuery({
+  const { data: serviceTypes } = useQuery<AppointmentServiceType[]>({
     queryKey: ["appointment-service-types"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -90,7 +93,7 @@ export function CompleteAppointmentDialog({
         .eq("active", true)
         .order("sort_order");
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: open,
   });
@@ -270,8 +273,8 @@ export function CompleteAppointmentDialog({
       <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            Complete Treatment - {appointment.patient_accounts?.first_name}{" "}
-            {appointment.patient_accounts?.last_name}
+            Complete Treatment - {appointment.patient_account?.first_name}{" "}
+            {appointment.patient_account?.last_name}
           </DialogTitle>
         </DialogHeader>
 
@@ -392,7 +395,7 @@ export function CompleteAppointmentDialog({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {(staffMembers as any)?.map((staff: any) => (
+                        {staffMembers?.map((staff) => (
                           <SelectItem key={staff.id} value={staff.id}>
                             {staff.name} ({staff.role_display})
                           </SelectItem>
