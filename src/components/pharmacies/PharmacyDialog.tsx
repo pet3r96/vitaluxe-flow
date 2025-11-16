@@ -222,8 +222,8 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             topline_rep_id: rep_id
           }));
           
-          const { error: assignError } = await supabase
-            .from("pharmacy_rep_assignments")
+          const { error: assignError } = await (supabase
+            .from("pharmacy_rep_assignments") as any)
             .insert(assignments);
           
           if (assignError) throw assignError;
@@ -233,8 +233,8 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
       // Handle scope assignments for existing pharmacy
       if (pharmacy) {
         // Delete existing assignments
-        await supabase
-          .from("pharmacy_rep_assignments")
+        await (supabase
+          .from("pharmacy_rep_assignments") as any)
           .delete()
           .eq("pharmacy_id", pharmacy.id);
         
@@ -245,8 +245,8 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             topline_rep_id: rep_id
           }));
           
-          const { error: assignError } = await supabase
-            .from("pharmacy_rep_assignments")
+          const { error: assignError } = await (supabase
+            .from("pharmacy_rep_assignments") as any)
             .insert(assignments);
           
           if (assignError) throw assignError;

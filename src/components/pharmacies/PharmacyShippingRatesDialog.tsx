@@ -32,9 +32,9 @@ export const PharmacyShippingRatesDialog = ({
   // Fetch existing rates
   const { data: existingRates } = useQuery({
     queryKey: ['pharmacy-shipping-rates', pharmacy.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pharmacy_shipping_rates')
+    queryFn: async (): Promise<any[]> => {
+      const { data, error } = await (supabase
+        .from('pharmacy_shipping_rates') as any)
         .select('shipping_speed, rate, enabled')
         .eq('pharmacy_id', pharmacy.id);
       

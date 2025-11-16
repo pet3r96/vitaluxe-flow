@@ -75,8 +75,8 @@ export function PatientEngagementSummaryCard({
               .gte("start_time", nowIso)
               .in("status", ["scheduled", "confirmed", "pending", "checked_in", "being_treated"])
           : Promise.resolve({ count: 0 }),
-        supabase
-          .from("patient_follow_ups")
+        (supabase
+          .from("patient_follow_ups") as any)
           .select("id", { count: "exact", head: true })
           .eq("patient_id", patientAccountId),
         supabase.rpc("get_patient_unified_documents", { p_patient_id: patientAccountId }),
