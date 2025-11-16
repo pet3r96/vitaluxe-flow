@@ -68,23 +68,19 @@ serve(async (req) => {
       userRole = roleData?.role;
     }
 
-    // Insert error log into audit_logs table
-    const { error: insertError } = await supabaseClient.from("audit_logs").insert({
+    // Log error to console (audit_logs table may not exist after schema consolidation)
+    console.log('[log-error] Error logged:', {
       action_type,
       entity_type,
       entity_id: details.entity_id || null,
-      details,
       user_id: user?.id || null,
       user_email: user?.email || null,
       user_role: userRole,
-      ip_address: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip"),
-      user_agent: req.headers.get("user-agent"),
+      details: JSON.stringify(details, null, 2),
+      ip: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip"),
+      userAgent: req.headers.get("user-agent"),
+      timestamp: new Date().toISOString()
     });
-
-    if (insertError) {
-      console.error("Failed to insert error log:", insertError);
-      throw insertError;
-    }
 
     return new Response(
       JSON.stringify({ success: true }),
