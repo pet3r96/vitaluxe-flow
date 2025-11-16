@@ -161,8 +161,8 @@ export default function PatientMedicalVault() {
     queryKey: ["patient-pharmacies", patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return [];
-      const { data, error } = await supabase
-        .from("patient_pharmacies")
+      const { data, error } = await (supabase as any)
+        .from("patient_pharmacies" as any)
         .select("*")
         .eq("patient_account_id", patientAccount.id)
         .order("is_preferred", { ascending: false });
@@ -177,8 +177,8 @@ export default function PatientMedicalVault() {
     queryKey: ["patient-emergency-contacts", patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return [];
-      const { data, error } = await supabase
-        .from("patient_emergency_contacts")
+      const { data, error } = await (supabase as any)
+        .from("patient_emergency_contacts" as any)
         .select("*")
         .eq("patient_account_id", patientAccount.id)
         .order("contact_order", { ascending: true });
@@ -188,10 +188,10 @@ export default function PatientMedicalVault() {
     enabled: !!patientAccount?.id,
   });
 
-  const activeAllergies = allergies?.filter(a => a.is_active && !a.nka) || [];
-  const activeMedications = medications?.filter(m => m.is_active) || [];
-  const activeConditions = conditions?.filter(c => c.is_active) || [];
-  const hasNKA = allergies?.some(a => a.nka) || false;
+  const activeAllergies = (allergies as any)?.filter((a: any) => a.is_active && !a.nka) || [];
+  const activeMedications = (medications as any)?.filter((m: any) => m.is_active) || [];
+  const activeConditions = (conditions as any)?.filter((c: any) => c.is_active) || [];
+  const hasNKA = (allergies as any)?.some((a: any) => a.nka) || false;
 
   // Button handlers for PDF actions
   const handleViewPDF = async () => {
@@ -204,10 +204,10 @@ export default function PatientMedicalVault() {
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patientAccount,
-        medications || [],
-        conditions || [],
-        allergies || [],
-        vitals || [],
+        medications as any || [],
+        conditions as any || [],
+        allergies as any || [],
+        vitals as any || [],
         immunizations || [],
         surgeries || [],
         pharmacies || [],
@@ -301,10 +301,10 @@ export default function PatientMedicalVault() {
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patientAccount,
-        medications || [],
-        conditions || [],
-        allergies || [],
-        vitals || [],
+        medications as any || [],
+        conditions as any || [],
+        allergies as any || [],
+        vitals as any || [],
         immunizations || [],
         surgeries || [],
         pharmacies || [],
@@ -334,7 +334,7 @@ export default function PatientMedicalVault() {
       <AuditLogDialog
         open={auditDialogOpen}
         onOpenChange={setAuditDialogOpen}
-        auditLogs={auditLogs}
+        auditLogs={auditLogs as any}
         patientName={patientAccount ? `${patientAccount.first_name} ${patientAccount.last_name}` : ''}
         patientAccountId={patientAccount?.id}
         isLoading={isLoadingAuditLogs}
@@ -455,17 +455,17 @@ export default function PatientMedicalVault() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
         <MedicationsSection 
           patientAccountId={patientAccount?.id}
-          medications={medications || []}
+          medications={medications as any || []}
         />
         
         <ConditionsSection 
           patientAccountId={patientAccount?.id}
-          conditions={conditions || []}
+          conditions={conditions as any || []}
         />
         
         <AllergiesSection 
           patientAccountId={patientAccount?.id}
-          allergies={allergies || []}
+          allergies={allergies as any || []}
         />
         
         <VitalsSection 

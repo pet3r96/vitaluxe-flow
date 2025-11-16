@@ -329,8 +329,8 @@ export default function PatientDetail() {
         vitals as any,
         immunizations as any,
         surgeries,
-        pharmacies,
-        emergencyContacts
+        pharmacies as any,
+        emergencyContacts as any
       );
       
       const url = URL.createObjectURL(pdfBlob);
@@ -391,8 +391,8 @@ export default function PatientDetail() {
         vitals as any,
         immunizations as any,
         surgeries,
-        pharmacies,
-        emergencyContacts
+        pharmacies as any,
+        emergencyContacts as any
       );
       
       const url = URL.createObjectURL(pdfBlob);

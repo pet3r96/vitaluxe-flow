@@ -68,9 +68,9 @@ export default function PatientInbox() {
 
       // Apply tab filters
       if (filterTab === 'active') {
-        query = query.eq('resolved', false);
+        query = (query as any).eq('resolved', false);
       } else if (filterTab === 'urgent') {
-        query = query.eq('urgency', 'urgent').eq('resolved', false);
+        query = (query as any).eq('urgency', 'urgent').eq('resolved', false);
       } else if (filterTab === 'resolved') {
         query = query.eq('resolved', true);
       }
