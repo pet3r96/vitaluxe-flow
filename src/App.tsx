@@ -112,8 +112,6 @@ const PharmacyApiLogs = lazy(() => import("./pages/PharmacyApiLogs"));
 // Phase 6: Removed Reports, Security, AdminDiscountCodes, PracticeAuditLog, AdminAlerts, InternalChat (tables dropped)
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
-const RepProductivityReport = lazy(() => import("./components/reports/RepProductivityReport"));
-const DownlinePerformanceView = lazy(() => import("./components/reports/DownlinePerformanceView"));
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"), "DashboardRouter");
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
@@ -274,12 +272,8 @@ const App = () => {
                                             <Route path="/practices" element={<Practices />} />
                                             <Route path="/representatives" element={<Representatives />} />
                                             <Route path="/patients" element={<Patients />} />
-                                            <Route path="/patients/:patientId" element={<PatientDetail />} />
-                                            <Route
-                                              path="/patients/:patientId/intake"
-                                              element={<PracticePatientIntakeForm />}
-                                            />
-                                            <Route
+                            <Route path="/patients/:patientId" element={<PatientDetail />} />
+                            <Route
                                               path="/practice/patients/:patientId/medical-vault"
                                               element={<PracticePatientMedicalVault />}
                                             />
@@ -385,15 +379,7 @@ const App = () => {
                                                 </SubscriptionProtectedRoute>
                                               }
                                             />
-                                            <Route
-                                              path="/internal-chat"
-                                              element={
-                                                <SubscriptionProtectedRoute>
-                                                  <InternalChat />
-                                                </SubscriptionProtectedRoute>
-                                              }
-                                            />
-                                            {/* Patient Inbox removed - now integrated into Messages */}
+                            {/* Patient Inbox removed - now integrated into Messages */}
                                             {/* Redirect old practice-patients route to new merged Patients page */}
                                             <Route
                                               path="/practice-patients"
