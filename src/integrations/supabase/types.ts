@@ -153,6 +153,54 @@ export type Database = {
         }
         Relationships: []
       }
+      amazon_tracking_api_calls: {
+        Row: {
+          called_at: string
+          created_at: string
+          id: string
+          order_id: string
+          response_status: string | null
+        }
+        Insert: {
+          called_at?: string
+          created_at?: string
+          id?: string
+          order_id: string
+          response_status?: string | null
+        }
+        Update: {
+          called_at?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          response_status?: string | null
+        }
+        Relationships: []
+      }
+      api_rate_limits_config: {
+        Row: {
+          api_name: string
+          cost_per_call: number
+          created_at: string
+          id: string
+          rate_limit: number | null
+        }
+        Insert: {
+          api_name: string
+          cost_per_call?: number
+          created_at?: string
+          id?: string
+          rate_limit?: number | null
+        }
+        Update: {
+          api_name?: string
+          cost_per_call?: number
+          created_at?: string
+          id?: string
+          rate_limit?: number | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action_type: string
@@ -192,6 +240,30 @@ export type Database = {
           user_email?: string | null
           user_id?: string | null
           user_role?: string | null
+        }
+        Relationships: []
+      }
+      calendar_sync_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          token?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -917,6 +989,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      order_profits: {
+        Row: {
+          created_at: string
+          downline_id: string | null
+          downline_profit: number | null
+          id: string
+          order_id: string
+          order_total: number
+          payment_status: string | null
+          topline_id: string
+          topline_profit: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          downline_id?: string | null
+          downline_profit?: number | null
+          id?: string
+          order_id: string
+          order_total: number
+          payment_status?: string | null
+          topline_id: string
+          topline_profit?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          downline_id?: string | null
+          downline_profit?: number | null
+          id?: string
+          order_id?: string
+          order_total?: number
+          payment_status?: string | null
+          topline_id?: string
+          topline_profit?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       order_status_configs: {
         Row: {
@@ -1696,9 +1807,11 @@ export type Database = {
           address_verification_status: string | null
           address_verified_at: string | null
           address_zip: string | null
+          admin_notes: string | null
           assigned_rep_user_id: string | null
           city: string | null
           company: string | null
+          contract_file: string | null
           created_at: string
           created_by_role: string
           created_by_user_id: string
@@ -1710,11 +1823,21 @@ export type Database = {
           npi: string | null
           phone: string | null
           practice_name: string
+          prescriber_dea: string | null
+          prescriber_email: string | null
+          prescriber_full_name: string | null
+          prescriber_license: string | null
+          prescriber_name: string | null
+          prescriber_npi: string | null
+          prescriber_phone: string | null
+          prescriber_specialty: string | null
+          prescriber_state: string | null
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           state: string | null
           status: string
+          submitted_at: string | null
           updated_at: string
           website: string | null
           zip_code: string | null
@@ -1729,9 +1852,11 @@ export type Database = {
           address_verification_status?: string | null
           address_verified_at?: string | null
           address_zip?: string | null
+          admin_notes?: string | null
           assigned_rep_user_id?: string | null
           city?: string | null
           company?: string | null
+          contract_file?: string | null
           created_at?: string
           created_by_role: string
           created_by_user_id: string
@@ -1743,11 +1868,21 @@ export type Database = {
           npi?: string | null
           phone?: string | null
           practice_name: string
+          prescriber_dea?: string | null
+          prescriber_email?: string | null
+          prescriber_full_name?: string | null
+          prescriber_license?: string | null
+          prescriber_name?: string | null
+          prescriber_npi?: string | null
+          prescriber_phone?: string | null
+          prescriber_specialty?: string | null
+          prescriber_state?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           state?: string | null
           status?: string
+          submitted_at?: string | null
           updated_at?: string
           website?: string | null
           zip_code?: string | null
@@ -1762,9 +1897,11 @@ export type Database = {
           address_verification_status?: string | null
           address_verified_at?: string | null
           address_zip?: string | null
+          admin_notes?: string | null
           assigned_rep_user_id?: string | null
           city?: string | null
           company?: string | null
+          contract_file?: string | null
           created_at?: string
           created_by_role?: string
           created_by_user_id?: string
@@ -1776,11 +1913,21 @@ export type Database = {
           npi?: string | null
           phone?: string | null
           practice_name?: string
+          prescriber_dea?: string | null
+          prescriber_email?: string | null
+          prescriber_full_name?: string | null
+          prescriber_license?: string | null
+          prescriber_name?: string | null
+          prescriber_npi?: string | null
+          prescriber_phone?: string | null
+          prescriber_specialty?: string | null
+          prescriber_state?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           state?: string | null
           status?: string
+          submitted_at?: string | null
           updated_at?: string
           website?: string | null
           zip_code?: string | null
@@ -1798,6 +1945,7 @@ export type Database = {
           name: string
           ndc: string | null
           pharmacy_id: string | null
+          product_type_id: string | null
           product_type_name: string | null
           rejection_reason: string | null
           requires_prescription: boolean | null
@@ -1819,6 +1967,7 @@ export type Database = {
           name: string
           ndc?: string | null
           pharmacy_id?: string | null
+          product_type_id?: string | null
           product_type_name?: string | null
           rejection_reason?: string | null
           requires_prescription?: boolean | null
@@ -1840,6 +1989,7 @@ export type Database = {
           name?: string
           ndc?: string | null
           pharmacy_id?: string | null
+          product_type_id?: string | null
           product_type_name?: string | null
           rejection_reason?: string | null
           requires_prescription?: boolean | null
@@ -1857,6 +2007,13 @@ export type Database = {
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_product_requests_product_type_id_fkey"
+            columns: ["product_type_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
             referencedColumns: ["id"]
           },
         ]
@@ -2304,11 +2461,15 @@ export type Database = {
           invoice_number: string
           invoice_template_data: Json | null
           paid_at: string | null
+          payment_method: string | null
           payment_status: string | null
+          pdf_url: string | null
           sent_at: string | null
           status: string
           topline_rep_id: string
           updated_at: string
+          void_reason: string | null
+          voided_at: string | null
         }
         Insert: {
           amount: number
@@ -2320,11 +2481,15 @@ export type Database = {
           invoice_number: string
           invoice_template_data?: Json | null
           paid_at?: string | null
+          payment_method?: string | null
           payment_status?: string | null
+          pdf_url?: string | null
           sent_at?: string | null
           status?: string
           topline_rep_id: string
           updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
         }
         Update: {
           amount?: number
@@ -2336,11 +2501,15 @@ export type Database = {
           invoice_number?: string
           invoice_template_data?: Json | null
           paid_at?: string | null
+          payment_method?: string | null
           payment_status?: string | null
+          pdf_url?: string | null
           sent_at?: string | null
           status?: string
           topline_rep_id?: string
           updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
         }
         Relationships: [
           {
@@ -2500,6 +2669,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      practice_rooms: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          practice_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          practice_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          practice_id?: string
+        }
+        Relationships: []
       }
       practice_staff: {
         Row: {
@@ -3206,6 +3396,186 @@ export type Database = {
           },
         ]
       }
+      rep_payment_batches: {
+        Row: {
+          batch_number: string
+          created_at: string
+          date_range_end: string
+          date_range_start: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_status: string | null
+          topline_rep_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string
+          date_range_end: string
+          date_range_start: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          topline_rep_id: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string
+          date_range_end?: string
+          date_range_start?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          topline_rep_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rep_payments: {
+        Row: {
+          amount_paid: number
+          batch_id: string | null
+          created_at: string
+          date_range_end: string
+          date_range_start: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          profit_ids: string[]
+          topline_rep_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paid: number
+          batch_id?: string | null
+          created_at?: string
+          date_range_end: string
+          date_range_start: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          profit_ids: string[]
+          topline_rep_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          batch_id?: string | null
+          created_at?: string
+          date_range_end?: string
+          date_range_start?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          profit_ids?: string[]
+          topline_rep_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rep_product_price_overrides: {
+        Row: {
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_until: string | null
+          id: string
+          notes: string | null
+          override_downline_price: number | null
+          override_price: number
+          override_retail_price: number | null
+          override_topline_price: number | null
+          product_id: string
+          rep_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          notes?: string | null
+          override_downline_price?: number | null
+          override_price: number
+          override_retail_price?: number | null
+          override_topline_price?: number | null
+          product_id: string
+          rep_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          notes?: string | null
+          override_downline_price?: number | null
+          override_price?: number
+          override_retail_price?: number | null
+          override_topline_price?: number | null
+          product_id?: string
+          rep_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rep_subscription_commissions: {
+        Row: {
+          billing_month: string
+          commission_amount: number
+          commission_type: string
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payment_status: string | null
+          practice_subscription_id: string | null
+          rep_id: string
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          billing_month: string
+          commission_amount: number
+          commission_type: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_status?: string | null
+          practice_subscription_id?: string | null
+          rep_id: string
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          billing_month?: string
+          commission_amount?: number
+          commission_type?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_status?: string | null
+          practice_subscription_id?: string | null
+          rep_id?: string
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reps: {
         Row: {
           active: boolean | null
@@ -3258,6 +3628,42 @@ export type Database = {
           },
         ]
       }
+      sms_codes: {
+        Row: {
+          attempt_count: number | null
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          user_id: string
+          verified: boolean | null
+          verified_at: string | null
+        }
+        Insert: {
+          attempt_count?: number | null
+          code: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          user_id: string
+          verified?: boolean | null
+          verified_at?: string | null
+        }
+        Update: {
+          attempt_count?: number | null
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          user_id?: string
+          verified?: boolean | null
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       statuses: {
         Row: {
           active: boolean | null
@@ -3287,6 +3693,51 @@ export type Database = {
           id?: string
           name?: string
           order_position?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_payments: {
+        Row: {
+          amount: number
+          billing_month: string
+          created_at: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_status: string | null
+          practice_id: string
+          subscription_id: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          billing_month: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          practice_id: string
+          subscription_id: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billing_month?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          practice_id?: string
+          subscription_id?: string
+          transaction_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3811,6 +4262,51 @@ export type Database = {
             referencedColumns: ["patient_id"]
           },
         ]
+      }
+      two_fa_audit_log: {
+        Row: {
+          action: string
+          attempt_count: number | null
+          code_verified: boolean | null
+          created_at: string
+          details: Json | null
+          event_type: string | null
+          id: string
+          ip_address: string | null
+          phone: string | null
+          success: boolean
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          attempt_count?: number | null
+          code_verified?: boolean | null
+          created_at?: string
+          details?: Json | null
+          event_type?: string | null
+          id?: string
+          ip_address?: string | null
+          phone?: string | null
+          success: boolean
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          attempt_count?: number | null
+          code_verified?: boolean | null
+          created_at?: string
+          details?: Json | null
+          event_type?: string | null
+          id?: string
+          ip_address?: string | null
+          phone?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_2fa_settings: {
         Row: {
