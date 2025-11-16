@@ -56,6 +56,23 @@ Deno.serve(async (req) => {
 
     const { role, userId, userName, targetEmail }: StartImpersonationRequest = await req.json();
 
+    // CRITICAL: Admin cannot impersonate another admin
+    if (userId) {
+      const { data: targetRoles } = await db
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+      
+      const isTargetAdmin = targetRoles?.some(r => r.role === 'admin');
+      if (isTargetAdmin) {
+        console.warn('[start-impersonation] Admin cannot impersonate admin:', userId);
+        return new Response(
+          JSON.stringify({ error: 'Admin cannot impersonate an admin.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Validate role is allowed for impersonation
     const allowedRoles = ['doctor', 'pharmacy', 'topline', 'downline', 'provider', 'patient', 'staff'];
     if (!allowedRoles.includes(role)) {

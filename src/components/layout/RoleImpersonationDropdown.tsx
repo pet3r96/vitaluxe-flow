@@ -41,13 +41,21 @@ export function RoleImpersonationDropdown() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch all user roles
+      // Fetch all user roles (EXCLUDING admin - admins cannot be impersonated)
       const { data: rolesData, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role")
         .in("role", ["doctor", "provider", "pharmacy", "topline", "downline", "staff"]);
 
       if (rolesError) throw rolesError;
+
+      // Get all admin user IDs to filter them out
+      const { data: adminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+      
+      const adminUserIds = new Set((adminRoles || []).map(r => r.user_id));
 
       // Create a map of user_id to profile
       const profileMap = new Map(
@@ -67,7 +75,8 @@ export function RoleImpersonationDropdown() {
 
       rolesData?.forEach((roleItem: any) => {
         const profile = profileMap.get(roleItem.user_id);
-        if (profile && grouped[roleItem.role]) {
+        // CRITICAL: Filter out admins - they cannot be impersonated
+        if (profile && grouped[roleItem.role] && !adminUserIds.has(profile.id)) {
           grouped[roleItem.role].push({
             id: profile.id,
             name: profile.name,
