@@ -107,7 +107,7 @@ const MyDownlines = lazy(() => import("./pages/MyDownlines"));
 const RepProfitReports = lazy(() => import("./pages/RepProfitReports"));
 // Phase 6: ChangePassword removed (user_password_status table dropped)
 const AcceptTerms = lazy(() => import("./pages/AcceptTerms"));
-const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
+// Phase 6: AdminTermsManagement removed (tables dropped)
 const PharmacyApiLogs = lazy(() => import("./pages/PharmacyApiLogs"));
 // Phase 6: Removed Reports, Security, AdminDiscountCodes, PracticeAuditLog, AdminAlerts (tables dropped)
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
