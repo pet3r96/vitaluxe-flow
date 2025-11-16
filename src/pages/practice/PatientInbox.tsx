@@ -68,9 +68,9 @@ export default function PatientInbox() {
 
       // Apply tab filters
       if (filterTab === 'active') {
-        query = query.eq('resolved', false);
+        query = (query as any).eq('resolved', false);
       } else if (filterTab === 'urgent') {
-        query = query.eq('urgency', 'urgent').eq('resolved', false);
+        query = (query as any).eq('urgency', 'urgent').eq('resolved', false);
       } else if (filterTab === 'resolved') {
         query = query.eq('resolved', true);
       }
@@ -257,7 +257,7 @@ export default function PatientInbox() {
             </TabsTrigger>
             <TabsTrigger value="urgent" className="text-xs flex-1">
               Urgent
-              {urgentCount > 0 && <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">{urgentCount}</Badge>}
+              {((messages as any)?.filter((m: any) => m.urgency === 'urgent' && !m.resolved).length || 0) > 0 && <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">{(messages as any)?.filter((m: any) => m.urgency === 'urgent' && !m.resolved).length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="resolved" className="text-xs flex-1">
               Resolved

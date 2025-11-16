@@ -324,12 +324,12 @@ export default function PatientDetail() {
       const pdfBlob = await generateMedicalVaultPDF(
         patient,
         medications as any,
-        conditions,
+        conditions as any,
         allergies as any,
         vitals,
-        immunizations,
+        immunizations as any,
         surgeries,
-        pharmacies,
+        pharmacies as any,
         emergencyContacts
       );
       
@@ -386,12 +386,12 @@ export default function PatientDetail() {
       const pdfBlob = await generateMedicalVaultPDF(
         patient,
         medications as any,
-        conditions,
+        conditions as any,
         allergies as any,
         vitals,
-        immunizations,
+        immunizations as any,
         surgeries,
-        pharmacies,
+        pharmacies as any,
         emergencyContacts
       );
       

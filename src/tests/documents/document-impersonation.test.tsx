@@ -196,8 +196,8 @@ describe('Document Impersonation', () => {
       return {} as any;
     });
 
-    const { data } = await supabase
-      .from('patient_documents')
+    const { data } = await (supabase as any)
+      .from('patient_documents' as any)
       .insert({
         document_name: 'Impersonated Upload',
         share_with_practice: true,
