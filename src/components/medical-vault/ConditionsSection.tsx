@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { asCondition, type VaultRecordBase } from "@/lib/vault";
 
 const formatTimestamp = (dateString?: string | null) => {
   if (!dateString) return '';
@@ -206,9 +207,9 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
                   <Button size="sm" variant="ghost" onClick={() => handleDelete(condition)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </div>
-              </div>
-            ))}
+          </div>
+        </div>
+      )})}
             {conditions.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
