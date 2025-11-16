@@ -122,42 +122,11 @@ Deno.serve(async (req) => {
       recentAppointmentsRes,
       recentMessagesRes,
     ] = await Promise.all([
-      // Medical vault data (8 queries)
+      // Medical vault data - query consolidated patient_medical_vault table
       supabaseClient
-        .from('patient_medications')
-        .select('id')
-        .eq('patient_account_id', patientAccount.id)
-        .eq('is_active', true),
-      supabaseClient
-        .from('patient_allergies')
-        .select('id')
-        .eq('patient_account_id', patientAccount.id)
-        .eq('is_active', true),
-      supabaseClient
-        .from('patient_conditions')
-        .select('id')
-        .eq('patient_account_id', patientAccount.id)
-        .eq('is_active', true),
-      supabaseClient
-        .from('patient_surgeries')
-        .select('id')
-        .eq('patient_account_id', patientAccount.id),
-      supabaseClient
-        .from('patient_immunizations')
-        .select('id')
-        .eq('patient_account_id', patientAccount.id),
-      supabaseClient
-        .from('patient_vitals')
-        .select('id')
-        .eq('patient_account_id', patientAccount.id),
-      supabaseClient
-        .from('patient_pharmacies')
-        .select('id')
-        .eq('patient_account_id', patientAccount.id),
-      supabaseClient
-        .from('patient_emergency_contacts')
-        .select('id')
-        .eq('patient_account_id', patientAccount.id),
+        .from('patient_medical_vault')
+        .select('id, record_type')
+        .eq('patient_id', patientAccount.id),
       supabaseClient
         .from('patient_medical_vault')
         .select('id, blood_type, updated_at')
@@ -198,32 +167,26 @@ Deno.serve(async (req) => {
         .order('created_at', { ascending: false }),
     ]);
 
-    // Process medical vault counts
-    const medicationsCount = medicationsRes.data?.length || 0;
-    const allergiesCount = allergiesRes.data?.length || 0;
-    const conditionsCount = conditionsRes.data?.length || 0;
-    const surgeriesCount = surgeriesRes.data?.length || 0;
-    const immunizationsCount = immunizationsRes.data?.length || 0;
-    const vitalsCount = vitalsRes.data?.length || 0;
-    const pharmaciesCount = pharmaciesRes.data?.length || 0;
-    const emergencyContactsCount = emergencyContactsRes.data?.length || 0;
+    // Process medical vault data from consolidated table
+    const vaultRecords = vaultRes.data || [];
+    const medicationsCount = vaultRecords.filter(r => r.record_type === 'medication').length;
+    const allergiesCount = vaultRecords.filter(r => r.record_type === 'allergy').length;
+    const conditionsCount = vaultRecords.filter(r => r.record_type === 'condition').length;
+    const surgeriesCount = vaultRecords.filter(r => r.record_type === 'surgery').length;
+    const immunizationsCount = vaultRecords.filter(r => r.record_type === 'immunization').length;
+    const vitalsCount = vaultRecords.filter(r => r.record_type === 'vital_signs').length;
+    const documentsCount = vaultRecords.filter(r => r.record_type === 'document').length;
 
-    const has_data = medicationsCount > 0 || allergiesCount > 0 || conditionsCount > 0 ||
-                     surgeriesCount > 0 || immunizationsCount > 0 || vitalsCount > 0 ||
-                     pharmaciesCount > 0 || emergencyContactsCount > 0 || !!vaultRes.data?.blood_type;
+    const has_data = vaultRecords.length > 0;
 
     const medicalVault = {
-      id: vaultRes.data?.id,
-      blood_type: vaultRes.data?.blood_type,
-      updated_at: vaultRes.data?.updated_at,
       medications_count: medicationsCount,
       allergies_count: allergiesCount,
       conditions_count: conditionsCount,
       surgeries_count: surgeriesCount,
       immunizations_count: immunizationsCount,
       vitals_count: vitalsCount,
-      pharmacies_count: pharmaciesCount,
-      emergency_contacts_count: emergencyContactsCount,
+      documents_count: documentsCount,
       has_data,
     };
 

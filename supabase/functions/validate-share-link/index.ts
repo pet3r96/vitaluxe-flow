@@ -110,15 +110,19 @@ Deno.serve(async (req) => {
       { data: pharmacies },
       { data: emergencyContacts }
     ] = await Promise.all([
-      supabase.from('patient_medications').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_conditions').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_allergies').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_vitals').select('*').eq('patient_account_id', patientAccountId).order('recorded_date', { ascending: false }).limit(1),
-      supabase.from('patient_immunizations').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_surgeries').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_pharmacies').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_emergency_contacts').select('*').eq('patient_account_id', patientAccountId)
+      supabase.from('patient_medical_vault').select('*').eq('patient_id', patientAccountId),
     ]);
+
+    // Group vault data by record_type
+    const vaultData = medications || [];
+    const groupedVault = {
+      medications: vaultData.filter(r => r.record_type === 'medication'),
+      conditions: vaultData.filter(r => r.record_type === 'condition'),
+      allergies: vaultData.filter(r => r.record_type === 'allergy'),
+      vitals: vaultData.filter(r => r.record_type === 'vital_signs'),
+      immunizations: vaultData.filter(r => r.record_type === 'immunization'),
+      surgeries: vaultData.filter(r => r.record_type === 'surgery'),
+    };
 
     // Increment access count for auditing (unlimited views within 60 minutes)
     const newAccessCount = currentAccessCount + 1;

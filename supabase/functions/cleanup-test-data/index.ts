@@ -130,18 +130,10 @@ serve(async (req) => {
         if (patientAccount) {
           console.log(`🩺 Detected PATIENT account: ${targetEmail}`);
           
-          // Delete patient-specific medical vault data
-          await supabaseAdmin.from('patient_medications').delete().eq('patient_account_id', patientAccount.id);
-          await supabaseAdmin.from('patient_conditions').delete().eq('patient_account_id', patientAccount.id);
-          await supabaseAdmin.from('patient_allergies').delete().eq('patient_account_id', patientAccount.id);
-          await supabaseAdmin.from('patient_vitals').delete().eq('patient_account_id', patientAccount.id);
-          await supabaseAdmin.from('patient_immunizations').delete().eq('patient_account_id', patientAccount.id);
-          await supabaseAdmin.from('patient_surgeries').delete().eq('patient_account_id', patientAccount.id);
-          await supabaseAdmin.from('patient_pharmacies').delete().eq('patient_account_id', patientAccount.id);
-          await supabaseAdmin.from('patient_emergency_contacts').delete().eq('patient_account_id', patientAccount.id);
-          await supabaseAdmin.from('patient_documents').delete().eq('patient_account_id', patientAccount.id);
+          // Delete patient-specific medical vault data from consolidated table
+          await supabaseAdmin.from('patient_medical_vault').delete().eq('patient_id', patientAccount.id);
           
-          // Delete patient appointments (uses patient_id, not patient_account_id)
+          // Delete patient appointments
           await supabaseAdmin.from('patient_appointments').delete().eq('patient_id', patientAccount.id);
           
           // Delete the patient_accounts record itself
@@ -161,16 +153,12 @@ serve(async (req) => {
           const patientAccountIds = patientAccounts.map(p => p.id);
           console.log(`Deleting medical vault data for ${patientAccountIds.length} patient accounts`);
 
-          await supabaseAdmin.from('patient_medications').delete().in('patient_account_id', patientAccountIds);
-          await supabaseAdmin.from('patient_conditions').delete().in('patient_account_id', patientAccountIds);
-          await supabaseAdmin.from('patient_allergies').delete().in('patient_account_id', patientAccountIds);
-          await supabaseAdmin.from('patient_vitals').delete().in('patient_account_id', patientAccountIds);
-          await supabaseAdmin.from('patient_immunizations').delete().in('patient_account_id', patientAccountIds);
-          await supabaseAdmin.from('patient_surgeries').delete().in('patient_account_id', patientAccountIds);
-          await supabaseAdmin.from('patient_pharmacies').delete().in('patient_account_id', patientAccountIds);
-          await supabaseAdmin.from('patient_emergency_contacts').delete().in('patient_account_id', patientAccountIds);
+          // Delete from consolidated patient_medical_vault table
+          await supabaseAdmin.from('patient_medical_vault').delete().in('patient_id', patientAccountIds);
+          await supabaseAdmin.from('patient_appointments').delete().in('patient_id', patientAccountIds);
           
           cleanupDetails.medical_vault_deleted = patientAccountIds.length;
+          console.log(`✓ Deleted medical vault data for ${patientAccountIds.length} patient accounts`);
         }
 
         // STEP 2: Delete appointments and blocked times
