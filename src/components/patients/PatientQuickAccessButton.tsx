@@ -78,14 +78,14 @@ export function PatientQuickAccessButton({
         if (!account) throw new Error("Patient not found or you don't have access");
 
         const [medications, conditions, allergies, vitals, immunizations, surgeries, pharmacies, emergencyContacts] = await Promise.all([
-          supabase.from("patient_medications").select("*").eq("patient_account_id", patientId).order("created_at", { ascending: false }),
-          supabase.from("patient_conditions").select("*").eq("patient_account_id", patientId).order("created_at", { ascending: false }),
-          supabase.from("patient_allergies").select("*").eq("patient_account_id", patientId).order("created_at", { ascending: false }),
-          supabase.from("patient_vitals").select("*").eq("patient_account_id", patientId).order("date_recorded", { ascending: false }),
-          supabase.from("patient_immunizations").select("*").eq("patient_account_id", patientId).order("date_administered", { ascending: false }),
-          supabase.from("patient_surgeries").select("*").eq("patient_account_id", patientId).order("surgery_date", { ascending: false }),
-          supabase.from("patient_pharmacies").select("*").eq("patient_account_id", patientId).order("is_preferred", { ascending: false }),
-          supabase.from("patient_emergency_contacts").select("*").eq("patient_account_id", patientId).order("contact_order", { ascending: true }),
+          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "medication").order("created_at", { ascending: false }),
+          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "condition").order("created_at", { ascending: false }),
+          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "allergy").order("created_at", { ascending: false }),
+          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "vital").order("created_at", { ascending: false }),
+          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "immunization").order("created_at", { ascending: false }),
+          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "surgery").order("created_at", { ascending: false }),
+          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "pharmacy").order("created_at", { ascending: false }),
+          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "emergency_contact").order("created_at", { ascending: false }),
         ]);
 
         data = {

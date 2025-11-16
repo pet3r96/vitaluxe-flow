@@ -110,14 +110,14 @@ Deno.serve(async (req) => {
       { data: pharmacies },
       { data: emergencyContacts }
     ] = await Promise.all([
-      supabase.from('patient_medications').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_conditions').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_allergies').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_vitals').select('*').eq('patient_account_id', patientAccountId).order('recorded_date', { ascending: false }).limit(1),
-      supabase.from('patient_immunizations').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_surgeries').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_pharmacies').select('*').eq('patient_account_id', patientAccountId),
-      supabase.from('patient_emergency_contacts').select('*').eq('patient_account_id', patientAccountId)
+      supabase.from('patient_medical_vault').select('*').eq('patient_account_id', patientAccountId).eq('record_type', 'medication'),
+      supabase.from('patient_medical_vault').select('*').eq('patient_account_id', patientAccountId).eq('record_type', 'condition'),
+      supabase.from('patient_medical_vault').select('*').eq('patient_account_id', patientAccountId).eq('record_type', 'allergy'),
+      supabase.from('patient_medical_vault').select('*').eq('patient_account_id', patientAccountId).eq('record_type', 'vital').order('created_at', { ascending: false }).limit(1),
+      supabase.from('patient_medical_vault').select('*').eq('patient_account_id', patientAccountId).eq('record_type', 'immunization'),
+      supabase.from('patient_medical_vault').select('*').eq('patient_account_id', patientAccountId).eq('record_type', 'surgery'),
+      supabase.from('patient_medical_vault').select('*').eq('patient_account_id', patientAccountId).eq('record_type', 'pharmacy'),
+      supabase.from('patient_medical_vault').select('*').eq('patient_account_id', patientAccountId).eq('record_type', 'emergency_contact')
     ]);
 
     // Increment access count for auditing (unlimited views within 60 minutes)
