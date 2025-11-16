@@ -2031,36 +2031,105 @@ export type Database = {
       }
       patient_follow_ups: {
         Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          completed_by: string | null
           created_at: string | null
+          created_by: string | null
           due_date: string
+          follow_up_date: string | null
+          follow_up_time: string | null
           id: string
+          notes: string | null
           patient_id: string
           practice_id: string
+          priority: string | null
+          reason: string | null
           status: string | null
           subject: string
           updated_at: string | null
         }
         Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
+          created_by?: string | null
           due_date: string
+          follow_up_date?: string | null
+          follow_up_time?: string | null
           id?: string
+          notes?: string | null
           patient_id: string
           practice_id: string
+          priority?: string | null
+          reason?: string | null
           status?: string | null
           subject: string
           updated_at?: string | null
         }
         Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
+          created_by?: string | null
           due_date?: string
+          follow_up_date?: string | null
+          follow_up_time?: string | null
           id?: string
+          notes?: string | null
           patient_id?: string
           practice_id?: string
+          priority?: string | null
+          reason?: string | null
           status?: string | null
           subject?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "patient_follow_ups_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_follow_ups_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_follow_ups_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_follow_ups_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_follow_ups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_follow_ups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patient_follow_ups_patient_id_fkey"
             columns: ["patient_id"]
