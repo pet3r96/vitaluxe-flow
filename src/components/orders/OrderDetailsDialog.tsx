@@ -19,8 +19,6 @@ import { CancelOrderDialog } from "./CancelOrderDialog";
 import { ReportNotesSection } from "./ReportNotesSection";
 import { RefundOrderDialog } from "./RefundOrderDialog";
 import { RefundHistory } from "./RefundHistory";
-import { OrderStatusSelector } from "./OrderStatusSelector";
-import { OrderStatusHistory } from "./OrderStatusHistory";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
