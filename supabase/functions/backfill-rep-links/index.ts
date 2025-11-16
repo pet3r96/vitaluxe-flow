@@ -142,22 +142,15 @@ Deno.serve(async (req) => {
             toplineIdForLink = targetRepDetails.assigned_topline_id;
           }
           
-          // Upsert the link with assigned_topline_id
+          // Update practice profile's linked_topline_id instead of creating links
           const { error: linkError } = await supabaseAdmin
-            .from('rep_practice_links')
-            .upsert(
-              {
-                rep_id: targetRepId,
-                practice_id: practice.id,
-                assigned_topline_id: toplineIdForLink,
-                created_at: new Date().toISOString(),
-              },
-              { onConflict: 'rep_id,practice_id' }
-            );
+            .from('profiles')
+            .update({ linked_topline_id: targetRepUserId })
+            .eq('id', practice.id);
 
           if (!linkError) {
             linksAdded++;
-            console.log(`Linked rep ${targetRepId} to practice ${practice.id}`);
+            console.log(`Linked rep ${targetRepUserId} to practice ${practice.id}`);
           } else {
             console.error(`Failed to link rep ${targetRepId} to practice ${practice.id}:`, linkError);
           }

@@ -673,75 +673,18 @@ serve(async (req) => {
       }
     }
 
-    // Create rep_practice_links for doctor (practice) role
+    // Link practice to rep via profiles.linked_topline_id for doctor (practice) role
     if (signupData.role === 'doctor' && signupData.roleData.linkedToplineId) {
-      // Determine if the linked rep is a downline or topline
-      const { data: linkedRepData } = await supabaseAdmin
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', signupData.roleData.linkedToplineId)
-        .limit(1)
-        .maybeSingle();
+      console.log('Linking practice to rep via linked_topline_id:', signupData.roleData.linkedToplineId);
       
-      const isLinkedRepDownline = linkedRepData?.role === 'downline';
+      // Simply update the practice's linked_topline_id to point to the rep
+      const { error: linkError } = await supabaseAdmin
+        .from('profiles')
+        .update({ linked_topline_id: signupData.roleData.linkedToplineId })
+        .eq('id', userId);
       
-      if (isLinkedRepDownline) {
-        // Scenario: Downline created the practice
-        // Get downline's rep record
-        const { data: downlineRepRecord } = await supabaseAdmin
-          .from('reps')
-          .select('id, assigned_topline_id')
-          .eq('user_id', signupData.roleData.linkedToplineId)
-          .single();
-        
-        if (downlineRepRecord) {
-          // Link 1: Direct downline rep → practice
-          const { error: link1Error } = await supabaseAdmin
-            .from('rep_practice_links')
-            .insert({
-              rep_id: downlineRepRecord.id,
-              practice_id: userId,
-              assigned_topline_id: downlineRepRecord.assigned_topline_id
-            });
-          
-          if (link1Error) {
-            console.error('Failed to create downline rep_practice_link:', link1Error);
-          }
-          
-          // Link 2: Topline rep → practice (if downline has a topline)
-          if (downlineRepRecord.assigned_topline_id) {
-            const { error: link2Error } = await supabaseAdmin
-              .from('rep_practice_links')
-              .insert({
-                rep_id: downlineRepRecord.assigned_topline_id,
-                practice_id: userId,
-                assigned_topline_id: downlineRepRecord.assigned_topline_id
-              });
-            
-            if (link2Error) {
-              console.error('Failed to create topline rep_practice_link:', link2Error);
-            }
-          }
-        }
-      } else {
-        // Scenario: Topline created the practice directly
-        const { data: toplineRepRecord } = await supabaseAdmin
-          .from('reps')
-          .select('id')
-          .eq('user_id', signupData.roleData.linkedToplineId)
-          .single();
-        
-        if (toplineRepRecord) {
-          const { error: linkError } = await supabaseAdmin
-            .from('rep_practice_links')
-            .insert({
-              rep_id: toplineRepRecord.id,
-              practice_id: userId,
-              assigned_topline_id: null
-            });
-          
-          if (linkError) {
-            console.error('Failed to create topline rep_practice_link:', linkError);
+      if (linkError) {
+        console.error('Failed to link practice to rep:', linkError);
           }
         }
       }
