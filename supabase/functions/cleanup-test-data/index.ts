@@ -278,10 +278,20 @@ serve(async (req) => {
           if (reps && reps.length > 0) {
             const repIds = reps.map(r => r.id);
             
-            await supabaseAdmin
-              .from('rep_practice_links')
-              .delete()
-              .in('rep_id', repIds);
+            // Reset linked_topline_id for practices linked to test reps
+            const { data: testRepUsers } = await supabaseAdmin
+              .from('reps')
+              .select('user_id')
+              .in('id', repIds);
+
+            if (testRepUsers && testRepUsers.length > 0) {
+              const testRepUserIds = testRepUsers.map(r => r.user_id);
+              
+              await supabaseAdmin
+                .from('profiles')
+                .update({ linked_topline_id: null })
+                .in('linked_topline_id', testRepUserIds);
+            }
             
             await supabaseAdmin
               .from('reps')
