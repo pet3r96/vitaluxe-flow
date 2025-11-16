@@ -95,9 +95,17 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in log-error function:", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorDetails = error instanceof Error ? {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    } : { error: String(error) };
+    
+    console.error("Detailed error:", JSON.stringify(errorDetails));
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: errorMessage, details: errorDetails }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
