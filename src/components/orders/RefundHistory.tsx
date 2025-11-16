@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tantml:react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, DollarSign } from "lucide-react";
 import { format } from "date-fns";
+import type { OrderRefund } from "@/types/domain/database-extensions";
 
 interface RefundHistoryProps {
   orderId: string;
@@ -23,7 +24,7 @@ export const RefundHistory = ({ orderId }: RefundHistoryProps) => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as unknown as OrderRefund[];
     },
     enabled: !!orderId,
   });

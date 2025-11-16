@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Monitor, LogOut } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
+import type { ActiveSession } from "@/types/domain/database-extensions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,7 +90,7 @@ export function ActivityLogSection() {
         .limit(limit || displayLimit);
 
       if (error) throw error;
-      setSessions(data || []);
+      setSessions((data as unknown as Session[]) || []);
     } catch (error: any) {
       console.error('Error fetching sessions:', error);
       toast({
