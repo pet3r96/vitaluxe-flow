@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { OrdersDataTable } from "@/components/orders/OrdersDataTable";
 import { ResponsivePage } from "@/components/layout/ResponsivePage";
 import { CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
