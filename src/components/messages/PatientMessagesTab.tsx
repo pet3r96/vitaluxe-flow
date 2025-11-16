@@ -17,27 +17,6 @@ interface PatientMessagesTabProps {
   userId: string;
 }
 
-interface PatientMessage {
-  id: string;
-  patient_id: string;
-  practice_id: string;
-  sender_id: string;
-  sender_type: string;
-  subject: string;
-  message_body: string;
-  urgency: 'low' | 'normal' | 'high' | 'urgent';
-  resolved: boolean;
-  resolved_by: string | null;
-  resolved_at: string | null;
-  resolution_notes: string | null;
-  read_at: string | null;
-  created_at: string;
-  patient: {
-    name: string;
-    email: string;
-  };
-}
-
 export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabProps) => {
   const [selectedMessage, setSelectedMessage] = useState<PatientMessage | null>(null);
   const [replyText, setReplyText] = useState("");

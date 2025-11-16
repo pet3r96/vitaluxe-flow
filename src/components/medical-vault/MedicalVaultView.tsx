@@ -426,7 +426,7 @@ export function MedicalVaultView({
           expires_at: expiresAt.toISOString(),
           consent_agreed_at: now.toISOString(),
           consent_ip: 'client-side',
-        });
+        }) as any; // Type workaround for missing table in types
 
       if (insertError) {
         console.error('Error creating share link:', insertError);

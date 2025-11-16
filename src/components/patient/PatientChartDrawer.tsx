@@ -97,7 +97,7 @@ export default function PatientChartDrawer({ open, onClose, patientId }: Props) 
         created_by_user_id: user.id,
         created_by_role: userRole,
         created_by_name: userName,
-      });
+      }) as any; // Type workaround for missing table in types
 
       if (error) throw error;
 
