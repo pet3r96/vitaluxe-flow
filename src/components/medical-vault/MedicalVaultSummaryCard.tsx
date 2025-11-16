@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Activity, Pill, Heart, AlertCircle, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { fromJsonSafe } from "@/types/vault/jsonHelpers";
+import type { AllergyRecordData, VitalRecordData } from "@/types/vault/records";
 
 interface MedicalVaultSummaryCardProps {
   patientAccountId: string;
@@ -43,15 +45,20 @@ export function MedicalVaultSummaryCard({ patientAccountId, onViewVault }: Medic
           .maybeSingle(),
       ]);
       
-      const hasNKA = allergies.data?.some((a) => (a.record_data as any)?.nka) || false;
+      const hasNKA = allergies.data?.some((a) => {
+        const allergyData = fromJsonSafe<AllergyRecordData>(a.record_data, {} as AllergyRecordData);
+        return allergyData.nka;
+      }) || false;
       const allergyCount = hasNKA ? 0 : (allergies.data?.length || 0);
+
+      const lastVital = vitals.data ? fromJsonSafe<VitalRecordData>(vitals.data.record_data, {} as VitalRecordData) : null;
 
       return {
         medications: medications.count || 0,
         conditions: conditions.count || 0,
         allergies: allergyCount,
         hasNKA,
-        lastVital: vitals.data?.record_data,
+        lastVital,
       };
     },
     enabled: !!patientAccountId,
@@ -143,7 +150,7 @@ export function MedicalVaultSummaryCard({ patientAccountId, onViewVault }: Medic
             {counts?.lastVital ? (
               <>
                 <p className="text-lg font-bold mb-1">
-                  {(counts.lastVital as any)?.blood_pressure_systolic || '--'}/{(counts.lastVital as any)?.blood_pressure_diastolic || '--'}
+                  {counts.lastVital.blood_pressure_systolic || '--'}/{counts.lastVital.blood_pressure_diastolic || '--'}
                 </p>
                 <p className="text-xs font-medium text-muted-foreground">Last BP</p>
               </>

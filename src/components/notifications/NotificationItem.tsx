@@ -5,6 +5,7 @@ import { X, ExternalLink, AlertCircle, CheckCircle, Info, AlertTriangle } from "
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { isFollowUpMetadata } from "@/types/notificationMetadata";
 
 interface NotificationItemProps {
   notification: Notification;
@@ -44,7 +45,7 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
     }
     if (notification.action_url) {
       // Handle follow-up notifications specially to navigate to patient chart
-      if (notification.entity_type === 'follow_up' && notification.metadata?.patient_id) {
+      if (notification.entity_type === 'follow_up' && isFollowUpMetadata(notification.metadata)) {
         navigate(`/patients/${notification.metadata.patient_id}?tab=follow-ups`);
       } else {
         navigate(notification.action_url);
