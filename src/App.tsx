@@ -109,7 +109,7 @@ const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const AcceptTerms = lazy(() => import("./pages/AcceptTerms"));
 const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
 const PharmacyApiLogs = lazy(() => import("./pages/PharmacyApiLogs"));
-// Phase 6: Removed Reports, Security, AdminDiscountCodes, PracticeAuditLog, AdminAlerts (tables dropped)
+// Phase 6: Removed Reports, Security, AdminDiscountCodes, PracticeAuditLog, AdminAlerts, InternalChat (tables dropped)
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
 const RepProductivityReport = lazy(() => import("./components/reports/RepProductivityReport"));
@@ -118,7 +118,6 @@ const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
 const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
-const InternalChat = lazy(() => import("./pages/InternalChat"));
 const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
 const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
 const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
@@ -316,7 +315,6 @@ const App = () => {
                                             <Route path="/orders" element={<Orders />} />
                                             <Route path="/messages" element={<Messages />} />
                                             <Route path="/pharmacies" element={<Pharmacies />} />
-                                            <Route path="/reports" element={<Reports />} />
                                             <Route path="/cart" element={<Cart />} />
                                             <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
                                             <Route path="/checkout" element={<Checkout />} />
@@ -326,19 +324,13 @@ const App = () => {
                                             <Route path="/profile" element={<Profile />} />
                                             <Route path="/admin-settings" element={<AdminSettings />} />
                                             <Route path="/subscriptions" element={<Subscriptions />} />
-                                            <Route path="/security" element={<Security />} />
                                             <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
-                                            <Route path="/support" element={<Support />} />
                                             <Route path="/support-tickets" element={<SupportTickets />} />
                                             <Route
                                               path="/support-tickets/:ticketId"
                                               element={<SupportTicketThread />}
                                             />
-                                            <Route path="/admin/terms" element={<AdminTermsManagement />} />
-                                            <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
-                                            <Route path="/admin/practice-audit" element={<PracticeAuditLog />} />
                                             <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
-                                            <Route path="/admin/alerts" element={<AdminAlerts />} />
                                             <Route path="/rep-reports" element={<RepProfitReports />} />
                                             <Route path="/rep-productivity" element={<RepProductivityReport />} />
                                             <Route path="/downline-performance" element={<DownlinePerformanceView />} />
