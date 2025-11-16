@@ -42,18 +42,20 @@ const handleSave = async () => {
     const prevShare = document.share_with_practice ?? true;
 
     const { error } = await supabase
-      .from("patient_documents")
+      .from("patient_medical_vault")
       .update({
-        notes,
-        share_with_practice: shareWithPractice,
-      } as any)
+        metadata: {
+          notes,
+          share_with_practice: shareWithPractice,
+        }
+      })
       .eq("id", document.id);
 
     if (error) throw error;
 
     // Fetch patient_id for audit logging
     const { data: pd, error: pdError } = await supabase
-      .from('patient_documents')
+      .from('patient_medical_vault')
       .select('patient_id')
       .eq('id', document.id)
       .maybeSingle();

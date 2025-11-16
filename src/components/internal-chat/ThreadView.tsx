@@ -3,8 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Reply } from "lucide-react";
-import { format } from "date-fns";
-import { PriorityBadge } from "./PriorityBadge";
 import { MessageBubble } from "./MessageBubble";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -55,11 +53,6 @@ export function ThreadView({ selectedMessage, replyText, setReplyText, sendReply
         {firstMessage?.subject && (
           <p className="font-medium text-sm">Subject: {firstMessage.subject}</p>
         )}
-        {firstMessage?.urgency && (
-          <div className="mt-2">
-            <PriorityBadge priority={firstMessage.urgency as "high" | "low" | "medium" | "urgent"} />
-          </div>
-        )}
       </div>
 
       {/* Messages Thread */}
@@ -76,10 +69,10 @@ export function ThreadView({ selectedMessage, replyText, setReplyText, sendReply
                 key={msg.id}
                 message={{
                   id: msg.id,
-                  body: msg.message_body,
+                  body: msg.body,
                   created_at: msg.created_at,
                   sender: {
-                    id: msg.sender_id,
+                    id: msg.sender_type === 'provider' ? msg.practice_id : msg.patient_id,
                     name: senderName,
                   },
                 }}

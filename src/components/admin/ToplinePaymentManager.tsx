@@ -171,53 +171,42 @@ const ToplinePaymentManager = () => {
         .filter(rep => selectedReps.includes(rep.topline_rep_id))
         .reduce((sum, rep) => sum + rep.total_unpaid, 0);
       
-      // Create payment batch
-      const { data: batch, error: batchError } = await supabase
-        .from("rep_payment_batches")
-        .insert({
-          batch_number: `BATCH-${format(new Date(), 'yyyy-MM-dd-HHmmss')}`,
-          paid_by: (await supabase.auth.getUser()).data.user?.id || '',
-          total_amount: totalAmount,
-          payment_method: paymentMethod,
-          notes: notes
-        })
-        .select()
-        .single();
-      
-      if (batchError) throw batchError;
-      
-      // Create individual rep payment records
+      // Create individual topline payment records directly (without batch_number)
       const paymentRecords = selectedReps.map(repId => {
         const rep = aggregatedByRep.find(r => r.topline_rep_id === repId);
         return {
-          batch_id: batch.id,
           topline_rep_id: repId,
-          amount_paid: rep?.total_unpaid || 0,
-          profit_ids: rep?.profit_ids || [],
+          total_amount: rep?.total_unpaid || 0,
+          payment_method: paymentMethod,
+          notes: paymentNotes,
+          payment_status: 'paid',
+          payment_date: new Date().toISOString(),
           date_range_start: rep?.earliest_date || new Date().toISOString(),
           date_range_end: rep?.latest_date || new Date().toISOString()
         };
       });
       
       const { data: payments, error: paymentsError } = await supabase
-        .from("rep_payments")
+        .from("topline_payments")
         .insert(paymentRecords)
         .select();
       
       if (paymentsError) throw paymentsError;
       
-      // Update order_profits records
-      for (const payment of payments) {
-        const { error: updateError } = await supabase
-          .from("order_profits")
-          .update({ 
-            payment_status: 'completed',
-            payment_id: payment.id, 
-            paid_at: new Date().toISOString() 
-          })
-          .in("id", payment.profit_ids);
-        
-        if (updateError) throw updateError;
+      // Update order_profits records - get profit_ids from aggregated data
+      for (const repId of selectedReps) {
+        const rep = aggregatedByRep.find(r => r.topline_rep_id === repId);
+        if (rep?.profit_ids && rep.profit_ids.length > 0) {
+          const { error: updateError } = await supabase
+            .from("order_profits")
+            .update({ 
+              payment_status: 'completed',
+              paid_at: new Date().toISOString() 
+            })
+            .in("id", rep.profit_ids);
+          
+          if (updateError) throw updateError;
+        }
       }
       
       return { batch, payments };

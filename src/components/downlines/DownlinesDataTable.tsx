@@ -89,28 +89,32 @@ export function DownlinesDataTable() {
       // Get downline rep IDs (from reps table)
       const downlineRepIds = downlineReps.map(rep => rep.id);
 
-      // Get practice counts for each downline using rep_practice_links
-      const { data: practiceLinks, error: linksError } = await supabase
-        .from("rep_practice_links")
-        .select("rep_id, practice_id")
-        .in("rep_id", downlineRepIds);
+      // Get practice counts for each downline using profiles table
+      const { data: practiceProfiles, error: practicesError } = await supabase
+        .from("profiles")
+        .select("id, linked_topline_id")
+        .eq("role", "practice")
+        .in("linked_topline_id", downlineRepIds);
 
-      if (linksError) throw linksError;
+      if (practicesError) throw practicesError;
 
-      // Build maps: rep_id -> [practice_ids] and rep_id -> practiceCount
+      // Build maps: downline_rep_id -> [practice_ids] and downline_rep_id -> practiceCount
       const repToPracticesMap: Record<string, string[]> = {};
       const practiceCountsMap: Record<string, number> = {};
       
-      practiceLinks?.forEach(link => {
-        if (!repToPracticesMap[link.rep_id]) {
-          repToPracticesMap[link.rep_id] = [];
+      practiceProfiles?.forEach(practice => {
+        const toplineId = practice.linked_topline_id;
+        if (toplineId) {
+          if (!repToPracticesMap[toplineId]) {
+            repToPracticesMap[toplineId] = [];
+          }
+          repToPracticesMap[toplineId].push(practice.id);
+          practiceCountsMap[toplineId] = (practiceCountsMap[toplineId] || 0) + 1;
         }
-        repToPracticesMap[link.rep_id].push(link.practice_id);
-        practiceCountsMap[link.rep_id] = (practiceCountsMap[link.rep_id] || 0) + 1;
       });
 
       // Get all unique practice IDs to fetch orders
-      const allPracticeIds = Array.from(new Set(practiceLinks?.map(l => l.practice_id) || []));
+      const allPracticeIds = practiceProfiles?.map(p => p.id) || [];
 
       // Get order counts for each downline's practices
       const { data: orders, error: ordersError } = await supabase
