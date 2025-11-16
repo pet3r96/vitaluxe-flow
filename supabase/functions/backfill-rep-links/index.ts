@@ -165,8 +165,9 @@ Deno.serve(async (req) => {
             if (!linkError) {
               linksAdded++;
               console.log(`Linked practice ${practice.id} to rep user ${targetRep.user_id} via linked_topline_id`);
-          } else {
-            console.error(`Failed to link rep ${targetRepId} to practice ${practice.id}:`, linkError);
+            } else {
+              console.error(`Failed to link rep ${targetRepId} to practice ${practice.id}:`, linkError);
+            }
           }
         }
       }

@@ -327,77 +327,34 @@ serve(async (req) => {
       }
     }
 
-    // Step 4: Backfill missing rep_practice_links for approved practices
-    // Now handles BOTH toplines AND downlines as owners
+    // Step 4: Backfill missing linked_topline_id for approved practices
     let repLinksAdded = 0;
     let doctorRolesAdded = 0;
 
-    const { data: practicesWithTopline } = await supabaseAdmin
+    const { data: practicesWithRepAssigned } = await supabaseAdmin
       .from('profiles')
-      .select('id, name, linked_topline_id')
-      .not('linked_topline_id', 'is', null)
-      .eq('active', true);
+      .select('id, assigned_rep_user_id, linked_topline_id')
+      .eq('role', 'doctor')
+      .eq('active', true)
+      .not('assigned_rep_user_id', 'is', null)
+      .is('linked_topline_id', null);
 
-    if (practicesWithTopline) {
-      for (const practice of practicesWithTopline) {
+    if (practicesWithRepAssigned && practicesWithRepAssigned.length > 0) {
+      for (const practice of practicesWithRepAssigned) {
         try {
-          // Look up the rep in 'reps' table - could be topline OR downline
-          // Priority: downline first, then topline (downlines are more specific)
-          let repRecord = null;
-          
-          const { data: downlineRep } = await supabaseAdmin
-            .from('reps')
-            .select('id, role')
-            .eq('user_id', practice.linked_topline_id)
-            .eq('role', 'downline')
-            .maybeSingle();
+          const { error: linkError } = await supabaseAdmin
+            .from('profiles')
+            .update({
+              linked_topline_id: practice.assigned_rep_user_id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', practice.id);
 
-          if (downlineRep) {
-            repRecord = downlineRep;
+          if (!linkError) {
+            repLinksAdded++;
+            console.log(`Set linked_topline_id for practice ${practice.id}`);
           } else {
-            const { data: toplineRep } = await supabaseAdmin
-              .from('reps')
-              .select('id, role')
-              .eq('user_id', practice.linked_topline_id)
-              .eq('role', 'topline')
-              .maybeSingle();
-            
-            if (toplineRep) {
-              repRecord = toplineRep;
-            }
-          }
-
-          if (repRecord) {
-            // Determine assigned_topline_id for the link
-            let toplineIdForLink = null;
-            if (repRecord.role === 'downline') {
-              // Fetch the downline's assigned_topline_id
-              const { data: downlineDetails } = await supabaseAdmin
-                .from('reps')
-                .select('assigned_topline_id')
-                .eq('id', repRecord.id)
-                .single();
-              
-              toplineIdForLink = downlineDetails?.assigned_topline_id || null;
-            }
-            
-            // Upsert rep_practice_link with assigned_topline_id (works for both toplines and downlines)
-            const { error: linkError } = await supabaseAdmin
-              .from('rep_practice_links')
-              .upsert({
-                rep_id: repRecord.id,
-                practice_id: practice.id,
-                assigned_topline_id: toplineIdForLink
-              }, { onConflict: 'rep_id,practice_id' });
-
-            if (!linkError) {
-              repLinksAdded++;
-              console.log(`Linked practice ${practice.name} to ${repRecord.role} rep ${repRecord.id}`);
-            } else {
-              errors.push(`Failed to link practice ${practice.name}: ${linkError.message}`);
-            }
-          } else {
-            console.log(`No rep found for practice ${practice.name} with linked_topline_id ${practice.linked_topline_id}`);
+            errors.push(`Failed to set linked_topline_id for practice ${practice.id}: ${linkError.message}`);
           }
 
           // Ensure user_roles has 'doctor' (normalize from legacy 'practice' role)
@@ -421,7 +378,7 @@ serve(async (req) => {
             }
           }
         } catch (error: any) {
-          errors.push(`Error backfilling links for practice ${practice.name}: ${error.message}`);
+          errors.push(`Error backfilling links for practice ${practice.id}: ${error.message}`);
         }
       }
     }

@@ -169,7 +169,6 @@ serve(async (req) => {
         patients: await getCount('patients'),
         
         // Reps & Relationships
-        rep_practice_links: await getCount('rep_practice_links'),
         rep_payments: await getCount('rep_payments'),
         rep_payment_batches: await getCount('rep_payment_batches'),
         pending_reps: await getCount('pending_reps'),
@@ -330,7 +329,6 @@ serve(async (req) => {
     deleted_counts.patient_accounts = await deleteRecords('patient_accounts', 'all');
 
     // Phase 9: Reps & Relationships
-    deleted_counts.rep_practice_links = await deleteRecords('rep_practice_links', 'all');
     deleted_counts.rep_payments = await deleteRecords('rep_payments', 'all');
     deleted_counts.rep_payment_batches = await deleteRecords('rep_payment_batches', 'all');
     deleted_counts.pending_reps = await deleteRecords('pending_reps', 'all');

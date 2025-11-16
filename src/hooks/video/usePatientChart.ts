@@ -24,13 +24,19 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
       const { data: { user } } = await supabase.auth.getUser();
       
       const { error } = await (supabase as any)
-        .from("patient_notes")
+        .from("patient_medical_vault")
         .insert({
           patient_account_id: patientId,
-          note_content: content,
-          created_by_user_id: user?.id || '',
-          created_by_name: user?.email || 'Unknown',
-          created_by_role: 'provider',
+          record_type: 'note',
+          title: `${type.charAt(0).toUpperCase() + type.slice(1)} Note`,
+          record_data: {
+            note_content: content,
+            note_type: type,
+            created_by_user_id: user?.id || '',
+            created_by_name: user?.email || 'Unknown',
+            created_by_role: 'provider',
+            created_at: new Date().toISOString(),
+          },
         });
 
       if (error) throw error;
@@ -88,13 +94,19 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
 
       // Save document record
       const { error } = await (supabase as any)
-        .from("patient_documents")
+        .from("patient_medical_vault")
         .insert({
-          patient_id: patientId,
-          document_type: type,
-          document_name: file.name,
-          storage_path: filePath,
-          uploaded_by: user?.id,
+          patient_account_id: patientId,
+          record_type: 'document',
+          title: file.name,
+          record_data: {
+            document_type: type,
+            document_name: file.name,
+            storage_path: filePath,
+            url: publicUrl,
+            uploaded_by: user?.id,
+            uploaded_at: new Date().toISOString(),
+          },
         });
 
       if (error) throw error;

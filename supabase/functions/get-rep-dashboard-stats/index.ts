@@ -125,13 +125,14 @@ Deno.serve(async (req) => {
 
             return count || 0;
           } else {
-            // Downline
-            const { data: practiceLinks } = await supabase
-              .from('rep_practice_links')
-              .select('practice_id')
-              .eq('rep_id', repId);
+            // Downline - get rep's user_id and query profiles
+            const { data: repUser } = await supabase
+              .from('reps')
+              .select('user_id')
+              .eq('id', repId)
+              .single();
 
-            const practiceIds = practiceLinks?.map(l => l.practice_id) || [];
+            const practiceIds = repUser ? [repUser.user_id] : [];
 
             if (practiceIds.length === 0) return 0;
 
