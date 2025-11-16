@@ -21,7 +21,7 @@ const AdminAlerts = () => {
   const { data: alerts, refetch } = useQuery({
     queryKey: ["admin-alerts", typeFilter, severityFilter, resolvedFilter],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("admin_alerts")
         .select(`
           *,
@@ -190,7 +190,7 @@ const AdminAlerts = () => {
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline">
-                    {alert.alert_type.replace(/_/g, ' ')}
+                    {(alert as any).alert_type?.replace(/_/g, ' ') || 'Unknown'}
                   </Badge>
                 </TableCell>
                 <TableCell>{(alert.pharmacies as any)?.name || 'Unknown'}</TableCell>

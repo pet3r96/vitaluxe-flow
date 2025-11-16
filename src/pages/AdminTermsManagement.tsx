@@ -62,8 +62,8 @@ export default function AdminTermsManagement() {
     let error: any = null;
 
     if (activeRole === 'patient') {
-      const res = await supabase
-        .from('patient_portal_terms')
+      const res = await (supabase as any)
+        .from('patient_portal_terms' as any)
         .select('*')
         .order('version', { ascending: false })
         .limit(1)
@@ -106,8 +106,8 @@ export default function AdminTermsManagement() {
     setLoadingAcceptances(true);
     try {
       // 1) Fetch acceptances without embedding
-      const { data: accepts, error: aErr } = await supabase
-        .from('user_terms_acceptances')
+      const { data: accepts, error: aErr } = await (supabase as any)
+        .from('user_terms_acceptances' as any)
         .select('*')
         .order('accepted_at', { ascending: false });
 
@@ -197,8 +197,8 @@ export default function AdminTermsManagement() {
       if (activeRole === 'patient') {
         if (terms?.id) {
           // Update existing patient portal terms
-          const { error } = await supabase
-            .from('patient_portal_terms')
+          const { error } = await (supabase as any)
+            .from('patient_portal_terms' as any)
             .update({
               title,
               content,
@@ -211,8 +211,8 @@ export default function AdminTermsManagement() {
           if (error) throw error;
         } else {
           // Insert new patient portal terms
-          const { error } = await supabase
-            .from('patient_portal_terms')
+          const { error } = await (supabase as any)
+            .from('patient_portal_terms' as any)
             .insert({
               title,
               content,
@@ -272,8 +272,8 @@ export default function AdminTermsManagement() {
   const loadAttestation = async () => {
     setLoadingAttestation(true);
     
-    const { data, error } = await supabase
-      .from('checkout_attestation')
+    const { data, error } = await (supabase as any)
+      .from('checkout_attestation' as any)
       .select('*')
       .eq('is_active', true)
       .maybeSingle();
@@ -289,10 +289,10 @@ export default function AdminTermsManagement() {
 
     if (data) {
       setAttestation(data);
-      setAttestationTitle(data.title);
-      setAttestationSubtitle(data.subtitle || "");
-      setAttestationContent(data.content);
-      setAttestationCheckboxText(data.checkbox_text);
+      setAttestationTitle((data as any).title || '');
+      setAttestationSubtitle((data as any).subtitle || "");
+      setAttestationContent((data as any).content || '');
+      setAttestationCheckboxText((data as any).checkbox_text || '');
     }
     
     setLoadingAttestation(false);
@@ -307,8 +307,8 @@ export default function AdminTermsManagement() {
     setSavingAttestation(true);
 
     try {
-      const { error } = await supabase
-        .from('checkout_attestation')
+      const { error } = await (supabase as any)
+        .from('checkout_attestation' as any)
         .update({
           title: attestationTitle,
           subtitle: attestationSubtitle,

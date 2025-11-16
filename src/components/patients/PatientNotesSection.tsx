@@ -30,7 +30,7 @@ export function PatientNotesSection({ patientAccountId, patientName }: PatientNo
   const { user } = useAuth();
 
   // Filter notes based on search and filter type
-  const filteredNotes = notes.filter(note => {
+  const filteredNotes = (notes as any).filter((note: any) => {
     const matchesSearch = note.note_content.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = 
       filterType === 'all' ? true :
