@@ -85,14 +85,14 @@ export function DocumentsTab() {
       }
 
       // Process patient-shared documents
-      let patientSharedDocuments: any[] = [];
+      let patientSharedDocuments: Record<string, unknown>[] = [];
       if (patientSharedResult.status === 'fulfilled') {
         const { data, error } = patientSharedResult.value;
         if (error) {
           console.warn('[DocumentsTab] RPC get_provider_documents failed (patient-shared docs unavailable):', error);
         } else {
           const parsed = data ? (typeof data === 'string' ? JSON.parse(data) : data) : [];
-          patientSharedDocuments = (parsed as any[]).map(d => ({ 
+          patientSharedDocuments = parsed.map((d: Record<string, unknown>) => ({ 
             ...d, 
             source_type: d.source_type || 'patient_shared' 
           }));

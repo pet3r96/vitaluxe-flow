@@ -1,10 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { PracticeSubscription, SubscriptionStatus } from "@/types/subscriptions";
 
 export interface PatientPracticeSubscriptionStatus {
   practiceId: string;
   practiceName: string;
   isSubscribed: boolean;
-  status: 'trial' | 'active' | 'cancelled' | 'expired' | 'suspended' | 'payment_failed' | null;
+  status: SubscriptionStatus | null;
   trialEndsAt: Date | null;
   currentPeriodEnd: Date | null;
   gracePeriodEndsAt: Date | null;
@@ -27,7 +28,7 @@ export const getPatientPracticeSubscription = async (
 
   // Get practice subscription status
   const { data: subscription, error: subError } = await supabase
-    .from('practice_subscriptions' as any)
+    .from('practice_subscriptions')
     .select('status, trial_ends_at, current_period_end, grace_period_ends_at')
     .eq('practice_id', patientAccount.practice_id)
     .maybeSingle();
@@ -39,10 +40,10 @@ export const getPatientPracticeSubscription = async (
 
   const practiceName = Array.isArray(patientAccount.practices) 
     ? patientAccount.practices[0]?.name 
-    : (patientAccount.practices as any)?.name || 'Your Practice';
+    : patientAccount.practices?.name || 'Your Practice';
 
   // No subscription found = inactive
-  if (!subscription || typeof subscription !== 'object') {
+  if (!subscription) {
     return {
       practiceId: patientAccount.practice_id,
       practiceName,
@@ -54,7 +55,7 @@ export const getPatientPracticeSubscription = async (
     };
   }
 
-  const sub = subscription as any;
+  const sub = subscription as PracticeSubscription;
   const now = new Date();
   let isSubscribed = false;
 
@@ -71,7 +72,7 @@ export const getPatientPracticeSubscription = async (
     practiceId: patientAccount.practice_id,
     practiceName,
     isSubscribed,
-    status: sub.status as any,
+    status: sub.status,
     trialEndsAt: sub.trial_ends_at ? new Date(sub.trial_ends_at) : null,
     currentPeriodEnd: sub.current_period_end ? new Date(sub.current_period_end) : null,
     gracePeriodEndsAt: sub.grace_period_ends_at ? new Date(sub.grace_period_ends_at) : null

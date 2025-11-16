@@ -265,7 +265,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
         <Label className="text-sm font-medium">Source</Label>
         <RadioGroup 
           value={sourceFilter} 
-          onValueChange={(value) => setSourceFilter(value as any)}
+          onValueChange={(value) => setSourceFilter(value as "all" | "my_uploads" | "patient_shared" | "practice_shared")}
           className="flex gap-6"
         >
           <div className="flex items-center space-x-2">

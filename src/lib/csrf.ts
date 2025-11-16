@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { UserSession } from "@/types/subscriptions";
 
 /**
  * CSRF Protection Utilities
@@ -23,9 +24,8 @@ const generateCSRFTokenInternal = async (): Promise<string | null> => {
     }
     
     // Store in database for server-side validation
-    // Note: Types will be available after database migration is applied
     try {
-      const { error } = await supabase.from('user_sessions' as any).upsert({
+      const { error } = await supabase.from('user_sessions').upsert({
         user_id: user.id,
         csrf_token: token,
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
@@ -87,10 +87,9 @@ export const validateCSRFToken = async (token: string): Promise<boolean> => {
     }
     
     // Verify in database
-    // Note: Types will be available after database migration is applied
     try {
       const { data, error } = await supabase
-        .from('user_sessions' as any)
+        .from('user_sessions')
         .select('csrf_token')
         .eq('user_id', user.id)
         .eq('csrf_token', token)
@@ -142,7 +141,7 @@ export const getCurrentCSRFToken = async (): Promise<string | null> => {
     }
     
     const { data, error } = await supabase
-      .from('user_sessions' as any)
+      .from('user_sessions')
       .select('csrf_token')
       .eq('user_id', user.id)
       .gte('expires_at', new Date().toISOString())
@@ -157,7 +156,8 @@ export const getCurrentCSRFToken = async (): Promise<string | null> => {
       return null;
     }
     
-    return (data as any).csrf_token || null;
+    const session = data as UserSession;
+    return session.csrf_token || null;
   } catch (error) {
     import('@/lib/logger').then(({ logger }) => {
       logger.error('Error fetching CSRF token', error);
