@@ -23,7 +23,7 @@ export interface ThreadParticipant {
 
 export interface ThreadWithRelations extends ThreadRow {
   creator?: ThreadCreator;
-  orders?: ThreadOrder[];
+  orders?: ThreadOrder;
   participants?: ThreadParticipant[];
   resolver?: ThreadCreator;
   disposition_type?: string;

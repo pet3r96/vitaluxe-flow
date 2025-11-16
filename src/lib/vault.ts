@@ -135,3 +135,17 @@ export function asDocument(r: VaultRecordBase) {
     notes?: string;
   };
 }
+
+// Helpers to flatten vault records for PDF generation
+export function flattenForPdf(records: VaultRecordBase[], recordType: string): any[] {
+  if (!records || records.length === 0) return [];
+  
+  return records.map(r => {
+    const data = r.record_data as Record<string, unknown> || {};
+    return {
+      id: r.id,
+      ...data,
+      created_at: r.created_at,
+    };
+  });
+}
