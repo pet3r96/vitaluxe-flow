@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 interface Profile {
   id: string;
   email: string;
-  role: string;
+  role?: string;
   active: boolean;
   practice_id?: string;
   linked_topline_id?: string;
@@ -121,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (profileError) throw profileError;
-      setProfile(profileData);
+      setProfile(profileData as any);
 
       // Fetch roles from user_roles table
       const { data: rolesData } = await supabase
@@ -130,6 +130,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', userId);
       
       const userRoles = rolesData?.map(r => r.role) || [];
+      // Add profile.role to roles if it exists for backward compatibility
+      if (profileData?.role && !userRoles.includes(profileData.role)) {
+        userRoles.push(profileData.role);
+      }
       setRoles(userRoles);
 
       // Fetch provider info if applicable
@@ -139,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', userId)
         .maybeSingle();
       
-      setProvider(providerData);
+      setProvider(providerData as any);
 
       // Fetch staff info if applicable
       const { data: staffData } = await supabase
@@ -148,11 +152,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', userId)
         .maybeSingle();
       
-      setStaff(staffData);
+      setStaff(staffData as any);
 
-      // Fetch practice info if user has a practice_id
-      if (profileData?.practice_id || providerData?.practice_id || staffData?.practice_id) {
-        const practiceId = profileData?.practice_id || providerData?.practice_id || staffData?.practice_id;
+      // Fetch practice info if user is linked to a practice
+      const practiceId = providerData?.practice_id || staffData?.practice_id;
+      if (practiceId) {
         const { data: practiceData } = await supabase
           .from('profiles')
           .select('*')
@@ -160,6 +164,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .maybeSingle();
         
         setPractice(practiceData);
+      } else if (profileData?.role === 'practice' || profileData?.role === 'doctor') {
+        // If user themselves is a practice, set practice to their profile
+        setPractice(profileData);
       }
 
     } catch (error) {
