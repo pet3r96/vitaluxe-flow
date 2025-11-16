@@ -118,15 +118,8 @@ const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
 const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
-const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
-const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
-const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
 const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
-const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
-const PatientMobileHeader = lazy(() =>
-  import("./components/patient/PatientMobileHeader").then((m) => ({ default: m.PatientMobileHeader })),
-);
 const VideoRoom = lazy(() => import("./pages/video/VideoRoom"));
 const VideoCallTest = lazy(() => import("./pages/VideoCallTest"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
@@ -140,7 +133,6 @@ const PracticePatientMedicalVault = lazyWithRetry(
   () => import("./pages/practice/PatientMedicalVault"),
   "PracticePatientMedicalVault",
 );
-const PracticePatientIntakeForm = lazy(() => import("./pages/practice/PracticePatientIntakeForm"));
 const Support = lazy(() => import("./pages/Support"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
@@ -232,14 +224,6 @@ const App = () => {
                         }
                       />
                       <Route
-                        path="/intake"
-                        element={
-                          <ProtectedRoute>
-                            <PatientIntakeForm />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
                         path="/subscribe-to-vitaluxepro"
                         element={
                           <ProtectedRoute>
@@ -278,7 +262,6 @@ const App = () => {
                               <div className="flex min-h-screen w-full vitaluxe-base-bg overflow-hidden">
                                 <AppSidebar />
                                 <main className="flex-1 flex flex-col overflow-y-auto">
-                                  <PatientMobileHeader />
                                   <Topbar />
                                   <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 pt-14 md:pt-4 overflow-x-hidden relative bg-gray-100 dark:bg-stone-900 rounded-none">
                                     <div className="relative z-10">
@@ -336,9 +319,6 @@ const App = () => {
                                             <Route path="/downline-performance" element={<DownlinePerformanceView />} />
                                             <Route path="/shipping" element={<PharmacyShipping />} />
                                             <Route path="/appointments" element={<PatientAppointments />} />
-                                            <Route path="/medical-vault" element={<PatientMedicalVault />} />
-                                            <Route path="/documents" element={<PatientDocuments />} />
-                                            <Route path="/patient-messages" element={<PatientMessages />} />
                                             <Route
                                               path="/practice/patient-inbox"
                                               element={
