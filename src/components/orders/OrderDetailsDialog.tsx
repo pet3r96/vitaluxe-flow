@@ -866,8 +866,6 @@ export const OrderDetailsDialog = ({
             </div>
           </div>
 
-          {/* Order Status History */}
-          <OrderStatusHistory orderId={order.id} />
 
           {/* Refund History Section */}
           <RefundHistory orderId={order.id} />
