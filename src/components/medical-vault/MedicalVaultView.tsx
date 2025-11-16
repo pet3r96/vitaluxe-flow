@@ -105,17 +105,22 @@ export function MedicalVaultView({
     enabled: !!patientAccountId,
   });
 
-  // Fetch all medical data
+  // Fetch all medical data from patient_medical_vault
   const { data: medications } = useQuery({
     queryKey: ["patient-medications", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_medications")
-        .select("*")
+        .from("patient_medical_vault")
+        .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
+        .eq("category", "medication")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data?.map((item: any) => ({
+        id: item.id,
+        created_at: item.created_at,
+        ...(item.record_data || {})
+      })) || [];
     },
     enabled: !!patientAccountId,
   });
@@ -124,12 +129,17 @@ export function MedicalVaultView({
     queryKey: ["patient-conditions", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_conditions")
-        .select("*")
+        .from("patient_medical_vault")
+        .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
+        .eq("category", "condition")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data?.map((item: any) => ({
+        id: item.id,
+        created_at: item.created_at,
+        ...(item.record_data || {})
+      })) || [];
     },
     enabled: !!patientAccountId,
   });
@@ -138,12 +148,17 @@ export function MedicalVaultView({
     queryKey: ["patient-allergies", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_allergies")
-        .select("*")
+        .from("patient_medical_vault")
+        .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
+        .eq("category", "allergy")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data?.map((item: any) => ({
+        id: item.id,
+        created_at: item.created_at,
+        ...(item.record_data || {})
+      })) || [];
     },
     enabled: !!patientAccountId,
   });
@@ -152,12 +167,18 @@ export function MedicalVaultView({
     queryKey: ["patient-vitals", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_vitals")
-        .select("*")
+        .from("patient_medical_vault")
+        .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
-        .order("date_recorded", { ascending: false });
+        .eq("category", "vitals")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return data?.map((item: any) => ({
+        id: item.id,
+        created_at: item.created_at,
+        date_recorded: item.created_at,
+        ...(item.record_data || {})
+      })) || [];
     },
     enabled: !!patientAccountId,
   });
@@ -166,12 +187,17 @@ export function MedicalVaultView({
     queryKey: ["patient-immunizations", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_immunizations")
-        .select("*")
+        .from("patient_medical_vault")
+        .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
-        .order("date_administered", { ascending: false });
+        .eq("category", "immunization")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return data?.map((item: any) => ({
+        id: item.id,
+        created_at: item.created_at,
+        ...(item.record_data || {})
+      })) || [];
     },
     enabled: !!patientAccountId,
   });
@@ -180,12 +206,17 @@ export function MedicalVaultView({
     queryKey: ["patient-surgeries", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_surgeries")
-        .select("*")
+        .from("patient_medical_vault")
+        .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
-        .order("surgery_date", { ascending: false });
+        .eq("category", "surgery")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return data?.map((item: any) => ({
+        id: item.id,
+        created_at: item.created_at,
+        ...(item.record_data || {})
+      })) || [];
     },
     enabled: !!patientAccountId,
   });
@@ -194,12 +225,17 @@ export function MedicalVaultView({
     queryKey: ["patient-pharmacies", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_pharmacies")
-        .select("*")
+        .from("patient_medical_vault")
+        .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
-        .order("is_preferred", { ascending: false });
+        .eq("category", "pharmacy")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return data?.map((item: any) => ({
+        id: item.id,
+        created_at: item.created_at,
+        ...(item.record_data || {})
+      })) || [];
     },
     enabled: !!patientAccountId,
   });
@@ -208,12 +244,17 @@ export function MedicalVaultView({
     queryKey: ["patient-emergency-contacts", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("patient_emergency_contacts")
-        .select("*")
+        .from("patient_medical_vault")
+        .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
-        .order("contact_order", { ascending: true });
+        .eq("category", "emergency_contact")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return data?.map((item: any) => ({
+        id: item.id,
+        created_at: item.created_at,
+        ...(item.record_data || {})
+      })) || [];
     },
     enabled: !!patientAccountId,
   });
