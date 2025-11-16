@@ -40,12 +40,17 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
     queryFn: async () => {
       if (!patientAccountId) return [];
       const { data, error } = await supabase
-        .from("patient_emergency_contacts")
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccountId)
-        .order("contact_order", { ascending: true });
+        .eq("category", "emergency_contact")
+        .order("created_at", { ascending: true });
       if (error) throw error;
-      return data;
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        ...(item.record_data as any),
+        created_at: item.created_at
+      }));
     },
     enabled: !!patientAccountId,
   });

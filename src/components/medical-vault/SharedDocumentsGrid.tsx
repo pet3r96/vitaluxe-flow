@@ -28,20 +28,28 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   const { data: patientDocs, isLoading: loadingPatientDocs } = useQuery({
     queryKey: ['shared-patient-documents', patientAccountId],
     queryFn: async () => {
-      const query = supabase
-        .from('patient_documents')
+      const { data, error } = await supabase
+        .from('patient_medical_vault')
         .select('*')
-        .eq('patient_id', patientAccountId)
+        .eq('patient_account_id', patientAccountId)
+        .eq('category', 'document')
         .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      const documents = (data || []).map((item: any) => ({
+        id: item.id,
+        patient_id: item.patient_account_id,
+        ...(item.record_data as any),
+        created_at: item.created_at
+      }));
 
       // For practice view, only show shared documents
       if (mode === 'practice') {
-        query.eq('share_with_practice', true);
+        return documents.filter((doc: any) => doc.share_with_practice === true);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+      return documents;
     },
     staleTime: 10000,
   });

@@ -38,12 +38,17 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
     queryFn: async () => {
       if (!patientAccountId) return [];
       const { data, error } = await supabase
-        .from("patient_immunizations")
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccountId)
-        .order("date_administered", { ascending: false });
+        .eq("category", "immunization")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        ...(item.record_data as any),
+        created_at: item.created_at
+      }));
     },
     enabled: !!patientAccountId,
   });

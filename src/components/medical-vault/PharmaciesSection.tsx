@@ -39,12 +39,17 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
     queryFn: async () => {
       if (!patientAccountId) return [];
       const { data, error } = await supabase
-        .from("patient_pharmacies")
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccountId)
-        .order("is_preferred", { ascending: false });
+        .eq("category", "pharmacy")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        ...(item.record_data as any),
+        created_at: item.created_at
+      }));
     },
     enabled: !!patientAccountId,
   });
@@ -58,7 +63,7 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
     
     try {
       const { error } = await supabase
-        .from("patient_pharmacies")
+        .from("patient_medical_vault")
         .delete()
         .eq("id", pharmacy.id);
       
