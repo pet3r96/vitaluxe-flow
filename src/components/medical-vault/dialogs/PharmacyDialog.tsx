@@ -34,7 +34,7 @@ interface PharmacyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patientAccountId: string;
-  pharmacy?: any;
+  pharmacy?: VaultRecordBase;
   mode: "add" | "edit" | "view";
 }
 
@@ -58,13 +58,14 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
   // Update form values when pharmacy data changes
   React.useEffect(() => {
     if (pharmacy) {
-      setValue("pharmacy_name", pharmacy.pharmacy_name || "");
-      setValue("address", pharmacy.address || "");
-      setValue("city", pharmacy.city || "");
-      setValue("state", pharmacy.state || "");
-      setValue("zip_code", pharmacy.zip_code || "");
-      setValue("phone", pharmacy.phone || "");
-      setValue("is_preferred", pharmacy.is_preferred || false);
+      const data = asPharmacy(pharmacy);
+      setValue("pharmacy_name", data.pharmacy_name || data.name || "");
+      setValue("address", data.address || "");
+      setValue("city", data.city || "");
+      setValue("state", data.state || "");
+      setValue("zip_code", data.zip_code || "");
+      setValue("phone", data.phone || "");
+      setValue("is_preferred", data.is_preferred || false);
     }
   }, [pharmacy, setValue]);
 

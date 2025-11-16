@@ -52,15 +52,22 @@ export function asAllergy(r: VaultRecordBase) {
 
 export function asVital(r: VaultRecordBase) {
   return (r?.record_data ?? {}) as {
+    vital_type?: string;
     blood_pressure_systolic?: number;
     blood_pressure_diastolic?: number;
     heart_rate?: number;
+    pulse?: number;
     temperature?: number;
+    temperature_unit?: string;
     respiratory_rate?: number;
     oxygen_saturation?: number;
     weight?: number;
+    weight_unit?: string;
     height?: number;
+    height_unit?: string;
     bmi?: number;
+    cholesterol?: number;
+    blood_sugar?: number;
     date_recorded?: string;
     notes?: string;
   };
@@ -69,6 +76,7 @@ export function asVital(r: VaultRecordBase) {
 export function asImmunization(r: VaultRecordBase) {
   return (r?.record_data ?? {}) as {
     vaccine?: string;
+    vaccine_name?: string;
     date_administered?: string;
     lot_number?: string;
     administered_by?: string;
@@ -80,6 +88,7 @@ export function asSurgery(r: VaultRecordBase) {
   return (r?.record_data ?? {}) as {
     procedure?: string;
     surgery_type?: string;
+    surgery_date?: string;
     date?: string;
     surgeon?: string;
     facility?: string;
@@ -90,10 +99,14 @@ export function asSurgery(r: VaultRecordBase) {
 export function asPharmacy(r: VaultRecordBase) {
   return (r?.record_data ?? {}) as {
     name?: string;
+    pharmacy_name?: string;
     npi?: string;
     phone?: string;
     fax?: string;
     address?: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
     is_preferred?: boolean;
     notes?: string;
   };
