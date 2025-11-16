@@ -14,6 +14,8 @@ import { phoneSchema } from "@/lib/validators";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { VaultRecordBase, asEmergencyContact } from "@/lib/vault";
+import React from "react";
 
 const emergencyContactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -58,7 +60,7 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
       setValue("phone", data.phone || "");
       setValue("email", data.email || "");
       setValue("address", data.address || "");
-      setValue("preferred_contact_method", data.preferred_contact_method || "any");
+      setValue("preferred_contact_method", (data.preferred_contact_method || "any") as "phone" | "sms" | "email" | "any");
     }
   }, [contact, open, setValue]);
 

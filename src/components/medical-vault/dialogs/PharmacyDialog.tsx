@@ -14,6 +14,7 @@ import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { VaultRecordBase, asPharmacy } from "@/lib/vault";
 
 const pharmacySchema = z.object({
   pharmacy_name: z.string().optional(),
