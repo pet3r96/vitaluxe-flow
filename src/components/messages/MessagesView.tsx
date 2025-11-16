@@ -1014,22 +1014,22 @@ export const MessagesView = () => {
                             </div>
                             
                             <div className="flex items-center gap-2 flex-wrap">
-                              {(thread as any).disposition_type && (
+                              {thread.disposition_type && (
                                 <Badge variant="outline" className="text-xs">
-                                  {(thread as any).disposition_type.replace(/_/g, ' ')}
+                                  {thread.disposition_type.replace(/_/g, ' ')}
                                 </Badge>
                               )}
                             </div>
 
-                            {(thread as any).orders && (
+                            {thread.orders && (
                               <p className="text-xs opacity-70">
-                                Order: {new Date((thread as any).orders.created_at).toLocaleDateString()} - ${(thread as any).orders.total_amount}
+                                Order: {new Date(thread.orders.created_at).toLocaleDateString()} - ${thread.orders.total_amount}
                               </p>
                             )}
 
-                            {thread.created_by && (thread as any).creator && (
+                            {thread.created_by && thread.creator && (
                               <p className="text-xs opacity-70">
-                                By: {(thread as any).creator.name}
+                                By: {thread.creator.name}
                               </p>
                             )}
                             <p className="text-xs opacity-70">
@@ -1107,16 +1107,16 @@ export const MessagesView = () => {
                             >
                               {isOrderIssue ? "Order Issue" : "Support"}
                             </Badge>
-                            {isOrderIssue && (thread as any).disposition_type && (
+                            {isOrderIssue && thread.disposition_type && (
                               <Badge variant="outline" className="text-xs">
-                                {(thread as any).disposition_type.replace(/_/g, ' ')}
+                                {thread.disposition_type.replace(/_/g, ' ')}
                               </Badge>
                             )}
                           </div>
 
-                          {isOrderIssue && (thread as any).orders && (
+                          {isOrderIssue && thread.orders && (
                             <p className="text-xs opacity-70">
-                              Order: {new Date((thread as any).orders.created_at).toLocaleDateString()} - ${(thread as any).orders.total_amount}
+                              Order: {new Date(thread.orders.created_at).toLocaleDateString()} - ${thread.orders.total_amount}
                             </p>
                           )}
 
@@ -1174,30 +1174,30 @@ export const MessagesView = () => {
                     <Badge 
                       variant="outline"
                       className={
-                        (currentThread as any)?.thread_type === 'order_issue'
+                        currentThread?.thread_type === 'order_issue'
                           ? "bg-gold1/10 text-gold1 border-gold1/30 text-xs"
                           : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs"
                       }
                     >
-                      {(currentThread as any)?.thread_type === 'order_issue' ? 'Order Issue' : 'Support'}
+                      {currentThread?.thread_type === 'order_issue' ? 'Order Issue' : 'Support'}
                     </Badge>
                   </div>
 
                   {/* Order Issue specific info */}
-                  {(currentThread as any)?.thread_type === 'order_issue' && (
+                  {currentThread?.thread_type === 'order_issue' && (
                     <div className="space-y-1 text-xs sm:text-sm mb-2">
                       <p className="text-muted-foreground">
-                        <strong>Issue Type:</strong> {(currentThread as any).disposition_type?.replace(/_/g, ' ')}
+                        <strong>Issue Type:</strong> {currentThread.disposition_type?.replace(/_/g, ' ')}
                       </p>
-                      {(currentThread as any).orders && (
+                      {currentThread.orders && (
                         <p className="text-muted-foreground">
-                          <strong>Order:</strong> {new Date((currentThread as any).orders.created_at).toLocaleDateString()} - 
-                          ${(currentThread as any).orders.total_amount} ({(currentThread as any).orders.status})
+                          <strong>Order:</strong> {new Date(currentThread.orders.created_at).toLocaleDateString()} - 
+                          ${currentThread.orders.total_amount} ({currentThread.orders.status})
                         </p>
                       )}
-                      {(currentThread as any).participants && (currentThread as any).participants.length > 0 && (
+                      {currentThread.participants && currentThread.participants.length > 0 && (
                         <p className="text-muted-foreground">
-                          <strong>Participants:</strong> {(currentThread as any).participants.map((p: any) => p.name).join(', ')}
+                          <strong>Participants:</strong> {currentThread.participants.map(p => p.name).join(', ')}
                         </p>
                       )}
                     </div>
@@ -1207,12 +1207,12 @@ export const MessagesView = () => {
                   {currentThread?.resolved && (
                     <div className="mt-2 p-2 bg-muted rounded text-xs sm:text-sm">
                       <p className="text-muted-foreground">
-                        Closed by {(currentThread as any).resolver?.name || "User"} on{" "}
+                        Closed by {currentThread.resolver?.name || "User"} on{" "}
                         {new Date(currentThread.resolved_at).toLocaleDateString()}
                       </p>
-                      {(currentThread as any).disposition_notes && (
+                      {currentThread.disposition_notes && (
                         <p className="mt-1">
-                          <strong>Resolution:</strong> {(currentThread as any).disposition_notes}
+                          <strong>Resolution:</strong> {currentThread.disposition_notes}
                         </p>
                       )}
                     </div>
@@ -1224,7 +1224,7 @@ export const MessagesView = () => {
                   {!currentThread?.resolved ? (
                     <>
             {/* Support tickets: creator or admin can resolve */}
-            {(currentThread as any)?.thread_type === 'support' && 
+            {currentThread?.thread_type === 'support' && 
              (currentThread.created_by === user?.id || isAdmin) && (
               <Button 
                 size="sm" 
@@ -1235,7 +1235,7 @@ export const MessagesView = () => {
             )}
 
             {/* Order issue tickets: creator (practice/provider) or admin can close */}
-            {(currentThread as any)?.thread_type === 'order_issue' && 
+            {currentThread?.thread_type === 'order_issue' && 
              (currentThread.created_by === user?.id || isAdmin) && (
                         <div className="flex flex-col gap-2">
                           <Textarea
@@ -1260,7 +1260,7 @@ export const MessagesView = () => {
                     <>
                       {/* Reopen logic */}
             {(currentThread.created_by === user?.id || isAdmin) && 
-             (currentThread as any)?.thread_type === 'support' && (
+             currentThread?.thread_type === 'support' && (
               <Button 
                 size="sm" 
                 variant="outline"
@@ -1270,7 +1270,7 @@ export const MessagesView = () => {
               </Button>
             )}
             {(currentThread?.created_by === user?.id || isAdmin) && 
-             (currentThread as any)?.thread_type === 'order_issue' && (
+             currentThread?.thread_type === 'order_issue' && (
               <Button 
                 size="sm" 
                 variant="outline"
