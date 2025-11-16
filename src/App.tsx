@@ -229,14 +229,7 @@ const App = () => {
                           </ProtectedRoute>
                         }
                       />
-                      <Route
-                        path="/intake"
-                        element={
-                          <ProtectedRoute>
-                            <PatientIntakeForm />
-                          </ProtectedRoute>
-                        }
-                      />
+                      {/* Phase 6: /intake route removed (PatientIntakeForm deleted) */}
                       <Route
                         path="/subscribe-to-vitaluxepro"
                         element={
@@ -289,15 +282,12 @@ const App = () => {
                                             <Route path="/practices" element={<Practices />} />
                                             <Route path="/representatives" element={<Representatives />} />
                                             <Route path="/patients" element={<Patients />} />
-                                            <Route path="/patients/:patientId" element={<PatientDetail />} />
+                                            {/* Phase 6: /patients/:patientId removed (PatientDetail deleted) */}
                                             <Route
                                               path="/patients/:patientId/intake"
                                               element={<PracticePatientIntakeForm />}
                                             />
-                                            <Route
-                                              path="/practice/patients/:patientId/medical-vault"
-                                              element={<PracticePatientMedicalVault />}
-                                            />
+                                            {/* Phase 6: /practice/patients/:patientId/medical-vault removed (PracticePatientMedicalVault deleted) */}
                                             <Route path="/providers" element={<Providers />} />
                                             <Route
                                               path="/staff"
@@ -325,7 +315,7 @@ const App = () => {
                                             <Route path="/subscriptions" element={<Subscriptions />} />
                                             {/* Phase 6: /security removed (Security page deleted) */}
                                             <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
-                                            <Route path="/support" element={<Support />} />
+                                            {/* Phase 6: /support removed (Support page deleted) */}
                                             <Route path="/support-tickets" element={<SupportTickets />} />
                                             <Route
                                               path="/support-tickets/:ticketId"
@@ -339,7 +329,7 @@ const App = () => {
                                             <Route path="/downline-performance" element={<DownlinePerformanceView />} />
                                             <Route path="/shipping" element={<PharmacyShipping />} />
                                             <Route path="/appointments" element={<PatientAppointments />} />
-                                            <Route path="/medical-vault" element={<PatientMedicalVault />} />
+                                            {/* Phase 6: /medical-vault removed (PatientMedicalVault deleted) */}
                                             <Route path="/documents" element={<PatientDocuments />} />
                                             <Route path="/patient-messages" element={<PatientMessages />} />
                                             <Route
@@ -408,14 +398,7 @@ const App = () => {
                                                 </SubscriptionProtectedRoute>
                                               }
                                             />
-                                            <Route
-                                              path="/internal-chat"
-                                              element={
-                                                <SubscriptionProtectedRoute>
-                                                  <InternalChat />
-                                                </SubscriptionProtectedRoute>
-                                              }
-                                            />
+                                            {/* Phase 6: /internal-chat removed (InternalChat deleted) */}
                                             {/* Patient Inbox removed - now integrated into Messages */}
                                             {/* Redirect old practice-patients route to new merged Patients page */}
                                             <Route
