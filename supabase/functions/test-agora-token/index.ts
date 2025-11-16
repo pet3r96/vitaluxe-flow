@@ -121,6 +121,7 @@ serve(async (req) => {
       console.log("[Test Agora Token] Agora API status:", res.status);
       console.log("[Test Agora Token] Agora API body prefix:", body.substring(0, 120));
     } catch (probeErr) {
+      // TODO(types): intentional dynamic - error handling with unknown error type
       console.log("[Test Agora Token] Agora API fetch error:", (probeErr as any)?.message || String(probeErr));
     }
 

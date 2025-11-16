@@ -269,13 +269,17 @@ export function CreateAppointmentDialog({
       if (createFollowUp && data && effectiveUserId) {
         const followUpDate = new Date(startDateTime);
         followUpDate.setDate(followUpDate.getDate() + 7); // Default 1 week later
+        const followUpDateStr = followUpDate.toISOString().split('T')[0];
 
         await supabase.from("patient_follow_ups").insert({
           patient_id: selectedPatientId,
+          practice_id: values.practiceId,
           created_by: effectiveUserId,
           assigned_to: values.providerId,
-          follow_up_date: followUpDate.toISOString().split('T')[0],
+          due_date: followUpDateStr,
+          follow_up_date: followUpDateStr,
           follow_up_time: "09:00",
+          subject: values.serviceType || values.serviceDescription || "Follow-up appointment",
           reason: values.serviceType || values.serviceDescription || "Follow-up appointment",
           notes: `Follow-up for appointment on ${values.appointmentDate}`,
           priority: "medium",

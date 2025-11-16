@@ -57,6 +57,7 @@ serve(async (req) => {
     }
 
     if (impersonationSession?.impersonated_user_id) {
+      // TODO(types): intentional dynamic - accessing role from impersonation session query result
       const role = (impersonationSession as any).impersonated_role;
       const impersonatedId = impersonationSession.impersonated_user_id as string;
       console.log('Impersonation active:', { role, impersonatedId });

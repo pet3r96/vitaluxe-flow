@@ -25,5 +25,5 @@ export const usePharmacyShippingRates = (pharmacyId: string | null) => {
     },
     enabled: !!pharmacyId,
     staleTime: 5 * 60 * 1000,
-  } as any);
+  });
 };

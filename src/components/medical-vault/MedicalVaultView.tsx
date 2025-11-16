@@ -388,11 +388,9 @@ export function MedicalVaultView({
       const { error: insertError } = await supabase
         .from('medical_vault_share_links')
         .insert({
-          patient_id: patientAccountId,
-          token,
+          patient_account_id: patientAccountId,
+          share_token: token,
           expires_at: expiresAt.toISOString(),
-          consent_agreed_at: now.toISOString(),
-          consent_ip: 'client-side',
         });
 
       if (insertError) {

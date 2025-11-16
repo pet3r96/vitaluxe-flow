@@ -129,7 +129,7 @@ serve(async (req) => {
     // Authorization checks based on bucket
     if (normalizedBucket === 'patient-documents') {
       // For patient documents bucket - query patient_medical_vault with record_type='document'
-      const { data: document } = await (supabase as any)
+      const { data: document } = await supabase
         .from('patient_medical_vault')
         .select('id, patient_account_id, record_data')
         .eq('record_type', 'document')

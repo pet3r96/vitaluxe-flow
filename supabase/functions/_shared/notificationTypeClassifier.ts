@@ -29,6 +29,7 @@ const PRACTICE_AUTOMATION_TYPES = [
  * @returns true if this is a practice automation event that should respect practice settings
  */
 export function isPracticeAutomationEvent(notificationType: string): boolean {
+  // TODO(types): intentional dynamic - string array includes check with dynamic input
   return PRACTICE_AUTOMATION_TYPES.includes(notificationType as any);
 }
 

@@ -29,5 +29,5 @@ export const useMultiplePharmacyRates = (pharmacyIds: string[]) => {
     },
     enabled: pharmacyIds.length > 0,
     staleTime: 5 * 60 * 1000,
-  } as any);
+  });
 };
