@@ -38,12 +38,17 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
     queryFn: async () => {
       if (!patientAccountId) return [];
       const { data, error } = await supabase
-        .from("patient_surgeries")
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccountId)
-        .order("surgery_date", { ascending: false });
+        .eq("category", "surgery")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        ...(item.record_data as any),
+        created_at: item.created_at
+      }));
     },
     enabled: !!patientAccountId,
   });
@@ -57,7 +62,7 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
     
     try {
       const { error } = await supabase
-        .from("patient_surgeries")
+        .from("patient_medical_vault")
         .delete()
         .eq("id", surgery.id);
       
