@@ -56,14 +56,15 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
     if (!confirm(`Are you sure you want to delete ${condition.condition_name}?`)) return;
     
     try {
-      const { error } = await supabase
-        .from("patient_conditions")
+      const { error} = await supabase
+        .from("patient_medical_vault")
         .delete()
         .eq("id", condition.id);
       
       if (error) throw error;
       
       queryClient.invalidateQueries({ queryKey: ["patient-conditions", patientAccountId] });
+      queryClient.invalidateQueries({ queryKey: ["patient-medical-data"] });
       toast({ title: "Success", description: "Condition deleted successfully" });
       if (patientAccountId) {
         await logMedicalVaultChange({
@@ -89,13 +90,19 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
     
     try {
       const { error } = await supabase
-        .from("patient_conditions")
-        .update({ is_active: !condition.is_active })
+        .from("patient_medical_vault")
+        .update({ 
+          record_data: {
+            ...condition,
+            is_active: !condition.is_active
+          }
+        })
         .eq("id", condition.id);
       
       if (error) throw error;
       
       queryClient.invalidateQueries({ queryKey: ["patient-conditions", patientAccountId] });
+      queryClient.invalidateQueries({ queryKey: ["patient-medical-data"] });
       toast({ 
         title: "Success", 
         description: `Condition ${condition.is_active ? "marked as inactive" : "marked as active"} successfully` 

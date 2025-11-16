@@ -60,13 +60,14 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
     
     try {
       const { error } = await supabase
-        .from("patient_allergies")
+        .from("patient_medical_vault")
         .delete()
         .eq("id", allergy.id);
       
       if (error) throw error;
       
       queryClient.invalidateQueries({ queryKey: ["patient-allergies", patientAccountId] });
+      queryClient.invalidateQueries({ queryKey: ["patient-medical-data"] });
       toast({ title: "Success", description: "Allergy deleted successfully" });
       if (patientAccountId) {
         await logMedicalVaultChange({
@@ -92,13 +93,19 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
     
     try {
       const { error } = await supabase
-        .from("patient_allergies")
-        .update({ is_active: !allergy.is_active })
+        .from("patient_medical_vault")
+        .update({ 
+          record_data: {
+            ...allergy,
+            is_active: !allergy.is_active
+          }
+        })
         .eq("id", allergy.id);
       
       if (error) throw error;
       
       queryClient.invalidateQueries({ queryKey: ["patient-allergies", patientAccountId] });
+      queryClient.invalidateQueries({ queryKey: ["patient-medical-data"] });
       toast({ 
         title: "Success", 
         description: `Allergy ${allergy.is_active ? "marked as inactive" : "marked as active"} successfully` 

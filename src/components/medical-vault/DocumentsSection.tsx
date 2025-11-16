@@ -8,9 +8,20 @@ import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { PatientDocumentPreview } from "@/components/documents/PatientDocumentPreview";
 import { format } from "date-fns";
-import type { Database } from "@/integrations/supabase/types";
 
-type PatientDocument = Database['public']['Tables']['patient_documents']['Row'];
+interface PatientDocument {
+  id: string;
+  patient_id: string;
+  document_name: string;
+  document_type: string;
+  storage_path: string;
+  file_size: number | null;
+  notes: string | null;
+  share_with_practice: boolean;
+  mime_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 interface DocumentsSectionProps {
   patientAccountId: string;
@@ -63,8 +74,8 @@ const { data: documents = [], isLoading } = useQuery({
         let patientDocDetails = new Map();
         if (patientDocIds.length > 0) {
           const { data: details, error: detailsError } = await supabase
-            .from('patient_documents')
-            .select('id, mime_type, created_at, file_size, notes')
+            .from('patient_medical_vault')
+            .select('id, metadata, created_at')
             .in('id', patientDocIds);
           if (detailsError) throw detailsError;
           patientDocDetails = new Map((details || []).map((d: any) => [d.id, d]));
@@ -98,18 +109,13 @@ const { data: documents = [], isLoading } = useQuery({
       }
     }
 
-    // Default: direct table query (patient mode) or fallback for practice
-    const query = supabase
-      .from("patient_documents")
+    // Default: direct table query using patient_medical_vault filtered by category
+    const { data, error } = await supabase
+      .from("patient_medical_vault")
       .select("*")
       .eq("patient_id", patientAccountId)
+      .eq("record_type", "document")
       .order("created_at", { ascending: false });
-
-    if (mode === 'practice') {
-      query.eq('share_with_practice', true);
-    }
-
-    const { data, error } = await query;
 
     if (error) {
       console.error('[DocumentsSection] Error fetching documents:', error);
@@ -185,10 +191,10 @@ const { data: documents = [], isLoading } = useQuery({
   const deleteMutation = useMutation({
     mutationFn: async (documentId: string) => {
       const { error } = await supabase
-        .from("patient_documents")
+        .from("patient_medical_vault")
         .delete()
         .eq("id", documentId);
-
+      
       if (error) throw error;
     },
     onSuccess: () => {
