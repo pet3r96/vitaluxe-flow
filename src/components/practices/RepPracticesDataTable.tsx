@@ -56,14 +56,14 @@ export const RepPracticesDataTable = () => {
         return [];
       }
       
-      // Build list of rep_ids to include (for toplines: include downlines too)
-      let networkRepIds = [repRecord.id];
+      // Build list of user_ids to query (topline + downlines)
+      let networkUserIds = [effectiveUserId];
       
       if (effectiveRole === 'topline') {
-        // Get all downlines assigned to this topline
+        // Get all downlines assigned to this topline (by rep.id, not user_id)
         const { data: downlines, error: downlinesError } = await supabase
           .from("reps")
-          .select("id")
+          .select("user_id")
           .eq("assigned_topline_id", repRecord.id)
           .eq("role", "downline")
           .eq("active", true);
@@ -75,35 +75,15 @@ export const RepPracticesDataTable = () => {
           throw downlinesError;
         }
         
-        const downlineRepIds = downlines?.map(d => d.id) || [];
-        networkRepIds = [repRecord.id, ...downlineRepIds];
+        const downlineUserIds = downlines?.map(d => d.user_id) || [];
+        networkUserIds = [effectiveUserId, ...downlineUserIds];
       }
       
-      // Query practices via rep_practice_links for entire network
-      const { data: practiceLinks, error: linksError } = await supabase
-        .from("rep_practice_links")
-        .select("practice_id")
-        .in("rep_id", networkRepIds);
-      
-      if (linksError) {
-        import('@/lib/logger').then(({ logger }) => {
-          logger.error("Error fetching practice links", linksError);
-        });
-        throw linksError;
-      }
-      
-      if (!practiceLinks || practiceLinks.length === 0) {
-        return [];
-      }
-
-      // De-duplicate practice IDs
-      const practiceIds = Array.from(new Set(practiceLinks.map(link => link.practice_id)));
-
-      // Fetch full practice details (no role filter needed - rep_practice_links validates these are practices)
+      // Query practices via profiles.linked_topline_id
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
-        .in("id", practiceIds)
+        .in("linked_topline_id", networkUserIds)
         .eq("active", true)
         .order("created_at", { ascending: false });
 
@@ -273,7 +253,7 @@ export const RepPracticesDataTable = () => {
     enabled: !!effectiveUserId && (effectiveRole === "topline" || effectiveRole === "downline"),
   });
 
-  // Auto-heal: detect and fix missing rep_practice_links
+  // Auto-heal: detect and fix missing linked_topline_id relationships
   useEffect(() => {
     // Only run auto-heal for actual rep users
     const isRepUser = effectiveRole === "topline" || effectiveRole === "downline";

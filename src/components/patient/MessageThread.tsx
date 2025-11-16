@@ -175,9 +175,6 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
             <CardTitle className="text-base">
               {firstMsg?.practice_id ? "Practice" : "Provider"} Conversation
             </CardTitle>
-            {firstMsg?.urgency === 'urgent' && (
-              <Badge variant="destructive" className="text-xs">Urgent</Badge>
-            )}
             {isResolved && (
               <Badge variant="secondary" className="text-xs">Resolved</Badge>
             )}

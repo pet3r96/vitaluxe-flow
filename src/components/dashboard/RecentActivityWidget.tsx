@@ -63,7 +63,7 @@ export function RecentActivityWidget({ className, activities: externalActivities
         const { data: messages } = await supabase
           .from('message_threads')
           .select('id, subject, updated_at, thread_type')
-          .or(`created_by.eq.${effectiveUserId},thread_participants.user_id.eq.${effectiveUserId}`)
+          .eq('created_by', effectiveUserId)
           .order('updated_at', { ascending: false })
           .limit(5);
 

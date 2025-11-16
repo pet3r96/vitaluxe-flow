@@ -514,8 +514,8 @@ const InternalChat = () => {
         reply_count: 0,
         unread_count: msg.read_at ? 0 : 1,
         has_attachments: false,
-        body: msg.message_body,
-        priority: msg.urgency || 'medium'
+        body: msg.body,
+        priority: 'medium'
       }));
     },
     enabled: !!practiceId
@@ -638,8 +638,7 @@ const InternalChat = () => {
           sender_id: effectiveUserId!,
           sender_type: 'provider',
           subject: `Re: ${selectedPatientMessage.subject}`,
-          message_body: body,
-          urgency: selectedPatientMessage.urgency
+          body: body
         });
       if (error) throw error;
     },
@@ -721,7 +720,6 @@ const InternalChat = () => {
 
   const patientUnreadCount = patientMessagesData.filter(m => !m.read_at).length;
   const patientActiveCount = patientMessagesData.filter(m => !m.resolved).length;
-  const patientUrgentCount = patientMessagesData.filter(m => m.urgency === 'urgent' && !m.resolved).length;
 
   // Real-time subscriptions
   useEffect(() => {

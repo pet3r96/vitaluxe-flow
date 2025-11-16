@@ -82,15 +82,15 @@ export function useMessageAlerts() {
 
             // Only process if message is not from current user
             if (newMessage.sender_id !== user.id) {
-              // Check if user is participant in this thread
-              const { data: isParticipant } = await supabase
-                .from('thread_participants')
-                .select('thread_id')
-                .eq('thread_id', newMessage.thread_id)
-                .eq('user_id', user.id)
+              // Check if user created the thread or is mentioned
+              const { data: thread } = await supabase
+                .from('message_threads')
+                .select('created_by')
+                .eq('id', newMessage.thread_id)
                 .maybeSingle();
 
-              if (isParticipant) {
+              // If user created the thread, show notification
+              if (thread?.created_by === user.id) {
                 // Refresh count from server
                 await fetchUnreadCount();
 

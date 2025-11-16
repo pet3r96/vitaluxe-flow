@@ -40,10 +40,9 @@ class RealtimeManager {
     'cart_lines': ['cart-items', 'cart-count'],
     
     // Practices & Accounts
-    'profiles': ['practices', 'accounts', 'dashboard-profile', 'rep-practices'],
+    'profiles': ['practices', 'accounts', 'dashboard-profile', 'rep-practices', 'rep-practice-links'],
     'user_roles': ['practices', 'accounts'],
     'pending_practices': ['rep-pending-practices', 'pending-practices'],
-    'rep_practice_links': ['rep-practices', 'rep-practice-stats'],
     
     // Reps & Commissions
     'reps': ['all-reps-lookup', 'rep-productivity-view', 'rep-practices', 'current-rep-id'],

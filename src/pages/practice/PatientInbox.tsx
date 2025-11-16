@@ -175,10 +175,7 @@ export default function PatientInbox() {
     [messages]
   );
 
-  const urgentCount = useMemo(() => 
-    messages?.filter((m) => m.urgency === 'urgent' && !m.resolved).length || 0,
-    [messages]
-  );
+  // urgency column removed
 
   const markReadMutation = useMutation({
     mutationFn: async (messageId: string) => {
@@ -336,9 +333,6 @@ export default function PatientInbox() {
                     </p>
 
                     <div className="flex items-center gap-2 flex-wrap">
-                      {msg.urgency && (
-                        <PriorityBadge priority={msg.urgency} />
-                      )}
                     </div>
                   </div>
 

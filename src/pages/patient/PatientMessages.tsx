@@ -222,9 +222,6 @@ export default function PatientMessages() {
                             {!msg.read_at && msg.sender_type !== 'patient' && (
                               <Badge variant="default" className="text-xs h-5">New</Badge>
                             )}
-                            {msg.urgency === 'urgent' && (
-                              <Badge variant="destructive" className="text-xs h-5">Urgent</Badge>
-                            )}
                           </div>
                           <p className="text-xs font-medium text-foreground truncate">
                             {msg.subject || 'No subject'}

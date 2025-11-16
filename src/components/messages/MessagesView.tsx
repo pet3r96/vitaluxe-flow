@@ -155,7 +155,6 @@ export const MessagesView = () => {
             .from("message_threads")
             .select(`
               *,
-              thread_participants(user_id),
               orders(id, status, created_at, total_amount)
             `)
             .eq("thread_type", "support")
@@ -228,23 +227,21 @@ export const MessagesView = () => {
           .from("message_threads")
           .select(`
             *,
-            thread_participants(user_id),
             orders(id, status, created_at, total_amount)
           `)
           .eq("thread_type", "support")
           .eq("created_by", createdByFilter)
           .order("updated_at", { ascending: false });
 
-        // Fetch order issues where user is a participant
+        // Fetch order issues created by user
         let orderIssuesQuery = supabase
           .from("message_threads")
           .select(`
             *,
-            thread_participants!inner(user_id),
             orders(id, status, created_at, total_amount)
           `)
           .eq("thread_type", "order_issue")
-          .eq("thread_participants.user_id", effectiveUserId)
+          .eq("created_by", effectiveUserId)
           .order("updated_at", { ascending: false });
 
         // Apply resolved filter
@@ -319,7 +316,6 @@ export const MessagesView = () => {
           .from("message_threads")
           .select(`
             *,
-            thread_participants(user_id),
             orders(id, status, created_at, total_amount)
           `)
           .order("updated_at", { ascending: false });
@@ -519,35 +515,9 @@ export const MessagesView = () => {
       orderId: selectedOrderId
     }));
 
-    // Ensure the creator is added as a participant first to satisfy RLS
-    const allParticipantIds = Array.from(participantIds);
-    const senderParticipant = [{ thread_id: thread.id, user_id: effectiveUserId }];
-
-    const { error: senderParticipantError } = await supabase
-      .from("thread_participants")
-      .upsert(senderParticipant, { onConflict: "thread_id,user_id" });
-
-    if (senderParticipantError) {
-      logger.error("Sender participant error", senderParticipantError);
-      toast.error("Ticket created but couldn't add you as participant");
-      return; // Without creator participant, message insert will fail due to RLS
-    }
-
-    // Add the rest of participants (best-effort)
-    const otherParticipants = allParticipantIds
-      .filter((userId) => userId !== effectiveUserId)
-      .map((userId) => ({ thread_id: thread.id, user_id: userId }));
-
-    if (otherParticipants.length > 0) {
-      const { error: participantsError } = await supabase
-        .from("thread_participants")
-        .upsert(otherParticipants, { onConflict: "thread_id,user_id" });
-
-      if (participantsError) {
-        logger.error("Participants error", participantsError);
-        toast.warning("Ticket created but some participants couldn't be added yet");
-      }
-    }
+    // NOTE: thread_participants table has been replaced with internal_message_recipients
+    // For message_threads, participants are not tracked separately anymore
+    // The thread is accessible via creator/resolver relationships
 
     // Create the first message
     // CRITICAL: Always use user.id (not effectiveUserId) as sender_id
