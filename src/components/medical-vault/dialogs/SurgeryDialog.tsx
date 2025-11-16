@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { VaultRecordBase, asSurgery } from "@/lib/vault";
 
 const surgerySchema = z.object({
   surgery_type: z.string().min(1, "Surgery type is required"),
@@ -25,7 +26,7 @@ interface SurgeryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patientAccountId: string;
-  surgery?: any;
+  surgery?: VaultRecordBase;
   mode: "add" | "edit" | "view";
 }
 
@@ -35,7 +36,7 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<SurgeryFormData>({
     resolver: zodResolver(surgerySchema),
-    defaultValues: surgery || {
+    defaultValues: {
       surgery_type: "",
       surgery_date: "",
     },

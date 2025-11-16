@@ -17,6 +17,7 @@ import { searchAllergens } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { VaultRecordBase, asAllergy } from "@/lib/vault";
 
 const allergySchema = z.object({
   nka: z.boolean().optional(),
@@ -42,7 +43,7 @@ interface AllergyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patientAccountId: string;
-  allergy?: any;
+  allergy?: VaultRecordBase;
   mode: "add" | "edit" | "view";
 }
 
@@ -67,16 +68,17 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
   // Handle edit mode - convert existing date to month format
   useEffect(() => {
     if (allergy && open) {
+      const data = asAllergy(allergy);
       // Convert date_recorded from YYYY-MM-DD to YYYY-MM
-      const monthYear = allergy.date_recorded ? allergy.date_recorded.substring(0, 7) : "";
+      const monthYear = data.date_recorded ? data.date_recorded.substring(0, 7) : "";
       
       reset({
-        nka: allergy.nka || false,
-        allergen_name: allergy.allergen_name || "",
-        reaction_type: allergy.reaction_type || "",
-        severity: allergy.severity || undefined,
+        nka: data.nka || false,
+        allergen_name: data.allergen_name || "",
+        reaction_type: data.reaction_type || "",
+        severity: (data.severity || undefined) as "mild" | "moderate" | "severe" | undefined,
         date_recorded: monthYear,
-        notes: allergy.notes || "",
+        notes: data.notes || "",
       });
     } else if (!allergy && open) {
       reset({

@@ -20,6 +20,7 @@ import { searchMedications } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { VaultRecordBase, asMedication } from "@/lib/vault";
 
 const medicationSchema = z.object({
   medication_name: z.string().min(1, "Medication name is required"),
@@ -43,7 +44,7 @@ interface MedicationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patientAccountId: string;
-  medication?: any;
+  medication?: VaultRecordBase;
   mode: "add" | "edit" | "view";
 }
 
@@ -73,14 +74,15 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
   // Handle edit mode - convert existing dates and determine stop_date_option
   useEffect(() => {
     if (medication && open) {
+      const data = asMedication(medication);
       // Convert start_date from YYYY-MM-DD to YYYY-MM
-      const monthYear = medication.start_date ? medication.start_date.substring(0, 7) : "";
+      const monthYear = data.start_date ? data.start_date.substring(0, 7) : "";
       
       // Determine stop_date_option from existing stop_date
       let calculatedOption: "1-10-days" | "3-months" | "ongoing" = "ongoing";
-      if (medication.stop_date && medication.start_date) {
-        const start = new Date(medication.start_date);
-        const stop = new Date(medication.stop_date);
+      if (data.stop_date && data.start_date) {
+        const start = new Date(data.start_date);
+        const stop = new Date(data.stop_date);
         const diffDays = Math.floor((stop.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
         
         if (diffDays <= 10) {
@@ -91,16 +93,16 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
       }
 
       reset({
-        medication_name: medication.medication_name || "",
-        dosage: medication.dosage || "",
-        frequency: medication.frequency || "",
+        medication_name: data.medication_name || "",
+        dosage: data.dosage || "",
+        frequency: data.frequency || "",
         start_date: monthYear,
         stop_date_option: calculatedOption,
-        stop_date: medication.stop_date || "",
-        notes: medication.notes || "",
-        instructions: medication.instructions || "",
-        alert_enabled: medication.alert_enabled || false,
-        prescribing_provider: medication.prescribing_provider || "",
+        stop_date: data.stop_date || "",
+        notes: data.notes || "",
+        instructions: data.instructions || "",
+        alert_enabled: data.alert_enabled || false,
+        prescribing_provider: data.prescribing_provider || "",
       });
     } else if (!medication && open) {
       reset({

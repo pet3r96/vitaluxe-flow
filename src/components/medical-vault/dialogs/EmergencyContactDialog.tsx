@@ -30,7 +30,7 @@ interface EmergencyContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patientAccountId: string;
-  contact?: any;
+  contact?: VaultRecordBase;
   mode: "add" | "edit" | "view";
 }
 
@@ -38,9 +38,9 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
   const isReadOnly = mode === "view";
   const { effectiveUserId, effectiveRole, user } = useAuth();
   
-  const { register, handleSubmit, control, formState: { errors, isSubmitting }, reset, watch } = useForm<EmergencyContactFormData>({
+  const { register, handleSubmit, control, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<EmergencyContactFormData>({
     resolver: zodResolver(emergencyContactSchema),
-    defaultValues: contact || {
+    defaultValues: {
       name: "",
       relationship: "",
       phone: "",
@@ -49,6 +49,18 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
       preferred_contact_method: "any",
     },
   });
+
+  React.useEffect(() => {
+    if (contact && open) {
+      const data = asEmergencyContact(contact);
+      setValue("name", data.name || "");
+      setValue("relationship", data.relationship || "");
+      setValue("phone", data.phone || "");
+      setValue("email", data.email || "");
+      setValue("address", data.address || "");
+      setValue("preferred_contact_method", data.preferred_contact_method || "any");
+    }
+  }, [contact, open, setValue]);
 
   const queryClient = useQueryClient();
 

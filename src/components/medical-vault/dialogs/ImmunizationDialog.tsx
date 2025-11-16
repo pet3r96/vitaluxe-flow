@@ -13,6 +13,7 @@ import { searchVaccines } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { VaultRecordBase, asImmunization } from "@/lib/vault";
 
 const immunizationSchema = z.object({
   vaccine_name: z.string().min(1, "Vaccine name is required"),
@@ -25,7 +26,7 @@ interface ImmunizationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patientAccountId: string;
-  immunization?: any;
+  immunization?: VaultRecordBase;
   mode: "add" | "edit" | "view";
 }
 
@@ -35,7 +36,7 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<ImmunizationFormData>({
     resolver: zodResolver(immunizationSchema),
-    defaultValues: immunization || {
+    defaultValues: {
       vaccine_name: "",
       date_administered: "",
     },

@@ -16,6 +16,7 @@ import { searchConditions } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { VaultRecordBase, asCondition } from "@/lib/vault";
 
 const conditionSchema = z.object({
   condition_name: z.string().min(1, "Condition name is required"),
@@ -36,7 +37,7 @@ interface ConditionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patientAccountId: string;
-  condition?: any;
+  condition?: VaultRecordBase;
   mode: "add" | "edit" | "view";
 }
 
@@ -60,17 +61,18 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
   // Handle edit mode - convert existing date to month format
   useEffect(() => {
     if (condition && open) {
+      const data = asCondition(condition);
       // Convert date_diagnosed from YYYY-MM-DD to YYYY-MM
-      const monthYear = condition.date_diagnosed ? condition.date_diagnosed.substring(0, 7) : "";
+      const monthYear = data.date_diagnosed ? data.date_diagnosed.substring(0, 7) : "";
       
       reset({
-        condition_name: condition.condition_name || "",
-        description: condition.description || "",
+        condition_name: data.condition_name || "",
+        description: data.description || "",
         date_diagnosed: monthYear,
-        severity: condition.severity || undefined,
-        treatment_plan: condition.treatment_plan || "",
-        associated_provider: condition.associated_provider || "",
-        notes: condition.notes || "",
+        severity: (data.severity || undefined) as "mild" | "moderate" | "severe" | undefined,
+        treatment_plan: data.treatment_plan || "",
+        associated_provider: data.associated_provider || "",
+        notes: data.notes || "",
       });
     } else if (!condition && open) {
       reset({
