@@ -60,7 +60,7 @@ export function PatientEngagementSummaryCard({
           .from("patient_notes")
           .select("id", { count: "exact", head: true })
           .eq("patient_account_id", patientAccountId)
-          .eq("is_active", true),
+          .eq("is_active", true) as any, // Type workaround
         supabase
           .from("treatment_plans")
           .select("id", { count: "exact", head: true })
