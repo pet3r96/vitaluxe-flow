@@ -323,11 +323,11 @@ export default function PatientDetail() {
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patient,
-        medications,
-        conditions,
-        allergies,
-        vitals,
-        immunizations,
+        medications as any,
+        conditions as any,
+        allergies as any,
+        vitals as any,
+        immunizations as any,
         surgeries,
         pharmacies,
         emergencyContacts
@@ -385,11 +385,11 @@ export default function PatientDetail() {
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patient,
-        medications,
-        conditions,
-        allergies,
-        vitals,
-        immunizations,
+        medications as any,
+        conditions as any,
+        allergies as any,
+        vitals as any,
+        immunizations as any,
         surgeries,
         pharmacies,
         emergencyContacts
