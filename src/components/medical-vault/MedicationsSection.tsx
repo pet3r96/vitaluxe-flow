@@ -59,7 +59,7 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
     
     try {
       const { error } = await supabase
-        .from("patient_medications")
+        .from("patient_medical_vault")
         .delete()
         .eq("id", medication.id);
       
@@ -91,8 +91,13 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
     
     try {
       const { error } = await supabase
-        .from("patient_medications")
-        .update({ is_active: !medication.is_active, updated_at: new Date().toISOString() })
+        .from("patient_medical_vault")
+        .update({ 
+          record_data: {
+            ...medication,
+            is_active: !medication.is_active
+          }
+        })
         .eq("id", medication.id);
       
       if (error) throw error;

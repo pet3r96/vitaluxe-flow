@@ -19,38 +19,39 @@ export function MedicalVaultSummaryCard({ patientAccountId, onViewVault }: Medic
     queryFn: async () => {
       const [medications, conditions, allergies, vitals] = await Promise.all([
         supabase
-          .from('patient_medications')
+          .from('patient_medical_vault')
           .select('id', { count: 'exact', head: true })
           .eq('patient_account_id', patientAccountId)
-          .eq('is_active', true),
+          .eq('category', 'medication'),
         supabase
-          .from('patient_conditions')
+          .from('patient_medical_vault')
           .select('id', { count: 'exact', head: true })
           .eq('patient_account_id', patientAccountId)
-          .eq('is_active', true),
+          .eq('category', 'condition'),
         supabase
-          .from('patient_allergies')
-          .select('id, nka', { count: 'exact' })
+          .from('patient_medical_vault')
+          .select('id, record_data')
           .eq('patient_account_id', patientAccountId)
-          .eq('is_active', true),
+          .eq('category', 'allergy'),
         supabase
-          .from('patient_vitals')
-          .select('*')
+          .from('patient_medical_vault')
+          .select('id, record_data')
           .eq('patient_account_id', patientAccountId)
-          .order('date_recorded', { ascending: false })
+          .eq('category', 'vitals')
+          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
       ]);
       
-      const hasNKA = allergies.data?.some(a => a.nka) || false;
-      const allergyCount = hasNKA ? 0 : (allergies.count || 0);
+      const hasNKA = allergies.data?.some((a: any) => a.record_data?.nka) || false;
+      const allergyCount = hasNKA ? 0 : (allergies.data?.length || 0);
 
       return {
         medications: medications.count || 0,
         conditions: conditions.count || 0,
         allergies: allergyCount,
         hasNKA,
-        lastVital: vitals.data,
+        lastVital: vitals.data?.record_data,
       };
     },
     enabled: !!patientAccountId,

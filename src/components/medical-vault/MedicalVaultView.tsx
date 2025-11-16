@@ -75,15 +75,7 @@ export function MedicalVaultView({
       console.log(`[MedicalVault] Subscribing to realtime updates for patient ${patientAccountId}`);
       
       const tables = [
-        'patient_medications',
-        'patient_conditions',
-        'patient_allergies',
-        'patient_vitals',
-        'patient_immunizations',
-        'patient_surgeries',
-        'patient_pharmacies',
-        'patient_emergency_contacts',
-        'patient_documents',
+        'patient_medical_vault',
       ];
       
       tables.forEach(table => {
