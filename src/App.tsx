@@ -173,16 +173,6 @@ const App = () => {
                       {/* Public Routes */}
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/verify-email" element={<VerifyEmail />} />
-                      <Route path="/change-password" element={<ChangePassword />} />
-                      <Route path="/video-guest/:token" element={<VideoGuestJoin />} />
-                      <Route
-                        path="/accept-terms"
-                        element={
-                          <ProtectedRoute>
-                            <AcceptTerms />
-                          </ProtectedRoute>
-                        }
-                      />
                       <Route
                         path="/patient-onboarding"
                         element={
@@ -210,14 +200,6 @@ const App = () => {
                         element={
                           <ProtectedRoute>
                             <VideoCallTest />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/video/room"
-                        element={
-                          <ProtectedRoute>
-                            <VideoRoom />
                           </ProtectedRoute>
                         }
                       />
