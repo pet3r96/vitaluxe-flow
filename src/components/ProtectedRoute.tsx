@@ -27,11 +27,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Check for token-based password change (public access)
   const searchParams = new URLSearchParams(location.search);
   const hasToken = searchParams.has('token');
-  
-  // Allow public access to change-password with token
-  if (location.pathname === '/change-password' && hasToken) {
-    return <>{children}</>;
-  }
+  const isPublicPasswordChange = location.pathname === '/change-password' && hasToken;
 
   // ===== ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS =====
   // This is critical to avoid "Rendered more hooks than during the previous render" error
@@ -179,6 +175,11 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         </div>
       </div>
     );
+  }
+
+  // Allow public access to change-password with token (no auth required)
+  if (isPublicPasswordChange) {
+    return <>{children}</>;
   }
 
   return <>{children}</>;
