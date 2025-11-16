@@ -41,7 +41,8 @@ export function usePatientNotes(patientAccountId: string | undefined) {
     queryKey: ['patient-notes', patientAccountId],
     queryFn: async () => {
       if (!patientAccountId) return [];
-      const { data, error } = await supabase
+      // TODO: Remove (as any) when patient_notes is added to Supabase types
+      const { data, error } = await (supabase as any)
         .from('patient_notes')
         .select('*')
         .eq('patient_account_id', patientAccountId)
@@ -90,7 +91,8 @@ export function useCreatePatientNote() {
   
   return useMutation({
     mutationFn: async (noteData: CreatePatientNoteInput) => {
-      const { data, error } = await supabase
+      // TODO: Remove (as any) when patient_notes is added to Supabase types
+      const { data, error } = await (supabase as any)
         .from('patient_notes')
         .insert(noteData)
         .select()
@@ -122,7 +124,8 @@ export function useUpdatePatientNote() {
   
   return useMutation({
     mutationFn: async ({ id, note_content, share_with_patient, last_edited_by_user_id, last_edited_by_name }: UpdatePatientNoteInput) => {
-      const { data, error} = await supabase
+      // TODO: Remove (as any) when patient_notes is added to Supabase types
+      const { data, error} = await (supabase as any)
         .from('patient_notes')
         .update({
           note_content,
@@ -158,7 +161,8 @@ export function useDeletePatientNote() {
   
   return useMutation({
     mutationFn: async ({ id, patientAccountId }: { id: string; patientAccountId: string }) => {
-      const { error } = await supabase
+      // TODO: Remove (as any) when patient_notes is added to Supabase types
+      const { error } = await (supabase as any)
         .from('patient_notes')
         .update({ is_active: false })
         .eq('id', id);
