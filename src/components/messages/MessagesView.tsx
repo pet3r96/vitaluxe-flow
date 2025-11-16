@@ -182,10 +182,12 @@ export const MessagesView = () => {
             const allUserIds = [...new Set([...creatorIds, ...resolverIds])];
 
             const threadIds = threadsData.map(t => t.id);
-            const { data: participants } = await supabase
-              .from("thread_participants")
-              .select("thread_id, user_id, profiles(id, name, email)")
-              .in("thread_id", threadIds);
+            
+            // Get participants from internal_message_recipients
+            const { data: recipients } = await supabase
+              .from("internal_message_recipients")
+              .select("message_id, recipient_id")
+              .in("message_id", threadIds);
 
             if (allUserIds.length > 0) {
               const { data: profiles } = await supabase
@@ -196,11 +198,15 @@ export const MessagesView = () => {
               const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
               const participantMap = new Map();
               
-              participants?.forEach(p => {
-                if (!participantMap.has(p.thread_id)) {
-                  participantMap.set(p.thread_id, []);
+              // Map recipients to threads
+              recipients?.forEach(r => {
+                if (!participantMap.has(r.message_id)) {
+                  participantMap.set(r.message_id, []);
                 }
-                participantMap.get(p.thread_id).push(p.profiles);
+                const profile = profileMap.get(r.recipient_id);
+                if (profile) {
+                  participantMap.get(r.message_id).push(profile);
+                }
               });
 
               return threadsData.map(thread => ({
@@ -270,10 +276,12 @@ export const MessagesView = () => {
 
           // Get participant details for pharmacy threads
           const threadIds = threadsData.map(t => t.id);
-          const { data: participants } = await supabase
-            .from("thread_participants")
-            .select("thread_id, user_id, profiles(id, name, email)")
-            .in("thread_id", threadIds);
+          
+          // Get participants from internal_message_recipients
+          const { data: recipients } = await supabase
+            .from("internal_message_recipients")
+            .select("message_id, recipient_id")
+            .in("message_id", threadIds);
 
           if (allUserIds.length > 0) {
             const { data: profiles } = await supabase
@@ -284,11 +292,15 @@ export const MessagesView = () => {
             const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
             const participantMap = new Map();
             
-            participants?.forEach(p => {
-              if (!participantMap.has(p.thread_id)) {
-                participantMap.set(p.thread_id, []);
+            // Map recipients to threads
+            recipients?.forEach(r => {
+              if (!participantMap.has(r.message_id)) {
+                participantMap.set(r.message_id, []);
               }
-              participantMap.get(p.thread_id).push(p.profiles);
+              const profile = profileMap.get(r.recipient_id);
+              if (profile) {
+                participantMap.get(r.message_id).push(profile);
+              }
             });
 
             return threadsData.map(thread => ({
@@ -329,10 +341,12 @@ export const MessagesView = () => {
           const allUserIds = [...new Set([...creatorIds, ...resolverIds])];
 
           const threadIds = threadsData.map(t => t.id);
-          const { data: participants } = await supabase
-            .from("thread_participants")
-            .select("thread_id, user_id, profiles(id, name, email)")
-            .in("thread_id", threadIds);
+          
+          // Get participants from internal_message_recipients
+          const { data: recipients } = await supabase
+            .from("internal_message_recipients")
+            .select("message_id, recipient_id")
+            .in("message_id", threadIds);
 
           if (allUserIds.length > 0) {
             const { data: profiles } = await supabase
@@ -343,11 +357,15 @@ export const MessagesView = () => {
             const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
             const participantMap = new Map();
             
-            participants?.forEach(p => {
-              if (!participantMap.has(p.thread_id)) {
-                participantMap.set(p.thread_id, []);
+            // Map recipients to threads
+            recipients?.forEach(r => {
+              if (!participantMap.has(r.message_id)) {
+                participantMap.set(r.message_id, []);
               }
-              participantMap.get(p.thread_id).push(p.profiles);
+              const profile = profileMap.get(r.recipient_id);
+              if (profile) {
+                participantMap.get(r.message_id).push(profile);
+              }
             });
 
             return threadsData.map(thread => ({

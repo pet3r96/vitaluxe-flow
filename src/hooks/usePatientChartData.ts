@@ -34,42 +34,41 @@ export const usePatientChartData = (patientId: string) => {
         }
       : null;
 
-    // Vault tables
-    const vaultTables = [
-      "patient_vitals",
-      "patient_medications",
-      "patient_allergies",
-      "patient_conditions",
-      "patient_surgeries",
-      "patient_immunizations",
-      "patient_pharmacies",
-      "patient_documents",
-      "patient_notes",
-    ];
+    // Fetch medical vault records
+    const { data: vaultRecords } = await supabase
+      .from("patient_medical_vault")
+      .select("*")
+      .eq("patient_account_id", patientId)
+      .order("created_at", { ascending: false });
 
-    const results: Record<string, any[]> = {};
-
-    for (const table of vaultTables) {
-      const { data } = await supabase
-        .from(table as any)
-        .select("*")
-        .eq("patient_account_id", patientId)
-        .order("created_at", { ascending: false });
-
-      results[table] = data ?? [];
-    }
+    // Group by record type
+    const medications = vaultRecords?.filter(r => r.record_type === 'medication') || [];
+    const conditions = vaultRecords?.filter(r => r.record_type === 'condition') || [];
+    const allergies = vaultRecords?.filter(r => r.record_type === 'allergy') || [];
+    const vitals = vaultRecords?.filter(r => r.record_type === 'vital') || [];
+    const immunizations = vaultRecords?.filter(r => r.record_type === 'immunization') || [];
+    const surgeries = vaultRecords?.filter(r => r.record_type === 'surgery') || [];
+    const pharmacies = vaultRecords?.filter(r => r.record_type === 'pharmacy') || [];
+    const documents = vaultRecords?.filter(r => r.record_type === 'document') || [];
+    
+    // Fetch patient notes separately (if not in vault)
+    const { data: notes } = await supabase
+      .from("patient_notes")
+      .select("*")
+      .eq("patient_account_id", patientId)
+      .order("created_at", { ascending: false });
 
     setChart({
       patient: identity,
-      vitals: results.patient_vitals,
-      medications: results.patient_medications,
-      allergies: results.patient_allergies,
-      conditions: results.patient_conditions,
-      surgeries: results.patient_surgeries,
-      immunizations: results.patient_immunizations,
-      pharmacies: results.patient_pharmacies,
-      documents: results.patient_documents,
-      notes: results.patient_notes,
+      vitals,
+      medications,
+      allergies,
+      conditions,
+      surgeries,
+      immunizations,
+      pharmacies,
+      documents,
+      notes: notes || [],
     });
 
     setLoading(false);
@@ -86,14 +85,7 @@ export const usePatientChartData = (patientId: string) => {
 
     const tables = [
       "patient_accounts",
-      "patient_vitals",
-      "patient_medications",
-      "patient_allergies",
-      "patient_conditions",
-      "patient_surgeries",
-      "patient_immunizations",
-      "patient_pharmacies",
-      "patient_documents",
+      "patient_medical_vault",
       "patient_notes",
     ];
 
