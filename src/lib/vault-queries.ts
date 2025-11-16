@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { toJsonSafe } from "@/types/vault/jsonHelpers";
 import type { 
   TypedVaultRecord, 
   MedicationRecordData,
@@ -150,7 +151,7 @@ export class VaultQueryBuilder {
         patient_id: patientAccountId,
         record_type: "medication",
         title: data.medication_name || "Medication",
-        record_data: data as any, // Temporary cast until Supabase types support discriminated unions
+        record_data: toJsonSafe(data),
       })
       .select()
       .single();
@@ -170,7 +171,7 @@ export class VaultQueryBuilder {
         patient_id: patientAccountId,
         record_type: "condition",
         title: data.condition_name || "Condition",
-        record_data: data as any,
+        record_data: toJsonSafe(data),
       })
       .select()
       .single();
@@ -190,7 +191,7 @@ export class VaultQueryBuilder {
         patient_id: patientAccountId,
         record_type: "allergy",
         title: data.allergen_name || "Allergy",
-        record_data: data as any,
+        record_data: toJsonSafe(data),
       })
       .select()
       .single();
@@ -210,7 +211,7 @@ export class VaultQueryBuilder {
         patient_id: patientAccountId,
         record_type: "vital",
         title: data.vital_type || "Vital Sign",
-        record_data: data as any,
+        record_data: toJsonSafe(data),
       })
       .select()
       .single();
@@ -230,7 +231,7 @@ export class VaultQueryBuilder {
         patient_id: patientAccountId,
         record_type: "immunization",
         title: data.vaccine || data.vaccine_name || "Immunization",
-        record_data: data as any,
+        record_data: toJsonSafe(data),
       })
       .select()
       .single();
@@ -250,7 +251,7 @@ export class VaultQueryBuilder {
         patient_id: patientAccountId,
         record_type: "surgery",
         title: data.procedure || data.surgery_type || "Surgery",
-        record_data: data as any,
+        record_data: toJsonSafe(data),
       })
       .select()
       .single();
@@ -270,7 +271,7 @@ export class VaultQueryBuilder {
         patient_id: patientAccountId,
         record_type: "pharmacy",
         title: data.name || data.pharmacy_name || "Pharmacy",
-        record_data: data as any,
+        record_data: toJsonSafe(data),
       })
       .select()
       .single();
@@ -290,7 +291,7 @@ export class VaultQueryBuilder {
         patient_id: patientAccountId,
         record_type: "emergency_contact",
         title: data.name || "Emergency Contact",
-        record_data: data as any,
+        record_data: toJsonSafe(data),
       })
       .select()
       .single();
@@ -310,7 +311,7 @@ export class VaultQueryBuilder {
         patient_id: patientAccountId,
         record_type: "document",
         title: data.title || "Document",
-        record_data: data as any,
+        record_data: toJsonSafe(data),
       })
       .select()
       .single();
@@ -330,7 +331,7 @@ export class VaultQueryBuilder {
         patient_id: patientAccountId,
         record_type: "note",
         title: "Note",
-        record_data: data as any,
+        record_data: toJsonSafe(data),
       })
       .select()
       .single();
@@ -348,7 +349,7 @@ export class VaultQueryBuilder {
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .update({
-        record_data: data as any,
+        record_data: toJsonSafe(data),
         updated_at: new Date().toISOString(),
       })
       .eq("id", recordId)

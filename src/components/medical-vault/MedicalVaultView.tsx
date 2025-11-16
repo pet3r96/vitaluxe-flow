@@ -29,6 +29,7 @@ import { PDFViewer } from "@/components/documents/PDFViewer";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { DocumentsSection } from "@/components/medical-vault/DocumentsSection";
 import { PatientNotesSection } from "@/components/patients/PatientNotesSection";
+import type { TypedVaultRecord } from "@/types/vault/records";
 
 interface MedicalVaultViewProps {
   patientAccountId: string;
@@ -63,9 +64,9 @@ export function MedicalVaultView({
   useEffect(() => {
     console.log('[MedicalVault] Audit logs state:', {
       patientAccountId,
-      auditLogsCount: (auditLogs as any).length,
+      auditLogsCount: auditLogs.length,
       isLoading: isLoadingAuditLogs,
-      auditLogs: (auditLogs as any).slice(0, 2) // Log first 2 for brevity
+      auditLogs: auditLogs.slice(0, 2) // Log first 2 for brevity
     });
   }, [auditLogs, isLoadingAuditLogs, patientAccountId]);
 
@@ -106,7 +107,7 @@ export function MedicalVaultView({
   });
 
   // Fetch all medical data from patient_medical_vault
-  const { data: medications } = useQuery({
+  const { data: medications } = useQuery<TypedVaultRecord[]>({
     queryKey: ["patient-medications", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -116,12 +117,12 @@ export function MedicalVaultView({
         .eq("record_type", "medication")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []) as TypedVaultRecord[];
     },
     enabled: !!patientAccountId,
   });
 
-  const { data: conditions } = useQuery({
+  const { data: conditions } = useQuery<TypedVaultRecord[]>({
     queryKey: ["patient-conditions", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -131,12 +132,12 @@ export function MedicalVaultView({
         .eq("record_type", "condition")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []) as TypedVaultRecord[];
     },
     enabled: !!patientAccountId,
   });
 
-  const { data: allergies } = useQuery({
+  const { data: allergies } = useQuery<TypedVaultRecord[]>({
     queryKey: ["patient-allergies", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -146,12 +147,12 @@ export function MedicalVaultView({
         .eq("record_type", "allergy")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []) as TypedVaultRecord[];
     },
     enabled: !!patientAccountId,
   });
 
-  const { data: vitals } = useQuery({
+  const { data: vitals } = useQuery<TypedVaultRecord[]>({
     queryKey: ["patient-vitals", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -161,12 +162,12 @@ export function MedicalVaultView({
         .eq("record_type", "vital")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []) as TypedVaultRecord[];
     },
     enabled: !!patientAccountId,
   });
 
-  const { data: immunizations } = useQuery({
+  const { data: immunizations } = useQuery<TypedVaultRecord[]>({
     queryKey: ["patient-immunizations", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -174,14 +175,14 @@ export function MedicalVaultView({
         .select("*")
         .eq("patient_account_id", patientAccountId)
         .eq("record_type", "immunization")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false});
       if (error) throw error;
-      return data || [];
+      return (data || []) as TypedVaultRecord[];
     },
     enabled: !!patientAccountId,
   });
 
-  const { data: surgeries } = useQuery({
+  const { data: surgeries } = useQuery<TypedVaultRecord[]>({
     queryKey: ["patient-surgeries", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -191,12 +192,12 @@ export function MedicalVaultView({
         .eq("record_type", "surgery")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []) as TypedVaultRecord[];
     },
     enabled: !!patientAccountId,
   });
 
-  const { data: pharmacies } = useQuery({
+  const { data: pharmacies } = useQuery<TypedVaultRecord[]>({
     queryKey: ["patient-pharmacies", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -206,12 +207,12 @@ export function MedicalVaultView({
         .eq("record_type", "pharmacy")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []) as TypedVaultRecord[];
     },
     enabled: !!patientAccountId,
   });
 
-  const { data: emergencyContacts } = useQuery({
+  const { data: emergencyContacts } = useQuery<TypedVaultRecord[]>({
     queryKey: ["patient-emergency-contacts", patientAccountId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -221,7 +222,7 @@ export function MedicalVaultView({
         .eq("record_type", "emergency_contact")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []) as TypedVaultRecord[];
     },
     enabled: !!patientAccountId,
   });
@@ -270,6 +271,7 @@ export function MedicalVaultView({
 
     setIsGeneratingPdf(true);
     try {
+      // PDF generator expects flattened record structure, cast for compatibility
       const pdfBlob = await generateMedicalVaultPDF(
         patientAccount,
         medications as any || [],
@@ -333,6 +335,7 @@ export function MedicalVaultView({
 
     setIsGeneratingPdf(true);
     try {
+      // PDF generator expects flattened record structure, cast for compatibility
       const pdfBlob = await generateMedicalVaultPDF(
         patientAccount,
         medications as any || [],
