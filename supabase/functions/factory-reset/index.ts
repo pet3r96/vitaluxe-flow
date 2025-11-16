@@ -169,7 +169,6 @@ serve(async (req) => {
         patients: await getCount('patients'),
         
         // Reps & Relationships
-        rep_practice_links: await getCount('rep_practice_links'),
         rep_payments: await getCount('rep_payments'),
         rep_payment_batches: await getCount('rep_payment_batches'),
         pending_reps: await getCount('pending_reps'),

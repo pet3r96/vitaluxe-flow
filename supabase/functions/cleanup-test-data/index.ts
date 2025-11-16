@@ -278,10 +278,7 @@ serve(async (req) => {
           if (reps && reps.length > 0) {
             const repIds = reps.map(r => r.id);
             
-            await supabaseAdmin
-              .from('rep_practice_links')
-              .delete()
-              .in('rep_id', repIds);
+            // No longer using rep_practice_links - link is already set via linked_topline_id
             
             await supabaseAdmin
               .from('reps')

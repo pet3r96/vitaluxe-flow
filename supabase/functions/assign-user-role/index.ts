@@ -685,8 +685,6 @@ serve(async (req) => {
       
       if (linkError) {
         console.error('Failed to link practice to rep:', linkError);
-          }
-        }
       }
     }
 
