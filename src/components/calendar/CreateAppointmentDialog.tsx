@@ -29,7 +29,7 @@ interface CreateAppointmentDialogProps {
   defaultDate?: Date;
   defaultProviderId?: string;
   defaultPatientId?: string;
-  providers: any[];
+  providers: import("@/hooks/useProvidersAndStaff").ProviderOrStaff[];
   rooms: any[];
   isWalkIn?: boolean;
   isProviderAccount?: boolean;
@@ -469,13 +469,13 @@ export function CreateAppointmentDialog({
                         providers.map((provider) => (
                           <SelectItem key={provider.id} value={provider.id}>
                             <div className="flex items-center justify-between w-full gap-2">
-                              <span>{(provider as any).display_name || getProviderDisplayName(provider)}</span>
-                              {(provider as any).type && (
+                              <span>{getProviderDisplayName(provider)}</span>
+                              {provider.type && (
                                 <Badge 
-                                  variant={(provider as any).type === 'provider' ? 'default' : 'secondary'}
+                                  variant={provider.type === 'provider' ? 'default' : 'secondary'}
                                   className="ml-2 text-[10px] px-1.5 py-0"
                                 >
-                                  {(provider as any).type === 'provider' ? 'Provider' : 'Staff'}
+                                  {provider.type === 'provider' ? 'Provider' : 'Staff'}
                                 </Badge>
                               )}
                             </div>

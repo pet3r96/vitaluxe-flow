@@ -242,7 +242,8 @@ export default function PatientDocuments() {
 
       if (uploadError) throw uploadError;
 
-      const { error: dbError } = await (supabase as any).from("patient_medical_vault").insert({
+      const { error: dbError } = await supabase.from("patient_medical_vault").insert({
+        patient_id: patientAccount.id,
         patient_account_id: patientAccount.id,
         record_type: 'document',
         title: documentName?.trim() || file.name,

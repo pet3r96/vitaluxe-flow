@@ -25,7 +25,7 @@ interface RescheduleAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   appointment: any;
-  providers: any[];
+  providers: import("@/hooks/useProvidersAndStaff").ProviderOrStaff[];
   rooms: any[];
   onSuccess?: () => void;
 }
@@ -201,12 +201,12 @@ export function RescheduleAppointmentDialog({
                       <SelectItem key={provider.id} value={provider.id}>
                         <div className="flex items-center justify-between w-full gap-2">
                           <span>{provider.full_name || `${provider.first_name} ${provider.last_name}`}</span>
-                          {(provider as any).type && (
+                          {provider.type && (
                             <Badge 
-                              variant={(provider as any).type === 'provider' ? 'default' : 'secondary'}
+                              variant={provider.type === 'provider' ? 'default' : 'secondary'}
                               className="ml-2 text-[10px] px-1.5 py-0"
                             >
-                              {(provider as any).type === 'provider' ? 'Provider' : 'Staff'}
+                              {provider.type === 'provider' ? 'Provider' : 'Staff'}
                             </Badge>
                           )}
                         </div>

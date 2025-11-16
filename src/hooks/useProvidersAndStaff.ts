@@ -2,12 +2,24 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getProviderDisplayName } from "@/utils/providerNameUtils";
 
+interface ProfileData {
+  id: string;
+  name?: string | null;
+  full_name?: string | null;
+  prescriber_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  npi?: string | null;
+  dea?: string | null;
+  license_number?: string | null;
+}
+
 export interface ProviderOrStaff {
   id: string;
   user_id: string;
   full_name: string;
   type: 'provider' | 'staff';
-  profiles?: any;
+  profiles?: ProfileData;
   first_name?: string;
   last_name?: string;
   specialty?: string;
@@ -58,7 +70,7 @@ export const useProvidersAndStaff = (practiceId: string | null | undefined) => {
       // Step 3: Merge provider records with profiles
       const profileMap = new Map((profiles || []).map(p => [p.id, p]));
       
-      const combined: ProviderOrStaff[] = providerRecords.map((p: any) => {
+      const combined: ProviderOrStaff[] = providerRecords.map((p) => {
         const profile = profileMap.get(p.user_id);
         
         // Build display name with fallbacks

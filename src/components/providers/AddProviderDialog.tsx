@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { EdgeFunctionResponse, getEdgeFunctionError } from "@/types/edgeFunction";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -218,7 +219,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
       });
 
       if (error) {
-        throw new Error((data as any)?.error || error.message);
+        throw new Error(getEdgeFunctionError(data, error));
       }
 
       // Invalidate RX privileges cache so UI updates immediately
