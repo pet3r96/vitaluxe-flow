@@ -27,7 +27,7 @@ const roleConfig = {
 };
 
 export function RoleImpersonationDropdown() {
-  const { canImpersonate, effectiveRole, impersonatedUserName, isImpersonating, setImpersonation } = useAuth();
+  const { canImpersonate, effectiveRole, impersonatedUserName, isImpersonating, setImpersonation, clearImpersonation } = useAuth();
 
   // Fetch users grouped by role
   const { data: usersByRole } = useQuery({
@@ -137,7 +137,7 @@ export function RoleImpersonationDropdown() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => setImpersonation(null)}
+          onClick={() => clearImpersonation()}
           className="gap-2 cursor-pointer"
         >
           <Shield className="h-4 w-4" />
@@ -175,7 +175,7 @@ export function RoleImpersonationDropdown() {
                   {users.map((user) => (
                     <DropdownMenuItem
                       key={user.id}
-                      onClick={() => setImpersonation(role, user.id, user.name, user.email)}
+                      onClick={() => setImpersonation(user.id, role, user.name)}
                       className="gap-2 cursor-pointer"
                     >
                       <span className="flex-1 truncate">
