@@ -117,7 +117,7 @@ export function RescheduleAppointmentDialog({
         const followUpDate = new Date(startDateTime);
         followUpDate.setDate(followUpDate.getDate() + 7); // Default 1 week later
 
-        await supabase.from("patient_follow_ups" as any).insert({
+        await supabase.from("patient_follow_ups").insert({
           patient_id: appointment.patient_id,
           created_by: effectiveUserId,
           assigned_to: values.providerId,

@@ -37,7 +37,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
       console.log("[FollowUpManager] Fetching follow-ups for patient:", patientId, "with status filter:", statusFilter);
       
       let query = supabase
-        .from("patient_follow_ups" as any)
+        .from("patient_follow_ups")
         .select("*")
         .eq("patient_id", patientId)
         .order("follow_up_date", { ascending: true });
@@ -101,7 +101,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
   const markComplete = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("patient_follow_ups" as any)
+        .from("patient_follow_ups")
         .update({
           status: "completed",
           completed_at: new Date().toISOString(),
@@ -144,7 +144,7 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
   const cancelFollowUp = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("patient_follow_ups" as any)
+        .from("patient_follow_ups")
         .update({ status: "cancelled" })
         .eq("id", id);
 

@@ -77,7 +77,7 @@ export function CreateFollowUpFromAppointmentDialog({
       };
 
       const { error } = await supabase
-        .from("patient_follow_ups" as any)
+        .from("patient_follow_ups")
         .insert(payload);
       if (error) throw error;
     },

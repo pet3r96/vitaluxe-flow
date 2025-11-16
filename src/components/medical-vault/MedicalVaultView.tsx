@@ -385,8 +385,7 @@ export function MedicalVaultView({
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
 
-      // TODO: Remove (as any) when medical_vault_share_links is added to Supabase types
-      const { error: insertError } = await (supabase as any)
+      const { error: insertError } = await supabase
         .from('medical_vault_share_links')
         .insert({
           patient_id: patientAccountId,
