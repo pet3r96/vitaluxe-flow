@@ -18,6 +18,7 @@ import { logger } from "@/lib/logger";
 import { useMessageAlerts } from "@/hooks/useMessageAlerts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import type { ThreadWithRelations } from "@/types/threadExtensions";
 
 export const MessagesView = () => {
   const { user, effectiveUserId, effectiveRole, effectivePracticeId, isImpersonating } = useAuth();
@@ -133,10 +134,10 @@ export const MessagesView = () => {
     enabled: recipientType === "pharmacy" && !!effectiveUserId,
   });
 
-  const { data: threads, refetch: refetchThreads } = useQuery({
+  const { data: threads, refetch: refetchThreads } = useQuery<ThreadWithRelations[]>({
     queryKey: ["message-threads", resolvedFilter, effectiveUserId, isAdminEffective, effectivePracticeId],
     staleTime: 30000, // 30 seconds
-    queryFn: async () => {
+    queryFn: async (): Promise<ThreadWithRelations[]> => {
       // CLIENT-SIDE SECURITY: Validate practice context for non-admins
       if (!isAdminEffective && effectivePracticeId && (effectiveRole === 'doctor' || effectiveRole === 'provider')) {
         logger.info('Loading messages with practice context', { 
@@ -153,10 +154,7 @@ export const MessagesView = () => {
           // Fetch only support tickets created by rep
           let supportQuery = supabase
             .from("message_threads")
-            .select(`
-              *,
-              orders(id, status, created_at, total_amount)
-            `)
+            .select("*")
             .eq("thread_type", "support")
             .eq("created_by", effectiveUserId)
             .order("updated_at", { ascending: false });
@@ -225,10 +223,7 @@ export const MessagesView = () => {
         const createdByFilter = (effectiveRole === 'staff' && effectivePracticeId) ? effectivePracticeId : effectiveUserId;
         let supportQuery = supabase
           .from("message_threads")
-          .select(`
-            *,
-            orders(id, status, created_at, total_amount)
-          `)
+          .select("*")
           .eq("thread_type", "support")
           .eq("created_by", createdByFilter)
           .order("updated_at", { ascending: false });
@@ -236,10 +231,7 @@ export const MessagesView = () => {
         // Fetch order issues created by user
         let orderIssuesQuery = supabase
           .from("message_threads")
-          .select(`
-            *,
-            orders(id, status, created_at, total_amount)
-          `)
+          .select("*")
           .eq("thread_type", "order_issue")
           .eq("created_by", effectiveUserId)
           .order("updated_at", { ascending: false });
@@ -314,10 +306,7 @@ export const MessagesView = () => {
         // Admin: Fetch all threads with simple query
         let query = supabase
           .from("message_threads")
-          .select(`
-            *,
-            orders(id, status, created_at, total_amount)
-          `)
+          .select("*")
           .order("updated_at", { ascending: false });
 
         // Apply resolved filter
@@ -638,8 +627,8 @@ export const MessagesView = () => {
   const currentThread = threads?.find(t => t.id === selectedThread);
   
   // Filter threads by type
-  const supportTickets = threads?.filter(t => (t as any).thread_type !== 'order_issue') || [];
-  const orderIssueTickets = threads?.filter(t => (t as any).thread_type === 'order_issue') || [];
+  const supportTickets = threads?.filter(t => t.thread_type !== 'order_issue') || [];
+  const orderIssueTickets = threads?.filter(t => t.thread_type === 'order_issue') || [];
 
   // Reset pagination when filters or tabs change
   useEffect(() => {
@@ -931,7 +920,7 @@ export const MessagesView = () => {
                   <p className="text-sm text-muted-foreground text-center py-8">No support tickets</p>
                 ) : (
                   paginatedSupportTickets.map((thread) => {
-                    const isOrderIssue = (thread as any).thread_type === 'order_issue';
+                    const isOrderIssue = thread.thread_type === 'order_issue';
                     
                     return (
                       <button
@@ -999,7 +988,7 @@ export const MessagesView = () => {
                   <p className="text-sm text-muted-foreground text-center py-8">No order issue tickets</p>
                 ) : (
                   paginatedOrderIssueTickets.map((thread) => {
-                    const isOrderIssue = (thread as any).thread_type === 'order_issue';
+                    const isOrderIssue = thread.thread_type === 'order_issue';
                     
                     return (
                       <button
@@ -1082,7 +1071,7 @@ export const MessagesView = () => {
                 <p className="text-sm text-muted-foreground text-center py-8">No tickets found</p>
               ) : (
                 paginatedAllTickets?.map((thread) => {
-                  const isOrderIssue = (thread as any).thread_type === 'order_issue';
+                  const isOrderIssue = thread.thread_type === 'order_issue';
                   
                   return (
                     <button
@@ -1337,8 +1326,8 @@ export const MessagesView = () => {
             ) : (
               <div className="p-2 sm:p-3 bg-muted rounded-md text-center">
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  This {(currentThread as any)?.thread_type === 'order_issue' ? 'issue' : 'ticket'} is closed.
-                  {(currentThread as any)?.thread_type === 'support' 
+                  This {currentThread?.thread_type === 'order_issue' ? 'issue' : 'ticket'} is closed.
+                  {currentThread?.thread_type === 'support'
                     ? (isAdmin ? " Reopen it" : " Contact an admin") 
                     : " Reopen it"
                   } to continue the conversation.
