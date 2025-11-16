@@ -66,15 +66,16 @@ Deno.serve(async (req) => {
           const downlineRepIds = downlines?.map(d => d.id) || [];
           const networkRepIds = [repId, ...downlineRepIds];
 
-          // Get practice links
-          const { data: practiceLinks } = await supabase
-            .from('rep_practice_links')
-            .select('practice_id')
-            .in('rep_id', networkRepIds);
+          // Get practices linked via profiles.linked_topline_id
+          const { data: linkedProfiles } = await supabase
+            .from('profiles')
+            .select('id')
+            .in('linked_topline_id', networkRepIds)
+            .eq('role', 'practice');
 
-          if (!practiceLinks?.length) return 0;
+          if (!linkedProfiles?.length) return 0;
 
-          const practiceIds = practiceLinks.map(l => l.practice_id);
+          const practiceIds = linkedProfiles.map(p => p.id);
           
           // Count active practices
           const { count } = await supabase
@@ -105,13 +106,14 @@ Deno.serve(async (req) => {
             const downlineRepIds = downlines?.map(d => d.id) || [];
             const networkRepIds = [repId, ...downlineRepIds];
 
-            // Get practice links
-            const { data: practiceLinks } = await supabase
-              .from('rep_practice_links')
-              .select('practice_id')
-              .in('rep_id', networkRepIds);
+            // Get practices linked via profiles.linked_topline_id
+            const { data: linkedProfiles } = await supabase
+              .from('profiles')
+              .select('id')
+              .in('linked_topline_id', networkRepIds)
+              .eq('role', 'practice');
 
-            const practiceIds = Array.from(new Set(practiceLinks?.map(l => l.practice_id) || []));
+            const practiceIds = Array.from(new Set(linkedProfiles?.map(p => p.id) || []));
 
             if (practiceIds.length === 0) return 0;
 
@@ -126,12 +128,13 @@ Deno.serve(async (req) => {
             return count || 0;
           } else {
             // Downline
-            const { data: practiceLinks } = await supabase
-              .from('rep_practice_links')
-              .select('practice_id')
-              .eq('rep_id', repId);
+            const { data: linkedProfiles } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('linked_topline_id', repId)
+              .eq('role', 'practice');
 
-            const practiceIds = practiceLinks?.map(l => l.practice_id) || [];
+            const practiceIds = linkedProfiles?.map(p => p.id) || [];
 
             if (practiceIds.length === 0) return 0;
 
