@@ -52,16 +52,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('[AuthContext] Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
-      setProfile(data);
+      if (error) {
+        console.error('[AuthContext] Error fetching profile:', error);
+        setProfile(null);
+        return;
+      }
+      
+      console.log('[AuthContext] Profile loaded, fetching roles...');
+      
+      // Fetch user roles
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+      
+      // Use first role if available
+      const userRole = rolesData && rolesData.length > 0 ? rolesData[0].role : null;
+      console.log('[AuthContext] User role:', userRole);
+      
+      setProfile({ ...data, role: userRole });
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('[AuthContext] Profile fetch exception:', error);
       setProfile(null);
     }
   };
@@ -73,9 +91,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Set up auth state listener
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('[AuthContext] Auth state changed:', event, !!session);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -88,6 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
         }
         
+        // ALWAYS set loading to false after session update
         setLoading(false);
         setInitializing(false);
       }
@@ -95,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[AuthContext] Initial session check:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -102,8 +123,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTimeout(() => {
           fetchProfile(session.user.id);
         }, 0);
+      } else {
+        setProfile(null);
       }
       
+      // ALWAYS set loading to false
+      setLoading(false);
+      setInitializing(false);
+    }).catch((error) => {
+      console.error('[AuthContext] Error getting session:', error);
+      // Even on error, set loading to false to prevent infinite loading
       setLoading(false);
       setInitializing(false);
     });
