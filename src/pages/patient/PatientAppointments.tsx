@@ -93,7 +93,7 @@ export default function PatientAppointments() {
               .from('profiles')
               .select('id, address_street, address_city, address_state, address_zip, name')
               .in('id', practiceIds as string[]),
-            supabase
+            (supabase as any)
               .from('practice_branding')
               .select('practice_id, practice_name')
               .in('practice_id', practiceIds as string[])
@@ -187,7 +187,7 @@ export default function PatientAppointments() {
         }
 
         // Fetch practice branding for name
-        const { data: branding } = await supabase
+        const { data: branding } = await (supabase as any)
           .from('practice_branding')
           .select('practice_id, practice_name')
           .eq('practice_id', patientAccount.practice_id)
@@ -217,7 +217,7 @@ export default function PatientAppointments() {
             ...r,
             practice: {
               id: r.practice_id,
-              name: branding?.practice_name || practiceProfile?.name || 'Practice',
+              name: (branding as any)?.practice_name || practiceProfile?.name || 'Practice',
               address_formatted: formatted,
               address_street: addrStreet,
               address_city: addrCity,

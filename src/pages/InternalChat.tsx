@@ -244,7 +244,7 @@ const InternalChat = () => {
         ? await supabase
             .from('profiles')
             .select('id, name')
-            .in('id', uniqueSenderIds)
+            .in('id', uniqueSenderIds as string[])
         : { data: [] };
 
       const profileMap = Object.fromEntries(
@@ -780,7 +780,7 @@ const InternalChat = () => {
   // Combined totals (internal + patient)
   const combinedUnreadCount = unreadCount + patientUnreadCount;
   const combinedActiveCount = activeCount + patientActiveCount;
-  const combinedUrgentCount = urgentCount + (patientMessages?.filter((m: any) => m.urgency === 'urgent' && !m.resolved).length || 0);
+  const combinedUrgentCount = urgentCount + (patientMessagesData?.filter((m: any) => m.urgency === 'urgent' && !m.resolved).length || 0);
 
   if (!practiceId) {
     return (
@@ -944,7 +944,7 @@ const InternalChat = () => {
                   onNewMessage={() => setCreatePatientDialogOpen(true)}
                   unreadCount={patientUnreadCount}
                   activeCount={patientActiveCount}
-                  urgentCount={patientUrgentCount}
+                  urgentCount={patientMessagesData?.filter((m: any) => m.urgency === 'urgent' && !m.resolved).length || 0}
                 />
               ) : (
                 <PatientMessageThread
@@ -978,7 +978,7 @@ const InternalChat = () => {
                 onNewMessage={() => setCreatePatientDialogOpen(true)}
                 unreadCount={patientUnreadCount}
                 activeCount={patientActiveCount}
-                urgentCount={patientUrgentCount}
+                urgentCount={patientMessagesData?.filter((m: any) => m.urgency === 'urgent' && !m.resolved).length || 0}
               />
 
               <PatientMessageThread

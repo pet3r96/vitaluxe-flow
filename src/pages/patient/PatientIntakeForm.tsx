@@ -290,7 +290,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   // Pre-populate medical vault data added by practice
   useEffect(() => {
     if (existingMedications && existingMedications.length > 0) {
-      const medList = existingMedications.map(med => ({
+      const medList = (existingMedications as any).map((med: any) => ({
         name: med.medication_name || '',
         dosage: med.dosage || '',
         frequency: med.frequency || '',
@@ -302,7 +302,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
   useEffect(() => {
     if (existingAllergies && existingAllergies.length > 0) {
-      const allergyList = existingAllergies.map(allergy => ({
+      const allergyList = (existingAllergies as any).map((allergy: any) => ({
         name: allergy.allergen_name || '',
         reaction: allergy.reaction_type || '',
         severity: allergy.severity || '',
@@ -314,7 +314,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
   useEffect(() => {
     if (existingConditions && existingConditions.length > 0) {
-      const conditionList = existingConditions.map(condition => ({
+      const conditionList = (existingConditions as any).map((condition: any) => ({
         name: condition.condition_name || '',
         diagnosed_date: condition.date_diagnosed || '',
         status: 'active', // Default status for intake form
@@ -326,7 +326,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
   useEffect(() => {
     if (existingSurgeries && existingSurgeries.length > 0) {
-      const surgeryList = existingSurgeries.map(surgery => ({
+      const surgeryList = (existingSurgeries as any).map((surgery: any) => ({
         type: surgery.surgery_type || '',
         date: surgery.surgery_date || '',
         notes: surgery.notes || '',
@@ -339,7 +339,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   useEffect(() => {
     if (existingImmunizations && existingImmunizations.length > 0) {
       console.log('[Immunizations] Loading existing data:', existingImmunizations);
-      const immunizationList = existingImmunizations.map(imm => {
+      const immunizationList = (existingImmunizations as any).map((imm: any) => {
         // Handle date formatting - ensure it's in YYYY-MM-DD format
         let dateFormatted = '';
         if (imm.date_administered && imm.date_administered !== 'null' && imm.date_administered !== 'undefined') {

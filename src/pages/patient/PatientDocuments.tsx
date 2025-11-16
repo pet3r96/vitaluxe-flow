@@ -242,7 +242,7 @@ export default function PatientDocuments() {
 
       if (uploadError) throw uploadError;
 
-      const { error: dbError } = await supabase.from("patient_documents").insert({
+      const { error: dbError } = await (supabase as any).from("patient_documents").insert({
         patient_id: patientAccount.id,
         document_name: documentName?.trim() || file.name,
         document_type: documentType,
@@ -297,7 +297,7 @@ export default function PatientDocuments() {
 
       if (storageError) throw storageError;
 
-      const { error: dbError } = await supabase
+      const { error: dbError } = await (supabase as any)
         .from("patient_documents")
         .delete()
         .eq("id", doc.id);
@@ -323,7 +323,7 @@ export default function PatientDocuments() {
   // Hide mutation (for provider documents)
   const hideMutation = useMutation({
     mutationFn: async (docId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("patient_documents")
         .update({ hidden_by_patient: true } as any)
         .eq("id", docId);
