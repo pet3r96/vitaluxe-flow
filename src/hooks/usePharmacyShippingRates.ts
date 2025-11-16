@@ -7,6 +7,7 @@ export const usePharmacyShippingRates = (pharmacyId: string | null) => {
     queryFn: async () => {
       if (!pharmacyId) return {};
       
+      // TODO: Remove (as any) when pharmacy_shipping_rates is added to Supabase types
       const { data, error } = await (supabase as any)
         .from('pharmacy_shipping_rates')
         .select('shipping_speed, rate, enabled')

@@ -55,6 +55,7 @@ export function PatientEngagementSummaryCard({
     queryFn: async () => {
       const nowIso = new Date().toISOString();
       
+      // TODO: Remove (as any) when patient_notes/patient_follow_ups are added to Supabase types
       const [notes, plans, upcoming, followups, docs] = await Promise.all([
         (supabase as any)
           .from("patient_notes")
