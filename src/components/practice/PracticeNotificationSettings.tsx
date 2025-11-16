@@ -32,8 +32,8 @@ export function PracticeNotificationSettings({ practiceId }: PracticeNotificatio
   // Update local state when settings load
   useState(() => {
     if (settings) {
-      setLocalEmailEnabled(settings.enable_email_notifications);
-      setLocalSmsEnabled(settings.enable_sms_notifications);
+      setLocalEmailEnabled((settings as any).enable_email_notifications);
+      setLocalSmsEnabled((settings as any).enable_sms_notifications);
     }
   });
 
@@ -199,8 +199,8 @@ export function PracticeNotificationSettings({ practiceId }: PracticeNotificatio
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  setLocalEmailEnabled(settings?.enable_email_notifications ?? true);
-                  setLocalSmsEnabled(settings?.enable_sms_notifications ?? true);
+                  setLocalEmailEnabled((settings as any)?.enable_email_notifications ?? true);
+                  setLocalSmsEnabled((settings as any)?.enable_sms_notifications ?? true);
                 }}
                 disabled={isUpdating}
               >

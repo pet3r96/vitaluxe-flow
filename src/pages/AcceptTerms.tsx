@@ -47,8 +47,8 @@ export default function AcceptTerms() {
       // Special handling for patients - they use a separate table
       if (effectiveRole === 'patient') {
         console.log('[AcceptTerms] Querying patient_portal_terms...');
-        const res = await supabase
-          .from('patient_portal_terms')
+        const res = await (supabase as any)
+          .from('patient_portal_terms' as any)
           .select('*')
           .order('version', { ascending: false })
           .limit(1)

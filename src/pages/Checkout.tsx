@@ -204,8 +204,8 @@ export default function Checkout() {
   const { data: checkoutAttestation } = useQuery({
     queryKey: ["checkout-attestation"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("checkout_attestation")
+      const { data, error } = await (supabase as any)
+        .from("checkout_attestation" as any)
         .select("*")
         .eq("is_active", true)
         .maybeSingle();
@@ -1043,10 +1043,10 @@ export default function Checkout() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
               <AlertCircle className="h-5 w-5" />
-              {checkoutAttestation.title}
+              {(checkoutAttestation as any).title}
             </CardTitle>
             <CardDescription>
-              {checkoutAttestation.subtitle}
+              {(checkoutAttestation as any).subtitle}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1055,7 +1055,7 @@ export default function Checkout() {
               <AlertDescription className="text-sm leading-relaxed">
                 By checking the box below, you attest that:
                 <ul className="list-disc ml-6 mt-2 space-y-1">
-                  {checkoutAttestation.content.split('\n').map((line: string, idx: number) => {
+                  {((checkoutAttestation as any).content || '').split('\n').map((line: string, idx: number) => {
                     const cleanedLine = line.trim().replace(/^-\s*/, '');
                     return cleanedLine ? <li key={idx}>{cleanedLine}</li> : null;
                   })}
@@ -1075,7 +1075,7 @@ export default function Checkout() {
                   htmlFor="medical-attestation"
                   className="text-sm font-medium leading-relaxed cursor-pointer"
                 >
-                  {checkoutAttestation.checkbox_text}
+                  {(checkoutAttestation as any).checkbox_text}
                 </Label>
               </div>
             </div>
