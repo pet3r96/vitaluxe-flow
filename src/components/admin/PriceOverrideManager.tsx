@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { usePagination } from "@/hooks/usePagination";
+import type { RepProductPriceOverride, PendingOverride } from "@/types/dashboard";
 import {
   Card,
   CardContent,
@@ -42,20 +43,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-interface Override {
-  id: string;
-  product_id: string;
-  override_topline_price: number | null;
-  override_downline_price: number | null;
-  override_retail_price: number | null;
-}
-
-interface PendingOverride {
-  override_topline_price: string;
-  override_downline_price: string;
-  override_retail_price: string;
-}
-
 export const PriceOverrideManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -92,19 +79,19 @@ export const PriceOverrideManager = () => {
     },
   });
 
-  // Simplify query to avoid deep type instantiation
-  const { data: existingOverrides, isLoading: overridesLoading } = useQuery({
+  // Fetch price overrides for selected rep
+  const { data: existingOverrides, isLoading: overridesLoading } = useQuery<RepProductPriceOverride[]>({
     queryKey: ['price-overrides', selectedRepId],
     queryFn: async () => {
       if (!selectedRepId) return [];
       
-      const { data, error } = await (supabase as any)
-        .from('rep_product_price_overrides')
-        .select('id, product_id, override_topline_price, override_downline_price, override_retail_price')
+      const { data, error } = await supabase
+        .from('rep_product_price_overrides' as any)
+        .select('id, product_id, override_topline_price, override_downline_price, override_retail_price, created_at, updated_at')
         .eq('rep_id', selectedRepId);
       
       if (error) throw error;
-      return (data || []) as Override[];
+      return (data || []) as unknown as RepProductPriceOverride[];
     },
     enabled: !!selectedRepId,
   });
@@ -129,7 +116,7 @@ export const PriceOverrideManager = () => {
   const paginatedProducts = products?.slice(startIndex, endIndex) || [];
 
   // Get existing override for a product
-  const getExistingOverride = (productId: string): Override | undefined => {
+  const getExistingOverride = (productId: string): RepProductPriceOverride | undefined => {
     return existingOverrides?.find(o => o.product_id === productId);
   };
 
