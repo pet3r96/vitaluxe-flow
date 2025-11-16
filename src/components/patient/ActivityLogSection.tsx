@@ -82,8 +82,8 @@ export function ActivityLogSection() {
       setTotalCount(count || 0);
 
       // Fetch sessions with limit
-      const { data, error } = await (supabase
-        .from('active_sessions') as any)
+      const { data, error } = await (supabase as any)
+        .from('active_sessions')
         .select('id, last_activity, ip_address, user_agent')
         .order('last_activity', { ascending: false })
         .limit(limit || displayLimit);

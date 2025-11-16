@@ -22,8 +22,8 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
     queryKey: ['signed-agreement', userId, effectiveRole],
     queryFn: async () => {
       if (isPatient) {
-        const { data, error } = await (supabase
-          .from('patient_terms_acceptances') as any)
+        const { data, error } = await (supabase as any)
+          .from('patient_terms_acceptances')
           .select('id, accepted_at, signature_name, signed_pdf_url, terms_version')
           .eq('user_id', userId)
           .order('accepted_at', { ascending: false })
@@ -33,8 +33,8 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
         if (error && error.code !== 'PGRST116') throw error;
         return data;
       } else {
-      const { data, error } = await (supabase
-        .from('user_terms_acceptances') as any)
+      const { data, error } = await (supabase as any)
+        .from('user_terms_acceptances')
           .select('id, accepted_at, signature_name, signed_pdf_url, terms_version, role')
           .eq('user_id', userId)
           .order('accepted_at', { ascending: false })

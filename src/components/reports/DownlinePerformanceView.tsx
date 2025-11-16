@@ -39,7 +39,7 @@ const DownlinePerformanceView = () => {
       // Refresh materialized view first
       await supabase.rpc('refresh_rep_productivity_summary');
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("rep_productivity_view")
         .select("*")
         .eq("assigned_topline_id", currentRep.id)

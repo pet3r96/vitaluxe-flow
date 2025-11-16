@@ -418,8 +418,8 @@ export function MedicalVaultView({
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
 
-      const { error: insertError } = await (supabase
-        .from('medical_vault_share_links') as any)
+      const { error: insertError } = await (supabase as any)
+        .from('medical_vault_share_links')
         .insert({
           patient_id: patientAccountId,
           token,
