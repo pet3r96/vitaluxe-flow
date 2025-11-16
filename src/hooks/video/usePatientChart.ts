@@ -31,7 +31,7 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
           created_by_user_id: user?.id || '',
           created_by_name: user?.email || 'Unknown',
           created_by_role: 'provider',
-        });
+        }) as any; // Type workaround
 
       if (error) throw error;
       

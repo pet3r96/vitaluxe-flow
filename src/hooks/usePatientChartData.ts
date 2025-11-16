@@ -56,7 +56,7 @@ export const usePatientChartData = (patientId: string) => {
       .from("patient_notes")
       .select("*")
       .eq("patient_account_id", patientId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }) as any; // Type workaround
 
     setChart({
       patient: identity,
