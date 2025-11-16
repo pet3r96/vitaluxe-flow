@@ -61,6 +61,140 @@ export type Database = {
           },
         ]
       }
+      admin_alerts: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          message: string
+          pharmacy_id: string | null
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          severity: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          message: string
+          pharmacy_id?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          severity?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          message?: string
+          pharmacy_id?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          severity?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_alerts_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_ip_banlist: {
+        Row: {
+          banned: boolean
+          banned_at: string
+          banned_by: string
+          banned_reason: string
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          ip_address: string
+          updated_at: string
+        }
+        Insert: {
+          banned?: boolean
+          banned_at?: string
+          banned_by: string
+          banned_reason: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address: string
+          updated_at?: string
+        }
+        Update: {
+          banned?: boolean
+          banned_at?: string
+          banned_by?: string
+          banned_reason?: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_role: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       cart: {
         Row: {
           created_at: string | null
@@ -283,6 +417,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      discount_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          current_uses: number
+          description: string | null
+          discount_percentage: number
+          id: string
+          max_uses: number | null
+          max_uses_per_user: number | null
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          current_uses?: number
+          description?: string | null
+          discount_percentage: number
+          id?: string
+          max_uses?: number | null
+          max_uses_per_user?: number | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          current_uses?: number
+          description?: string | null
+          discount_percentage?: number
+          id?: string
+          max_uses?: number | null
+          max_uses_per_user?: number | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
       }
       impersonation_logs: {
         Row: {
@@ -738,6 +917,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      order_status_configs: {
+        Row: {
+          color_class: string | null
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean
+          is_system_default: boolean
+          sort_order: number
+          status_key: string
+          updated_at: string
+        }
+        Insert: {
+          color_class?: string | null
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean
+          is_system_default?: boolean
+          sort_order?: number
+          status_key: string
+          updated_at?: string
+        }
+        Update: {
+          color_class?: string | null
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          is_system_default?: boolean
+          sort_order?: number
+          status_key?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       order_status_history: {
         Row: {
@@ -1467,6 +1685,242 @@ export type Database = {
           },
         ]
       }
+      pending_practices: {
+        Row: {
+          address: string | null
+          address_city: string | null
+          address_formatted: string | null
+          address_state: string | null
+          address_street: string | null
+          address_verification_source: string | null
+          address_verification_status: string | null
+          address_verified_at: string | null
+          address_zip: string | null
+          assigned_rep_user_id: string | null
+          city: string | null
+          company: string | null
+          created_at: string
+          created_by_role: string
+          created_by_user_id: string
+          dea: string | null
+          email: string | null
+          id: string
+          license_number: string | null
+          notes: string | null
+          npi: string | null
+          phone: string | null
+          practice_name: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          state: string | null
+          status: string
+          updated_at: string
+          website: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          address_city?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
+          address_zip?: string | null
+          assigned_rep_user_id?: string | null
+          city?: string | null
+          company?: string | null
+          created_at?: string
+          created_by_role: string
+          created_by_user_id: string
+          dea?: string | null
+          email?: string | null
+          id?: string
+          license_number?: string | null
+          notes?: string | null
+          npi?: string | null
+          phone?: string | null
+          practice_name: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          address_city?: string | null
+          address_formatted?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_verification_source?: string | null
+          address_verification_status?: string | null
+          address_verified_at?: string | null
+          address_zip?: string | null
+          assigned_rep_user_id?: string | null
+          city?: string | null
+          company?: string | null
+          created_at?: string
+          created_by_role?: string
+          created_by_user_id?: string
+          dea?: string | null
+          email?: string | null
+          id?: string
+          license_number?: string | null
+          notes?: string | null
+          npi?: string | null
+          phone?: string | null
+          practice_name?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      pending_product_requests: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by_user_id: string
+          description: string | null
+          dosage: string | null
+          id: string
+          name: string
+          ndc: string | null
+          pharmacy_id: string | null
+          product_type_name: string | null
+          rejection_reason: string | null
+          requires_prescription: boolean | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          unit_price: number | null
+          updated_at: string
+          vitaluxe_price: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by_user_id: string
+          description?: string | null
+          dosage?: string | null
+          id?: string
+          name: string
+          ndc?: string | null
+          pharmacy_id?: string | null
+          product_type_name?: string | null
+          rejection_reason?: string | null
+          requires_prescription?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          vitaluxe_price?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          description?: string | null
+          dosage?: string | null
+          id?: string
+          name?: string
+          ndc?: string | null
+          pharmacy_id?: string | null
+          product_type_name?: string | null
+          rejection_reason?: string | null
+          requires_prescription?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          vitaluxe_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_product_requests_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_reps: {
+        Row: {
+          admin_notes: string | null
+          assigned_topline_user_id: string | null
+          company: string | null
+          created_at: string
+          created_by_role: string
+          created_by_user_id: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          role: string
+          status: string
+          submitted_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          assigned_topline_user_id?: string | null
+          company?: string | null
+          created_at?: string
+          created_by_role: string
+          created_by_user_id: string
+          email: string
+          full_name: string
+          id?: string
+          phone?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          role: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          assigned_topline_user_id?: string | null
+          company?: string | null
+          created_at?: string
+          created_by_role?: string
+          created_by_user_id?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          role?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       pharmacies: {
         Row: {
           active: boolean | null
@@ -1835,6 +2289,112 @@ export type Database = {
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_development_fee_invoices: {
+        Row: {
+          amount: number
+          billing_month: string
+          created_at: string
+          due_date: string
+          id: string
+          invoice_date: string
+          invoice_number: string
+          invoice_template_data: Json | null
+          paid_at: string | null
+          payment_status: string | null
+          sent_at: string | null
+          status: string
+          topline_rep_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          billing_month: string
+          created_at?: string
+          due_date: string
+          id?: string
+          invoice_date: string
+          invoice_number: string
+          invoice_template_data?: Json | null
+          paid_at?: string | null
+          payment_status?: string | null
+          sent_at?: string | null
+          status?: string
+          topline_rep_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billing_month?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          invoice_template_data?: Json | null
+          paid_at?: string | null
+          payment_status?: string | null
+          sent_at?: string | null
+          status?: string
+          topline_rep_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_development_fee_invoices_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_development_fees: {
+        Row: {
+          active: boolean
+          created_at: string
+          effective_from: string
+          effective_until: string | null
+          id: string
+          monthly_amount: number
+          notes: string | null
+          practice_id: string
+          topline_rep_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          effective_from: string
+          effective_until?: string | null
+          id?: string
+          monthly_amount: number
+          notes?: string | null
+          practice_id: string
+          topline_rep_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          monthly_amount?: number
+          notes?: string | null
+          practice_id?: string
+          topline_rep_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_development_fees_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
             referencedColumns: ["id"]
           },
         ]
@@ -3313,6 +3873,33 @@ export type Database = {
           reset_requested_by?: string | null
           twilio_enabled?: boolean | null
           twilio_phone_verified?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_password_status: {
+        Row: {
+          created_at: string
+          id: string
+          must_change_password: boolean
+          password_changed_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          must_change_password?: boolean
+          password_changed_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          must_change_password?: boolean
+          password_changed_at?: string | null
           updated_at?: string
           user_id?: string
         }
