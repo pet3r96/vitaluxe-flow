@@ -37,7 +37,7 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
     queryKey: ["patient-immunizations", patientAccountId],
     queryFn: async () => {
       if (!patientAccountId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccountId)

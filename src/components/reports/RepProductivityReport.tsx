@@ -23,7 +23,7 @@ const RepProductivityReport = () => {
       console.time('[RepProductivity] Query');
       
       // Fetch ONLY the columns we need for display - no SELECT *
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("rep_productivity_view")
         .select(`
           rep_id,

@@ -20,7 +20,7 @@ export function ThreadView({ selectedMessage, replyText, setReplyText, sendReply
   const { data: threadMessages, isLoading } = useQuery({
     queryKey: ["thread-messages", threadId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("patient_messages")
         .select(`
           *,
