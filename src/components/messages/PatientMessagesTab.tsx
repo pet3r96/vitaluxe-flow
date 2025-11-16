@@ -57,7 +57,12 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
 
       return (messagesData || []).map(msg => ({
         ...msg,
-        patient: patientsMap.get(msg.patient_id) || { name: 'Unknown', email: '' }
+        patient: patientsMap.get(msg.patient_id) || { 
+          id: '', 
+          first_name: 'Unknown', 
+          last_name: '', 
+          email: '' 
+        }
       })) as PatientMessage[];
     },
   });
