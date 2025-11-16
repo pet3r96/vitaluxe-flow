@@ -945,9 +945,9 @@ export const MessagesView = () => {
                               </Badge>
                             </div>
 
-                            {thread.created_by && (thread as any).creator && (
+                            {thread.created_by && thread.creator && (
                               <p className="text-xs opacity-70">
-                                By: {(thread as any).creator.name}
+                                By: {thread.creator.name}
                               </p>
                             )}
                             <p className="text-xs opacity-70">
