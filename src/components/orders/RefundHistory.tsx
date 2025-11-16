@@ -13,8 +13,8 @@ export const RefundHistory = ({ orderId }: RefundHistoryProps) => {
   const { data: refunds, isLoading } = useQuery({
     queryKey: ["order-refunds", orderId],
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from("order_refunds") as any)
+      const { data, error } = await (supabase as any)
+        .from("order_refunds")
         .select(`
           *,
           profiles!inner(name, email)

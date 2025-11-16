@@ -12,8 +12,8 @@ export const ShippingAuditLog = ({ orderLineId }: ShippingAuditLogProps) => {
   const { data: logs, isLoading } = useQuery({
     queryKey: ["shipping-audit-logs", orderLineId],
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from("shipping_audit_logs") as any)
+      const { data, error } = await (supabase as any)
+        .from("shipping_audit_logs")
         .select(`
           *,
           updated_by_profile:updated_by(name)
