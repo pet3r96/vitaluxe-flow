@@ -137,7 +137,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
       // Convert YYYY-MM to YYYY-MM-01 for database storage
       const fullStartDate = data.start_date + "-01";
       
-      const formattedData = {
+      const recordData = {
         medication_name: data.medication_name,
         dosage: data.dosage,
         frequency: data.frequency,
@@ -151,8 +151,8 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
 
       if (mode === "edit" && medication) {
         const { error } = await supabase
-          .from("patient_medications")
-          .update({ ...formattedData, updated_at: new Date().toISOString() })
+          .from("patient_medical_vault")
+          .update({ record_data: recordData, updated_at: new Date().toISOString() })
           .eq("id", medication.id);
         
         if (error) {
@@ -166,14 +166,15 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         console.log('[MedicationDialog] UPDATE success');
       } else {
         const { error } = await supabase
-          .from("patient_medications")
+          .from("patient_medical_vault")
           .insert({
-            ...formattedData,
+            record_type: "medication",
+            record_data: recordData,
             patient_account_id: patientAccountId,
             is_active: true,
-            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
-            added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+            created_by_user_id: authUser.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         
         if (error) {
           console.error('[MedicationDialog] INSERT failed:', {

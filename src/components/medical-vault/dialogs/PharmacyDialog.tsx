@@ -82,7 +82,7 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         mode,
       });
       
-      const formattedData = {
+      const recordData = {
         pharmacy_name: data.pharmacy_name || null,
         address: data.address,
         city: data.city,
@@ -93,17 +93,28 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
       };
 
       // If setting as preferred, first unset all other preferred pharmacies
-      if (formattedData.is_preferred) {
-        await supabase
-          .from("patient_pharmacies")
-          .update({ is_preferred: false })
-          .eq("patient_account_id", patientAccountId);
+      if (recordData.is_preferred) {
+        const { data: allPharmacies } = await supabase
+          .from("patient_medical_vault")
+          .select("id, record_data")
+          .eq("patient_account_id", patientAccountId)
+          .eq("record_type", "pharmacy");
+        
+        for (const p of allPharmacies || []) {
+          if (p.id !== pharmacy?.id) {
+            const updatedData = { ...(p.record_data as any), is_preferred: false };
+            await supabase
+              .from("patient_medical_vault")
+              .update({ record_data: updatedData })
+              .eq("id", p.id);
+          }
+        }
       }
 
       if (mode === "edit" && pharmacy) {
         const { error } = await supabase
-          .from("patient_pharmacies")
-          .update({ ...formattedData, updated_at: new Date().toISOString() })
+          .from("patient_medical_vault")
+          .update({ record_data: recordData, updated_at: new Date().toISOString() })
           .eq("id", pharmacy.id);
         
         if (error) {
@@ -113,13 +124,14 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         console.log('[PharmacyDialog] UPDATE success');
       } else {
         const { error } = await supabase
-          .from("patient_pharmacies")
+          .from("patient_medical_vault")
           .insert({
-            ...formattedData,
+            record_type: "pharmacy",
+            record_data: recordData,
             patient_account_id: patientAccountId,
-            added_by_user_id: authUser.id, // Use auth.uid() directly - matches RLS policy
-            added_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+            created_by_user_id: authUser.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         
         if (error) {
           console.error('[PharmacyDialog] INSERT failed:', {
