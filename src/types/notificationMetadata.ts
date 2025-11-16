@@ -40,23 +40,23 @@ export type NotificationMetadata =
 export function isFollowUpMetadata(
   m: unknown
 ): m is FollowUpNotificationMetadata {
-  return !!m && typeof m === "object" && "patient_id" in (m as any);
+  return !!m && typeof m === "object" && "patient_id" in m;
 }
 
 export function isAppointmentMetadata(
   m: unknown
 ): m is AppointmentNotificationMetadata {
-  return !!m && typeof m === "object" && "appointment_id" in (m as any);
+  return !!m && typeof m === "object" && "appointment_id" in m;
 }
 
 export function isOrderMetadata(
   m: unknown
 ): m is OrderNotificationMetadata {
-  return !!m && typeof m === "object" && "order_id" in (m as any);
+  return !!m && typeof m === "object" && "order_id" in m;
 }
 
 export function isMessageMetadata(
   m: unknown
 ): m is MessageNotificationMetadata {
-  return !!m && typeof m === "object" && "thread_id" in (m as any);
+  return !!m && typeof m === "object" && "thread_id" in m;
 }
