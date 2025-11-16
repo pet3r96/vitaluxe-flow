@@ -23,10 +23,11 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("patient_medical_vault")
         .insert({
           patient_account_id: patientId,
+          patient_id: patientId,
           record_type: 'note',
           title: `${type.charAt(0).toUpperCase() + type.slice(1)} Note`,
           record_data: {
@@ -93,10 +94,11 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
         .getPublicUrl(filePath);
 
       // Save document record
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("patient_medical_vault")
         .insert({
           patient_account_id: patientId,
+          patient_id: patientId,
           record_type: 'document',
           title: file.name,
           record_data: {

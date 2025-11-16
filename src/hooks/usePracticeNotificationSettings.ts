@@ -16,6 +16,7 @@ export function usePracticeNotificationSettings(practiceId: string | null) {
     queryFn: async () => {
       if (!practiceId) return null;
 
+      // TODO: Remove (as any) when practice_automation_settings is added to Supabase types
       const { data, error } = await (supabase as any)
         .from("practice_automation_settings")
         .select("enable_email_notifications, enable_sms_notifications")

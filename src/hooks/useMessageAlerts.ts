@@ -37,6 +37,7 @@ export function useMessageAlerts() {
     if (!user) return;
 
     try {
+      // TODO: Remove (as any) when message_thread_read_status is added to Supabase types
       await (supabase as any)
         .from('message_thread_read_status')
         .upsert({
