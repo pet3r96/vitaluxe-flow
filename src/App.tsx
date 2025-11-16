@@ -307,11 +307,9 @@ const App = () => {
                                               path="/support-tickets/:ticketId"
                                               element={<SupportTicketThread />}
                                             />
-                                            <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
-                                            <Route path="/rep-reports" element={<RepProfitReports />} />
-                                            <Route path="/rep-productivity" element={<RepProductivityReport />} />
-                                            <Route path="/downline-performance" element={<DownlinePerformanceView />} />
-                                            <Route path="/shipping" element={<PharmacyShipping />} />
+                            <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
+                            <Route path="/rep-reports" element={<RepProfitReports />} />
+                            <Route path="/shipping" element={<PharmacyShipping />} />
                                             <Route path="/appointments" element={<PatientAppointments />} />
                                             <Route
                                               path="/practice/patient-inbox"
