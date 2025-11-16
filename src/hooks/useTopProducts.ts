@@ -1,15 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-interface TopProduct {
-  name: string;
-  sales: number;
-  revenue: number;
-  trend: string;
-}
+import type { TopProduct, OrderLineWithProduct } from "@/types/dashboard";
 
 export function useTopProducts() {
-  return useQuery({
+  return useQuery<TopProduct[], Error>({
     queryKey: ["top-products"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -29,7 +23,7 @@ export function useTopProducts() {
       // Aggregate by product
       const productMap = new Map<string, { name: string; sales: number; revenue: number }>();
       
-      data?.forEach((line: any) => {
+      (data as OrderLineWithProduct[])?.forEach((line) => {
         const productName = line.products?.name;
         if (!productName) return;
         

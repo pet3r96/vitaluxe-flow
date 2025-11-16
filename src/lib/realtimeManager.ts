@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { QueryClient } from '@tanstack/react-query';
 import { logger } from '@/lib/logger';
+import type { RealtimePayload, RealtimeCallback, IRealtimeManager, TableDependencies } from '@/types/realtime';
 
 /**
  * Centralized Realtime Manager
@@ -9,14 +10,14 @@ import { logger } from '@/lib/logger';
  * Automatically invalidates React Query cache on database changes.
  * Provides debouncing and smart reconnection for optimal performance.
  */
-class RealtimeManager {
+class RealtimeManager implements IRealtimeManager {
   private channels = new Map<string, any>();
   private queryClient: QueryClient | null = null;
   private pendingInvalidations = new Map<string, NodeJS.Timeout>();
   private readonly DEBOUNCE_MS = 0; // NO debounce - instant updates for medical appointments
   
   // Cross-table dependencies - when table A changes, also invalidate queries for B, C
-  private tableDependencies: Record<string, string[]> = {
+  private tableDependencies: TableDependencies = {
     // Appointments & Clinical
     'patient_appointments': ['calendar-data', 'waiting-room-dashboard', 'today-appointments', 'being-treated-appointments', 'provider-video-sessions', 'dashboard-stats-batched'],
     'practice_rooms': ['calendar-data'],
@@ -81,7 +82,7 @@ class RealtimeManager {
    * @param callback - Optional callback for custom handling
    * @returns Channel instance
    */
-  subscribe(table: string, callback?: (payload: any) => void) {
+  subscribe<T = any>(table: string, callback?: RealtimeCallback<T>) {
     // Return existing channel if already subscribed
     if (this.channels.has(table)) {
       logger.info(`Reusing existing realtime channel for ${table}`);
@@ -106,7 +107,7 @@ class RealtimeManager {
 
           // Execute custom callback if provided
           if (callback) {
-            callback(payload);
+            callback(payload as any);
           }
         }
       )

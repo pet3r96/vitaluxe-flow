@@ -123,3 +123,25 @@ export interface DashboardStats {
   changePercent: number;
   trend: 'up' | 'down' | 'neutral';
 }
+
+// ============= Revenue & Product Analytics =============
+
+export interface RevenueDataPoint {
+  name: string;
+  revenue: number;
+}
+
+export interface TopProduct {
+  name: string;
+  sales: number;
+  revenue: number;
+  trend: string;
+}
+
+export interface OrderLineWithProduct {
+  product_id: string;
+  price: number;
+  products: {
+    name: string;
+  } | null;
+}

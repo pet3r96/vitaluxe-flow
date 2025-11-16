@@ -1,14 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { subMonths, format } from "date-fns";
-
-interface RevenueDataPoint {
-  name: string;
-  revenue: number;
-}
+import type { RevenueDataPoint } from "@/types/dashboard";
 
 export function useRevenueData() {
-  return useQuery({
+  return useQuery<RevenueDataPoint[], Error>({
     queryKey: ["revenue-chart-data"],
     queryFn: async () => {
       const sevenMonthsAgo = subMonths(new Date(), 6);
