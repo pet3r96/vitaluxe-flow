@@ -81,9 +81,9 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         const { data: assignments } = await supabase
           .from("pharmacy_rep_assignments")
           .select("topline_rep_id")
-          .eq("pharmacy_id", pharmacy.id);
+          .eq("pharmacy_id", pharmacy.id) as any; // Type workaround
         
-        const assignedReps = assignments?.map(a => a.topline_rep_id) || [];
+        const assignedReps = (assignments as any)?.map((a: any) => a.topline_rep_id) || [];
         
         setFormData({
           name: pharmacy.name || "",
@@ -224,7 +224,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
           
           const { error: assignError } = await supabase
             .from("pharmacy_rep_assignments")
-            .insert(assignments);
+            .insert(assignments) as any; // Type workaround
           
           if (assignError) throw assignError;
         }
@@ -233,10 +233,10 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
       // Handle scope assignments for existing pharmacy
       if (pharmacy) {
         // Delete existing assignments
-        await supabase
+        await (supabase
           .from("pharmacy_rep_assignments")
           .delete()
-          .eq("pharmacy_id", pharmacy.id);
+          .eq("pharmacy_id", pharmacy.id) as any); // Type workaround
         
         // Insert new assignments if scoped
         if (formData.scope_type === "scoped" && formData.assigned_topline_reps.length > 0) {
@@ -247,7 +247,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
           
           const { error: assignError } = await supabase
             .from("pharmacy_rep_assignments")
-            .insert(assignments);
+            .insert(assignments) as any; // Type workaround
           
           if (assignError) throw assignError;
         }
