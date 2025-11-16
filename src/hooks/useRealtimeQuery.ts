@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
 import { realtimeManager } from '@/lib/realtimeManager';
+import type { RealtimeCallback } from '@/types/realtime';
 
 /**
  * Enhanced React Query hook with automatic realtime subscription
@@ -18,7 +19,7 @@ export function useRealtimeQuery<TData = unknown, TError = unknown>(
   queryKey: string[],
   queryFn: () => Promise<TData>,
   options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-  onRealtimeEvent?: (payload: any) => void
+  onRealtimeEvent?: RealtimeCallback<TData>
 ): UseQueryResult<TData, TError> {
   const tableName = queryKey[0];
 

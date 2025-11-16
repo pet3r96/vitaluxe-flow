@@ -6,6 +6,8 @@ import { DollarSign, Users, Package, TrendingUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatCardWithChart } from "@/components/dashboard/StatCardWithChart";
 import { useQueryClient } from "@tanstack/react-query";
+import type { RealtimePayload } from "@/types/realtime";
+import type { Database } from "@/integrations/supabase/types";
 
 const RepDashboard = () => {
   const { user, effectiveRole, effectiveUserId } = useAuth();
@@ -69,13 +71,13 @@ const RepDashboard = () => {
   useEffect(() => {
     if (!repData?.id) return;
 
-    // Subscribe to relevant tables
+    // Subscribe to relevant tables with typed payloads  
     const ordersChannel = supabase
       .channel('rep-dashboard-orders')
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'orders' },
-        () => {
+        (_payload: RealtimePayload<Database['public']['Tables']['orders']['Row']>) => {
           queryClient.invalidateQueries({ 
             queryKey: ["rep-dashboard-stats-batched"],
             refetchType: 'active'
@@ -87,9 +89,9 @@ const RepDashboard = () => {
     const repsChannel = supabase
       .channel('rep-dashboard-reps')
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'reps' },
-        () => {
+        (_payload: RealtimePayload<Database['public']['Tables']['reps']['Row']>) => {
           queryClient.invalidateQueries({ 
             queryKey: ["rep-dashboard-stats-batched"],
             refetchType: 'active'
@@ -101,9 +103,9 @@ const RepDashboard = () => {
     const profitsChannel = supabase
       .channel('rep-dashboard-profits')
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'order_profits' },
-        () => {
+        (_payload: RealtimePayload<Database['public']['Tables']['order_profits']['Row']>) => {
           queryClient.invalidateQueries({ 
             queryKey: ["rep-dashboard-stats-batched"],
             refetchType: 'active'
