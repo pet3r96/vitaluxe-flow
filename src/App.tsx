@@ -109,7 +109,7 @@ const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const AcceptTerms = lazy(() => import("./pages/AcceptTerms"));
 const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
 const PharmacyApiLogs = lazy(() => import("./pages/PharmacyApiLogs"));
-// Phase 6: Removed Reports, Security, AdminDiscountCodes, PracticeAuditLog, AdminAlerts, InternalChat (tables dropped)
+// Phase 6: Removed Reports, Security, AdminDiscountCodes, PracticeAuditLog, AdminAlerts, InternalChat, patient messages/vault/docs/intake/mobile header
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
 const RepProductivityReport = lazy(() => import("./components/reports/RepProductivityReport"));
@@ -118,15 +118,9 @@ const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
 const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
-const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
-const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
-const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
 const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
-const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
-const PatientMobileHeader = lazy(() =>
-  import("./components/patient/PatientMobileHeader").then((m) => ({ default: m.PatientMobileHeader })),
-);
+
 const VideoRoom = lazy(() => import("./pages/video/VideoRoom"));
 const VideoCallTest = lazy(() => import("./pages/VideoCallTest"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
@@ -402,14 +396,6 @@ const App = () => {
                                               element={
                                                 <SubscriptionProtectedRoute>
                                                   <PracticeReporting />
-                                                </SubscriptionProtectedRoute>
-                                              }
-                                            />
-                                            <Route
-                                              path="/internal-chat"
-                                              element={
-                                                <SubscriptionProtectedRoute>
-                                                  <InternalChat />
                                                 </SubscriptionProtectedRoute>
                                               }
                                             />
