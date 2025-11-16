@@ -118,13 +118,13 @@ const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
 const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
-const InternalChat = lazy(() => import("./pages/InternalChat"));
+// Phase 6: InternalChat removed (internal_messages table dropped)
 const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
-const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
+// Phase 6: PatientMedicalVault removed (legacy patient_* tables dropped)
 const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
 const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
-const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
+// Phase 6: PatientIntakeForm removed (legacy patient_* tables dropped)
 const PatientMobileHeader = lazy(() =>
   import("./components/patient/PatientMobileHeader").then((m) => ({ default: m.PatientMobileHeader })),
 );
@@ -136,13 +136,10 @@ const PracticePatients = lazy(() => import("./pages/practice/PracticePatients"))
 const DocumentCenter = lazy(() => import("./pages/practice/DocumentCenter"));
 const MySubscription = lazy(() => import("./pages/practice/MySubscription"));
 const PracticeReporting = lazy(() => import("./pages/PracticeReporting"));
-const PatientDetail = lazyWithRetry(() => import("./pages/PatientDetail"), "PatientDetail");
-const PracticePatientMedicalVault = lazyWithRetry(
-  () => import("./pages/practice/PatientMedicalVault"),
-  "PracticePatientMedicalVault",
-);
+// Phase 6: PatientDetail removed (legacy patient_* tables dropped)
+// Phase 6: PracticePatientMedicalVault removed (legacy patient_* tables dropped)
 const PracticePatientIntakeForm = lazy(() => import("./pages/practice/PracticePatientIntakeForm"));
-const Support = lazy(() => import("./pages/Support"));
+// Phase 6: Support removed (patient_messages table dropped)
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultations"));
