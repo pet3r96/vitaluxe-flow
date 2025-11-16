@@ -112,8 +112,7 @@ const PharmacyApiLogs = lazy(() => import("./pages/PharmacyApiLogs"));
 // Phase 6: Removed Reports, Security, AdminDiscountCodes, PracticeAuditLog, AdminAlerts (tables dropped)
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
-const RepProductivityReport = lazy(() => import("./components/reports/RepProductivityReport"));
-const DownlinePerformanceView = lazy(() => import("./components/reports/DownlinePerformanceView"));
+// Phase 6: RepProductivityReport and DownlinePerformanceView removed (tables dropped)
 const DashboardRouter = lazyWithRetry(() => import("./components/DashboardRouter"), "DashboardRouter");
 const SubscribeToVitaLuxePro = lazy(() => import("./pages/SubscribeToVitaLuxePro"));
 const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard"));
@@ -125,9 +124,7 @@ const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
 const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
 const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
 // Phase 6: PatientIntakeForm removed (legacy patient_* tables dropped)
-const PatientMobileHeader = lazy(() =>
-  import("./components/patient/PatientMobileHeader").then((m) => ({ default: m.PatientMobileHeader })),
-);
+// Phase 6: PatientMobileHeader removed (dependent on deleted components)
 const VideoRoom = lazy(() => import("./pages/video/VideoRoom"));
 const VideoCallTest = lazy(() => import("./pages/VideoCallTest"));
 const PracticeCalendar = lazy(() => import("./pages/practice/PracticeCalendar"));
