@@ -63,9 +63,9 @@ export function MedicalVaultView({
   useEffect(() => {
     console.log('[MedicalVault] Audit logs state:', {
       patientAccountId,
-      auditLogsCount: auditLogs.length,
+      auditLogsCount: (auditLogs as any).length,
       isLoading: isLoadingAuditLogs,
-      auditLogs: auditLogs.slice(0, 2) // Log first 2 for brevity
+      auditLogs: (auditLogs as any).slice(0, 2) // Log first 2 for brevity
     });
   }, [auditLogs, isLoadingAuditLogs, patientAccountId]);
 
@@ -479,7 +479,7 @@ export function MedicalVaultView({
           }
           setAuditDialogOpen(open);
         }}
-        auditLogs={auditLogs}
+        auditLogs={auditLogs as any}
         patientName={displayName}
         patientAccountId={patientAccountId}
         isLoading={isLoadingAuditLogs}

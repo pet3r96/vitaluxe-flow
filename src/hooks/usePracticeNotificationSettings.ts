@@ -16,7 +16,7 @@ export function usePracticeNotificationSettings(practiceId: string | null) {
     queryFn: async () => {
       if (!practiceId) return null;
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("practice_automation_settings")
         .select("enable_email_notifications, enable_sms_notifications")
         .eq("practice_id", practiceId)
@@ -26,18 +26,18 @@ export function usePracticeNotificationSettings(practiceId: string | null) {
       
       // Default to true if columns are null
       return {
-        enable_email_notifications: data?.enable_email_notifications ?? true,
-        enable_sms_notifications: data?.enable_sms_notifications ?? true,
+        enable_email_notifications: (data as any)?.enable_email_notifications ?? true,
+        enable_sms_notifications: (data as any)?.enable_sms_notifications ?? true,
       };
     },
     enabled: !!practiceId,
-  });
+  } as any);
 
   const updateSettings = useMutation({
     mutationFn: async (newSettings: PracticeNotificationSettings) => {
       if (!practiceId) throw new Error("Practice ID is required");
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("practice_automation_settings")
         .upsert({
           practice_id: practiceId,
