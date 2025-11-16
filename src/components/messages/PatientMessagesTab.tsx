@@ -55,9 +55,7 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
         .eq('practice_id', practiceId)
         .order('created_at', { ascending: false });
 
-      if (urgencyFilter !== 'all') {
-        query = query.eq('urgency', urgencyFilter);
-      }
+      // urgency column removed - filter not available
 
       if (statusFilter === 'resolved') {
         query = query.eq('resolved', true);
@@ -116,21 +114,16 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
   // Send reply mutation
   const sendReplyMutation = useMutation({
     mutationFn: async ({ patientId, message }: { patientId: string; message: string }) => {
-      // Get the thread_id from the first message
-      const threadId = threadMessages[0]?.thread_id || threadMessages[0]?.id;
-      
+      // parent_message_id links to the thread
       const { error } = await supabase
         .from('patient_messages')
         .insert({
           patient_id: patientId,
           practice_id: practiceId,
-          sender_id: userId,
           sender_type: 'provider',
-          thread_id: threadId,
           parent_message_id: threadMessages[0]?.id,
           subject: 'Reply from Practice',
-          message_body: message,
-          urgency: selectedMessage?.urgency || 'normal',
+          body: message,
         });
 
       if (error) throw error;
@@ -147,20 +140,7 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
   });
 
   // Update urgency mutation
-  const updateUrgencyMutation = useMutation({
-    mutationFn: async ({ messageId, urgency }: { messageId: string; urgency: string }) => {
-      const { error } = await supabase
-        .from('patient_messages')
-        .update({ urgency })
-        .eq('id', messageId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Urgency updated');
-      queryClient.invalidateQueries({ queryKey: ['patient-messages'] });
-    },
-  });
+  // Urgency column removed - mutation not needed
 
   // Resolve message mutation
   const resolveMutation = useMutation({
@@ -303,10 +283,9 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground truncate">
-                          {latestMsg.message_body}
+                          {latestMsg.body}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
-                          {getUrgencyBadge(latestMsg.urgency)}
                           {latestMsg.resolved && (
                             <Badge variant="success" size="sm">
                               <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -337,21 +316,6 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
                 <p className="text-sm text-muted-foreground">{selectedMessage.patient.email}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Select
-                  value={selectedMessage.urgency}
-                  onValueChange={(value) => updateUrgencyMutation.mutate({ messageId: selectedMessage.id, urgency: value })}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-                
                 {selectedMessage.resolved ? (
                   <Button
                     variant="outline"
@@ -388,7 +352,7 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
                         {format(new Date(msg.created_at), 'MMM d, h:mm a')}
                       </span>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">{msg.message_body}</p>
+                    <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
                   </Card>
                 ))}
               </div>

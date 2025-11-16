@@ -82,7 +82,6 @@ export function PatientMessageThread({
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg truncate">{message.subject}</h3>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <PriorityBadge priority={message.urgency || 'medium'} />
               {message.patient && (
                 <Badge variant="outline" className="text-xs">
                   <User className="w-3 h-3 mr-1" />

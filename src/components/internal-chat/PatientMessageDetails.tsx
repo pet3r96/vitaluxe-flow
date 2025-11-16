@@ -47,12 +47,7 @@ export function PatientMessageDetails({
             <CardTitle className="text-lg">Message Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Priority</label>
-              <div className="mt-1">
-                <PriorityBadge priority={message.urgency || 'medium'} />
-              </div>
-            </div>
+            {/* Priority/urgency removed */}
             
             <div>
               <label className="text-xs text-muted-foreground">Created</label>

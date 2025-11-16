@@ -174,33 +174,44 @@ export const PracticesDataTable = () => {
     },
   });
 
-  // Fetch rep-practice links
+  // Fetch rep assignments via profiles.linked_topline_id
   const { data: repPracticeLinks } = useQuery({
     queryKey: ["rep-practice-links"],
-    staleTime: 5 * 60 * 1000, // 5min - links rarely change
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnMount: false,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rep_practice_links")
-        .select(`
-          practice_id,
-          rep_id,
-          reps!rep_practice_links_rep_id_fkey!inner(
-            user_id,
-            role
-          )
-        `);
+      // Get all practices with linked_topline_id
+      const { data: practicesWithReps, error } = await supabase
+        .from("profiles")
+        .select("id, linked_topline_id")
+        .not("linked_topline_id", "is", null);
       
       if (error) throw error;
       
-      // Group by practice_id
+      // Get rep details for all linked toplines
+      const toplineIds = [...new Set(practicesWithReps?.map(p => p.linked_topline_id).filter(Boolean))];
+      const { data: reps } = await supabase
+        .from("reps")
+        .select("id, user_id, role")
+        .in("user_id", toplineIds);
+      
+      const repMap = new Map(reps?.map(r => [r.user_id, r]) || []);
+      
+      // Group by practice_id with rep info
       const linksByPractice: Record<string, any[]> = {};
-      data?.forEach(link => {
-        if (!linksByPractice[link.practice_id]) {
-          linksByPractice[link.practice_id] = [];
+      practicesWithReps?.forEach(practice => {
+        if (!linksByPractice[practice.id]) {
+          linksByPractice[practice.id] = [];
         }
-        linksByPractice[link.practice_id].push(link);
+        const rep = repMap.get(practice.linked_topline_id!);
+        if (rep) {
+          linksByPractice[practice.id].push({
+            practice_id: practice.id,
+            rep_id: rep.id,
+            reps: { user_id: rep.user_id, role: rep.role }
+          });
+        }
       });
       
       return linksByPractice;
