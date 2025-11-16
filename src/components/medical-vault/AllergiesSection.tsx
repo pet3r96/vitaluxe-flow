@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { asAllergy, type VaultRecordBase } from "@/lib/vault";
 
 const formatTimestamp = (dateString?: string | null) => {
   if (!dateString) return '';
@@ -39,8 +40,8 @@ interface AllergiesSectionProps {
 
 export function AllergiesSection({ patientAccountId, allergies }: AllergiesSectionProps) {
   const queryClient = useQueryClient();
-  const nkaRecord = allergies.find(a => a.is_active && a.nka);
-  const regularAllergies = allergies.filter(a => !a.nka);
+  const nkaRecord = allergies.find(a => asAllergy(a).is_active && asAllergy(a).nka);
+  const regularAllergies = allergies.filter(a => !asAllergy(a).nka);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAllergy, setSelectedAllergy] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
@@ -55,8 +56,9 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
     setDialogOpen(true);
   };
 
-  const handleDelete = async (allergy: any) => {
-    if (!confirm(`Are you sure you want to delete ${allergy.nka ? 'NKA record' : allergy.allergen_name}?`)) return;
+  const handleDelete = async (allergy: VaultRecordBase) => {
+    const data = asAllergy(allergy);
+    if (!confirm(`Are you sure you want to delete ${data.nka ? 'NKA record' : data.allergen_name}?`)) return;
     
     try {
       const { error } = await supabase
@@ -75,11 +77,11 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
           actionType: 'deleted',
           entityType: 'allergy',
           entityId: allergy.id,
-          entityName: allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown Allergen'),
+          entityName: data.nka ? 'NKA' : (data.allergen_name || 'Unknown Allergen'),
           changedByUserId: effectiveUserId || undefined,
           changedByRole: mapRoleToAuditRole(effectiveRole),
           oldData: allergy,
-          changeSummary: `Deleted allergy: ${allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown')}`,
+          changeSummary: `Deleted allergy: ${data.nka ? 'NKA' : (data.allergen_name || 'Unknown')}`,
         });
       }
     } catch (error) {
@@ -87,9 +89,10 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
     }
   };
 
-  const handleToggleActive = async (allergy: any) => {
-    const action = allergy.is_active ? "mark as inactive" : "mark as active";
-    if (!confirm(`Are you sure you want to ${action} ${allergy.allergen_name}?`)) return;
+  const handleToggleActive = async (allergy: VaultRecordBase) => {
+    const data = asAllergy(allergy);
+    const action = data.is_active ? "mark as inactive" : "mark as active";
+    if (!confirm(`Are you sure you want to ${action} ${data.allergen_name}?`)) return;
     
     try {
       const { error } = await supabase
@@ -227,9 +230,9 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
                   <Button size="sm" variant="ghost" onClick={() => handleDelete(allergy)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </div>
-              </div>
-            ))}
+          </div>
+        </div>
+      )})}
             {regularAllergies.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
