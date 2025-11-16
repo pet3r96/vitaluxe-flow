@@ -968,7 +968,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle(),
         
         // 5. Check patient terms acceptance
-        supabase
+        (supabase as any)
           .from('patient_terms_acceptances')
           .select('id')
           .eq('user_id', userId)
@@ -1060,16 +1060,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      // Process password status
+      // Process password status and terms
       if (role === 'admin') {
         // Admins ALWAYS exempt, regardless of database value
         setMustChangePassword(false);
         setTermsAccepted(true);
       } else if (passwordResult.status === 'fulfilled' && passwordResult.value.data) {
-        setMustChangePassword(passwordResult.value.data.must_change_password || false);
+        const passwordData = passwordResult.value.data as any;
+        setMustChangePassword(passwordData.must_change_password || false);
         
         // Check terms acceptance from either user_password_status OR patient_terms_acceptances
-        const termsAcceptInStatus = passwordResult.value.data.terms_accepted || false;
+        const termsAcceptInStatus = passwordData.terms_accepted || false;
         const hasPatientTerms = patientTermsResult.status === 'fulfilled' && patientTermsResult.value.data !== null;
         setTermsAccepted(termsAcceptInStatus || hasPatientTerms);
       } else {

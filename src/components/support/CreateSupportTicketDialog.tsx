@@ -83,7 +83,7 @@ export function CreateSupportTicketDialog() {
       
       console.log('[CreateSupportTicket] Attempting insert:', insertData);
 
-      const { data: insertResult, error } = await supabase
+      const { data: insertResult, error } = await (supabase as any)
         .from("patient_messages")
         .insert(insertData)
         .select()
