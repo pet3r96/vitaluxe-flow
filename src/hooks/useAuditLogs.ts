@@ -89,7 +89,8 @@ export const logMedicalVaultChange = async ({
   changeSummary?: string;
 }) => {
   try {
-    const { error } = await supabase
+    // TODO: Remove (as any) when medical_vault_audit_logs is added to Supabase types
+    const { error } = await (supabase as any)
       .from("medical_vault_audit_logs")
       .insert({
         patient_account_id: patientAccountId,
