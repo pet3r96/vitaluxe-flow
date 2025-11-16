@@ -37,7 +37,7 @@ const Support = () => {
 
       if (result.error) throw result.error;
       
-      const tickets = (result.data || []) as PatientMessage[];
+      const tickets = (result.data || []) as any;
       
       // Apply search filter client-side
       if (searchQuery && tickets.length > 0) {

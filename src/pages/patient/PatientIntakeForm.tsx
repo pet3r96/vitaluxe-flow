@@ -290,10 +290,10 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   // Pre-populate medical vault data added by practice
   useEffect(() => {
     if (existingMedications && existingMedications.length > 0) {
-      const medList = existingMedications.map(med => ({
-        name: med.medication_name || '',
-        dosage: med.dosage || '',
-        frequency: med.frequency || '',
+      const medList = existingMedications.map((med: any) => ({
+        name: (med as any).medication_name || '',
+        dosage: (med as any).dosage || '',
+        frequency: (med as any).frequency || '',
       }));
       setMedications(medList);
       setHasNoMedications(false);
@@ -302,10 +302,10 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
   useEffect(() => {
     if (existingAllergies && existingAllergies.length > 0) {
-      const allergyList = existingAllergies.map(allergy => ({
-        name: allergy.allergen_name || '',
-        reaction: allergy.reaction_type || '',
-        severity: allergy.severity || '',
+      const allergyList = existingAllergies.map((allergy: any) => ({
+        name: (allergy as any).allergen_name || '',
+        reaction: (allergy as any).reaction_type || '',
+        severity: (allergy as any).severity || '',
       }));
       setAllergies(allergyList);
       setHasNoAllergies(false);
@@ -314,9 +314,9 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
   useEffect(() => {
     if (existingConditions && existingConditions.length > 0) {
-      const conditionList = existingConditions.map(condition => ({
-        name: condition.condition_name || '',
-        diagnosed_date: condition.date_diagnosed || '',
+      const conditionList = existingConditions.map((condition: any) => ({
+        name: (condition as any).condition_name || '',
+        diagnosed_date: (condition as any).date_diagnosed || '',
         status: 'active', // Default status for intake form
       }));
       setConditions(conditionList);
@@ -326,10 +326,10 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
   useEffect(() => {
     if (existingSurgeries && existingSurgeries.length > 0) {
-      const surgeryList = existingSurgeries.map(surgery => ({
-        type: surgery.surgery_type || '',
-        date: surgery.surgery_date || '',
-        notes: surgery.notes || '',
+      const surgeryList = existingSurgeries.map((surgery: any) => ({
+        type: (surgery as any).surgery_type || '',
+        date: (surgery as any).surgery_date || '',
+        notes: (surgery as any).notes || '',
       }));
       setSurgeries(surgeryList);
       setHasNoSurgeries(false);
@@ -339,12 +339,12 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   useEffect(() => {
     if (existingImmunizations && existingImmunizations.length > 0) {
       console.log('[Immunizations] Loading existing data:', existingImmunizations);
-      const immunizationList = existingImmunizations.map(imm => {
+      const immunizationList = existingImmunizations.map((imm: any) => {
         // Handle date formatting - ensure it's in YYYY-MM-DD format
         let dateFormatted = '';
-        if (imm.date_administered && imm.date_administered !== 'null' && imm.date_administered !== 'undefined') {
+        if ((imm as any).date_administered && (imm as any).date_administered !== 'null' && (imm as any).date_administered !== 'undefined') {
           // Split on 'T' to remove any time component and ensure YYYY-MM-DD format
-          const dateStr = String(imm.date_administered).split('T')[0];
+          const dateStr = String((imm as any).date_administered).split('T')[0];
           // Only set if it's a valid date string
           if (dateStr && dateStr !== 'null' && dateStr !== 'undefined' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
             dateFormatted = dateStr;
@@ -352,7 +352,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         }
         
         return {
-          vaccine_name: imm.vaccine_name || '',
+          vaccine_name: (imm as any).vaccine_name || '',
           date_administered: dateFormatted,
         };
       });
@@ -810,7 +810,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         .filter(i => i.vaccine_name.trim() && i.date_administered)
         .map(imm => ({
           patient_account_id: patientAccount.id,
-          vaccine_name: imm.vaccine_name,
+          vaccine_name: (imm as any).vaccine_name,
           date_administered: imm.date_administered,
           added_by_user_id: effectiveUserId,
           added_by_role: auditRole,
