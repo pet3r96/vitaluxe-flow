@@ -100,29 +100,19 @@ Deno.serve(async (req) => {
     // Fetch all medical data for PDF generation
     const patientAccountId = shareLink.patient_id;
     
-    const [
-      { data: medications },
-      { data: conditions },
-      { data: allergies },
-      { data: vitals },
-      { data: immunizations },
-      { data: surgeries },
-      { data: pharmacies },
-      { data: emergencyContacts }
-    ] = await Promise.all([
-      supabase.from('patient_medical_vault').select('*').eq('patient_id', patientAccountId),
-    ]);
+    const { data: vaultData } = await supabase
+      .from('patient_medical_vault')
+      .select('*')
+      .eq('patient_id', patientAccountId);
 
     // Group vault data by record_type
-    const vaultData = medications || [];
-    const groupedVault = {
-      medications: vaultData.filter(r => r.record_type === 'medication'),
-      conditions: vaultData.filter(r => r.record_type === 'condition'),
-      allergies: vaultData.filter(r => r.record_type === 'allergy'),
-      vitals: vaultData.filter(r => r.record_type === 'vital_signs'),
-      immunizations: vaultData.filter(r => r.record_type === 'immunization'),
-      surgeries: vaultData.filter(r => r.record_type === 'surgery'),
-    };
+    const vaultRecords = vaultData || [];
+    const medications = vaultRecords.filter((r: any) => r.record_type === 'medication');
+    const conditions = vaultRecords.filter((r: any) => r.record_type === 'condition');
+    const allergies = vaultRecords.filter((r: any) => r.record_type === 'allergy');
+    const immunizations = vaultRecords.filter((r: any) => r.record_type === 'immunization');
+    const surgeries = vaultRecords.filter((r: any) => r.record_type === 'surgery');
+    const vitals = vaultRecords.find((r: any) => r.record_type === 'vital_signs') || null;
 
     // Increment access count for auditing (unlimited views within 60 minutes)
     const newAccessCount = currentAccessCount + 1;
@@ -184,14 +174,12 @@ Deno.serve(async (req) => {
           last_name: patientAccount.last_name,
           date_of_birth: patientAccount.date_of_birth
         },
-        medications: medications || [],
-        conditions: conditions || [],
-        allergies: allergies || [],
-        vitals: vitals?.[0] || null,
-        immunizations: immunizations || [],
-        surgeries: surgeries || [],
-        pharmacies: pharmacies || [],
-        emergencyContacts: emergencyContacts || []
+        medications,
+        conditions,
+        allergies,
+        vitals,
+        immunizations,
+        surgeries
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
