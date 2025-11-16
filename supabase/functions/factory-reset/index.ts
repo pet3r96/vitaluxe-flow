@@ -329,7 +329,6 @@ serve(async (req) => {
     deleted_counts.patient_accounts = await deleteRecords('patient_accounts', 'all');
 
     // Phase 9: Reps & Relationships
-    deleted_counts.rep_practice_links = await deleteRecords('rep_practice_links', 'all');
     deleted_counts.rep_payments = await deleteRecords('rep_payments', 'all');
     deleted_counts.rep_payment_batches = await deleteRecords('rep_payment_batches', 'all');
     deleted_counts.pending_reps = await deleteRecords('pending_reps', 'all');

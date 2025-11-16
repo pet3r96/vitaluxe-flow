@@ -280,9 +280,9 @@ serve(async (req) => {
           throw new Error(`Failed to link practice: ${linkError.message}`);
         }
         
-        console.log('Successfully created rep_practice_link:', {
-          rep_id: repRecord.id,
-          practice_id: userId
+        console.log('Successfully linked practice to rep:', {
+          practice_id: userId,
+          linked_topline_id: practiceData.assigned_rep_user_id
         });
       }
 

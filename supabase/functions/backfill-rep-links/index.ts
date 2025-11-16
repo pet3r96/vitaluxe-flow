@@ -145,12 +145,12 @@ Deno.serve(async (req) => {
           // Update practice profile's linked_topline_id instead of creating links
           const { error: linkError } = await supabaseAdmin
             .from('profiles')
-            .update({ linked_topline_id: targetRepUserId })
+            .update({ linked_topline_id: practice.linked_topline_id })
             .eq('id', practice.id);
 
           if (!linkError) {
             linksAdded++;
-            console.log(`Linked rep ${targetRepUserId} to practice ${practice.id}`);
+            console.log(`Linked practice ${practice.id} to rep ${practice.linked_topline_id}`);
           } else {
             console.error(`Failed to link rep ${targetRepId} to practice ${practice.id}:`, linkError);
           }
