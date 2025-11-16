@@ -849,7 +849,6 @@ export const OrderDetailsDialog = ({
 
                   <div className="pt-2">
                     <ShippingInfoForm orderLine={line} onSuccess={onSuccess} />
-                    <ShippingAuditLog orderLineId={line.id} />
                     
                     {/* Shipment Tracking - Show for shipped orders with tracking info */}
                     {line.status === 'shipped' && line.tracking_number && line.shipping_carrier && (
