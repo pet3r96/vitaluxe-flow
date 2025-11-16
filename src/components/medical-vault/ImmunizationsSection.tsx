@@ -57,7 +57,7 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
     
     try {
       const { error } = await supabase
-        .from("patient_immunizations")
+        .from("patient_medical_vault")
         .delete()
         .eq("id", immunization.id);
       

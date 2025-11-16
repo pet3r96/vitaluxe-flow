@@ -59,7 +59,7 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
     
     try {
       const { error } = await supabase
-        .from("patient_emergency_contacts")
+        .from("patient_medical_vault")
         .delete()
         .eq("id", contact.id);
       
