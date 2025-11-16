@@ -586,7 +586,7 @@ export const OrderDetailsDialog = ({
                 </div>
               </div>
             )}
-            <OrderStatusSelector order={order} onSuccess={onSuccess} />
+            
             <div>
               <p className="text-sm text-muted-foreground">Fulfillment Type</p>
               <Badge variant={order.ship_to === 'practice' ? 'secondary' : 'default'}>
