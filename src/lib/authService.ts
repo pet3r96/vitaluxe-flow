@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { getCurrentCSRFToken } from "@/lib/csrf";
+import { EdgeFunctionResponse, getEdgeFunctionError } from "@/types/edgeFunction";
 
 /**
  * Unified Auth Service Layer
@@ -75,7 +76,7 @@ export const authService = {
 
       if (error) {
         logger.error('Self-signup error', error);
-        return { error: { message: (data as any)?.error || error.message } };
+        return { error: { message: getEdgeFunctionError(data, error) } };
       }
 
       if (data?.error) {
@@ -139,7 +140,7 @@ export const authService = {
 
       if (error) {
         logger.error('Admin user creation error', error);
-        return { error: { message: (data as any)?.error || error.message } };
+        return { error: { message: getEdgeFunctionError(data, error) } };
       }
 
       if (data?.error) {
@@ -265,7 +266,7 @@ export const authService = {
 
       if (error) {
         logger.error('Email verification error', error);
-        return { error: { message: (data as any)?.error || error.message } };
+        return { error: { message: getEdgeFunctionError(data, error) } };
       }
 
       if (data?.error) {

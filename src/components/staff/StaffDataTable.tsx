@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { EdgeFunctionResponse, isEdgeFunctionError } from "@/types/edgeFunction";
 import {
   Table,
   TableBody,
@@ -82,7 +83,7 @@ export const StaffDataTable = () => {
       body: { staffId: staffUserId, active: !currentStatus }
     });
 
-    const serverMessage = (error as any)?.message || (typeof data === 'object' && (data as any)?.error);
+    const serverMessage = error?.message || (isEdgeFunctionError(data) ? data.error : undefined);
     if (error || serverMessage) {
       toast.error(serverMessage || 'Failed to update staff status');
       return;

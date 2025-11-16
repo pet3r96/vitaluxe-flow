@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { EdgeFunctionResponse, getEdgeFunctionError } from "@/types/edgeFunction";
 import {
   Dialog,
   DialogContent,
@@ -186,7 +187,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
           }
         });
 
-        if (error) throw new Error((data as any)?.error || error.message);
+        if (error) throw new Error(getEdgeFunctionError(data, error));
 
         // Update the pharmacy record with additional fields
         const { error: updateError } = await supabase

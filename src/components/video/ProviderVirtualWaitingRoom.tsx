@@ -891,15 +891,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
           open={showScheduleDialog}
           onOpenChange={setShowScheduleDialog}
           practiceId={practiceId}
-          providers={
-            allProviders?.map((p) => ({
-              id: p.id,
-              full_name: p.full_name || getProviderDisplayName(p),
-              first_name: p.first_name || "",
-              last_name: p.last_name || "",
-              type: p.type,
-            })) || []
-          }
+          providers={allProviders || []}
           rooms={[]}
           defaultVisitType="video"
         />
@@ -1283,15 +1275,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         open={showScheduleDialog}
         onOpenChange={setShowScheduleDialog}
         practiceId={practiceId}
-        providers={
-          allProviders?.map((p) => ({
-            id: p.id,
-            display_name: getProviderDisplayName(p),
-            full_name: getProviderDisplayName(p),
-            first_name: p.first_name || "",
-            last_name: p.last_name || "",
-          })) || []
-        }
+        providers={allProviders || []}
         rooms={[]}
         defaultVisitType="video"
       />
