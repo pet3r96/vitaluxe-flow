@@ -21,7 +21,7 @@ export const ArchivedLogsViewer = () => {
   const { data: archivedLogs, isLoading } = useQuery({
     queryKey: ["archived-logs", searchTerm],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("audit_logs_archive")
         .select("*")
         .order("created_at", { ascending: false })

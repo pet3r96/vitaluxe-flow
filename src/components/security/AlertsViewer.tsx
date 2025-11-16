@@ -37,7 +37,7 @@ export const AlertsViewer = () => {
   const { data: unresolvedAlerts, isLoading: loadingUnresolved } = useQuery({
     queryKey: ["alerts", "unresolved"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("alerts")
         .select("*")
         .eq("resolved", false)
@@ -51,7 +51,7 @@ export const AlertsViewer = () => {
   const { data: resolvedAlerts, isLoading: loadingResolved } = useQuery({
     queryKey: ["alerts", "resolved"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("alerts")
         .select("*")
         .eq("resolved", true)
@@ -66,7 +66,7 @@ export const AlertsViewer = () => {
   const resolveAlertMutation = useMutation({
     mutationFn: async ({ alertId, notes }: { alertId: string; notes: string }) => {
       const { data: userData } = await supabase.auth.getUser();
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("alerts")
         .update({
           resolved: true,
@@ -93,7 +93,7 @@ export const AlertsViewer = () => {
 
   const deleteAlertMutation = useMutation({
     mutationFn: async (alertId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("alerts")
         .delete()
         .eq("id", alertId);
@@ -113,7 +113,7 @@ export const AlertsViewer = () => {
   const markAllResolvedMutation = useMutation({
     mutationFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("alerts")
         .update({
           resolved: true,

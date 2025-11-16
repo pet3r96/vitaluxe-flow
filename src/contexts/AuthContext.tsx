@@ -968,7 +968,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle(),
         
         // 5. Check patient terms acceptance
-        supabase
+        (supabase as any)
           .from('patient_terms_acceptances')
           .select('id')
           .eq('user_id', userId)

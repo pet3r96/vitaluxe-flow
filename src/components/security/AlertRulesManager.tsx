@@ -42,7 +42,7 @@ export const AlertRulesManager = () => {
   const createRuleMutation = useMutation({
     mutationFn: async (newRule: typeof formData) => {
       const { data: userData } = await supabase.auth.getUser();
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("alert_rules")
         .insert([{ ...newRule, created_by: userData.user?.id }])
         .select()
