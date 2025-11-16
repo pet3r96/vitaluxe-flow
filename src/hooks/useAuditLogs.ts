@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { MedicalVaultAuditLog } from "@/types/supabase-extensions";
 
 export interface AuditLog {
   id: string;
@@ -46,7 +45,7 @@ export const useAuditLogs = (patientAccountId?: string) => {
 
       console.log('[useAuditLogs] Fetching audit logs for:', patientAccountId);
       
-      const { data, error} = await supabase
+      const { data, error} = await (supabase as any)
         .from("medical_vault_audit_logs")
         .select("*")
         .eq("patient_account_id", patientAccountId)
@@ -62,7 +61,7 @@ export const useAuditLogs = (patientAccountId?: string) => {
     },
     enabled: !!patientAccountId,
     refetchOnMount: 'always',
-  });
+  } as any);
 };
 
 // Utility function to log changes

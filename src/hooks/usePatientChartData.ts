@@ -52,7 +52,8 @@ export const usePatientChartData = (patientId: string) => {
     const documents = vaultRecords?.filter(r => r.record_type === 'document') || [];
     
     // Fetch patient notes separately (if not in vault)
-    const { data: notes } = await supabase
+    // TODO: Remove (as any) when patient_notes is added to Supabase types  
+    const { data: notes } = await (supabase as any)
       .from("patient_notes")
       .select("*")
       .eq("patient_account_id", patientId)

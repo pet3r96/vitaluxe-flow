@@ -55,8 +55,9 @@ export function PatientEngagementSummaryCard({
     queryFn: async () => {
       const nowIso = new Date().toISOString();
       
+      // TODO: Remove (as any) when patient_notes/patient_follow_ups are added to Supabase types
       const [notes, plans, upcoming, followups, docs] = await Promise.all([
-        supabase
+        (supabase as any)
           .from("patient_notes")
           .select("id", { count: "exact", head: true })
           .eq("patient_account_id", patientAccountId)
