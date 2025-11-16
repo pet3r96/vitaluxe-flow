@@ -198,10 +198,10 @@ export function PracticeNotificationSettings({ practiceId }: PracticeNotificatio
             <div className="flex items-center justify-end gap-3 pt-4 border-t">
               <Button 
                 variant="outline" 
-                onClick={() => {
-                  setLocalEmailEnabled(settings?.enable_email_notifications ?? true);
-                  setLocalSmsEnabled(settings?.enable_sms_notifications ?? true);
-                }}
+              onClick={() => {
+                setLocalEmailEnabled((settings as any)?.enable_email_notifications ?? true);
+                setLocalSmsEnabled((settings as any)?.enable_sms_notifications ?? true);
+              }}
                 disabled={isUpdating}
               >
                 Cancel

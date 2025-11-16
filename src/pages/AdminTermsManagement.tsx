@@ -197,7 +197,7 @@ export default function AdminTermsManagement() {
       if (activeRole === 'patient') {
         if (terms?.id) {
           // Update existing patient portal terms
-          const { error } = await supabase
+          const { error } = await (supabase as any)
             .from('patient_portal_terms')
             .update({
               title,
@@ -211,7 +211,7 @@ export default function AdminTermsManagement() {
           if (error) throw error;
         } else {
           // Insert new patient portal terms
-          const { error } = await supabase
+          const { error } = await (supabase as any)
             .from('patient_portal_terms')
             .insert({
               title,
@@ -272,7 +272,7 @@ export default function AdminTermsManagement() {
   const loadAttestation = async () => {
     setLoadingAttestation(true);
     
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('checkout_attestation')
       .select('*')
       .eq('is_active', true)
@@ -289,10 +289,10 @@ export default function AdminTermsManagement() {
 
     if (data) {
       setAttestation(data);
-      setAttestationTitle(data.title);
-      setAttestationSubtitle(data.subtitle || "");
-      setAttestationContent(data.content);
-      setAttestationCheckboxText(data.checkbox_text);
+      setAttestationTitle((data as any).title);
+      setAttestationSubtitle((data as any).subtitle || "");
+      setAttestationContent((data as any).content);
+      setAttestationCheckboxText((data as any).checkbox_text);
     }
     
     setLoadingAttestation(false);
@@ -307,7 +307,7 @@ export default function AdminTermsManagement() {
     setSavingAttestation(true);
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('checkout_attestation')
         .update({
           title: attestationTitle,

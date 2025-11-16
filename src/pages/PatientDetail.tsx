@@ -323,7 +323,7 @@ export default function PatientDetail() {
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patient,
-        medications,
+        medications as any,
         conditions,
         allergies,
         vitals,
@@ -385,7 +385,7 @@ export default function PatientDetail() {
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patient,
-        medications,
+        medications as any,
         conditions,
         allergies,
         vitals,

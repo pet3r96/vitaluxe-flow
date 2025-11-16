@@ -228,7 +228,7 @@ const InternalChat = () => {
     queryKey: ['internal-message-replies', selectedMessageId],
     queryFn: async () => {
       if (!selectedMessageId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('internal_message_replies')
         .select('*')
         .eq('message_id', selectedMessageId)
@@ -236,7 +236,7 @@ const InternalChat = () => {
       if (error) throw error;
       
       // Get all unique sender IDs not in teamMap
-      const senderIds = data.map(r => r.sender_id).filter(id => !teamMap[id]);
+      const senderIds = (data as any).map((r: any) => r.sender_id).filter((id: any) => !teamMap[id]);
       const uniqueSenderIds = [...new Set(senderIds)];
 
       // Single batch query for all missing profiles
@@ -382,13 +382,13 @@ const InternalChat = () => {
   // Send reply mutation
   const sendReplyMutation = useMutation({
     mutationFn: async (body: string) => {
-      const { error } = await supabase
+      const { error} = await (supabase as any)
         .from('internal_message_replies')
         .insert({
           message_id: selectedMessageId!,
           sender_id: effectiveUserId,
           body
-        });
+        } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -554,7 +554,7 @@ const InternalChat = () => {
           name: `${data.patient?.first_name || ''} ${data.patient?.last_name || ''}`.trim()
         },
         sender: isFromPractice
-          ? { id: data.sender_id, name: teamMap[data.sender_id]?.name || 'Practice' }
+          ? { id: (data as any).sender_id, name: teamMap[(data as any).sender_id]?.name || 'Practice' }
           : { id: data.patient_id, name: `${data.patient?.first_name || ''} ${data.patient?.last_name || ''}`.trim() || 'Patient' }
       };
     },
@@ -626,7 +626,7 @@ const InternalChat = () => {
       if (!selectedPatientMessage) throw new Error('No message selected');
       
       // Determine the root thread_id
-      const rootThreadId = selectedPatientMessage.thread_id || selectedPatientMessage.id;
+      const rootThreadId = (selectedPatientMessage as any).thread_id || selectedPatientMessage.id;
       
       const { error } = await supabase
         .from('patient_messages')
@@ -780,7 +780,7 @@ const InternalChat = () => {
   // Combined totals (internal + patient)
   const combinedUnreadCount = unreadCount + patientUnreadCount;
   const combinedActiveCount = activeCount + patientActiveCount;
-  const combinedUrgentCount = urgentCount + patientUrgentCount;
+  const combinedUrgentCount = urgentCount + (patientMessages?.filter((m: any) => m.urgency === 'urgent' && !m.resolved).length || 0);
 
   if (!practiceId) {
     return (

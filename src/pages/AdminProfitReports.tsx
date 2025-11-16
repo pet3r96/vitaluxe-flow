@@ -99,15 +99,15 @@ const AdminProfitReports = () => {
     filteredProfitDetails
       ?.filter((item: any) => (item as any).orders?.status !== 'cancelled')
       .filter((item: any) => (item as any).topline_id && !(item as any).downline_id)
-      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+      .reduce((sum: number, item: any) => sum + parseFloat((item as any).admin_profit?.toString() || '0'), 0) || 0,
     [filteredProfitDetails]
   );
 
   const fullNetworkProfit = useMemo(() => 
     filteredProfitDetails
-      ?.filter(item => item.orders?.status !== 'cancelled')
-      .filter(item => item.topline_id && item.downline_id)
-      .reduce((sum, item) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
+      ?.filter((item: any) => (item as any).orders?.status !== 'cancelled')
+      .filter((item: any) => (item as any).topline_id && (item as any).downline_id)
+      .reduce((sum: number, item: any) => sum + parseFloat((item as any).admin_profit?.toString() || '0'), 0) || 0,
     [filteredProfitDetails]
   );
 

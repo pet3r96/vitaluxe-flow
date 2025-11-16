@@ -190,7 +190,7 @@ const AdminAlerts = () => {
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline">
-                    {alert.alert_type.replace(/_/g, ' ')}
+                    {(alert as any).alert_type.replace(/_/g, ' ')}
                   </Badge>
                 </TableCell>
                 <TableCell>{(alert.pharmacies as any)?.name || 'Unknown'}</TableCell>

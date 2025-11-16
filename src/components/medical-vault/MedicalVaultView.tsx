@@ -186,7 +186,7 @@ export function MedicalVaultView({
   const { data: immunizations } = useQuery({
     queryKey: ["patient-immunizations", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("patient_medical_vault")
         .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)

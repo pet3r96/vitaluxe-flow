@@ -153,7 +153,7 @@ export const ArchivedLogsViewer = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedLogs?.map((log) => (
+                {paginatedLogs?.map((log: any) => (
                   <TableRow key={log.id}>
                     <TableCell>{log.user_email || "System"}</TableCell>
                     <TableCell className="font-medium">{log.action_type}</TableCell>
