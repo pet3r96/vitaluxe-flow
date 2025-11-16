@@ -37,7 +37,7 @@ export function useMessageAlerts() {
     if (!user) return;
 
     try {
-      await supabase
+      await (supabase as any)
         .from('message_thread_read_status')
         .upsert({
           thread_id: threadId,

@@ -45,7 +45,7 @@ export const useAuditLogs = (patientAccountId?: string) => {
 
       console.log('[useAuditLogs] Fetching audit logs for:', patientAccountId);
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("medical_vault_audit_logs")
         .select("*")
         .eq("patient_account_id", patientAccountId)
@@ -89,7 +89,7 @@ export const logMedicalVaultChange = async ({
   changeSummary?: string;
 }) => {
   try {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("medical_vault_audit_logs")
       .insert({
         patient_account_id: patientAccountId,

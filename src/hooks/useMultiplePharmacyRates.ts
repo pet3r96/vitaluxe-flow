@@ -7,7 +7,7 @@ export const useMultiplePharmacyRates = (pharmacyIds: string[]) => {
     queryFn: async () => {
       if (pharmacyIds.length === 0) return {};
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('pharmacy_shipping_rates')
         .select('pharmacy_id, shipping_speed, rate, enabled')
         .in('pharmacy_id', pharmacyIds)

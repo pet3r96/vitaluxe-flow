@@ -1186,7 +1186,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .select('temp_password')
           .eq('id', uid)
           .maybeSingle(),
-        supabase
+        (supabase as any)
           .from('patient_terms_acceptances')
           .select('id')
           .eq('user_id', uid)
