@@ -27,7 +27,7 @@ export function SharedNotesSection({ patientAccountId }: SharedNotesSectionProps
     );
   }
 
-  if (!(sharedNotes as any).length) {
+  if (!(sharedNotes?.length)) {
     return (
       <Card>
         <CardHeader>
@@ -58,7 +58,7 @@ export function SharedNotesSection({ patientAccountId }: SharedNotesSectionProps
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {(sharedNotes as any).map((note: any) => (
+        {sharedNotes.map((note) => (
           <div key={note.id} className="border rounded-lg p-4 space-y-2">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1 flex-1">

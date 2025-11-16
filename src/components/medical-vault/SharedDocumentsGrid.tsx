@@ -37,16 +37,19 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
 
       if (error) throw error;
       
-      const documents = (data || []).map((item: any) => ({
-        id: item.id,
-        patient_id: item.patient_account_id,
-        ...(item.record_data as any),
-        created_at: item.created_at
-      }));
+      const documents = (data || []).map((item) => {
+        const recordData = (item.record_data || {}) as Record<string, unknown>;
+        return {
+          id: item.id,
+          patient_id: item.patient_account_id,
+          ...recordData,
+          created_at: item.created_at
+        };
+      });
 
       // For practice view, only show shared documents
       if (mode === 'practice') {
-        return documents.filter((doc: any) => doc.share_with_practice === true);
+        return documents.filter((doc) => (doc as any).share_with_practice === true);
       }
 
       return documents;
@@ -164,8 +167,8 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
 
   // All hooks MUST be called before any conditional returns
   const allDocs = useMemo(() => [
-    ...((patientDocs as any[]) || []).map(d => ({ ...d, docType: 'patient' as const })),
-    ...((providerDocs as any[]) || []).map(d => ({ ...d, docType: 'provider' as const })),
+    ...(patientDocs || []).map(d => ({ ...d, docType: 'patient' as const })),
+    ...(providerDocs || []).map(d => ({ ...d, docType: 'provider' as const })),
   ], [patientDocs, providerDocs]);
 
   // Get unique document types for filter
