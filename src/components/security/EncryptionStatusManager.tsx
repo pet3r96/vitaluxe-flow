@@ -12,7 +12,7 @@ export const EncryptionStatusManager = () => {
   const { data: encryptionKeys, isLoading: keysLoading } = useQuery({
     queryKey: ["encryption-keys"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("encryption_keys")
         .select("*")
         .eq("active", true)

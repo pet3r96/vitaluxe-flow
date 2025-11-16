@@ -128,7 +128,7 @@ export function MedicalVaultView({
   const { data: conditions } = useQuery({
     queryKey: ["patient-conditions", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("patient_medical_vault")
         .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
@@ -147,7 +147,7 @@ export function MedicalVaultView({
   const { data: allergies } = useQuery({
     queryKey: ["patient-allergies", patientAccountId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("patient_medical_vault")
         .select("id, record_data, created_at")
         .eq("patient_account_id", patientAccountId)
