@@ -94,6 +94,18 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [user, effectiveRole, passwordStatusChecked]);
 
+  // Role resolution timeout (prevents infinite loading when role doesn't load)
+  useEffect(() => {
+    if (user && !effectiveRole) {
+      const timeout = setTimeout(() => {
+        console.warn('[ProtectedRoute] Role resolution timeout - redirecting to auth');
+        navigate('/auth');
+      }, 5000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [user, effectiveRole, navigate]);
+
   // ===== NOW SAFE TO HAVE CONDITIONAL RETURNS =====
 
   if (initializing) {
@@ -155,17 +167,6 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // While role is being determined, show a lightweight loader with timeout
   if (user && !effectiveRole) {
     console.log('[ProtectedRoute] Waiting for role resolution');
-    
-    // Add timeout to prevent infinite loading
-    useEffect(() => {
-      const timeout = setTimeout(() => {
-        console.warn('[ProtectedRoute] Role resolution timeout - redirecting to auth');
-        // If role doesn't load after 5 seconds, something is wrong
-        navigate('/auth');
-      }, 5000);
-      
-      return () => clearTimeout(timeout);
-    }, [navigate]);
     
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
