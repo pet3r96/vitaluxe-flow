@@ -139,7 +139,7 @@ export function FollowUpDialog({
 
       if (followUp) {
         const { error, data: result } = await supabase
-          .from("patient_follow_ups" as any)
+          .from("patient_follow_ups")
           .update(payload)
           .eq("id", followUp.id);
         
@@ -158,7 +158,7 @@ export function FollowUpDialog({
         console.log('[FollowUpDialog] UPDATE success:', { followUpId: followUp.id });
       } else {
         const { error, data: result } = await supabase
-          .from("patient_follow_ups" as any)
+          .from("patient_follow_ups")
           .insert(payload)
           .select();
         

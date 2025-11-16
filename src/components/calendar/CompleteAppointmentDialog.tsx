@@ -124,7 +124,7 @@ export function CompleteAppointmentDialog({
       // 2. Create follow-up if requested
       if (scheduleFollowUp === "yes") {
         const { error: followUpError } = await supabase
-          .from("patient_follow_ups" as any)
+          .from("patient_follow_ups")
           .insert({
             patient_id: appointment.patient_id,
             created_by: effectiveUserId,
