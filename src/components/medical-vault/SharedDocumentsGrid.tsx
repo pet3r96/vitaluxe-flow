@@ -28,11 +28,11 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   const { data: patientDocs, isLoading: loadingPatientDocs } = useQuery({
     queryKey: ['shared-patient-documents', patientAccountId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('patient_medical_vault')
         .select('*')
         .eq('patient_account_id', patientAccountId)
-        .eq('category', 'document')
+        .eq('record_type', 'document')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -92,7 +92,7 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   useEffect(() => {
     if (!patientAccountId) return;
 
-    realtimeManager.subscribe('patient_documents', () => {
+    realtimeManager.subscribe('patient_medical_vault', () => {
       queryClient.invalidateQueries({ queryKey: ['shared-patient-documents', patientAccountId] });
     });
 

@@ -36,7 +36,7 @@ export function PatientEngagementSummaryCard({
       'treatment_plans', 
       'patient_appointments',
       'patient_follow_ups',
-      'patient_documents'
+      'patient_medical_vault'
     ];
 
     // Subscribe to each table with custom invalidation callback

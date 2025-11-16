@@ -32,7 +32,7 @@ export const RepPracticesDataTable = () => {
   const autoHealAttempted = useRef(false);
   const queryClient = useQueryClient();
 
-  // Fetch practices based on role using rep_practice_links with real-time updates
+  // Fetch practices based on role using linked_topline_id with real-time updates
   const { data: practices, isLoading, refetch } = useRealtimeQuery(
     ["rep-practices", effectiveUserId, effectiveRole],
     async () => {

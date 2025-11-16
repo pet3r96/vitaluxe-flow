@@ -187,11 +187,11 @@ export default function PatientDocuments() {
         {
           event: "*",
           schema: "public",
-          table: "patient_documents",
-          filter: `patient_id=eq.${patientAccount.id}`,
+          table: "patient_medical_vault",
+          filter: `patient_account_id=eq.${patientAccount.id}`,
         },
         (payload) => {
-          console.log('[PatientDocuments] Realtime: patient_documents changed', payload);
+          console.log('[PatientDocuments] Realtime: patient_medical_vault changed', payload);
           queryClient.invalidateQueries({ queryKey: ["patient-unified-documents"] });
         }
       )
@@ -242,17 +242,22 @@ export default function PatientDocuments() {
 
       if (uploadError) throw uploadError;
 
-      const { error: dbError } = await (supabase as any).from("patient_documents" as any).insert({
-        patient_id: patientAccount.id,
-        document_name: documentName?.trim() || file.name,
-        document_type: documentType,
-        storage_path: filePath,
-        file_size: file.size,
-        mime_type: file.type,
-        notes: notes || null,
-        share_with_practice: shareWithPractice,
-        custom_title: documentType === "other" ? customTitle : null,
-        uploaded_by: effectiveUserId,
+      const { error: dbError } = await (supabase as any).from("patient_medical_vault").insert({
+        patient_account_id: patientAccount.id,
+        record_type: 'document',
+        title: documentName?.trim() || file.name,
+        record_data: {
+          document_name: documentName?.trim() || file.name,
+          document_type: documentType,
+          storage_path: filePath,
+          file_size: file.size,
+          mime_type: file.type,
+          notes: notes || null,
+          share_with_practice: shareWithPractice,
+          custom_title: documentType === "other" ? customTitle : null,
+          uploaded_by: effectiveUserId,
+          url: filePath,
+        },
       });
 
       if (dbError) throw dbError;
@@ -272,13 +277,10 @@ export default function PatientDocuments() {
     },
     onError: (error: any) => {
       const errorMessage = error.message || "Could not upload document";
-      const isConstraintError = errorMessage.includes("patient_documents_document_type_check");
       
       toast({
         title: "Upload Failed",
-        description: isConstraintError 
-          ? "Invalid document type. Please select one of the supported types."
-          : errorMessage,
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -298,9 +300,9 @@ export default function PatientDocuments() {
       if (storageError) throw storageError;
 
       const { error: dbError } = await (supabase as any)
-        .from("patient_documents" as any)
+        .from("patient_medical_vault")
         .delete()
-        .eq("id", doc.id) as any;
+        .eq("id", doc.id);
 
       if (dbError) throw dbError;
     },
@@ -324,9 +326,11 @@ export default function PatientDocuments() {
   const hideMutation = useMutation({
     mutationFn: async (docId: string) => {
       const { error } = await (supabase as any)
-        .from("patient_documents" as any)
-        .update({ hidden_by_patient: true } as any)
-        .eq("id", docId) as any;
+        .from("patient_medical_vault")
+        .update({ 
+          record_data: { hidden_by_patient: true }
+        })
+        .eq("id", docId);
 
       if (error) throw error;
     },
