@@ -12,7 +12,7 @@ interface RefundHistoryProps {
 export const RefundHistory = ({ orderId }: RefundHistoryProps) => {
   const { data: refunds, isLoading } = useQuery({
     queryKey: ["order-refunds", orderId],
-    queryFn: async (): Promise<any[]> => {
+    queryFn: async () => {
       const { data, error } = await (supabase
         .from("order_refunds") as any)
         .select(`

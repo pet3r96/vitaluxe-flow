@@ -283,7 +283,7 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground truncate">
-                          {latestMsg.body}
+                          {(latestMsg as any).body}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           {latestMsg.resolved && (

@@ -35,7 +35,7 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
   
   const { data: immunizations } = useQuery({
     queryKey: ["patient-immunizations", patientAccountId],
-    queryFn: async (): Promise<any[]> => {
+    queryFn: async () => {
       if (!patientAccountId) return [];
       const { data, error } = await supabase
         .from("patient_medical_vault")
