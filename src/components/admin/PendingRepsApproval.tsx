@@ -35,12 +35,13 @@ export const PendingRepsApproval = () => {
     status: string;
     submitted_at: string;
     reviewed_at: string | null;
-    reviewed_by: string | null;
+    reviewed_by_user_id: string | null;
     rejection_reason: string | null;
     admin_notes: string | null;
     created_at: string;
     updated_at: string;
     created_by?: { name: string; email: string } | null;
+    reviewed_by?: string | null;
     reviewed_by_profile?: { name: string } | null;
   };
 
@@ -63,7 +64,7 @@ export const PendingRepsApproval = () => {
       // Fetch related profiles separately
       if (data && data.length > 0) {
         const creatorIds = [...new Set(data.map(r => r.created_by_user_id))];
-        const reviewerIds = [...new Set(data.map(r => r.reviewed_by).filter(Boolean))];
+        const reviewerIds = [...new Set(data.map(r => r.reviewed_by_user_id).filter(Boolean))];
         
         const { data: profiles } = await supabase
           .from("profiles")
@@ -75,7 +76,8 @@ export const PendingRepsApproval = () => {
         return data.map(request => ({
           ...request,
           created_by: profileMap.get(request.created_by_user_id),
-          reviewed_by_profile: request.reviewed_by ? profileMap.get(request.reviewed_by) : null,
+          reviewed_by: request.reviewed_by_user_id,
+          reviewed_by_profile: request.reviewed_by_user_id ? profileMap.get(request.reviewed_by_user_id) : null,
         }));
       }
 

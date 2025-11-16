@@ -148,7 +148,13 @@ export default function PracticeDevelopmentFeeManager() {
       } else {
         const { error } = await supabase
           .from("practice_development_fees")
-          .insert([{ topline_rep_id: repId, monthly_amount: amount, notes }]);
+          .insert([{ 
+            topline_rep_id: repId, 
+            practice_id: repId, // Using rep ID as placeholder - adjust as needed
+            monthly_amount: amount, 
+            effective_from: new Date().toISOString(),
+            notes 
+          }]);
         if (error) throw error;
       }
     },
