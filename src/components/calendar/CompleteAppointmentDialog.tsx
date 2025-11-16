@@ -127,10 +127,13 @@ export function CompleteAppointmentDialog({
           .from("patient_follow_ups")
           .insert({
             patient_id: appointment.patient_id,
+            practice_id: appointment.practice_id,
             created_by: effectiveUserId,
             assigned_to: data.followUpAssignedTo === "unassigned" ? null : data.followUpAssignedTo,
+            due_date: data.followUpDate,
             follow_up_date: data.followUpDate,
             follow_up_time: data.followUpTime || null,
+            subject: data.followUpReason || "Follow-up",
             reason: data.followUpReason,
             notes: data.followUpNotes || null,
             priority: data.followUpPriority,

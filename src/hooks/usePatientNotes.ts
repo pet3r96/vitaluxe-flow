@@ -56,7 +56,7 @@ export function usePatientNotes(patientAccountId: string | undefined) {
       return data as unknown as PatientNote[];
     },
     enabled: !!patientAccountId,
-  } as any);
+  });
 }
 
 // Fetch shared notes only (for patient view)
@@ -81,7 +81,7 @@ export function useSharedPatientNotes(patientAccountId: string | undefined) {
       return data as unknown as PatientNote[];
     },
     enabled: !!patientAccountId,
-  } as any);
+  });
 }
 
 // Create note mutation

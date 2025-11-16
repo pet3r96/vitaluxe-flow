@@ -31,7 +31,7 @@ export function usePracticeNotificationSettings(practiceId: string | null) {
       };
     },
     enabled: !!practiceId,
-  } as any);
+  });
 
   const updateSettings = useMutation({
     mutationFn: async (newSettings: PracticeNotificationSettings) => {

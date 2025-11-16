@@ -179,7 +179,7 @@ serve(async (req) => {
           { message_id: thread.id, recipient_id: order.profiles.id }
         ];
 
-        const { error: recipientsError } = await (supabase as any)
+        const { error: recipientsError } = await supabase
           .from('internal_message_recipients')
           .insert(recipients);
 
@@ -300,7 +300,7 @@ serve(async (req) => {
           { message_id: thread.id, recipient_id: order.profiles.id }
         ];
 
-        const { error: recipientsError } = await (supabase as any)
+        const { error: recipientsError } = await supabase
           .from('internal_message_recipients')
           .insert(recipients);
 

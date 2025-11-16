@@ -92,6 +92,16 @@ export function FollowUpDialog({
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error("Not authenticated");
 
+      // Get the patient's practice_id
+      const { data: patientData, error: patientError } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientId)
+        .single();
+
+      if (patientError) throw patientError;
+      if (!patientData?.practice_id) throw new Error("Patient practice not found");
+
       // Verify user belongs to patient's practice before attempting mutation
       const { data: practiceCheck, error: rpcError } = await supabase.rpc('user_belongs_to_patient_practice', {
         _user_id: user.id,
@@ -117,10 +127,13 @@ export function FollowUpDialog({
 
       const payload = {
         patient_id: patientId,
+        practice_id: patientData.practice_id,
         created_by: user.id,
         assigned_to: data.assigned_to || null,
+        due_date: data.follow_up_date,
         follow_up_date: data.follow_up_date,
         follow_up_time: data.follow_up_time || null,
+        subject: data.reason || "Follow-up",
         reason: data.reason,
         notes: data.notes || null,
         priority: data.priority,

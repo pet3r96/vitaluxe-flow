@@ -65,7 +65,7 @@ export const useAuditLogs = (patientAccountId?: string) => {
     },
     enabled: !!patientAccountId,
     refetchOnMount: 'always',
-  } as any);
+  });
 };
 
 // Utility function to log changes

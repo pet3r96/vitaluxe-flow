@@ -66,10 +66,13 @@ export function CreateFollowUpFromAppointmentDialog({
 
       const payload = {
         patient_id: appointment.patient_id,
+        practice_id: appointment.practice_id,
         created_by: effectiveUserId,
         assigned_to: data.assigned_to || null,
+        due_date: data.follow_up_date,
         follow_up_date: data.follow_up_date,
         follow_up_time: data.follow_up_time || null,
+        subject: data.reason || "Follow-up",
         reason: data.reason,
         notes: data.notes || null,
         priority: data.priority,
