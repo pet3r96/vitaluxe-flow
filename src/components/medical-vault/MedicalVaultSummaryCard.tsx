@@ -143,7 +143,7 @@ export function MedicalVaultSummaryCard({ patientAccountId, onViewVault }: Medic
             {counts?.lastVital ? (
               <>
                 <p className="text-lg font-bold mb-1">
-                  {counts.lastVital.blood_pressure_systolic}/{counts.lastVital.blood_pressure_diastolic}
+                  {(counts.lastVital as any)?.blood_pressure_systolic || '--'}/{(counts.lastVital as any)?.blood_pressure_diastolic || '--'}
                 </p>
                 <p className="text-xs font-medium text-muted-foreground">Last BP</p>
               </>
