@@ -128,15 +128,27 @@ serve(async (req) => {
 
     // Authorization checks based on bucket
     if (normalizedBucket === 'patient-documents') {
-      // For patient documents bucket
-      const { data: document } = await supabase
-        .from('patient_documents')
-        .select('id, patient_id, share_with_practice')
-        .eq('storage_path', normalizedPath)
+      // For patient documents bucket - query medical vault for document records
+      const { data: vaultRecords } = await supabase
+        .from('patient_medical_vault')
+        .select('id, patient_account_id, record_data')
+        .eq('category', 'document')
+        .eq('record_data->>storage_path', normalizedPath)
         .maybeSingle();
 
+      if (!vaultRecords) {
+        console.error('[get-s3-signed-url] Document not found in medical vault:', normalizedPath);
+        throw new Error('Document not found');
+      }
+
+      const document = {
+        id: vaultRecords.id,
+        patient_id: vaultRecords.patient_account_id,
+        share_with_practice: (vaultRecords.record_data as any)?.share_with_practice || false
+      };
+
       if (!document) {
-        console.error('[get-s3-signed-url] Document not found in patient_documents:', normalizedPath);
+        console.error('[get-s3-signed-url] Document not found:', normalizedPath);
         throw new Error('Document not found');
       }
 

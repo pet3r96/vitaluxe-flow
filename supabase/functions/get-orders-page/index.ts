@@ -400,13 +400,15 @@ serve(async (req) => {
         );
       }
       
-      const { data: practiceLinks, error: linksError } = await supabase
-        .from('rep_practice_links')
-        .select('practice_id')
-        .eq('rep_id', repData.id)
+      // Get practices linked to this topline rep via profiles.linked_topline_id
+      const { data: linkedProfiles, error: linksError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('linked_topline_id', userId)
+        .eq('role', 'practice')
         .limit(5000);
       
-      const practiceIds = practiceLinks?.map(pl => pl.practice_id) || [];
+      const practiceIds = linkedProfiles?.map(p => p.id) || [];
       
       if (practiceIds.length === 0) {
         console.warn('[get-orders-page] No practices linked to downline rep:', repData.id);

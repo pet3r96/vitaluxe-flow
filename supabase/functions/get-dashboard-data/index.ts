@@ -61,12 +61,12 @@ Deno.serve(async (req) => {
     // 1. Unread messages count
     promises.push(
       (async () => {
-        const { data: participantThreads } = await supabase
-          .from('thread_participants')
-          .select('thread_id')
-          .eq('user_id', userId);
+        const { data: recipientMessages } = await supabase
+          .from('internal_message_recipients')
+          .select('message_id')
+          .eq('recipient_id', userId);
 
-        const threadIds = participantThreads?.map(pt => pt.thread_id) || [];
+        const threadIds = recipientMessages?.map(rm => rm.message_id) || [];
         if (threadIds.length > 0) {
           const { data: threads } = await supabase
             .from('message_threads')

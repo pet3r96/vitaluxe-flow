@@ -173,18 +173,18 @@ serve(async (req) => {
       if (threadError) {
         console.error('Error creating message thread:', threadError);
       } else {
-        // Add pharmacy and practice as participants
-        const participants = [
-          { thread_id: thread.id, user_id: user.id },
-          { thread_id: thread.id, user_id: order.profiles.id }
+        // Add pharmacy and practice as recipients
+        const recipients = [
+          { message_id: thread.id, recipient_id: user.id },
+          { message_id: thread.id, recipient_id: order.profiles.id }
         ];
 
-        const { error: participantsError } = await supabase
-          .from('thread_participants')
-          .insert(participants);
+        const { error: recipientsError } = await supabase
+          .from('internal_message_recipients')
+          .insert(recipients);
 
-        if (participantsError) {
-          console.error('Error adding thread participants:', participantsError);
+        if (recipientsError) {
+          console.error('Error adding message recipients:', recipientsError);
         }
 
         // Create initial message
