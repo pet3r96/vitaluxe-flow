@@ -316,7 +316,7 @@ const App = () => {
                                             <Route path="/orders" element={<Orders />} />
                                             <Route path="/messages" element={<Messages />} />
                                             <Route path="/pharmacies" element={<Pharmacies />} />
-                                            <Route path="/reports" element={<Reports />} />
+                                            {/* Phase 6: /reports removed (Reports page deleted) */}
                                             <Route path="/cart" element={<Cart />} />
                                             <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
                                             <Route path="/checkout" element={<Checkout />} />
@@ -326,7 +326,7 @@ const App = () => {
                                             <Route path="/profile" element={<Profile />} />
                                             <Route path="/admin-settings" element={<AdminSettings />} />
                                             <Route path="/subscriptions" element={<Subscriptions />} />
-                                            <Route path="/security" element={<Security />} />
+                                            {/* Phase 6: /security removed (Security page deleted) */}
                                             <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
                                             <Route path="/support" element={<Support />} />
                                             <Route path="/support-tickets" element={<SupportTickets />} />
@@ -335,10 +335,8 @@ const App = () => {
                                               element={<SupportTicketThread />}
                                             />
                                             <Route path="/admin/terms" element={<AdminTermsManagement />} />
-                                            <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
-                                            <Route path="/admin/practice-audit" element={<PracticeAuditLog />} />
+                                            {/* Phase 6: Removed /admin/discount-codes, /admin/practice-audit, /admin/alerts (pages deleted) */}
                                             <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
-                                            <Route path="/admin/alerts" element={<AdminAlerts />} />
                                             <Route path="/rep-reports" element={<RepProfitReports />} />
                                             <Route path="/rep-productivity" element={<RepProductivityReport />} />
                                             <Route path="/downline-performance" element={<DownlinePerformanceView />} />
