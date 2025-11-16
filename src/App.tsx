@@ -218,67 +218,32 @@ const App = () => {
                                       <Suspense fallback={<PageLoader />}>
                                         <AnimatePresence mode="wait">
                                           <Routes>
-                                            <Route path="/" element={<DashboardRouter />} />
-                                            <Route path="/dashboard" element={<DashboardRouter />} />
-                                            <Route path="/accounts" element={<Accounts />} />
-                                            <Route path="/practices" element={<Practices />} />
-                                            <Route path="/representatives" element={<Representatives />} />
-                                            <Route path="/patients" element={<Patients />} />
-                            <Route path="/patients/:patientId" element={<PatientDetail />} />
+                            <Route path="/" element={<DashboardRouter />} />
+                            <Route path="/dashboard" element={<DashboardRouter />} />
+                            <Route path="/accounts" element={<Accounts />} />
+                            <Route path="/representatives" element={<Representatives />} />
+                            <Route path="/providers" element={<Providers />} />
                             <Route
-                                              path="/practice/patients/:patientId/medical-vault"
-                                              element={<PracticePatientMedicalVault />}
-                                            />
-                                            <Route path="/providers" element={<Providers />} />
-                                            <Route
-                                              path="/staff"
-                                              element={
-                                                <SubscriptionProtectedRoute>
-                                                  <ProGate>
-                                                    <Staff />
-                                                  </ProGate>
-                                                </SubscriptionProtectedRoute>
-                                              }
-                                            />
-                                            <Route path="/products" element={<Products />} />
-                                            <Route path="/orders" element={<Orders />} />
-                                            <Route path="/messages" element={<Messages />} />
-                                            <Route path="/pharmacies" element={<Pharmacies />} />
-                                            <Route path="/cart" element={<Cart />} />
-                                            <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
-                                            <Route path="/checkout" element={<Checkout />} />
-                                            <Route path="/order-confirmation" element={<Checkout />} />
-                                            <Route path="/downlines" element={<MyDownlines />} />
-                                            <Route path="/med-spas" element={<MedSpas />} />
-                                            <Route path="/profile" element={<Profile />} />
-                                            <Route path="/admin-settings" element={<AdminSettings />} />
-                                            <Route path="/subscriptions" element={<Subscriptions />} />
-                                            <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
-                                            <Route path="/support-tickets" element={<SupportTickets />} />
-                                            <Route
-                                              path="/support-tickets/:ticketId"
-                                              element={<SupportTicketThread />}
-                                            />
+                              path="/staff"
+                              element={
+                                <SubscriptionProtectedRoute>
+                                  <ProGate>
+                                    <Staff />
+                                  </ProGate>
+                                </SubscriptionProtectedRoute>
+                              }
+                            />
+                            <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
+                            <Route path="/downlines" element={<Downlines />} />
+                            <Route path="/med-spas" element={<MedSpas />} />
+                            <Route path="/appointment-debug" element={<AppointmentDebugLogs />} />
+                            <Route path="/support-tickets" element={<SupportTickets />} />
+                            <Route
+                              path="/support-tickets/:ticketId"
+                              element={<SupportTicketThread />}
+                            />
                             <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
-                            <Route path="/rep-reports" element={<RepProfitReports />} />
                             <Route path="/shipping" element={<PharmacyShipping />} />
-                                            <Route path="/appointments" element={<PatientAppointments />} />
-                                            <Route
-                                              path="/practice/patient-inbox"
-                                              element={
-                                                <SubscriptionProtectedRoute>
-                                                  <PatientInbox />
-                                                </SubscriptionProtectedRoute>
-                                              }
-                                            />
-                                            <Route
-                                              path="/practice-calendar"
-                                              element={
-                                                <SubscriptionProtectedRoute>
-                                                  <PracticeCalendar />
-                                                </SubscriptionProtectedRoute>
-                                              }
-                                            />
                                             {/* Video Consultations temporarily disabled - feature coming soon */}
                                             {/* <Route
                                               path="/video-consultations"
