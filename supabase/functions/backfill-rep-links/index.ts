@@ -49,7 +49,25 @@ Deno.serve(async (req) => {
       console.log(`Using impersonated user ${effectiveUserId} for rep links`);
     }
 
-    console.log(`Backfilling rep_practice_links for user ${effectiveUserId}`);
+    console.log(`Backfilling linked_topline_id for user ${effectiveUserId}`);
+
+    // Get approved practices that need linking
+    const { data: approvedPractices, error: practicesErr } = await supabaseAdmin
+      .from('profiles')
+      .select('id, linked_topline_id')
+      .eq('role', 'doctor')
+      .eq('active', true)
+      .is('linked_topline_id', null);
+
+    if (practicesErr) {
+      console.error('Failed to fetch practices:', practicesErr);
+      return new Response(
+        JSON.stringify({ success: false, error: practicesErr.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    console.log(`Found ${approvedPractices?.length || 0} practices without linked_topline_id`);
 
     // Determine if user is topline or downline
     const { data: repData, error: repError } = await supabaseAdmin
@@ -94,7 +112,7 @@ Deno.serve(async (req) => {
     console.log(`Processing ${repIds.length} rep(s) and ${userIds.length} user ID(s)`);
 
     // Find all active doctor practices linked to these user_ids (exclude rep profiles)
-    const { data: practices, error: practicesError } = await supabaseAdmin
+    const { data: practices, error: practicesErr2 } = await supabaseAdmin
       .from('profiles')
       .select(`
         id,
@@ -105,8 +123,8 @@ Deno.serve(async (req) => {
       .eq('active', true)
       .eq('user_roles.role', 'doctor');
 
-    if (practicesError) {
-      throw practicesError;
+    if (practicesErr2) {
+      throw practicesErr2;
     }
 
     console.log(`Found ${practices?.length || 0} practices to link`);
@@ -128,36 +146,25 @@ Deno.serve(async (req) => {
         }
 
         if (targetRepId) {
-          // Determine assigned_topline_id for the link
-          let toplineIdForLink = null;
-          
-          // Get the rep's details to check if it's a downline
-          const { data: targetRepDetails } = await supabaseAdmin
+          // Update practice to link via linked_topline_id
+          const { data: targetRep } = await supabaseAdmin
             .from('reps')
-            .select('role, assigned_topline_id')
+            .select('user_id')
             .eq('id', targetRepId)
             .single();
-          
-          if (targetRepDetails?.role === 'downline' && targetRepDetails.assigned_topline_id) {
-            toplineIdForLink = targetRepDetails.assigned_topline_id;
-          }
-          
-          // Upsert the link with assigned_topline_id
-          const { error: linkError } = await supabaseAdmin
-            .from('rep_practice_links')
-            .upsert(
-              {
-                rep_id: targetRepId,
-                practice_id: practice.id,
-                assigned_topline_id: toplineIdForLink,
-                created_at: new Date().toISOString(),
-              },
-              { onConflict: 'rep_id,practice_id' }
-            );
 
-          if (!linkError) {
-            linksAdded++;
-            console.log(`Linked rep ${targetRepId} to practice ${practice.id}`);
+          if (targetRep) {
+            const { error: linkError } = await supabaseAdmin
+              .from('profiles')
+              .update({
+                linked_topline_id: targetRep.user_id,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', practice.id);
+
+            if (!linkError) {
+              linksAdded++;
+              console.log(`Linked practice ${practice.id} to rep user ${targetRep.user_id} via linked_topline_id`);
           } else {
             console.error(`Failed to link rep ${targetRepId} to practice ${practice.id}:`, linkError);
           }

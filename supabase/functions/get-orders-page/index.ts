@@ -400,13 +400,14 @@ serve(async (req) => {
         );
       }
       
-      const { data: practiceLinks, error: linksError } = await supabase
-        .from('rep_practice_links')
-        .select('practice_id')
-        .eq('rep_id', repData.id)
+      // Get practices linked to this downline rep via profiles.linked_topline_id
+      const { data: linkedPractices, error: practicesError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('linked_topline_id', practiceId)
         .limit(5000);
       
-      const practiceIds = practiceLinks?.map(pl => pl.practice_id) || [];
+      const practiceIds = linkedPractices?.map(p => p.id) || [];
       
       if (practiceIds.length === 0) {
         console.warn('[get-orders-page] No practices linked to downline rep:', repData.id);
@@ -463,14 +464,22 @@ serve(async (req) => {
       
       const allRepIds = [repData.id, ...(downlineReps?.map(r => r.id) || [])];
       
-      // Get all practices linked to these reps
-      const { data: practiceLinks } = await supabase
-        .from('rep_practice_links')
-        .select('practice_id')
-        .in('rep_id', allRepIds)
+      // Get user_ids for all these reps
+      const { data: repUsers } = await supabase
+        .from('reps')
+        .select('user_id')
+        .in('id', allRepIds);
+      
+      const repUserIds = repUsers?.map(r => r.user_id) || [];
+      
+      // Get all practices linked via linked_topline_id
+      const { data: linkedPractices } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('linked_topline_id', repUserIds)
         .limit(5000);
       
-      const practiceIds = [...new Set(practiceLinks?.map(pl => pl.practice_id) || [])];
+      const practiceIds = [...new Set(linkedPractices?.map(p => p.id) || [])];
       
       if (practiceIds.length === 0) {
         console.warn('[get-orders-page] No practices linked to topline/downlines:', repData.id);

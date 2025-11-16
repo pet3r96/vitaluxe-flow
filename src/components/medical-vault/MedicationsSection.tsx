@@ -23,20 +23,9 @@ const formatTimestamp = (dateString?: string | null) => {
   }
 };
 
-interface Medication {
-  id: string;
-  medication_name: string;
-  dosage?: string;
-  frequency?: string;
-  start_date?: string;
-  stop_date?: string;
-  is_active: boolean;
-  notes?: string;
-}
-
 interface MedicationsSectionProps {
   patientAccountId?: string;
-  medications: Medication[];
+  medications: VaultRecordBase[];
 }
 
 export function MedicationsSection({ patientAccountId, medications }: MedicationsSectionProps) {
@@ -157,50 +146,53 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
       <CardContent className="relative z-10">
         {medications.length > 0 ? (
           <div className="space-y-3">
-            {visibleMedications.map((med) => (
-              <div key={med.id} className="flex items-start justify-between p-3 border rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium">{med.medication_name}</p>
-                    <Badge 
-                      variant={med.is_active ? "success" : "outline"} 
-                      className="text-xs"
-                    >
-                      {med.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                  {med.dosage && (
-                    <p className="text-sm text-muted-foreground">
-                      {med.dosage} {med.frequency && `• ${med.frequency}`}
-                    </p>
-                  )}
-                  {med.start_date && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Started: {format(new Date(med.start_date), 'MMM dd, yyyy')}
-                    </p>
-                  )}
-                </div>
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => openDialog("view", med)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => openDialog("edit", med)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => handleToggleActive(med)} 
-                      title={med.is_active ? "Mark inactive" : "Mark active"}
-                    >
-                      {med.is_active ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDelete(med)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+      {visibleMedications.map((medication: VaultRecordBase) => {
+        const data = asMedication(medication);
+        return (
+          <div key={medication.id} className="flex items-start justify-between p-3 border rounded-lg">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="font-medium">{data.medication_name}</p>
+                <Badge 
+                  variant={data.is_active ? "success" : "outline"} 
+                  className="text-xs"
+                >
+                  {data.is_active ? "Active" : "Inactive"}
+                </Badge>
+              </div>
+              {data.dosage && (
+                <p className="text-sm text-muted-foreground">
+                  {data.dosage} {data.frequency && `• ${data.frequency}`}
+                </p>
+              )}
+              {data.start_date && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Started: {format(new Date(data.start_date), 'MMM dd, yyyy')}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-1">
+              <Button size="sm" variant="ghost" onClick={() => openDialog("view", medication)}>
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => openDialog("edit", medication)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => handleToggleActive(medication)} 
+                title={data.is_active ? "Mark inactive" : "Mark active"}
+              >
+                {data.is_active ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => handleDelete(medication)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )})}
+        );
+      })}
             {medications.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>

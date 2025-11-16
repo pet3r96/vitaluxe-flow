@@ -58,30 +58,16 @@ Deno.serve(async (req) => {
     // Parallel batch queries for maximum efficiency
     const promises: Promise<void>[] = [];
 
-    // 1. Unread messages count
+    // 1. Unread messages count - using internal_message_recipients
     promises.push(
       (async () => {
-        const { data: participantThreads } = await supabase
-          .from('thread_participants')
-          .select('thread_id')
-          .eq('user_id', userId);
+        const { data: recipientMessages } = await supabase
+          .from('internal_message_recipients')
+          .select('message_id')
+          .eq('recipient_id', userId)
+          .is('read_at', null);
 
-        const threadIds = participantThreads?.map(pt => pt.thread_id) || [];
-        if (threadIds.length > 0) {
-          const { data: threads } = await supabase
-            .from('message_threads')
-            .select('id, messages!inner(created_at, sender_id)')
-            .in('id', threadIds);
-
-          const unreadCount = threads?.filter((thread: any) => {
-            const messages = Array.isArray(thread.messages) ? thread.messages : [thread.messages];
-            return messages[0]?.sender_id !== userId;
-          }).length || 0;
-
-          dashboardData.unreadMessages = unreadCount;
-        } else {
-          dashboardData.unreadMessages = 0;
-        }
+        dashboardData.unreadMessages = recipientMessages?.length || 0;
       })()
     );
 
