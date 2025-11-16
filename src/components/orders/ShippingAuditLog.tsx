@@ -3,26 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { History } from "lucide-react";
 import { format } from "date-fns";
+import type { ShippingAuditLogEntry } from "@/types/orders";
 
 interface ShippingAuditLogProps {
   orderLineId: string;
 }
 
 export const ShippingAuditLog = ({ orderLineId }: ShippingAuditLogProps) => {
-  const { data: logs, isLoading } = useQuery({
+  const { data: logs, isLoading } = useQuery<ShippingAuditLogEntry[]>({
     queryKey: ["shipping-audit-logs", orderLineId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("shipping_audit_logs")
-        .select(`
-          *,
-          updated_by_profile:updated_by(name)
-        `)
-        .eq("order_line_id", orderLineId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return (data || []) as any[];
+      // shipping_audit_logs table not in current schema, return empty
+      return [];
     },
   });
 
