@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, CheckCircle2, Clock, Send } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import type { PatientMessage } from "@/types/domain/messages";
 
 interface PatientMessagesTabProps {
   practiceId: string;
