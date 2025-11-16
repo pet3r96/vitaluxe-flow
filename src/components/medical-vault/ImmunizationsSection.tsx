@@ -9,6 +9,7 @@ import { ImmunizationDialog } from "./dialogs/ImmunizationDialog";
 import { toast } from "@/hooks/use-toast";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { asImmunization, type VaultRecordBase } from "@/lib/vault";
 
 interface ImmunizationsSectionProps {
   patientAccountId?: string;
@@ -121,14 +122,16 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
       <CardContent className="relative z-10">
         {immunizations && immunizations.length > 0 ? (
           <div className="space-y-3">
-            {visibleImmunizations.map((immunization) => (
+            {visibleImmunizations.map((immunization: any) => {
+              const data = asImmunization({ ...immunization, record_type: 'immunization', record_data: immunization, patient_account_id: patientAccountId || '', created_at: immunization.created_at });
+              return (
               <div key={immunization.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
                   <div className="flex flex-col gap-1">
-                    <p className="font-medium">{immunization.vaccine_name}</p>
-                    {immunization.date_administered && (
+                    <p className="font-medium">{data.vaccine}</p>
+                    {data.date_administered && (
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(immunization.date_administered), 'MMM dd, yyyy')}
+                        {format(new Date(data.date_administered), 'MMM dd, yyyy')}
                       </p>
                     )}
                     <span className="text-xs text-muted-foreground">
@@ -168,7 +171,8 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
                   </Button>
                 </div>
               </div>
-            ))}
+            );
+          })}
             {immunizations.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>

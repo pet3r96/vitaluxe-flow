@@ -66,21 +66,19 @@ Deno.serve(async (req) => {
           const downlineRepIds = downlines?.map(d => d.id) || [];
           const networkRepIds = [repId, ...downlineRepIds];
 
-          // Get practice links
-          const { data: practiceLinks } = await supabase
-            .from('rep_practice_links')
-            .select('practice_id')
-            .in('rep_id', networkRepIds);
+          // Get user_ids for all network reps
+          const { data: repUsers } = await supabase
+            .from('reps')
+            .select('user_id')
+            .in('id', networkRepIds);
 
-          if (!practiceLinks?.length) return 0;
+          const repUserIds = repUsers?.map(r => r.user_id) || [];
 
-          const practiceIds = practiceLinks.map(l => l.practice_id);
-          
-          // Count active practices
+          // Count practices linked via linked_topline_id
           const { count } = await supabase
             .from('profiles')
             .select('id', { count: 'exact', head: true })
-            .in('id', practiceIds)
+            .in('linked_topline_id', repUserIds)
             .eq('active', true);
 
           return count || 0;
@@ -105,13 +103,15 @@ Deno.serve(async (req) => {
             const downlineRepIds = downlines?.map(d => d.id) || [];
             const networkRepIds = [repId, ...downlineRepIds];
 
-            // Get practice links
-            const { data: practiceLinks } = await supabase
-              .from('rep_practice_links')
-              .select('practice_id')
-              .in('rep_id', networkRepIds);
+            // Get user_ids for all network reps
+            const { data: repUsers } = await supabase
+              .from('reps')
+              .select('user_id')
+              .in('id', networkRepIds);
 
-            const practiceIds = Array.from(new Set(practiceLinks?.map(l => l.practice_id) || []));
+            const repUserIds = repUsers?.map(r => r.user_id) || [];
+
+            const practiceIds = Array.from(new Set(repUserIds));
 
             if (practiceIds.length === 0) return 0;
 

@@ -23,18 +23,9 @@ const formatTimestamp = (dateString?: string | null) => {
   }
 };
 
-interface Condition {
-  id: string;
-  condition_name: string;
-  description?: string;
-  severity?: string;
-  date_diagnosed?: string;
-  is_active: boolean;
-}
-
 interface ConditionsSectionProps {
   patientAccountId?: string;
-  conditions: Condition[];
+  conditions: VaultRecordBase[];
 }
 
 export function ConditionsSection({ patientAccountId, conditions }: ConditionsSectionProps) {
@@ -156,60 +147,63 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
       <CardContent className="relative z-10">
         {conditions.length > 0 ? (
           <div className="space-y-3">
-            {visibleConditions.map((condition) => (
-              <div key={condition.id} className="flex items-start justify-between p-3 border rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium">{condition.condition_name}</p>
-                    <Badge 
-                      variant={condition.is_active ? "success" : "outline"} 
-                      className="text-xs"
-                    >
-                      {condition.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                    {condition.severity && (
-                      <Badge 
-                        variant={
-                          condition.severity === 'severe' ? 'destructive' : 
-                          condition.severity === 'moderate' ? 'default' : 
-                          'outline'
-                        }
-                        className="text-xs"
-                      >
-                        {condition.severity}
-                      </Badge>
-                    )}
-                  </div>
-                  {condition.description && (
-                    <p className="text-sm text-muted-foreground">{condition.description}</p>
-                  )}
-                  {condition.date_diagnosed && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Diagnosed: {format(new Date(condition.date_diagnosed), 'MMM dd, yyyy')}
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => openDialog("view", condition)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => openDialog("edit", condition)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => handleToggleActive(condition)} 
-                    title={condition.is_active ? "Mark inactive" : "Mark active"}
+      {visibleConditions.map((condition: VaultRecordBase) => {
+        const data = asCondition(condition);
+        return (
+          <div key={condition.id} className="flex items-start justify-between p-3 border rounded-lg">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="font-medium">{data.condition_name}</p>
+                <Badge 
+                  variant={data.is_active ? "success" : "outline"} 
+                  className="text-xs"
+                >
+                  {data.is_active ? "Active" : "Inactive"}
+                </Badge>
+                {data.severity && (
+                  <Badge 
+                    variant={
+                      data.severity === 'severe' ? 'destructive' : 
+                      data.severity === 'moderate' ? 'default' : 
+                      'outline'
+                    }
+                    className="text-xs"
                   >
-                    {condition.is_active ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDelete(condition)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                    {data.severity}
+                  </Badge>
+                )}
+              </div>
+              {data.description && (
+                <p className="text-sm text-muted-foreground">{data.description}</p>
+              )}
+              {data.date_diagnosed && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Diagnosed: {format(new Date(data.date_diagnosed), 'MMM dd, yyyy')}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-1">
+              <Button size="sm" variant="ghost" onClick={() => openDialog("view", condition)}>
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => openDialog("edit", condition)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => handleToggleActive(condition)} 
+                title={data.is_active ? "Mark inactive" : "Mark active"}
+              >
+                {data.is_active ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => handleDelete(condition)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )})}
+        );
+      })}
             {conditions.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>

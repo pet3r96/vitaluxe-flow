@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { asEmergencyContact, type VaultRecordBase } from "@/lib/vault";
 
 interface EmergencyContactsSectionProps {
   patientAccountId?: string;
@@ -123,19 +124,21 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
       <CardContent className="relative z-10">
         {contacts && contacts.length > 0 ? (
           <div className="space-y-3">
-            {visibleContacts.map((contact) => (
+            {visibleContacts.map((contact: any) => {
+              const data = asEmergencyContact({ ...contact, record_type: 'emergency_contact', record_data: contact, patient_account_id: patientAccountId || '', created_at: contact.created_at });
+              return (
               <div key={contact.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium">{contact.name}</p>
+                      <p className="font-medium">{data.name}</p>
                       <Badge variant="outline" className="text-xs">
-                        {contact.relationship}
+                        {data.relationship}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{formatPhoneNumber(contact.phone)}</p>
-                    {contact.email && (
-                      <p className="text-sm text-muted-foreground">{contact.email}</p>
+                    <p className="text-sm text-muted-foreground">{formatPhoneNumber(data.phone || '')}</p>
+                    {data.email && (
+                      <p className="text-sm text-muted-foreground">{data.email}</p>
                     )}
                     <span className="text-xs text-muted-foreground">
                       Recorded: {formatTimestamp(contact.created_at)}
@@ -174,7 +177,8 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
                   </Button>
                 </div>
               </div>
-            ))}
+            );
+          })}
             {contacts.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>

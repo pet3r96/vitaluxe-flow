@@ -165,25 +165,15 @@ Deno.serve(async (req) => {
             .then(({ data }) => data || [])
         : Promise.resolve([]),
 
-      // 9. Unread messages count
+      // 9. Unread messages count - using internal_message_recipients
       (async () => {
-        const { data: participantThreads } = await supabase
-          .from('thread_participants')
-          .select('thread_id')
-          .eq('user_id', userId);
+        const { data: unreadMessages } = await supabase
+          .from('internal_message_recipients')
+          .select('message_id')
+          .eq('recipient_id', userId)
+          .is('read_at', null);
 
-        const threadIds = participantThreads?.map(pt => pt.thread_id) || [];
-        if (threadIds.length === 0) return 0;
-
-        const { data: threads } = await supabase
-          .from('message_threads')
-          .select('id, messages!inner(created_at, sender_id)')
-          .in('id', threadIds);
-
-        return threads?.filter((thread: any) => {
-          const messages = Array.isArray(thread.messages) ? thread.messages : [thread.messages];
-          return messages[0]?.sender_id !== userId;
-        }).length || 0;
+        return unreadMessages?.length || 0;
       })(),
 
       // 10. Internal chat unread count

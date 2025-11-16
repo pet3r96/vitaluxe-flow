@@ -9,6 +9,7 @@ import { SurgeryDialog } from "./dialogs/SurgeryDialog";
 import { toast } from "@/hooks/use-toast";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import { asSurgery, type VaultRecordBase } from "@/lib/vault";
 
 interface SurgeriesSectionProps {
   patientAccountId?: string;
@@ -121,19 +122,21 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
       <CardContent className="relative z-10">
         {surgeries && surgeries.length > 0 ? (
           <div className="space-y-3">
-            {visibleSurgeries.map((surgery) => (
+            {visibleSurgeries.map((surgery: any) => {
+              const data = asSurgery({ ...surgery, record_type: 'surgery', record_data: surgery, patient_account_id: patientAccountId || '', created_at: surgery.created_at });
+              return (
               <div key={surgery.id} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex-1">
                   <div className="flex flex-col gap-1">
-                    <p className="font-medium">{surgery.surgery_type}</p>
-                    {surgery.surgery_date && (
+                    <p className="font-medium">{data.procedure || data.surgery_type}</p>
+                    {data.date && (
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(surgery.surgery_date), 'MMM dd, yyyy')}
+                        {format(new Date(data.date), 'MMM dd, yyyy')}
                       </p>
                     )}
-                    {surgery.surgeon_name && (
+                    {data.surgeon && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Surgeon: {surgery.surgeon_name}
+                        Surgeon: {data.surgeon}
                       </p>
                     )}
                     <span className="text-xs text-muted-foreground">
@@ -173,7 +176,8 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
                   </Button>
                 </div>
               </div>
-            ))}
+            );
+          })}
             {surgeries.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>

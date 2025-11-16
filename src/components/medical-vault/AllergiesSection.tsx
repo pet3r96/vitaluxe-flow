@@ -23,25 +23,18 @@ const formatTimestamp = (dateString?: string | null) => {
   }
 };
 
-interface Allergy {
-  id: string;
-  nka: boolean;
-  allergen_name?: string;
-  reaction_type?: string;
-  severity?: string;
-  is_active: boolean;
-  notes?: string;
-}
-
 interface AllergiesSectionProps {
   patientAccountId?: string;
-  allergies: Allergy[];
+  allergies: VaultRecordBase[];
 }
 
 export function AllergiesSection({ patientAccountId, allergies }: AllergiesSectionProps) {
   const queryClient = useQueryClient();
-  const nkaRecord = allergies.find(a => asAllergy(a).is_active && asAllergy(a).nka);
-  const regularAllergies = allergies.filter(a => !asAllergy(a).nka);
+  const nkaRecord = allergies.find((a: VaultRecordBase) => {
+    const data = asAllergy(a);
+    return data.is_active && data.nka;
+  });
+  const regularAllergies = allergies.filter((a: VaultRecordBase) => !asAllergy(a).nka);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAllergy, setSelectedAllergy] = useState<any>(null);
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view">("add");
@@ -99,8 +92,8 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
         .from("patient_medical_vault")
         .update({ 
           record_data: {
-            ...allergy,
-            is_active: !allergy.is_active
+            ...data,
+            is_active: !data.is_active
           }
         })
         .eq("id", allergy.id);
@@ -111,7 +104,7 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
       queryClient.invalidateQueries({ queryKey: ["patient-medical-data"] });
       toast({ 
         title: "Success", 
-        description: `Allergy ${allergy.is_active ? "marked as inactive" : "marked as active"} successfully` 
+        description: `Allergy ${data.is_active ? "marked as inactive" : "marked as active"} successfully` 
       });
       if (patientAccountId) {
         await logMedicalVaultChange({
@@ -119,12 +112,12 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
           actionType: 'updated',
           entityType: 'allergy',
           entityId: allergy.id,
-          entityName: allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown Allergen'),
+          entityName: data.nka ? 'NKA' : (data.allergen_name || 'Unknown Allergen'),
           changedByUserId: effectiveUserId || undefined,
           changedByRole: mapRoleToAuditRole(effectiveRole),
-          oldData: { is_active: allergy.is_active },
-          newData: { is_active: !allergy.is_active },
-          changeSummary: `Set allergy ${allergy.nka ? 'NKA' : (allergy.allergen_name || 'Unknown')} to ${allergy.is_active ? 'inactive' : 'active'}`,
+          oldData: { is_active: data.is_active },
+          newData: { is_active: !data.is_active },
+          changeSummary: `Set allergy ${data.nka ? 'NKA' : (data.allergen_name || 'Unknown')} to ${data.is_active ? 'inactive' : 'active'}`,
         });
       }
     } catch (error) {
@@ -166,8 +159,8 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
               <Badge variant="outline" className="text-base px-4 py-2 border-green-500/50">
                 NKA (No Known Allergies)
               </Badge>
-              {nkaRecord.notes && (
-                <span className="text-sm text-muted-foreground">• {nkaRecord.notes}</span>
+              {asAllergy(nkaRecord).notes && (
+                <span className="text-sm text-muted-foreground">• {asAllergy(nkaRecord).notes}</span>
               )}
             </div>
             <div className="flex gap-1">
@@ -184,55 +177,58 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
           </div>
         ) : regularAllergies.length > 0 ? (
           <div className="space-y-3">
-            {visibleAllergies.map((allergy) => (
-              <div key={allergy.id} className="flex items-start justify-between p-3 border rounded-lg border-destructive/20 bg-destructive/5">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium">{allergy.allergen_name}</p>
-                    <Badge 
-                      variant={allergy.is_active ? "success" : "outline"} 
-                      className="text-xs"
-                    >
-                      {allergy.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                    <Badge 
-                      variant={
-                        allergy.severity === 'severe' ? 'destructive' : 
-                        allergy.severity === 'moderate' ? 'default' : 
-                        'outline'
-                      }
-                      className="text-xs"
-                    >
-                      {allergy.severity || 'Unknown'}
-                    </Badge>
+            {visibleAllergies.map((allergy: VaultRecordBase) => {
+              const data = asAllergy(allergy);
+              return (
+                <div key={allergy.id} className="flex items-start justify-between p-3 border rounded-lg border-destructive/20 bg-destructive/5">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-medium">{data.allergen_name}</p>
+                      <Badge 
+                        variant={data.is_active ? "success" : "outline"} 
+                        className="text-xs"
+                      >
+                        {data.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                      <Badge 
+                        variant={
+                          data.severity === 'severe' ? 'destructive' : 
+                          data.severity === 'moderate' ? 'default' : 
+                          'outline'
+                        }
+                        className="text-xs"
+                      >
+                        {data.severity || 'Unknown'}
+                      </Badge>
+                    </div>
+                    {data.reaction_type && (
+                      <p className="text-sm text-muted-foreground">
+                        Reaction: {data.reaction_type}
+                      </p>
+                    )}
                   </div>
-                  {allergy.reaction_type && (
-                    <p className="text-sm text-muted-foreground">
-                      Reaction: {allergy.reaction_type}
-                    </p>
-                  )}
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => openDialog("view", allergy)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => openDialog("edit", allergy)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => handleToggleActive(allergy)} 
+                      title={data.is_active ? "Mark inactive" : "Mark active"}
+                    >
+                      {data.is_active ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleDelete(allergy)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => openDialog("view", allergy)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => openDialog("edit", allergy)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => handleToggleActive(allergy)} 
-                    title={allergy.is_active ? "Mark inactive" : "Mark active"}
-                  >
-                    {allergy.is_active ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDelete(allergy)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-          </div>
-        </div>
-      )})}
+              );
+            })}
             {regularAllergies.length > 2 && (
               <div className="flex justify-end pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
