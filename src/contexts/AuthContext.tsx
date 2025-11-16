@@ -129,10 +129,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select('role')
         .eq('user_id', userId);
       
-      const userRoles = rolesData?.map(r => r.role) || [];
+      const userRoles = rolesData?.map((r: any) => r.role) || [];
       // Add profile.role to roles if it exists for backward compatibility
-      if (profileData?.role && !userRoles.includes(profileData.role)) {
-        userRoles.push(profileData.role);
+      if ((profileData as any)?.role && !userRoles.includes((profileData as any).role)) {
+        userRoles.push((profileData as any).role);
       }
       setRoles(userRoles);
 
@@ -164,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .maybeSingle();
         
         setPractice(practiceData);
-      } else if (profileData?.role === 'practice' || profileData?.role === 'doctor') {
+      } else if ((profileData as any)?.role === 'practice' || (profileData as any)?.role === 'doctor') {
         // If user themselves is a practice, set practice to their profile
         setPractice(profileData);
       }
@@ -341,9 +341,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Computed values
   const effectiveUserId = impersonationSession?.impersonatedUserId || user?.id || null;
-  const effectiveRole = impersonationSession?.impersonatedRole || profile?.role || roles[0] || null;
-  const userRole = profile?.role || roles[0] || null;
-  const effectivePracticeId = practice?.id || profile?.practice_id || provider?.practice_id || staff?.practice_id || null;
+  const effectiveRole = impersonationSession?.impersonatedRole || (profile as any)?.role || roles[0] || null;
+  const userRole = (profile as any)?.role || roles[0] || null;
+  const effectivePracticeId = practice?.id || (profile as any)?.practice_id || provider?.practice_id || staff?.practice_id || null;
   const canImpersonate = roles.includes('admin') || roles.includes('topline');
   const isProviderAccount = !!provider || roles.includes('provider');
   const isStaffAccount = !!staff || roles.includes('staff');
