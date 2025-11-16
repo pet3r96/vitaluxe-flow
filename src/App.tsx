@@ -99,15 +99,10 @@ const Checkout = lazy(() => import("./pages/Checkout"));
 const Downlines = lazy(() => import("./pages/Downlines"));
 const MedSpas = lazy(() => import("./pages/MedSpas"));
 const Profile = lazy(() => import("./pages/Profile"));
-const AdminSettings = lazy(() => import("./pages/AdminSettings"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const AppointmentDebugLogs = lazy(() => import("./pages/AppointmentDebugLogs"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const MyDownlines = lazy(() => import("./pages/MyDownlines"));
 const RepProfitReports = lazy(() => import("./pages/RepProfitReports"));
-const ChangePassword = lazy(() => import("./pages/ChangePassword"));
-const AcceptTerms = lazy(() => import("./pages/AcceptTerms"));
-const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
 const PharmacyApiLogs = lazy(() => import("./pages/PharmacyApiLogs"));
 // Phase 6: Removed Reports, Security, AdminDiscountCodes, PracticeAuditLog, AdminAlerts, InternalChat (tables dropped)
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
