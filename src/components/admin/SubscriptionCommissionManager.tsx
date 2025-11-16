@@ -50,7 +50,7 @@ export default function SubscriptionCommissionManager() {
         .from("rep_subscription_commissions")
         .select(`
           *,
-          profiles!practice_id(
+          profiles!rep_id(
             id,
             full_name,
             email
