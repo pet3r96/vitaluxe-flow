@@ -7,7 +7,7 @@ export const useMultiplePharmacyRates = (pharmacyIds: string[]) => {
     queryFn: async () => {
       if (pharmacyIds.length === 0) return {};
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('pharmacy_shipping_rates')
         .select('pharmacy_id, shipping_speed, rate, enabled')
         .in('pharmacy_id', pharmacyIds)
@@ -18,7 +18,7 @@ export const useMultiplePharmacyRates = (pharmacyIds: string[]) => {
       // Convert to nested map: { pharmacyId: { ground: 15.00, 2day: 25.00, overnight: 40.00 } }
       const ratesMap: Record<string, Record<string, number>> = {};
       
-      data?.forEach(rate => {
+      (data as any)?.forEach((rate: any) => {
         if (!ratesMap[rate.pharmacy_id]) {
           ratesMap[rate.pharmacy_id] = {};
         }
@@ -29,5 +29,5 @@ export const useMultiplePharmacyRates = (pharmacyIds: string[]) => {
     },
     enabled: pharmacyIds.length > 0,
     staleTime: 5 * 60 * 1000,
-  });
+  } as any);
 };
