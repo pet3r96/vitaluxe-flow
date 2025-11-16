@@ -186,7 +186,7 @@ export default function PatientDetail() {
     queryFn: async () => {
       console.time('[PatientDetail] Parallel medical data fetch');
       
-      // Run all queries in parallel using Promise.all for 10x faster loading
+      // Run all queries in parallel using patient_medical_vault with record_type filters
       const [
         medications,
         conditions,
@@ -198,72 +198,80 @@ export default function PatientDetail() {
         emergencyContacts
       ] = await Promise.all([
         supabase
-          .from("patient_medications")
+          .from("patient_medical_vault")
           .select("*")
           .eq("patient_account_id", actualPatientId)
+          .eq("record_type", "medication")
           .order("created_at", { ascending: false })
           .then(({ data, error }) => {
             if (error) throw error;
             return data || [];
           }),
         supabase
-          .from("patient_conditions")
+          .from("patient_medical_vault")
           .select("*")
           .eq("patient_account_id", actualPatientId)
+          .eq("record_type", "condition")
           .order("created_at", { ascending: false })
           .then(({ data, error }) => {
             if (error) throw error;
             return data || [];
           }),
         supabase
-          .from("patient_allergies")
+          .from("patient_medical_vault")
           .select("*")
           .eq("patient_account_id", actualPatientId)
+          .eq("record_type", "allergy")
           .order("created_at", { ascending: false })
           .then(({ data, error }) => {
             if (error) throw error;
             return data || [];
           }),
         supabase
-          .from("patient_vitals")
+          .from("patient_medical_vault")
           .select("*")
           .eq("patient_account_id", actualPatientId)
+          .eq("record_type", "vital")
           .order("created_at", { ascending: false })
           .then(({ data, error }) => {
             if (error) throw error;
             return data || [];
           }),
         supabase
-          .from("patient_immunizations")
+          .from("patient_medical_vault")
           .select("*")
           .eq("patient_account_id", actualPatientId)
-          .order("date_administered", { ascending: false })
-          .then(({ data, error }) => {
-            if (error) throw error;
-            return data || [];
-          }),
-        supabase
-          .from("patient_surgeries")
-          .select("*")
-          .eq("patient_account_id", actualPatientId)
+          .eq("record_type", "immunization")
           .order("created_at", { ascending: false })
           .then(({ data, error }) => {
             if (error) throw error;
             return data || [];
           }),
         supabase
-          .from("patient_pharmacies")
+          .from("patient_medical_vault")
           .select("*")
           .eq("patient_account_id", actualPatientId)
+          .eq("record_type", "surgery")
           .order("created_at", { ascending: false })
           .then(({ data, error }) => {
             if (error) throw error;
             return data || [];
           }),
         supabase
-          .from("patient_emergency_contacts")
+          .from("patient_medical_vault")
           .select("*")
           .eq("patient_account_id", actualPatientId)
+          .eq("record_type", "pharmacy")
+          .order("created_at", { ascending: false })
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return data || [];
+          }),
+        supabase
+          .from("patient_medical_vault")
+          .select("*")
+          .eq("patient_account_id", actualPatientId)
+          .eq("record_type", "emergency_contact")
           .order("created_at", { ascending: false })
           .then(({ data, error }) => {
             if (error) throw error;

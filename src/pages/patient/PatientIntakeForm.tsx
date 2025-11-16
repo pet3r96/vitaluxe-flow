@@ -443,17 +443,22 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           heightInches = (feet * 12) + inches;
         }
         
-        // Insert height record with vital_type
+        // Insert height record to patient_medical_vault
         if (heightInches) {
-          const { error: heightError } = await supabase.from('patient_vitals').insert({
+          const { error: heightError } = await supabase.from('patient_medical_vault').insert({
             patient_account_id: patientAccount.id,
-            vital_type: 'height',
-            height: heightInches,
-            height_unit: 'in',
-            date_recorded: new Date().toISOString(),
-            added_by_user_id: effectiveUserId,
-            added_by_role: auditRole,
-          });
+            patient_id: patientAccount.id,
+            record_type: 'vital',
+            title: 'Height',
+            record_data: {
+              vital_type: 'height',
+              height: heightInches,
+              height_unit: 'in',
+              date_recorded: new Date().toISOString(),
+              added_by_user_id: effectiveUserId,
+              added_by_role: auditRole,
+            }
+          } as any);
           
           if (heightError) {
             console.error('Height insert error:', heightError);
@@ -462,17 +467,22 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           console.log('✅ Saved height');
         }
         
-        // Insert weight record with vital_type
+        // Insert weight record to patient_medical_vault
         if (data.weight) {
-          const { error: weightError } = await supabase.from('patient_vitals').insert({
+          const { error: weightError } = await supabase.from('patient_medical_vault').insert({
             patient_account_id: patientAccount.id,
-            vital_type: 'weight',
-            weight: parseFloat(data.weight),
-            weight_unit: 'lbs',
-            date_recorded: new Date().toISOString(),
-            added_by_user_id: effectiveUserId,
-            added_by_role: auditRole,
-          });
+            patient_id: patientAccount.id,
+            record_type: 'vital',
+            title: 'Weight',
+            record_data: {
+              vital_type: 'weight',
+              weight: parseFloat(data.weight),
+              weight_unit: 'lbs',
+              date_recorded: new Date().toISOString(),
+              added_by_user_id: effectiveUserId,
+              added_by_role: auditRole,
+            }
+          } as any);
           
           if (weightError) {
             console.error('Weight insert error:', weightError);
@@ -534,9 +544,17 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         );
         
         if (medEntries.length > 0) {
+          const vaultEntries = medEntries.map(med => ({
+            patient_account_id: patientAccount.id,
+            patient_id: patientAccount.id,
+            record_type: 'medication',
+            title: med.medication_name,
+            record_data: med
+          }));
+          
           const { error: medError } = await supabase
-            .from('patient_medications')
-            .insert(medEntries);
+            .from('patient_medical_vault')
+            .insert(vaultEntries as any);
           
           if (medError) {
             console.error('Medication insert error:', medError);
@@ -563,17 +581,22 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
       // Insert allergies or NKA record
       if (hasNoAllergies) {
-        // Insert NKA (No Known Allergies) record
+        // Insert NKA (No Known Allergies) record to patient_medical_vault
         const { error: nkaError } = await supabase
-          .from('patient_allergies')
+          .from('patient_medical_vault')
           .insert({
             patient_account_id: patientAccount.id,
-            nka: true,
-            is_active: true,
-            added_by_user_id: effectiveUserId,
-            added_by_role: 'patient',
-            date_recorded: new Date().toISOString(),
-          });
+            patient_id: patientAccount.id,
+            record_type: 'allergy',
+            title: 'No Known Allergies (NKA)',
+            record_data: {
+              nka: true,
+              is_active: true,
+              added_by_user_id: effectiveUserId,
+              added_by_role: 'patient',
+              date_recorded: new Date().toISOString(),
+            }
+          } as any);
         
         if (nkaError) {
           console.error('NKA insert error:', nkaError);
@@ -618,9 +641,17 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         );
         
         if (allergyEntries.length > 0) {
+          const vaultEntries = allergyEntries.map(allergy => ({
+            patient_account_id: patientAccount.id,
+            patient_id: patientAccount.id,
+            record_type: 'allergy',
+            title: allergy.allergen_name,
+            record_data: allergy
+          }));
+          
           const { error: allergyError } = await supabase
-            .from('patient_allergies')
-            .insert(allergyEntries);
+            .from('patient_medical_vault')
+            .insert(vaultEntries as any);
           
           if (allergyError) {
             console.error('Allergy insert error:', allergyError);
@@ -673,9 +704,17 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         );
         
         if (conditionEntries.length > 0) {
+          const vaultEntries = conditionEntries.map(condition => ({
+            patient_account_id: patientAccount.id,
+            patient_id: patientAccount.id,
+            record_type: 'condition',
+            title: condition.condition_name,
+            record_data: condition
+          }));
+          
           const { error: conditionError } = await supabase
-            .from('patient_conditions')
-            .insert(conditionEntries);
+            .from('patient_medical_vault')
+            .insert(vaultEntries as any);
           
           if (conditionError) {
             console.error('Condition insert error:', conditionError);
@@ -723,9 +762,17 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           }));
         
         if (surgeryEntries.length > 0) {
+          const vaultEntries = surgeryEntries.map(surgery => ({
+            patient_account_id: patientAccount.id,
+            patient_id: patientAccount.id,
+            record_type: 'surgery',
+            title: surgery.surgery_type,
+            record_data: surgery
+          }));
+          
           const { error: surgeryError } = await supabase
-            .from('patient_surgeries')
-            .insert(surgeryEntries);
+            .from('patient_medical_vault')
+            .insert(vaultEntries as any);
           
           if (surgeryError) {
             console.error('Surgery insert error:', surgeryError);
@@ -768,9 +815,17 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         }));
         
         if (immEntries.length > 0) {
+          const vaultEntries = immEntries.map(imm => ({
+            patient_account_id: patientAccount.id,
+            patient_id: patientAccount.id,
+            record_type: 'immunization',
+            title: imm.vaccine_name,
+            record_data: imm
+          }));
+          
           const { error: immError } = await supabase
-            .from('patient_immunizations')
-            .insert(immEntries);
+            .from('patient_medical_vault')
+            .insert(vaultEntries as any);
           
           if (immError) {
             console.error('Immunization insert error:', immError);
@@ -795,40 +850,43 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         }
       }
 
-      // Insert or update pharmacy (only if not skipped and has data)
+      // Insert or update pharmacy using patient_medical_vault
       if (!hasNoPharmacy && data.pharmacy_name && data.pharmacy_name.trim()) {
         const { data: existingPharmacy } = await supabase
-          .from('patient_pharmacies')
+          .from('patient_medical_vault')
           .select('id')
           .eq('patient_account_id', patientAccount.id)
-          .eq('is_preferred', true)
+          .eq('record_type', 'pharmacy')
+          .eq('title', data.pharmacy_name)
           .maybeSingle();
+
+        const pharmacyData = {
+          pharmacy_name: data.pharmacy_name,
+          address: data.pharmacy_address,
+          city: data.pharmacy_city,
+          state: data.pharmacy_state,
+          zip_code: data.pharmacy_zip,
+          phone: data.pharmacy_phone,
+          is_preferred: true,
+          added_by_user_id: effectiveUserId,
+          added_by_role: auditRole,
+        };
 
         if (existingPharmacy) {
           await supabase
-            .from('patient_pharmacies')
+            .from('patient_medical_vault')
             .update({
-              pharmacy_name: data.pharmacy_name,
-              address: data.pharmacy_address,
-              city: data.pharmacy_city,
-              state: data.pharmacy_state,
-              zip_code: data.pharmacy_zip,
-              phone: data.pharmacy_phone,
+              record_data: pharmacyData
             })
             .eq('id', existingPharmacy.id);
         } else {
-          await supabase.from('patient_pharmacies').insert({
+          await supabase.from('patient_medical_vault').insert({
             patient_account_id: patientAccount.id,
-            pharmacy_name: data.pharmacy_name,
-            address: data.pharmacy_address,
-            city: data.pharmacy_city,
-            state: data.pharmacy_state,
-            zip_code: data.pharmacy_zip,
-            phone: data.pharmacy_phone,
-            is_preferred: true,
-            added_by_user_id: effectiveUserId,
-            added_by_role: auditRole,
-          });
+            patient_id: patientAccount.id,
+            record_type: 'pharmacy',
+            title: data.pharmacy_name,
+            record_data: pharmacyData
+          } as any);
           
           // Log pharmacy creation
           await logMedicalVaultChange({
@@ -847,34 +905,40 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         console.log(`⏭️ Skipped pharmacy (user indicated no pharmacy or no data provided)`);
       }
 
-      // Insert or update emergency contact (only if not skipped and has data)
+      // Insert or update emergency contact using patient_medical_vault
       if (!hasNoEmergencyContact && data.emergency_contact_name && data.emergency_contact_name.trim()) {
         const { data: existingContact } = await supabase
-          .from('patient_emergency_contacts')
+          .from('patient_medical_vault')
           .select('id')
           .eq('patient_account_id', patientAccount.id)
+          .eq('record_type', 'emergency_contact')
           .maybeSingle();
+
+        const contactData = {
+          name: data.emergency_contact_name,
+          relationship: data.emergency_contact_relationship,
+          phone: data.emergency_contact_phone,
+          email: data.emergency_contact_email || null,
+          added_by_user_id: effectiveUserId,
+          added_by_role: auditRole,
+        };
 
         if (existingContact) {
           await supabase
-            .from('patient_emergency_contacts')
+            .from('patient_medical_vault')
             .update({
-              name: data.emergency_contact_name,
-              relationship: data.emergency_contact_relationship,
-              phone: data.emergency_contact_phone,
-              email: data.emergency_contact_email || null,
+              title: data.emergency_contact_name,
+              record_data: contactData
             })
             .eq('id', existingContact.id);
         } else {
-          await supabase.from('patient_emergency_contacts').insert({
+          await supabase.from('patient_medical_vault').insert({
             patient_account_id: patientAccount.id,
-            name: data.emergency_contact_name,
-            relationship: data.emergency_contact_relationship,
-            phone: data.emergency_contact_phone,
-            email: data.emergency_contact_email || null,
-            added_by_user_id: effectiveUserId,
-            added_by_role: auditRole,
-          });
+            patient_id: patientAccount.id,
+            record_type: 'emergency_contact',
+            title: data.emergency_contact_name,
+            record_data: contactData
+          } as any);
           
           // Log emergency contact creation
           await logMedicalVaultChange({
