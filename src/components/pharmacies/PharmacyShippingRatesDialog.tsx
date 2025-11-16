@@ -33,8 +33,8 @@ export const PharmacyShippingRatesDialog = ({
   const { data: existingRates } = useQuery({
     queryKey: ['pharmacy-shipping-rates', pharmacy.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pharmacy_shipping_rates')
+      const { data, error } = await (supabase
+        .from('pharmacy_shipping_rates') as any)
         .select('shipping_speed, rate, enabled')
         .eq('pharmacy_id', pharmacy.id);
       
@@ -99,8 +99,8 @@ export const PharmacyShippingRatesDialog = ({
       }
 
       // Upsert rates for all speeds
-      const { error } = await supabase
-        .from('pharmacy_shipping_rates')
+      const { error } = await (supabase
+        .from('pharmacy_shipping_rates') as any)
         .upsert(updates, { onConflict: 'pharmacy_id,shipping_speed' });
 
       if (error) throw error;

@@ -125,8 +125,8 @@ export const ProductsGrid = () => {
 
       console.log('[ProductsGrid] Fetching visibility for rep ID:', repId);
       
-      const { data, error } = await supabase
-        .from('rep_product_visibility')
+      const { data, error } = await (supabase
+        .from('rep_product_visibility') as any)
         .select('product_id, visible')
         .eq('topline_rep_id', repId);
       

@@ -124,8 +124,8 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         }
         
         // Fetch rep assignments
-        const { data: repData } = await supabase
-          .from("product_rep_assignments")
+        const { data: repData } = await (supabase
+          .from("product_rep_assignments") as any)
           .select("topline_rep_id")
           .eq("product_id", product.id);
         
@@ -327,8 +327,8 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       
       // Handle product rep assignments
       // Delete existing assignments
-      await supabase
-        .from("product_rep_assignments")
+      await (supabase
+        .from("product_rep_assignments") as any)
         .delete()
         .eq("product_id", productId);
       
@@ -339,8 +339,8 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
           topline_rep_id: rep_id
         }));
         
-        const { error: repAssignError } = await supabase
-          .from("product_rep_assignments")
+        const { error: repAssignError } = await (supabase
+          .from("product_rep_assignments") as any)
           .insert(repAssignments);
         
         if (repAssignError) throw repAssignError;
