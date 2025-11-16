@@ -156,9 +156,21 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }
 
-  // While role is being determined, show a lightweight loader
+  // While role is being determined, show a lightweight loader with timeout
   if (user && !effectiveRole) {
     console.log('[ProtectedRoute] Waiting for role resolution');
+    
+    // Add timeout to prevent infinite loading
+    useEffect(() => {
+      const timeout = setTimeout(() => {
+        console.warn('[ProtectedRoute] Role resolution timeout - redirecting to auth');
+        // If role doesn't load after 5 seconds, something is wrong
+        navigate('/auth');
+      }, 5000);
+      
+      return () => clearTimeout(timeout);
+    }, [navigate]);
+    
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
