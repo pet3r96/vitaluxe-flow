@@ -139,73 +139,75 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   });
 
   // Fetch existing medical vault data (may be added by practice)
-  const { data: existingMedications } = useQuery({
+  const { data: existingMedications = [] } = useQuery({
     queryKey: ['existing-medications', patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from('patient_medications')
+        .from('patient_medical_vault')
         .select('*')
         .eq('patient_account_id', patientAccount.id)
-        .eq('is_active', true);
+        .eq('record_type', 'medication');
       if (error) throw error;
       return data || [];
     },
     enabled: !!patientAccount?.id,
   });
 
-  const { data: existingAllergies } = useQuery({
+  const { data: existingAllergies = [] } = useQuery({
     queryKey: ['existing-allergies', patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from('patient_allergies')
+        .from('patient_medical_vault')
         .select('*')
         .eq('patient_account_id', patientAccount.id)
-        .eq('is_active', true);
+        .eq('record_type', 'allergy');
       if (error) throw error;
       return data || [];
     },
     enabled: !!patientAccount?.id,
   });
 
-  const { data: existingConditions } = useQuery({
+  const { data: existingConditions = [] } = useQuery({
     queryKey: ['existing-conditions', patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from('patient_conditions')
+        .from('patient_medical_vault')
         .select('*')
         .eq('patient_account_id', patientAccount.id)
-        .eq('is_active', true);
+        .eq('record_type', 'condition');
       if (error) throw error;
       return data || [];
     },
     enabled: !!patientAccount?.id,
   });
 
-  const { data: existingSurgeries } = useQuery({
+  const { data: existingSurgeries = [] } = useQuery({
     queryKey: ['existing-surgeries', patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from('patient_surgeries')
+        .from('patient_medical_vault')
         .select('*')
-        .eq('patient_account_id', patientAccount.id);
+        .eq('patient_account_id', patientAccount.id)
+        .eq('record_type', 'surgery');
       if (error) throw error;
       return data || [];
     },
     enabled: !!patientAccount?.id,
   });
 
-  const { data: existingImmunizations } = useQuery({
+  const { data: existingImmunizations = [] } = useQuery({
     queryKey: ['existing-immunizations', patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from('patient_immunizations')
+        .from('patient_medical_vault')
         .select('*')
-        .eq('patient_account_id', patientAccount.id);
+        .eq('patient_account_id', patientAccount.id)
+        .eq('record_type', 'immunization');
       if (error) throw error;
       return data || [];
     },

@@ -48,10 +48,13 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
   const updateVital = useCallback(async (vital: any) => {
     try {
       const { error } = await supabase
-        .from("patient_vitals")
+        .from("patient_medical_vault")
         .insert({
           patient_account_id: patientId,
-          ...vital,
+          record_type: "vital",
+          title: "Vital Signs",
+          record_data: vital,
+          date_recorded: new Date().toISOString(),
         });
 
       if (error) throw error;

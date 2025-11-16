@@ -63,9 +63,10 @@ export default function PatientMedicalVault() {
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from("patient_medications")
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
+        .eq("record_type", "medication")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -78,9 +79,10 @@ export default function PatientMedicalVault() {
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from("patient_conditions")
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
+        .eq("record_type", "condition")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -93,9 +95,10 @@ export default function PatientMedicalVault() {
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from("patient_allergies")
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
+        .eq("record_type", "allergy")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -108,9 +111,10 @@ export default function PatientMedicalVault() {
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from("patient_vitals")
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
+        .eq("record_type", "vital")
         .order("date_recorded", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -124,10 +128,11 @@ export default function PatientMedicalVault() {
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from("patient_immunizations")
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
-        .order("date_administered", { ascending: false });
+        .eq("record_type", "immunization")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -140,10 +145,11 @@ export default function PatientMedicalVault() {
     queryFn: async () => {
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
-        .from("patient_surgeries")
+        .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
-        .order("surgery_date", { ascending: false });
+        .eq("record_type", "surgery")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },

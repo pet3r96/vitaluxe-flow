@@ -128,7 +128,20 @@ const { data: documents = [], isLoading } = useQuery({
       mode,
     });
 
-    return (data || []) as PatientDocument[];
+    // Map patient_medical_vault records to PatientDocument format
+    return (data || []).map((record: any) => ({
+      id: record.id,
+      patient_id: record.patient_id,
+      document_name: record.title || 'Untitled Document',
+      document_type: record.metadata?.document_type || 'other',
+      storage_path: record.metadata?.storage_path || '',
+      file_size: record.metadata?.file_size || null,
+      notes: record.description || null,
+      share_with_practice: record.metadata?.share_with_practice || false,
+      mime_type: record.metadata?.mime_type || null,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+    })) as PatientDocument[];
   },
   enabled: !!patientAccountId,
 });
