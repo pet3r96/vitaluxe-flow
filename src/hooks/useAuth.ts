@@ -23,7 +23,6 @@ export function useSession() {
 export function useImpersonation() {
   const { 
     isImpersonating, 
-    impersonatedUserId, 
     impersonatedUserName,
     canImpersonate,
     setImpersonation,
@@ -32,7 +31,6 @@ export function useImpersonation() {
   
   return {
     isImpersonating,
-    impersonatedUserId,
     impersonatedUserName,
     canImpersonate,
     setImpersonation,
