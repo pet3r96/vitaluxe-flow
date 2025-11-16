@@ -39,16 +39,16 @@ export function PharmaciesSection({ patientAccountId }: PharmaciesSectionProps) 
     queryKey: ["patient-pharmacies", patientAccountId],
     queryFn: async () => {
       if (!patientAccountId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("category", "pharmacy")
+        .eq("record_type", "pharmacy")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []).map((item: any) => ({
+      return (data || []).map((item) => ({
         id: item.id,
-        ...(item.record_data as any),
+        ...asPharmacy(item as VaultRecordBase),
         created_at: item.created_at
       }));
     },

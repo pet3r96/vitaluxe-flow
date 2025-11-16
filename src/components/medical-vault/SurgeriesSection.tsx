@@ -38,16 +38,16 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
     queryKey: ["patient-surgeries", patientAccountId],
     queryFn: async () => {
       if (!patientAccountId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("category", "surgery")
+        .eq("record_type", "surgery")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []).map((item: any) => ({
+      return (data || []).map((item) => ({
         id: item.id,
-        ...(item.record_data as any),
+        ...asSurgery(item as VaultRecordBase),
         created_at: item.created_at
       }));
     },
