@@ -278,7 +278,7 @@ export default function PatientMedicalVault() {
     
     try {
       const patientName = `${patientAccount.first_name} ${patientAccount.last_name}`;
-      const pdfBlob = await generateAuditReportPDF(patientName, auditLogs);
+      const pdfBlob = await generateAuditReportPDF(patientName, (auditLogs || []) as any);
       const url = URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
