@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { parseErrorLogDetails } from "@/types/jsonb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -172,9 +173,10 @@ export const ErrorLogsView = () => {
                         </TableCell>
                         <TableCell className="hidden md:table-cell font-mono text-xs">
                           {truncateMessage(
-                            (log.details as any)?.error_message ||
-                              (log.details as any)?.message ||
-                              "No message"
+                            (() => {
+                              const details = parseErrorLogDetails(log.details);
+                              return details.error_message || details.message || "No message";
+                            })()
                           )}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-xs">

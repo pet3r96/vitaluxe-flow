@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { parseEdgeFunctionError } from "@/types/jsonb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -170,8 +171,10 @@ export default function AcceptTerms() {
       });
 
       if (error) {
-        const backendError = (data as any)?.error || (error as any)?.message || "Failed to accept terms";
-        const details = (data as any)?.details;
+        const errorData = parseEdgeFunctionError(data);
+        const errorObj = parseEdgeFunctionError(error);
+        const backendError = errorData.error || errorObj.message || "Failed to accept terms";
+        const details = errorData.details;
         toast.error(details ? `${backendError} — ${typeof details === 'string' ? details : JSON.stringify(details)}` : backendError);
         return;
       }
@@ -191,8 +194,9 @@ export default function AcceptTerms() {
         
         navigate("/");
       } else {
-        const backendError = (data as any)?.error || "Failed to accept terms";
-        const details = (data as any)?.details;
+        const errorData = parseEdgeFunctionError(data);
+        const backendError = errorData.error || "Failed to accept terms";
+        const details = errorData.details;
         toast.error(details ? `${backendError} — ${typeof details === 'string' ? details : JSON.stringify(details)}` : backendError);
         return;
       }
