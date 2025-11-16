@@ -22,8 +22,8 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
     queryKey: ['signed-agreement', userId, effectiveRole],
     queryFn: async () => {
       if (isPatient) {
-        const { data, error } = await supabase
-          .from('patient_terms_acceptances')
+        const { data, error } = await (supabase
+          .from('patient_terms_acceptances') as any)
           .select('id, accepted_at, signature_name, signed_pdf_url, terms_version')
           .eq('user_id', userId)
           .order('accepted_at', { ascending: false })
