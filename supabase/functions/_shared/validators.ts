@@ -178,10 +178,11 @@ export function validateEnum(
   return { valid: true };
 }
 
-// IP address validation
+// IP address validation - lenient, allows null/undefined
 export function validateIP(ip: any, required: boolean = false): ValidationResult {
-  if (!ip || ip === 'unknown') {
-    if (required && ip !== 'unknown') {
+  // Allow null/undefined - normalize to valid
+  if (!ip || typeof ip !== 'string') {
+    if (required) {
       return { valid: false, error: "IP address is required" };
     }
     return { valid: true };
@@ -190,7 +191,9 @@ export function validateIP(ip: any, required: boolean = false): ValidationResult
   const ipStr = String(ip).trim();
   
   // Allow "unknown" as a valid IP when extraction fails
-  if (ipStr === 'unknown') return { valid: true };
+  if (ipStr === 'unknown' || ipStr === '') {
+    return { valid: true };
+  }
   
   // IPv4 validation with proper octet range (0-255)
   const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
@@ -213,7 +216,44 @@ export function validateIP(ip: any, required: boolean = false): ValidationResult
     return { valid: true };
   }
   
-  return { valid: false, error: "Invalid IP address format" };
+  // Don't fail - just accept it as valid but sanitize later
+  return { valid: true };
+}
+
+/**
+ * Sanitizes IP address - returns null for invalid formats
+ * Use this AFTER validation to clean IP data before storage
+ */
+export function sanitizeIP(ip: any): string | null {
+  // Allow null/undefined but normalize to null
+  if (!ip || typeof ip !== "string") {
+    return null;
+  }
+
+  const ipStr = String(ip).trim();
+  
+  // Allow "unknown" but store as null
+  if (ipStr === 'unknown' || ipStr === '') {
+    return null;
+  }
+
+  // Validate IPv4 format
+  const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const ipv4Match = ipStr.match(ipv4Regex);
+  if (ipv4Match) {
+    const octets = [
+      parseInt(ipv4Match[1]),
+      parseInt(ipv4Match[2]),
+      parseInt(ipv4Match[3]),
+      parseInt(ipv4Match[4])
+    ];
+    if (octets.every(octet => octet >= 0 && octet <= 255)) {
+      return ipStr;
+    }
+  }
+
+  // If format is invalid, return null (don't block the request)
+  return null;
 }
 
 // Array validation
