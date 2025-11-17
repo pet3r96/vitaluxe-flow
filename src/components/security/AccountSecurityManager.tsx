@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { AccountLockouts } from "@/integrations/supabase/table-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,7 @@ export const AccountSecurityManager = () => {
   const { data: lockouts, isLoading, refetch } = useQuery({
     queryKey: ["account-lockouts"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("account_lockouts")
+      const { data, error } = await AccountLockouts()
         .select("*")
         .is("unlocked_at", null)
         .order("locked_at", { ascending: false });
@@ -40,12 +40,11 @@ export const AccountSecurityManager = () => {
   const paginatedLockouts = lockouts?.slice(startIndex, endIndex);
 
   const handleUnlock = async (lockoutId: string) => {
-    const { error } = await (supabase as any)
-      .from("account_lockouts")
+    const { error } = await AccountLockouts()
       .update({
         unlocked_at: new Date().toISOString(),
         unlocked_by: (await supabase.auth.getUser()).data.user?.id,
-      } as any)
+      })
       .eq("id", lockoutId);
 
     if (error) {

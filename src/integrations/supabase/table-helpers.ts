@@ -27,6 +27,8 @@ import type {
   SecurityEvent,
   AuditLogArchive,
   PracticeBranding,
+  AccountLockout,
+  AlertRule,
 } from '@/types/manual-schema';
 
 /**
@@ -60,3 +62,5 @@ export const SecurityAlertRules = () => table<SecurityAlertRule>('security_alert
 export const SecurityEvents = () => table<SecurityEvent>('security_events');
 export const AuditLogsArchive = () => table<AuditLogArchive>('audit_logs_archive');
 export const PracticeBrand = () => table<PracticeBranding>('practice_branding');
+export const AccountLockouts = () => table<AccountLockout>('account_lockouts');
+export const AlertRules = () => table<AlertRule>('alert_rules');

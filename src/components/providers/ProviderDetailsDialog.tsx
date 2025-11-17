@@ -259,7 +259,7 @@ export const ProviderDetailsDialog = ({
 
       // Update providers table timestamp
       const { error: providerError } = await supabase
-        .from("providers" as any)
+        .from("providers")
         .update({ updated_at: new Date().toISOString() })
         .eq("id", provider.id);
 

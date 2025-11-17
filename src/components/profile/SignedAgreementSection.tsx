@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Download, Info } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PatientTermsAccept, UserTermsAccept } from "@/integrations/supabase/table-helpers";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSignedUrl } from "@/lib/storageStrategy";
 import { format } from "date-fns";
@@ -22,8 +23,7 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
     queryKey: ['signed-agreement', userId, effectiveRole],
     queryFn: async () => {
       if (isPatient) {
-        const { data, error } = await (supabase as any)
-          .from('patient_terms_acceptances')
+        const { data, error } = await PatientTermsAccept()
           .select('id, accepted_at, signature_name, signed_pdf_url, terms_version')
           .eq('user_id', userId)
           .order('accepted_at', { ascending: false })
@@ -33,8 +33,7 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
         if (error && error.code !== 'PGRST116') throw error;
         return data;
       } else {
-      const { data, error } = await (supabase as any)
-        .from('user_terms_acceptances')
+      const { data, error } = await UserTermsAccept()
           .select('id, accepted_at, signature_name, signed_pdf_url, terms_version, role')
           .eq('user_id', userId)
           .order('accepted_at', { ascending: false })

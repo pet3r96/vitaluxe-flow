@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { AlertRules } from "@/integrations/supabase/table-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,11 +30,10 @@ export const AlertRulesManager = () => {
   const { data: rules, isLoading } = useQuery({
     queryKey: ["alert-rules"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("alert_rules")
+      const { data, error } = await AlertRules()
         .select("*")
         .order("created_at", { ascending: false });
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -42,9 +42,8 @@ export const AlertRulesManager = () => {
   const createRuleMutation = useMutation({
     mutationFn: async (newRule: typeof formData) => {
       const { data: userData } = await supabase.auth.getUser();
-      const { data, error } = await (supabase as any)
-        .from("alert_rules")
-        .insert([{ ...newRule, created_by: userData.user?.id }] as any)
+      const { data, error } = await AlertRules()
+        .insert([{ ...newRule, created_by: userData.user?.id }])
         .select()
         .single();
       
@@ -74,11 +73,10 @@ export const AlertRulesManager = () => {
 
   const toggleRuleMutation = useMutation({
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
-      const { error } = await (supabase as any)
-        .from("alert_rules")
-        .update({ enabled } as any)
+      const { error } = await AlertRules()
+        .update({ enabled })
         .eq("id", id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
