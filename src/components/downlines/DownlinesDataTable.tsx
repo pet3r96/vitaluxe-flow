@@ -90,11 +90,14 @@ export function DownlinesDataTable() {
       const downlineRepIds = downlineReps.map(rep => rep.id);
 
       // Get practice counts for each downline using profiles table
-      const { data: practiceProfiles, error: practicesError }: { data: any[] | null, error: any } = await (supabase as any)
+      const profilesQuery = await supabase
         .from("profiles")
         .select("id, linked_topline_id")
         .eq("role", "practice")
         .in("linked_topline_id", downlineRepIds);
+      
+      const practiceProfiles = profilesQuery.data;
+      const practicesError = profilesQuery.error;
 
       if (practicesError) throw practicesError;
 

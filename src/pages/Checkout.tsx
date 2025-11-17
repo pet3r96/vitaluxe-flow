@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { parseCheckoutAttestation, type CheckoutAttestationData } from "@/types/jsonb";
 import { useCart } from "@/hooks/useCart";
 import { resolveCartOwnerUserId } from "@/lib/cartOwnerResolver";
+import type { CartLine } from "@/types/domain/cart";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -131,7 +132,7 @@ export default function Checkout() {
   }, [cart?.lines, discountPercentage, calculateMerchantFee, location.state?.merchantFeeAmount]);
 
   const hasPracticeOrder = (cart?.lines || []).some(
-    (line: any) => line.patient_name === "Practice Order"
+    (line: CartLine) => line.patient_name === "Practice Order"
   );
 
   const { data: providerProfile, isLoading: isLoadingProfile } = useQuery({

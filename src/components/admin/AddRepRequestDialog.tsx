@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { validatePhone } from "@/lib/validators";
 import { useQueryClient } from "@tanstack/react-query";
@@ -86,7 +87,7 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
         .from("pending_reps")
         .insert([{
           created_by_user_id: user.id,
-          created_by_role: effectiveRole as any,
+          created_by_role: effectiveRole as Database["public"]["Enums"]["app_role"],
           full_name: formData.full_name,
           email: formData.email,
           phone: formData.phone || null,

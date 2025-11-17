@@ -1,39 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
-
-export interface CartLine {
-  id: string;
-  cart_id: string;
-  product_id: string;
-  quantity: number;
-  price_snapshot: number;
-  patient_id: string | null;
-  patient_name: string | null;
-  patient_email: string | null;
-  patient_phone: string | null;
-  patient_address: string | null;
-  shipping_speed: string | null;
-  provider_id: string | null;
-  destination_state: string | null;
-  assigned_pharmacy_id: string | null;
-  prescription_url: string | null;
-  custom_sig: string | null;
-  custom_dosage: string | null;
-  order_notes: string | null;
-  prescription_method: string | null;
-  expires_at: string;
-  created_at: string;
-  product?: any;
-  pharmacy?: any;
-  provider?: any;
-  patient?: any;
-}
-
-export interface Cart {
-  id: string;
-  lines: CartLine[];
-}
+import type { Cart, CartLine } from "@/types/domain/cart";
 
 interface UseCartOptions {
   productFields?: string;

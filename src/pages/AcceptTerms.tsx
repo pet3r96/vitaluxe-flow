@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { parseEdgeFunctionError } from "@/types/jsonb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,7 +67,7 @@ export default function AcceptTerms() {
         const res = await supabase
           .from('terms_and_conditions')
           .select('*')
-          .eq('role', effectiveRole as any)
+          .eq('role', effectiveRole as Database["public"]["Enums"]["app_role"])
           .order('version', { ascending: false })
           .limit(1)
           .maybeSingle();
