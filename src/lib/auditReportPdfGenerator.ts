@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { AuditLog } from '@/hooks/useAuditLogs';
+import { getLastAutoTableY, getTotalPages } from '@/types/pdf';
 
 export const generateAuditReportPDF = async (
   patientName: string,
@@ -195,7 +196,7 @@ export const generateAuditReportPDF = async (
     margin: { left: 10, right: 10 },
   });
 
-  yPos = (doc as any).lastAutoTable.finalY + 15;
+  yPos = getLastAutoTableY(doc) + 15;
 
   // Audit Entries Section
   if (auditLogs.length > 0) {
@@ -268,7 +269,7 @@ export const generateAuditReportPDF = async (
   }
 
   // Add footers to all pages
-  const totalPages = (doc as any).internal.getNumberOfPages();
+  const totalPages = getTotalPages(doc);
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     addFooter(i, totalPages);

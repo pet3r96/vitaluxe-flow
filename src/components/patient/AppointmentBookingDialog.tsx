@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
+import type { ProviderWithUser, PatientAccount } from '@/types/database-queries';
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Calendar, Building, Loader2, AlertCircle, CheckCircle, Info, ChevronDown } from "lucide-react";
@@ -91,7 +92,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
   const { data: providers } = useQuery({
     queryKey: ["practice-providers", patientAccount?.practice_id],
     queryFn: async () => {
-      if (!patientAccount?.practice_id) return [] as any[];
+      if (!patientAccount?.practice_id) return [] as ProviderWithUser[];
       console.log('[AppointmentBooking] Fetching providers for practice:', patientAccount.practice_id);
       const { data, error } = await supabase
         .from("providers")

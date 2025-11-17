@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Building2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getErrorName, getErrorMessage } from '@/types/errors';
 
 interface NewMessageDialogProps {
   open: boolean;
@@ -64,8 +65,8 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
           console.error(`❌ [${reqId}] Edge function error:`, error);
           
           // Detect error type for better user feedback
-          const errorName = (error as any)?.name || "UnknownError";
-          const errorMessage = error.message || "Unknown error occurred";
+          const errorName = getErrorName(error);
+          const errorMessage = getErrorMessage(error);
           
           throw new Error(`${errorName}: ${errorMessage}`);
         }

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Monitor, LogOut } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
+import { getErrorMessage } from '@/types/errors';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,12 +19,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-interface Session {
-  id: string;
-  last_activity: string;
-  ip_address: string | null;
-  user_agent: string | null;
-}
+import type { ActiveSession } from '@/types/database-queries';
+
+interface Session extends ActiveSession {}
 
 function maskIP(ip: string | null): string {
   if (!ip || ip === 'unknown') return 'Unknown';
@@ -89,12 +87,12 @@ export function ActivityLogSection() {
         .limit(limit || displayLimit);
 
       if (error) throw error;
-      setSessions((data || []) as any[]);
-    } catch (error: any) {
+      setSessions((data || []) as ActiveSession[]);
+    } catch (error: unknown) {
       console.error('Error fetching sessions:', error);
       toast({
         title: "Error loading activity log",
-        description: error.message || "Failed to fetch session history.",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     } finally {

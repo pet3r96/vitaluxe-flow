@@ -447,7 +447,7 @@ export function MedicalVaultView({
           }
           setAuditDialogOpen(open);
         }}
-        auditLogs={auditLogs as any[]} // AuditLog type mismatch - MedicalVaultAuditLog has different action_type
+        auditLogs={auditLogs}
         patientName={displayName}
         patientAccountId={patientAccountId}
         isLoading={isLoadingAuditLogs}

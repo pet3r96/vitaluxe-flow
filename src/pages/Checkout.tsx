@@ -26,6 +26,7 @@ import { useMerchantFee } from "@/hooks/useMerchantFee";
 import { logger } from "@/lib/logger";
 import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { CartLineItem } from '@/types/database-queries';
 
 export default function Checkout() {
   const { effectiveUserId, effectivePracticeId, effectiveRole, user, isStaffAccount, isProviderAccount } = useAuth();
@@ -229,7 +230,7 @@ export default function Checkout() {
         throw new Error("Cart is empty or unavailable");
       }
 
-      const linesAll = (cart.lines as any[]) || [];
+      const linesAll = (cart.lines as unknown as CartLineItem[]) || [];
 
       // If there are any practice lines, make sure profile is loaded before proceeding
       const practiceLines = linesAll.filter((line) => line.patient_name === "Practice Order");
