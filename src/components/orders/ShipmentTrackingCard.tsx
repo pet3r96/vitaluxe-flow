@@ -27,15 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface TrackingEvent {
-  status: string;
-  message: string;
-  description: string;
-  carrier: string;
-  tracking_details: any;
-  datetime: string;
-}
+import type { TrackingEvent as TrackingEventType, TrackingDetails } from "@/types/orders";
 
 interface ShipmentTrackingCardProps {
   orderLineId: string;

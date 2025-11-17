@@ -23,9 +23,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, AlertTriangle } from "lucide-react";
+import type { Order } from "@/types/orders";
 
 interface OrderStatusSelectorProps {
-  order: any;
+  order: Order;
   onSuccess: () => void;
 }
 

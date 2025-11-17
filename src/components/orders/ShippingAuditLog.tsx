@@ -30,7 +30,7 @@ export const ShippingAuditLog = ({ orderLineId }: ShippingAuditLogProps) => {
       
       <ScrollArea className="h-32">
         <div className="space-y-2">
-          {logs.map((log: any) => (
+          {logs.map((log) => (
             <div key={log.id} className="text-xs pb-2 border-b border-border last:border-0">
               <p className="text-muted-foreground">
                 {format(new Date(log.created_at), "PPp")} - {log.updated_by_profile?.name}

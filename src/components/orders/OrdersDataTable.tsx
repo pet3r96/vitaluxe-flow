@@ -32,6 +32,7 @@ import { logger } from "@/lib/logger";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { OrderQueryMetadata } from "@/types/domain/orders";
+import type { Order } from "@/types/orders";
 import { count, mark, time, timeEnd } from "@/diag";
 
 export const OrdersDataTable = () => {
@@ -39,7 +40,7 @@ export const OrdersDataTable = () => {
   const { effectiveRole, effectiveUserId, effectivePracticeId, user, session } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [queryMetadata, setQueryMetadata] = useState<OrderQueryMetadata>({
     hasRepRecord: true,
