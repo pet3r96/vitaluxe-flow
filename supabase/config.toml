@@ -3,6 +3,12 @@ project_id = "qbtsfajshnrwwlfzkeog"
 [functions.email-dispatcher]
 verify_jwt = false
 
+[functions.agora-diagnostics]
+verify_jwt = false
+
+[functions.email-diagnostics]
+verify_jwt = false
+
 [functions.get-patient-dashboard-data]
 verify_jwt = true
 
