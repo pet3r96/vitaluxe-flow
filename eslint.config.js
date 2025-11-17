@@ -21,9 +21,16 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
-      "no-console": ["warn", {
-        allow: ["error", "warn"]
+      "no-console": ["error", {
+        allow: []
       }],
+      "no-restricted-syntax": [
+        "error",
+        {
+          "selector": "CallExpression[callee.object.name='console']",
+          "message": "Use logger or edgeLogger instead of console.*"
+        }
+      ],
     },
   },
 );

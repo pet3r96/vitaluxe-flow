@@ -196,8 +196,6 @@ const SidebarLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
-  if (import.meta.env.DEV) console.time('App-Mount');
-  
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
