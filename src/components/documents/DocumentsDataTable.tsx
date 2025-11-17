@@ -48,8 +48,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
       if (storageError) throw storageError;
 
       // Direct table access - provider_documents not in generated types
-      const docTable: any = supabase.from("provider_documents");
-      const { error: dbError } = await docTable.delete().eq("id", document.id);
+      const { error: dbError } = await (supabase as any).from("provider_documents").delete().eq("id", document.id);
 
       if (dbError) throw dbError;
     },
