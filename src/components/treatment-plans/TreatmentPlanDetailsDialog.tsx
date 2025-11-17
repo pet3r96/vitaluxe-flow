@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { logger } from "@/lib/logger";
 import {
   Dialog,
   DialogContent,
@@ -225,7 +226,7 @@ export function TreatmentPlanDetailsDialog({
 
       toast.success("Treatment plan downloaded successfully");
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      logger.error('Error generating PDF', error);
       toast.error("Failed to generate PDF");
     } finally {
       setIsGeneratingPdf(false);

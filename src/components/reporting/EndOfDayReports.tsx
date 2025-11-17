@@ -157,7 +157,7 @@ export function EndOfDayReports({ dateRange }: EndOfDayReportsProps) {
       doc.save(`end-of-day-report-${format(dateRange.from, "yyyy-MM-dd")}.pdf`);
       toast.success("Report exported successfully");
     } catch (error) {
-      console.error("PDF export error:", error);
+      logger.error("PDF export error", error);
       toast.error("Failed to export report");
     }
   };

@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     }
 
     // Create new practice room
-    console.log('[get-or-create-practice-room] Creating new room for practice:', practiceId);
+    edgeLogger.info('[get-or-create-practice-room] Creating new room for practice', { practiceId });
 
     const channelName = `practice_${practiceId}`;
     
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
       .rpc('generate_room_key');
 
     if (roomKeyError || !roomKeyData) {
-      console.error('[get-or-create-practice-room] Failed to generate room key:', roomKeyError);
+      edgeLogger.error('[get-or-create-practice-room] Failed to generate room key', roomKeyError);
       return new Response(
         JSON.stringify({ error: 'Failed to generate room key' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      console.error('[get-or-create-practice-room] Failed to create room:', insertError);
+      edgeLogger.error('[get-or-create-practice-room] Failed to create room', insertError);
       return new Response(
         JSON.stringify({ error: 'Failed to create practice room', details: insertError }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[get-or-create-practice-room] Unexpected error:', error);
+    edgeLogger.error('[get-or-create-practice-room] Unexpected error', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: errorMessage }),

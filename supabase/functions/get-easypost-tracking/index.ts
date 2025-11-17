@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { createEasyPostClient } from "../_shared/easypostClient.ts";
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,7 +28,6 @@ serve(async (req: Request) => {
     try {
       requestData = await req.json();
     } catch (error) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('Invalid JSON in request body', error);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
@@ -65,7 +65,6 @@ serve(async (req: Request) => {
     }
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('Auth error', userError);
       throw new Error(`Authentication failed: ${userError.message}`);
     }
@@ -73,14 +72,12 @@ serve(async (req: Request) => {
       throw new Error('No user found');
     }
 
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.info('Authenticated user', { userId: user.id });
 
     // Validate CSRF token
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('CSRF validation failed', new Error(csrfError || 'Invalid CSRF'));
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
@@ -149,12 +146,12 @@ serve(async (req: Request) => {
       
       // If carrier mismatch and we had a carrier specified, retry with auto-detect
       if (isCarrierMismatch && requestData.carrier) {
-        console.log('[get-easypost-tracking] Carrier mismatch detected, retrying with auto-detect...');
+        edgeLogger.warn('[get-easypost-tracking] Carrier mismatch detected, retrying with auto-detect');
         try {
           tracking = await easyPostClient.getTracking(trackingCode, undefined);
-          console.log('[get-easypost-tracking] Auto-detect succeeded');
+          edgeLogger.info('[get-easypost-tracking] Auto-detect succeeded');
         } catch (retryError: any) {
-          console.error('[get-easypost-tracking] Auto-detect also failed:', retryError.message);
+          edgeLogger.error('[get-easypost-tracking] Auto-detect also failed', retryError, { message: retryError.message });
           
           const isInvalidFormat = retryError.message?.includes('match the format');
           const isNotFound = retryError.message?.includes('not found');
@@ -175,7 +172,7 @@ serve(async (req: Request) => {
         }
       } else {
         // Return user-friendly error for invalid tracking numbers
-        console.error('[get-easypost-tracking] Tracking lookup failed:', trackingError.message);
+        edgeLogger.error('[get-easypost-tracking] Tracking lookup failed', trackingError, { message: trackingError.message });
         
         const isInvalidFormat = trackingError.message?.includes('match the format');
         const isNotFound = trackingError.message?.includes('not found');
@@ -226,7 +223,7 @@ serve(async (req: Request) => {
           .insert(eventsToInsert);
 
         if (insertError) {
-          console.error('Error storing tracking events:', insertError);
+          edgeLogger.error('Error storing tracking events', insertError);
           // Don't fail the request if we can't store events
         }
       }
@@ -243,7 +240,7 @@ serve(async (req: Request) => {
         .eq('id', orderLineId);
 
       if (updateError) {
-        console.error('Error updating order line status:', updateError);
+        edgeLogger.error('Error updating order line status', updateError);
         // Don't fail the request if we can't update status
       }
     }
@@ -259,7 +256,7 @@ serve(async (req: Request) => {
     });
 
   } catch (error: any) {
-    console.error('Error getting tracking:', error);
+    edgeLogger.error('Error getting tracking', error);
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Failed to get tracking information',

@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     // Apply filters (ignore provider filters if provider-scoped)
     // Accept both provider and staff IDs for calendar filtering
     if (!isProviderScoped && providers && providers.length > 0) {
-      console.log('[get-calendar-data] Provider/staff filter requested:', providers);
+      edgeLogger.info('[get-calendar-data] Provider/staff filter requested', { providers });
       query = query.in('provider_id', providers);
     }
 
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 
     if (appointmentsError) throw appointmentsError;
 
-    console.log(`[get-calendar-data] Retrieved ${appointments?.length || 0} appointments`);
+    edgeLogger.info('[get-calendar-data] Retrieved appointments', { count: appointments?.length || 0 });
 
     // Parallel fetch for better performance
     const queryStartTime = performance.now();
@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
       (async () => {
         if (isProviderScoped && providerRecord) {
           // Provider: only fetch their own record for better performance
-          console.log('[get-calendar-data] Fetching single provider:', providerRecord.id);
+          edgeLogger.info('[get-calendar-data] Fetching single provider', { providerId: providerRecord.id });
           const effectiveUserId = effectiveProviderUserId || user.id;
           const { data: providerProfile } = await supabaseClient
             .from('profiles')
@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
           return [];
         } else {
           // Admin/doctor/staff: fetch all providers
-          console.log('[get-calendar-data] Fetching all providers for practice:', practiceId);
+          edgeLogger.info('[get-calendar-data] Fetching all providers for practice', { practiceId });
           // Fetch providers with minimal data
           const { data: providerRecords, error: providerError } = await supabaseClient
             .from('providers')
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
             .eq('active', true);
           
           if (providerError) {
-            console.error('[get-calendar-data] Error fetching providers:', providerError);
+            edgeLogger.error('[get-calendar-data] Error fetching providers', providerError);
             return [];
           }
           
@@ -238,7 +238,7 @@ Deno.serve(async (req) => {
     const blockedTime = blockedTimeResult.data;
 
     const fetchDuration = Date.now() - fetchStartTime;
-    console.log('[get-calendar-data] Total fetch duration:', fetchDuration, 'ms');
+    edgeLogger.info('[get-calendar-data] Total fetch duration', { fetchDuration, unit: 'ms' });
 
     return successResponse({
       appointments: appointments || [],
@@ -253,7 +253,7 @@ Deno.serve(async (req) => {
       blockedTime: blockedTime || []
     });
   } catch (error: any) {
-    console.error('Get calendar data error:', error);
+    edgeLogger.error('Get calendar data error', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -5,6 +5,7 @@ import { Label } from './label';
 import { Alert, AlertDescription } from './alert';
 import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 const libraries: ("places")[] = ['places'];
 
@@ -194,7 +195,7 @@ export const GoogleAddressAutocomplete = ({
       setInputValue(validatedAddress.formatted);
       
     } catch (error) {
-      console.error('Validation error:', error);
+      logger.error('Validation error', error);
       onChange({
         ...address,
         formatted: displayAddress || '',

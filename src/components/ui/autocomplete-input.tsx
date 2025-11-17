@@ -4,6 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 export interface AutocompleteOption {
   value: string;
@@ -60,7 +61,7 @@ export const AutocompleteInput = React.forwardRef<HTMLInputElement, Autocomplete
             setOptions(results);
             setOpen(results.length > 0);
           } catch (error) {
-            console.error('Search error:', error);
+            logger.error('Search error', error);
             setOptions([]);
           } finally {
             setLoading(false);
