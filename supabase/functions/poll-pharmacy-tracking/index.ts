@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +15,7 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createAdminClient();
 
-    console.log("Starting pharmacy tracking poll...");
+    edgeLogger.info("Starting pharmacy tracking poll");
 
     // Fetch all pharmacies with API enabled and webhook URL configured
     const { data: pharmacies, error: pharmaciesError } = await supabaseAdmin

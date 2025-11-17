@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,7 +44,7 @@ serve(async (req) => {
 
     // If target_user_id provided, verify admin permission
     if (target_user_id && target_user_id !== user.id) {
-      console.log(`Admin ${user.id} acting as pharmacy user ${target_user_id}`);
+      edgeLogger.info('Admin acting as pharmacy user', { adminId: user.id, targetUserId: target_user_id });
       
       // Verify acting user is admin
       const { data: roleData } = await supabaseAdmin

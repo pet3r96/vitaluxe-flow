@@ -1,4 +1,5 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,7 +14,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createAdminClient();
 
-    console.log('[process-pharmacy-order-queue] Starting queue processing...');
+    edgeLogger.info('[process-pharmacy-order-queue] Starting queue processing');
 
     // Dequeue oldest pending job
     const { data: job, error: fetchError } = await supabase
@@ -31,7 +32,7 @@ Deno.serve(async (req) => {
 
     if (fetchError) {
       if (fetchError.code === 'PGRST116') {
-        console.log('[process-pharmacy-order-queue] No pending jobs found');
+        edgeLogger.info('[process-pharmacy-order-queue] No pending jobs found');
         return new Response(
           JSON.stringify({ message: 'No pending jobs' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
       throw fetchError;
     }
 
-    console.log(`[process-pharmacy-order-queue] Processing job ${job.id} for order_line ${job.order_line_id}`);
+    edgeLogger.info('[process-pharmacy-order-queue] Processing job', { jobId: job.id, orderLineId: job.order_line_id });
 
     // Mark as processing
     await supabase

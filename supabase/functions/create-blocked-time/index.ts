@@ -1,6 +1,7 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -80,7 +81,7 @@ Deno.serve(async (req) => {
       });
 
     if (conflictError) {
-      console.error('Error checking conflicts:', conflictError);
+      edgeLogger.error('Error checking conflicts', conflictError);
     }
 
     // Create blocked time
@@ -106,7 +107,7 @@ Deno.serve(async (req) => {
       conflictingAppointments: conflicts || []
     });
   } catch (error: any) {
-    console.error('Error creating blocked time:', error);
+    edgeLogger.error('Error creating blocked time', error);
     return errorResponse(error.message, 400);
   }
 });

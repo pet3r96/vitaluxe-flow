@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +43,7 @@ serve(async (req) => {
     );
 
     const actorUserId = user.id;
-    console.log('[get-practice-subscription-status] Actor user:', actorUserId);
+    edgeLogger.info('[get-practice-subscription-status] Actor user', { actorUserId });
 
     // Parse optional practiceId hint from request body
     let hintedPracticeId: string | null = null;
@@ -50,7 +51,7 @@ serve(async (req) => {
       const body = await req.json();
       if (body?.practiceId) {
         hintedPracticeId = body.practiceId;
-        console.log('[get-practice-subscription-status] Received practiceId hint:', hintedPracticeId);
+        edgeLogger.info('[get-practice-subscription-status] Received practiceId hint', { hintedPracticeId });
       }
     } catch {
       // No body or invalid JSON, continue without hint
@@ -69,7 +70,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (impErr) {
-      console.warn('[get-practice-subscription-status] Impersonation lookup error', impErr);
+      edgeLogger.warn('[get-practice-subscription-status] Impersonation lookup error', { error: impErr });
     }
 
     const now = new Date();
