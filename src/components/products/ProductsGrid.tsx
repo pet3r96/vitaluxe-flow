@@ -457,11 +457,8 @@ export const ProductsGrid = () => {
         logger.info('[ProductsGrid] 🔍 PRACTICE PROFILE FETCH', {
           resolvedDoctorId,
           practiceProfileFound: !!practiceProfile,
-          practiceProfile: practiceProfile ? {
-            id: practiceProfile.id,
-            hasShippingState: !!practiceProfile.shipping_address_state,
-            hasAddressState: !!practiceProfile.address_state
-          } : null
+          hasShippingState: !!practiceProfile?.shipping_address_state,
+          hasAddressState: !!practiceProfile?.address_state
         });
 
         // Use shipping address state with fallback to billing address state
@@ -621,12 +618,50 @@ export const ProductsGrid = () => {
           user_topline_rep_id: userToplineRepId
         });
 
+        const { data: routingResult, error: routingError } = await supabase.functions.invoke('route-order-to-pharmacy', {
+          body: {
+            product_id: productForCart.id,
+            destination_state: destinationState,
+            user_topline_rep_id: userToplineRepId,
+          }
+        });
+
+        logger.info('[ProductsGrid] 📦 Routing result:', {
+          pharmacy_id: routingResult?.pharmacy_id,
+          reason: routingResult?.reason,
+          error: routingError
+        });
+
         if (routingError) {
           logger.error("[ProductsGrid] ❌ Routing error details", routingError, {
             message: routingError.message,
             status: routingError.status,
             product: productForCart.name
           });
+          toast.error("Unable to verify pharmacy availability. Please try again.");
+          return;
+        }
+
+        if (!routingResult?.pharmacy_id) {
+          logger.error('[ProductsGrid] ❌ Pharmacy routing failed (patient order)', null, { 
+            product: productForCart.name, 
+            destinationState, 
+            reason: routingResult?.reason,
+            routingResult: routingResult || {}
+          });
+          toast.error(
+            `Cannot add to cart: No pharmacy available for "${productForCart.name}" in ${destinationState}. ${routingResult?.reason || 'Please verify address has valid 2-letter state code.'}`
+          );
+          return;
+        }
+
+        // Success - pharmacy found, proceed with insertion
+        logger.info(`✅ [ProductsGrid] Pharmacy routed successfully:`, {
+          pharmacy_id: routingResult.pharmacy_id,
+          reason: routingResult.reason,
+          product: productForCart.name,
+          destinationState
+        });
 
         // Validate patient address completeness - all 4 fields required
         const hasCompleteAddress = !!(
@@ -679,6 +714,11 @@ export const ProductsGrid = () => {
         effectiveUserId,
         cartOwnerId
       });
+
+      queryClient.invalidateQueries({ queryKey: ["cart", resolvedCartOwnerId] });
+      queryClient.invalidateQueries({ queryKey: ["cart-count", resolvedCartOwnerId] });
+    } catch (error: any) {
+      logger.error('[ProductsGrid] Error adding product to cart', error);
       toast.error(error.message || "Failed to add product to cart");
     }
   };
