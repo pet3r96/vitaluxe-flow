@@ -6,6 +6,8 @@
  * adapted to use Deno's Web Crypto API instead of Node's crypto module.
  */
 
+import { edgeLogger } from './logger.ts';
+
 // ============================================================================
 // ByteBuf Helper Class (for packing/unpacking binary data)
 // ============================================================================
@@ -422,9 +424,9 @@ export async function buildRtcToken(
   const currentTimestamp = Math.floor(Date.now() / 1000);
   const privilegeExpireTs = expireTimestamp - currentTimestamp;
 
-  console.log('🎫 [Official Agora Port] Building RTC token:', {
-    channelName,
-    uid: String(uid),
+  edgeLogger.info('Building RTC token', {
+    channelName: channelName.substring(0, 8) + '***',
+    uidType: typeof uid,
     role: tokenRole === Role.PUBLISHER ? 'PUBLISHER' : 'SUBSCRIBER',
     privilegeExpireSeconds: privilegeExpireTs
   });
@@ -439,8 +441,8 @@ export async function buildRtcToken(
     privilegeExpireTs
   );
 
-  console.log('✅ [Official Agora Port] RTC token generated:', {
-    tokenPrefix: token.substring(0, 20) + '...',
+  edgeLogger.info('RTC token generated', {
+    tokenPrefix: token.substring(0, 10) + '***',
     tokenLength: token.length,
     startsWith007: token.startsWith('007')
   });
@@ -457,8 +459,8 @@ export async function buildRtmToken(
   const currentTimestamp = Math.floor(Date.now() / 1000);
   const privilegeExpireTs = expireTimestamp - currentTimestamp;
 
-  console.log('💬 [Official Agora Port] Building RTM token:', {
-    uid: String(uid),
+  edgeLogger.info('Building RTM token', {
+    uidType: typeof uid,
     privilegeExpireSeconds: privilegeExpireTs
   });
 
@@ -469,8 +471,8 @@ export async function buildRtmToken(
     privilegeExpireTs
   );
 
-  console.log('✅ [Official Agora Port] RTM token generated:', {
-    tokenPrefix: token.substring(0, 20) + '...',
+  edgeLogger.info('RTM token generated', {
+    tokenPrefix: token.substring(0, 10) + '***',
     tokenLength: token.length,
     startsWith007: token.startsWith('007')
   });
@@ -484,15 +486,15 @@ export function verifyTokenSignature(
   appCertificate: string
 ): boolean {
   if (!token || !token.startsWith('007')) {
-    console.error('❌ Token does not start with 007');
+    edgeLogger.error('Token validation failed - invalid prefix');
     return false;
   }
 
   if (token.length < 100 || token.length > 1000) {
-    console.error('❌ Token length suspicious:', token.length);
+    edgeLogger.error('Token validation failed - suspicious length', undefined, { tokenLength: token.length });
     return false;
   }
 
-  console.log('✅ Token format validation passed');
+  edgeLogger.info('Token format validation passed');
   return true;
 }
