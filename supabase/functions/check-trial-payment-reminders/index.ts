@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +22,7 @@ serve(async (req) => {
     const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
     const oneDayFromNow = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000);
 
-    console.log('Checking for trial payment reminders...');
+    edgeLogger.info('Checking for trial payment reminders');
 
     // Get trials ending in 2 days (day 12 reminder for 14-day trial)
     const { data: day12Trials } = await supabaseClient
@@ -41,7 +42,7 @@ serve(async (req) => {
       .gte("trial_ends_at", now.toISOString())
       .lte("trial_ends_at", twoDaysFromNow.toISOString());
 
-    console.log(`Found ${day12Trials?.length || 0} trials ending in ~2 days`);
+    edgeLogger.info('Trials found', { day12Count: day12Trials?.length || 0 });
 
     // Get trials ending in 1 day (day 13 reminder for 14-day trial)
     const { data: day13Trials } = await supabaseClient
@@ -61,7 +62,7 @@ serve(async (req) => {
       .gte("trial_ends_at", now.toISOString())
       .lte("trial_ends_at", oneDayFromNow.toISOString());
 
-    console.log(`Found ${day13Trials?.length || 0} trials ending in ~1 day`);
+    edgeLogger.info('Trials found', { day13Count: day13Trials?.length || 0 });
 
     const results = [];
 
@@ -78,7 +79,7 @@ serve(async (req) => {
         .single();
 
       if (existingReminder) {
-        console.log(`Day 12 reminder already sent for subscription ${trial.id}`);
+        edgeLogger.info('Day 12 reminder already sent', { subscriptionId: trial.id });
         continue;
       }
 
@@ -86,7 +87,7 @@ serve(async (req) => {
       const hasPaymentMethod = profile.authorizenet_customer_profile_id != null;
 
       if (!hasPaymentMethod) {
-        console.log(`Sending day 12 reminder to practice ${profile.name}`);
+        edgeLogger.info('Sending day 12 reminder', { practiceName: profile.name });
 
         // Create notification via unified system
         const { error: notifError } = await supabaseClient.functions.invoke('handleNotifications', {
@@ -106,7 +107,7 @@ serve(async (req) => {
         });
 
         if (notifError) {
-          console.error('Error creating notification:', notifError);
+          edgeLogger.error('Error creating notification', notifError);
         }
 
         // Mark reminder as sent
@@ -120,7 +121,7 @@ serve(async (req) => {
 
         results.push({ subscription_id: trial.id, reminder_type: "day_12", sent: true });
       } else {
-        console.log(`Practice ${profile.name} already has payment method`);
+        edgeLogger.info('Practice already has payment method', { practiceName: profile.name });
         results.push({ subscription_id: trial.id, reminder_type: "day_12", sent: false, reason: "has_payment_method" });
       }
     }
@@ -138,7 +139,7 @@ serve(async (req) => {
         .single();
 
       if (existingReminder) {
-        console.log(`Day 13 reminder already sent for subscription ${trial.id}`);
+        edgeLogger.info('Day 13 reminder already sent', { subscriptionId: trial.id });
         continue;
       }
 
@@ -146,7 +147,7 @@ serve(async (req) => {
       const hasPaymentMethod = profile.authorizenet_customer_profile_id != null;
 
       if (!hasPaymentMethod) {
-        console.log(`Sending day 13 (URGENT) reminder to practice ${profile.name}`);
+        edgeLogger.warn('Sending day 13 URGENT reminder', { practiceName: profile.name });
 
         // Create urgent notification via unified system
         const { error: notifError } = await supabaseClient.functions.invoke('handleNotifications', {
@@ -167,7 +168,7 @@ serve(async (req) => {
         });
 
         if (notifError) {
-          console.error('Error creating notification:', notifError);
+          edgeLogger.error('Error creating notification', notifError);
         }
 
         // Mark reminder as sent
@@ -181,7 +182,7 @@ serve(async (req) => {
 
         results.push({ subscription_id: trial.id, reminder_type: "day_13", sent: true });
       } else {
-        console.log(`Practice ${profile.name} already has payment method`);
+        edgeLogger.info('Practice already has payment method', { practiceName: profile.name });
         results.push({ subscription_id: trial.id, reminder_type: "day_13", sent: false, reason: "has_payment_method" });
       }
     }
@@ -195,7 +196,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("Error checking trial reminders:", error);
+    edgeLogger.error('Error checking trial reminders', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
