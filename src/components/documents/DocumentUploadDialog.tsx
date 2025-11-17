@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 
 interface DocumentUploadDialogProps {
   open: boolean;
@@ -108,7 +109,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         }
       }
       
-      console.error("Document upload error:", error);
+      logger.error("Document upload error", error, { practiceId: effectivePracticeId });
       toast.error(errorMessage);
     },
   });

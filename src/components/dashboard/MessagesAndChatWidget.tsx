@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { logger } from "@/lib/logger";
 
 export function MessagesAndChatWidget() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export function MessagesAndChatWidget() {
       if (!user?.id || !effectivePracticeId) return { count: 0, subjects: [] };
       
       try {
-        console.log('[Dashboard Widget] 📧 Fetching patient messages for practice:', effectivePracticeId);
+        logger.info('[Dashboard Widget] Fetching patient messages', { practiceId: effectivePracticeId });
         
         // Get unread patient messages (messages FROM patients that need responses)
         const { data: messages, error } = await supabase
@@ -43,7 +44,7 @@ export function MessagesAndChatWidget() {
 
         if (error) throw error;
 
-        console.log('[Dashboard Widget] ✅ Found', messages?.length || 0, 'unread patient messages');
+        logger.info('[Dashboard Widget] Unread patient messages found', { count: messages?.length || 0, practiceId: effectivePracticeId });
 
         // Group by thread_id to show unique conversations
         const threadsMap = new Map();
@@ -66,7 +67,7 @@ export function MessagesAndChatWidget() {
           })
         };
       } catch (error) {
-        console.error("[Dashboard Widget] ❌ Failed to fetch patient messages:", error);
+        logger.error("[Dashboard Widget] Failed to fetch patient messages", error, { practiceId: effectivePracticeId });
         return { count: 0, subjects: [] };
       }
     },
@@ -114,7 +115,7 @@ export function MessagesAndChatWidget() {
           senders: senders.slice(0, 3)
         };
       } catch (error) {
-        console.error("Failed to fetch internal chat:", error);
+        logger.error("Failed to fetch internal chat", error, { practiceId: effectivePracticeId });
         return { count: 0, senders: [] };
       }
     },
@@ -137,7 +138,7 @@ export function MessagesAndChatWidget() {
           filter: `practice_id=eq.${effectivePracticeId}`,
         },
         (payload) => {
-          console.log('[Dashboard Widget] 🔔 New patient message received:', payload);
+          logger.info('[Dashboard Widget] New patient message received', { eventType: payload.eventType });
           queryClient.invalidateQueries({ queryKey: ['unread-patient-messages-dashboard'] });
         }
       )
@@ -150,7 +151,7 @@ export function MessagesAndChatWidget() {
           filter: `practice_id=eq.${effectivePracticeId}`,
         },
         (payload) => {
-          console.log('[Dashboard Widget] 📝 Patient message updated:', payload);
+          logger.info('[Dashboard Widget] Patient message updated', { eventType: payload.eventType });
           queryClient.invalidateQueries({ queryKey: ['unread-patient-messages-dashboard'] });
         }
       )
@@ -168,7 +169,7 @@ export function MessagesAndChatWidget() {
           filter: `practice_id=eq.${effectivePracticeId}`,
         },
         (payload) => {
-          console.log('[Dashboard Widget] 📬 Internal message updated:', payload);
+          logger.info('[Dashboard Widget] Internal message updated', { eventType: payload.eventType });
           queryClient.invalidateQueries({ queryKey: ['unread-internal-chat'] });
         }
       )

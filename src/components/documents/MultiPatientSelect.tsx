@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logger";
 
 interface MultiPatientSelectProps {
   selectedPatientIds: string[];
@@ -23,7 +24,7 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
     queryKey: ["patients-select", effectivePracticeId],
     queryFn: async () => {
       if (!effectivePracticeId) return [];
-      console.log("Fetching patients for practice:", effectivePracticeId);
+      logger.info("Fetching patients for practice", { practiceId: effectivePracticeId });
       // Fetch patient_id (patients.id) from the view instead of patient_account_id
       const { data, error } = await supabase
         .from("v_patients_with_portal_status")
@@ -31,10 +32,10 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
         .eq("practice_id", effectivePracticeId)
         .order("name");
       if (error) {
-        console.error("Error fetching patients:", error);
+        logger.error("Error fetching patients", error, { practiceId: effectivePracticeId });
         throw error;
       }
-      console.log("Patients fetched:", data?.length || 0);
+      logger.info("Patients fetched", { count: data?.length || 0, practiceId: effectivePracticeId });
       // Map to format expected by component - use patient_id (patients.id) not patient_account_id
       return (data || []).map(p => ({ id: p.patient_id, name: p.name }));
     },
@@ -68,7 +69,7 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
   }, [effectivePracticeId, queryClient]);
 
   if (queryError) {
-    console.error("Query error:", queryError);
+    logger.error("Query error", queryError, { practiceId: effectivePracticeId });
   }
 
   const selectedPatients = patients?.filter(p => selectedPatientIds.includes(p.id)) || [];

@@ -9,6 +9,7 @@ import { DocumentsDataTable } from "./DocumentsDataTable";
 import { DocumentFilters } from "./DocumentFilters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 
 export function DocumentsTab() {
   const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
@@ -34,7 +35,7 @@ export function DocumentsTab() {
     queryFn: async () => {
       if (!effectivePracticeId) return [];
 
-      console.log('[DocumentsTab] Fetching BOTH practice and patient-shared documents for practice:', effectivePracticeId);
+      logger.info('[DocumentsTab] Fetching practice and patient-shared documents', { practiceId: effectivePracticeId });
 
       // Fetch practice documents AND patient-shared documents in parallel
       const [practiceResult, patientSharedResult] = await Promise.allSettled([
@@ -54,7 +55,7 @@ export function DocumentsTab() {
       if (practiceResult.status === 'fulfilled') {
         const { data, error } = practiceResult.value;
         if (error) {
-          console.error('[DocumentsTab] Error fetching practice documents:', error);
+          logger.error('[DocumentsTab] Error fetching practice documents', error, { practiceId: effectivePracticeId });
         } else {
           practiceDocuments = (data || []).map((doc: any) => ({
             ...doc,
@@ -63,10 +64,10 @@ export function DocumentsTab() {
               .map((p: any) => p.patient_id)
               .filter(Boolean),
           }));
-          console.log('[DocumentsTab] Practice documents loaded:', practiceDocuments.length);
+          logger.info('[DocumentsTab] Practice documents loaded', { count: practiceDocuments.length, practiceId: effectivePracticeId });
         }
       } else {
-        console.error('[DocumentsTab] Practice documents promise rejected:', practiceResult.reason);
+        logger.warn('[DocumentsTab] Practice documents promise rejected', { reason: practiceResult.reason });
       }
 
       // Process patient-shared documents
@@ -74,23 +75,23 @@ export function DocumentsTab() {
       if (patientSharedResult.status === 'fulfilled') {
         const { data, error } = patientSharedResult.value;
         if (error) {
-          console.warn('[DocumentsTab] RPC get_provider_documents failed (patient-shared docs unavailable):', error);
+          logger.warn('[DocumentsTab] RPC get_provider_documents failed (patient-shared docs unavailable)', error);
         } else {
           const parsed = data ? (typeof data === 'string' ? JSON.parse(data) : data) : [];
           patientSharedDocuments = parsed.map((d: Record<string, unknown>) => ({ 
             ...d, 
             source_type: d.source_type || 'patient_shared' 
           }));
-          console.log('[DocumentsTab] Patient-shared documents loaded:', patientSharedDocuments.length);
+          logger.info('[DocumentsTab] Patient-shared documents loaded', { count: patientSharedDocuments.length });
         }
       } else {
-        console.warn('[DocumentsTab] Patient-shared RPC promise rejected:', patientSharedResult.reason);
+        logger.warn('[DocumentsTab] Patient-shared RPC promise rejected', { reason: patientSharedResult.reason });
       }
 
       // Merge both document sources
       let allDocs = [...practiceDocuments, ...patientSharedDocuments];
       
-      console.log('[DocumentsTab] Merged documents:', {
+      logger.info('[DocumentsTab] Merged documents', {
         total: allDocs.length,
         practice: practiceDocuments.length,
         patientShared: patientSharedDocuments.length
@@ -128,8 +129,8 @@ export function DocumentsTab() {
           );
         }
       }
-      
-      console.log('[DocumentsTab] Final document count after security filter:', allDocs.length);
+
+      logger.info('[DocumentsTab] Final document count after security filter', { count: allDocs.length, practiceId: effectivePracticeId });
       
       return allDocs;
     },
@@ -182,18 +183,18 @@ export function DocumentsTab() {
   useEffect(() => {
     if (!effectivePracticeId && effectiveRole !== 'admin') return;
 
-    console.log('[DocumentsTab] Setting up realtime subscriptions for practice:', effectivePracticeId);
+    logger.info('[DocumentsTab] Setting up realtime subscriptions', { practiceId: effectivePracticeId });
 
     realtimeManager.subscribe('provider_documents', (payload) => {
-      console.log('[DocumentsTab] Realtime: provider_documents changed', payload);
+      logger.info('[DocumentsTab] Realtime: provider_documents changed', { eventType: payload.eventType });
     });
     
     realtimeManager.subscribe('provider_document_patients', (payload) => {
-      console.log('[DocumentsTab] Realtime: provider_document_patients changed', payload);
+      logger.info('[DocumentsTab] Realtime: provider_document_patients changed', { eventType: payload.eventType });
     });
 
     return () => {
-      console.log('[DocumentsTab] Cleaning up realtime subscriptions');
+      logger.info('[DocumentsTab] Cleaning up realtime subscriptions');
       // Manager handles cleanup
     };
   }, [effectivePracticeId]);

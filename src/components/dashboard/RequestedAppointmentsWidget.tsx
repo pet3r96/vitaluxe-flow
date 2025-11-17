@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { AppointmentRequestReviewDialog } from "@/components/calendar/AppointmentRequestReviewDialog";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 
 interface RequestedAppointment {
   id: string;
@@ -98,7 +99,7 @@ export const RequestedAppointmentsWidget = ({ className }: { className?: string 
           filter: `practice_id=eq.${effectivePracticeId}`
         },
         (payload) => {
-          console.log('📋 Appointment request changed:', payload.eventType);
+          logger.info('Appointment request changed', { eventType: payload.eventType });
           refetch();
         }
       )

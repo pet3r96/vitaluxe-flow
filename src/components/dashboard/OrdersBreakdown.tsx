@@ -4,6 +4,7 @@ import { TrendingUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface OrdersBreakdownProps {
   data?: Record<string, number>;
@@ -33,7 +34,7 @@ export function OrdersBreakdown({ data: externalData }: OrdersBreakdownProps) {
         .lte('created_at', endDate.toISOString());
 
       if (error) {
-        console.error('Error fetching orders breakdown:', error);
+        logger.error('Error fetching orders breakdown', error);
         return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
       }
 
