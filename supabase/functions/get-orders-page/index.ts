@@ -586,13 +586,44 @@ serve(async (req) => {
     if (orderIds.length > 0) {
       const { data: lines, error: linesError } = await supabase
         .from('order_lines')
-        .select('id, order_id, status, patient_name, patient_id, shipping_speed, product_id, prescription_url, products(id, name, product_types(id, name))')
+        .select('id, order_id, status, patient_name, patient_id, shipping_speed, product_id, prescription_url')
         .in('order_id', orderIds);
       
       if (linesError) {
         console.error('[get-orders-page] Order lines error:', linesError);
       } else {
         orderLinesData = lines || [];
+      }
+
+      // Hydrate products using service role to avoid RLS hiding names
+      try {
+        const supabaseUrlAdmin = Deno.env.get('SUPABASE_URL') ?? '';
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+        if (!supabaseUrlAdmin || !serviceKey) {
+          console.warn('[get-orders-page] Service role envs missing, skipping product hydration');
+        } else {
+          const admin = createClient(supabaseUrlAdmin, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+          const productIds = [...new Set((orderLinesData || []).map((l: any) => l.product_id).filter(Boolean))];
+          console.log(`[get-orders-page] Hydration: ${productIds.length} unique product_ids`);
+          if (productIds.length > 0) {
+            const { data: products, error: prodErr } = await admin
+              .from('products')
+              .select('id, name, product_types(id, name)')
+              .in('id', productIds);
+            if (prodErr) {
+              console.error('[get-orders-page] Product hydration error:', prodErr);
+            } else {
+              const pmap = new Map(products.map((p: any) => [p.id, p]));
+              orderLinesData = (orderLinesData || []).map((l: any) => ({
+                ...l,
+                products: pmap.get(l.product_id) || null,
+              }));
+              console.log(`[get-orders-page] Hydration: attached products for ${products?.length || 0} products`);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[get-orders-page] Hydration exception:', parseErr(e));
       }
     }
 
