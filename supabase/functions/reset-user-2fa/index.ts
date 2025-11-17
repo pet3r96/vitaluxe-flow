@@ -3,6 +3,7 @@ import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,7 +24,7 @@ serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', new Error(csrfError || 'Invalid CSRF token'), { userId: user.id });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -84,7 +85,7 @@ serve(async (req) => {
       });
 
     if (logError) {
-      console.error('Error logging reset:', logError);
+      edgeLogger.error('Error logging reset', logError);
       // Continue even if logging fails
     }
 
@@ -103,14 +104,14 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    console.log(`2FA reset for user ${targetUserId} by admin ${user.id}`);
+    edgeLogger.info('2FA reset successful', { targetUserId, adminId: user.id });
 
     return successResponse({ 
       message: 'User 2FA has been reset. They will be prompted to re-enroll on next login.'
     });
 
   } catch (error: any) {
-    console.error('Error in reset-user-2fa:', error);
+    edgeLogger.error('Error in reset-user-2fa', error);
     return errorResponse(error.message || 'Internal server error', 500);
   }
 });
