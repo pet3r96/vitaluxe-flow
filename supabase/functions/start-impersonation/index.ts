@@ -2,6 +2,7 @@ import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 interface StartImpersonationRequest {
   role: string;
@@ -29,7 +30,7 @@ Deno.serve(async (req) => {
     // Verify user is authenticated using the raw JWT token
     const { data: { user }, error: userError } = await db.auth.getUser(token);
     if (userError || !user) {
-      console.error('[start-impersonation] Authentication failed:', userError);
+      edgeLogger.error('[start-impersonation] Authentication failed', userError);
       return errorResponse('Unauthorized', 401);
     }
 
@@ -39,7 +40,7 @@ Deno.serve(async (req) => {
     });
 
     if (!isSuperAdmin) {
-      console.warn('[start-impersonation] User is not super_admin:', user.id);
+      edgeLogger.warn('[start-impersonation] User is not super_admin', { userId: user.id });
       return new Response(
         JSON.stringify({ error: 'Only super_admin users can impersonate others' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -50,7 +51,7 @@ Deno.serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(db, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', null, { error: csrfError });
       return errorResponse(csrfError || 'Invalid CSRF token', 403);
     }
 
@@ -65,7 +66,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[start-impersonation] Request:', { 
+    edgeLogger.info('[start-impersonation] Request', { 
       adminUserId: user.id, 
       role, 
       targetUserId: userId,
@@ -88,7 +89,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (logError || !logData) {
-      console.error('[start-impersonation] Failed to create log:', logError);
+      edgeLogger.error('[start-impersonation] Failed to create log', logError);
       // Check for RLS violation
       if (logError?.code === '42501') {
         return new Response(
@@ -120,7 +121,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (sessionError) {
-      console.error('[start-impersonation] Failed to create session:', sessionError);
+      edgeLogger.error('[start-impersonation] Failed to create session', sessionError);
       // Check for RLS violation
       if (sessionError?.code === '42501') {
         return new Response(
@@ -134,7 +135,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[start-impersonation] Success:', { sessionId: sessionData.id, logId: logData.id });
+    edgeLogger.info('[start-impersonation] Success', { sessionId: sessionData.id, logId: logData.id });
 
     return new Response(
       JSON.stringify({ 
@@ -146,7 +147,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[start-impersonation] Unexpected error:', error);
+    edgeLogger.error('[start-impersonation] Unexpected error', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

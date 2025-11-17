@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (tokenError || !tokenData) {
-      console.error('Token lookup error:', tokenError);
+      edgeLogger.error('Token lookup error', tokenError);
       return new Response(
         JSON.stringify({ error: 'Invalid verification token' }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -73,7 +74,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', tokenData.user_id);
 
     if (profileError) {
-      console.error('Profile update error:', profileError);
+      edgeLogger.error('Profile update error', profileError);
       return new Response(
         JSON.stringify({ error: 'Failed to verify account. Please try again.' }),
         { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -87,7 +88,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', tokenData.id);
 
     if (tokenUpdateError) {
-      console.error('Token update error:', tokenUpdateError);
+      edgeLogger.error('Token update error', tokenUpdateError);
       // Don't fail the request - the account is already verified
     }
 
@@ -102,11 +103,11 @@ const handler = async (req: Request): Promise<Response> => {
         },
       });
     } catch (auditError) {
-      console.error('Audit log error:', auditError);
+      edgeLogger.error('Audit log error', auditError);
       // Don't fail the request
     }
 
-    console.log('Email verified successfully:', { userId: tokenData.user_id });
+    edgeLogger.info('Email verified successfully', { userId: tokenData.user_id });
 
     return new Response(
       JSON.stringify({ 
@@ -117,7 +118,7 @@ const handler = async (req: Request): Promise<Response> => {
       { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   } catch (error: any) {
-    console.error('Error in verify-email:', error);
+    edgeLogger.error('Error in verify-email', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }

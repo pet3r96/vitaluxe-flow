@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 // Helper to hash codes securely
 async function hashCode(code: string): Promise<string> {
@@ -37,7 +38,7 @@ serve(async (req) => {
     }
 
     // Twilio-only SMS provider
-    console.log('[2FA Twilio] Processing SMS verification');
+    edgeLogger.info('[2FA Twilio] Processing SMS verification');
 
     // Parse request body
     const { phoneNumber, purpose = 'verification' } = await req.json();
@@ -103,7 +104,7 @@ serve(async (req) => {
 
     // Handle idempotent duplicate (unique constraint violation on window_key)
     if (insertError?.code === '23505') {
-      console.log('[2FA Twilio] Idempotent duplicate detected | User:', user.id, '| Window:', windowBucket);
+      edgeLogger.info('[2FA Twilio] Idempotent duplicate detected', { userId: user.id, window: windowBucket });
       
       const { data: existingAttempt, error: fetchError } = await supabase
         .from('sms_verification_attempts')
@@ -112,7 +113,7 @@ serve(async (req) => {
         .single();
 
       if (fetchError || !existingAttempt) {
-        console.error('[2FA Twilio] Failed to fetch existing attempt:', fetchError);
+        edgeLogger.error('[2FA Twilio] Failed to fetch existing attempt', fetchError);
         throw new Error('Failed to retrieve verification attempt');
       }
 
@@ -129,7 +130,7 @@ serve(async (req) => {
         }
       });
 
-      console.log('[2FA Twilio] Idempotent duplicate blocked | Attempt:', existingAttempt.attempt_id);
+      edgeLogger.info('[2FA Twilio] Idempotent duplicate blocked', { attemptId: existingAttempt.attempt_id });
 
       return new Response(
         JSON.stringify({ 
@@ -144,7 +145,7 @@ serve(async (req) => {
     }
 
     if (insertError || !attemptData) {
-      console.error('[2FA Twilio] Attempt insert failed:', insertError);
+      edgeLogger.error('[2FA Twilio] Attempt insert failed', insertError);
       throw new Error('Failed to create verification attempt');
     }
 
@@ -155,7 +156,7 @@ serve(async (req) => {
     const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN')!;
     const twilioMessagingServiceSid = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID')!;
 
-    console.log('[2FA Twilio] Attempt:', attemptId, '| Sending SMS');
+    edgeLogger.info('[2FA Twilio] Sending SMS', { attemptId });
       
     const twilioStartTime = Date.now();
     const controller = new AbortController();
@@ -183,11 +184,11 @@ serve(async (req) => {
       const twilioEndTime = Date.now();
       const responseTime = twilioEndTime - twilioStartTime;
 
-      console.log('[2FA Twilio] Attempt:', attemptId, '| Response:', twilioResponse.status, '| Time:', responseTime, 'ms');
+      edgeLogger.info('[2FA Twilio] Response received', { attemptId, status: twilioResponse.status, responseTimeMs: responseTime });
 
       if (!twilioResponse.ok) {
         const errorText = await twilioResponse.text();
-        console.error('[2FA Twilio] Attempt:', attemptId, '| API failed:', errorText);
+        edgeLogger.error('[2FA Twilio] API failed', null, { attemptId, errorText });
         
         // For transient errors (5xx), treat as queued
         if (twilioResponse.status >= 500 && twilioResponse.status < 600) {
@@ -207,7 +208,7 @@ serve(async (req) => {
           });
 
           const totalTime = Date.now() - startTime;
-          console.log('[2FA Twilio] Attempt:', attemptId, '| Queued (5xx) | Total:', totalTime, 'ms');
+          edgeLogger.info('[2FA Twilio] Queued (5xx)', { attemptId, totalTimeMs: totalTime });
 
           return new Response(
             JSON.stringify({ 
@@ -251,7 +252,7 @@ serve(async (req) => {
       });
 
       const totalTime = Date.now() - startTime;
-      console.log('[2FA Twilio] Attempt:', attemptId, '| Success | Total:', totalTime, 'ms');
+      edgeLogger.info('[2FA Twilio] Success', { attemptId, totalTimeMs: totalTime });
 
       return new Response(
         JSON.stringify({ 
@@ -269,7 +270,7 @@ serve(async (req) => {
       if (fetchError.name === 'AbortError') {
         // Treat timeout as queued - code was likely sent but upstream slow
         const responseTime = Date.now() - twilioStartTime;
-        console.log('[2FA Twilio] Attempt:', attemptId, '| Timeout after 12s, treating as queued');
+        edgeLogger.info('[2FA Twilio] Timeout after 12s, treating as queued', { attemptId });
         
         await supabase.from('two_fa_audit_log').insert({
           user_id: user.id,
@@ -286,7 +287,7 @@ serve(async (req) => {
         });
 
         const totalTime = Date.now() - startTime;
-        console.log('[2FA Twilio] Attempt:', attemptId, '| Queued (timeout) | Total:', totalTime, 'ms');
+        edgeLogger.info('[2FA Twilio] Queued (timeout)', { attemptId, totalTimeMs: totalTime });
 
         return new Response(
           JSON.stringify({ 
@@ -303,7 +304,7 @@ serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error('Error in send-2fa-sms:', error);
+    edgeLogger.error('Error in send-2fa-sms', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

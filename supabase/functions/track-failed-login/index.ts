@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validateTrackFailedLoginRequest } from "../_shared/requestValidators.ts";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +19,7 @@ serve(async (req) => {
     try {
       requestData = await req.json();
     } catch (error) {
-      console.error('Invalid JSON in request body:', error);
+      edgeLogger.error('Invalid JSON in request body', error);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -28,7 +29,7 @@ serve(async (req) => {
     // Validate input
     const validation = validateTrackFailedLoginRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request data', 
@@ -53,10 +54,10 @@ serve(async (req) => {
     const ip = /^[0-9a-fA-F:.\s]+$/.test(clientIp) ? clientIp : null;
     
     if (!ip) {
-      console.warn('Invalid IP address format detected:', clientIp);
+      edgeLogger.warn('Invalid IP address format detected', { clientIp });
     }
 
-    console.log(`Tracking failed login for email: ${email} from IP: ${ip || 'unknown'}`);
+    edgeLogger.info('Tracking failed login', { email, ip: ip || 'unknown' });
 
     // Log security event
     await supabaseClient.from("security_events").insert({
@@ -87,11 +88,11 @@ serve(async (req) => {
         })
         .eq("id", existing.id);
 
-      console.log(`Updated attempt count to ${newCount} for ${email}`);
+      edgeLogger.info('Updated attempt count', { count: newCount, email });
 
       // Check for brute force (5+ attempts in 10 minutes)
       if (newCount >= 5) {
-        console.log(`Brute force detected for ${email}, invoking detect-brute-force`);
+        edgeLogger.warn('Brute force detected, invoking detect-brute-force', { email });
         await supabaseClient.functions.invoke("detect-brute-force", {
           body: { email, ip_address: ip, attempt_count: newCount },
         });
@@ -103,7 +104,7 @@ serve(async (req) => {
         user_agent,
         attempt_count: 1,
       });
-      console.log(`Created new failed login attempt record for ${email}`);
+      edgeLogger.info('Created new failed login attempt record', { email });
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -111,7 +112,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error tracking failed login:", error);
+    edgeLogger.error("Error tracking failed login", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

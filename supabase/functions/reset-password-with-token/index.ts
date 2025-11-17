@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -106,7 +107,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     if (passwordError) {
-      console.error("Error updating password:", passwordError);
+      edgeLogger.error("Error updating password", passwordError);
       throw passwordError;
     }
 
@@ -157,7 +158,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(resetToken.user_id);
     
     if (userError || !userData?.user) {
-      console.error("Error fetching user data:", userError);
+      edgeLogger.error("Error fetching user data", userError);
       // Still return success since password was updated
     }
 
@@ -169,11 +170,11 @@ const handler = async (req: Request): Promise<Response> => {
       p_details: { method: 'email_token' }
     });
 
-    console.log("Password reset completed successfully for user:", resetToken.user_id);
+    edgeLogger.info("Password reset completed successfully", { userId: resetToken.user_id });
 
     // Get user email for frontend auto-login
     const userEmail = userData?.user?.email;
-    console.log('[reset-password-with-token] Returning success with email:', userEmail);
+    edgeLogger.info('[reset-password-with-token] Returning success with email', { email: userEmail });
     
     return new Response(
       JSON.stringify({ 
@@ -186,7 +187,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error) {
-    console.error("Error in reset-password-with-token function:", error);
+    edgeLogger.error("Error in reset-password-with-token function", error);
     return new Response(
       JSON.stringify({
         success: false, 
