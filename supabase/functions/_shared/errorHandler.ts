@@ -72,7 +72,7 @@ export async function logError(
       },
     });
   } catch (logError) {
-    // Fallback to console if RPC fails
+    // Fallback logging if RPC fails - keep console for critical errors
     console.error('Failed to log error to audit_logs:', logError);
     console.error('Original error:', error);
   }

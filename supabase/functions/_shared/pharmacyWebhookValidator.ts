@@ -3,6 +3,8 @@
  * Validates incoming webhooks from pharmacy APIs
  */
 
+import { edgeLogger } from './logger.ts';
+
 /**
  * Validates pharmacy webhook signature using HMAC-SHA512
  * @param signature The signature from the webhook header
@@ -19,7 +21,7 @@ export async function validatePharmacyWebhookSignature(
   }
 
   if (!signingKey) {
-    console.warn('No signing key configured - webhook validation disabled');
+    edgeLogger.warn('No signing key configured - webhook validation disabled');
     return { valid: false, reason: 'No signing key configured' };
   }
 
