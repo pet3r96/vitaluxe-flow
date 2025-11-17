@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
       'quarantine'
     ];
 
-    console.log(`Starting storage cleanup for buckets: ${bucketsToClean.join(', ')}`);
+    edgeLogger.info('Starting storage cleanup', { buckets: bucketsToClean });
 
     const results: Record<string, BucketResult> = {};
     let totalFilesDeleted = 0;
@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
         user_agent: req.headers.get("user-agent"),
       });
     } catch (auditError) {
-      console.error("Failed to log audit entry (non-fatal):", auditError);
+      edgeLogger.error('Failed to log audit entry (non-fatal)', auditError);
     }
 
     return new Response(
@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Storage clear error:', error);
+    edgeLogger.error('Storage clear error', error);
     return new Response(
       JSON.stringify({
         success: false,

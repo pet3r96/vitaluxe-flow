@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -176,7 +177,7 @@ export const RequestProductDialog = ({
       onSuccess?.();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Error submitting product request:", error);
+      logger.error('Error submitting product request', error);
       toast({
         title: "Error",
         description: error.message || "Failed to submit product request",

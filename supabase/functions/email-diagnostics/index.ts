@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { edgeLogger } from '../_shared/logger.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -168,7 +169,7 @@ serve(async (req) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (error) {
-          console.error('[email-diagnostics] Test email error:', error);
+          edgeLogger.error('[email-diagnostics] Test email error', error);
           return new Response(
             JSON.stringify({
               success: false,
@@ -196,7 +197,7 @@ serve(async (req) => {
       }
     }
   } catch (error) {
-    console.error('[email-diagnostics] Error:', error);
+    edgeLogger.error('[email-diagnostics] Error', error);
     return new Response(
       JSON.stringify({
         success: false,

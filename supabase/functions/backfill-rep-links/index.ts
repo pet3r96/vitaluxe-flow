@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
       throw practicesErr2;
     }
 
-    console.log(`Found ${practices?.length || 0} practices to link`);
+    edgeLogger.info('Practices to link found', { count: practices?.length || 0 });
 
     let linksAdded = 0;
 

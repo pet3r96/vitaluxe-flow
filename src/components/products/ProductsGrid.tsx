@@ -421,14 +421,14 @@ export const ProductsGrid = () => {
           return;
         }
         resolvedDoctorId = practiceId;
-        console.debug('[ProductsGrid] Provider detected - using practice context for orders', { 
-          provider_user_id: providerId,  // ✅ Log correct provider ID
+        logger.info('[ProductsGrid] Provider detected - using practice context for orders', { 
+          provider_user_id: providerId,
           practice_id: practiceId 
         });
       } else if (userRoleData?.role === 'staff' && effectivePracticeId) {
         // For staff, use the effectivePracticeId from context
         resolvedDoctorId = effectivePracticeId;
-        console.debug('[ProductsGrid] Staff detected - using practice context for orders', { 
+        logger.info('[ProductsGrid] Staff detected - using practice context for orders', { 
           staff_user_id: effectiveUserId, 
           practice_id: effectivePracticeId 
         });
@@ -444,7 +444,7 @@ export const ProductsGrid = () => {
       });
 
       if (shipToPractice) {
-        console.debug('[ProductsGrid] Practice order - fetching practice shipping address', { effectiveUserId });
+        logger.info('[ProductsGrid] Practice order - fetching practice shipping address', { effectiveUserId });
         
         // Get practice's shipping address with fallback to billing address
         const { data: practiceProfile } = await supabase
@@ -486,7 +486,7 @@ export const ProductsGrid = () => {
           ? await getProviderIdFromUserId(providerId)
           : null;
         
-        console.debug('[ProductsGrid] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
+        logger.info('[ProductsGrid] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
 
         // Get user's topline rep ID for scoping - use resolvedDoctorId (practice_id) to get topline rep
         const userToplineRepId = await getUserToplineRepId(resolvedDoctorId);

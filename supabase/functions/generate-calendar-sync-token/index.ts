@@ -1,5 +1,6 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,7 +12,7 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      console.error('Auth error:', authError);
+      edgeLogger.error('Auth error', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
