@@ -124,7 +124,7 @@ serve(async (req) => {
         is_office_dispensing: orderLine.orders.ship_to === 'practice'
       };
 
-      console.log('Built prescription data:', JSON.stringify(prescriptionData, null, 2));
+      edgeLogger.info('Built prescription data', { prescriptionData: JSON.stringify(prescriptionData, null, 2) });
     } else {
       // Use provided data (existing mode)
       prescriptionData = requestData;
@@ -132,7 +132,7 @@ serve(async (req) => {
 
     const validation = validateGeneratePrescriptionRequest(prescriptionData);
     if (!validation.valid) {
-      console.error('Prescription validation failed:', validation.errors);
+      edgeLogger.error('Prescription validation failed', validation.errors);
       return createErrorResponse(
         'Invalid prescription data',
         400,
@@ -179,7 +179,7 @@ serve(async (req) => {
       .single();
 
     if (providerError || !providerRecord) {
-      console.error('Failed to fetch provider record:', providerError);
+      edgeLogger.error('Failed to fetch provider record', providerError);
       throw new Error('Provider not found');
     }
 
@@ -189,25 +189,21 @@ serve(async (req) => {
       .eq('id', providerRecord.user_id)
       .single();
 
-    console.log('Provider credentials response:', {
-      profileError,
-      hasData: !!profileData,
-      rawData: profileData
+    edgeLogger.info('Provider credentials response', {
+      providerDataLength: JSON.stringify(providerData).length,
+      hasLicense: !!providerData?.medical_license_number,
+      hasDea: !!providerData?.dea_number
     });
 
     if (profileError || !profileData) {
-      console.error('Failed to fetch provider profile:', profileError);
+      edgeLogger.error('Failed to fetch provider profile', profileError);
       throw new Error('Failed to fetch provider credentials');
     }
 
     // Log raw values before normalization
-    console.log('Provider credentials (raw):', {
-      npi: profileData.npi,
-      dea: profileData.dea,
-      license_number: profileData.license_number,
-      npi_type: typeof profileData.npi,
-      dea_type: typeof profileData.dea,
-      license_type: typeof profileData.license_number
+    edgeLogger.info('Provider credentials (raw)', {
+      licenseNumber: providerData.medical_license_number?.substring(0, 5) + '...',
+      deaNumber: providerData.dea_number?.substring(0, 3) + '...'
     });
 
     // Use provider credentials directly
@@ -215,20 +211,12 @@ serve(async (req) => {
     const provider_dea = profileData.dea || '';
     const provider_license = profileData.license_number || '';
 
-    console.log('Normalized provider credentials:', {
-      npi: provider_npi,
-      dea: provider_dea,
-      license: provider_license
+    edgeLogger.info('Normalized provider credentials', {
+      hasLicenseNumber: !!licenseNumber,
+      hasDeaNumber: !!deaNumber,
+      licenseLength: licenseNumber?.length || 0,
+      deaLength: deaNumber?.length || 0
     });
-
-    // Log if credentials are missing for debugging
-    if (!profileData.npi || !profileData.dea || !profileData.license_number) {
-      console.warn(`Provider ${provider_id} missing credentials:`, {
-        npi: !!profileData.npi,
-        dea: !!profileData.dea,
-        license: !!profileData.license_number,
-        provider_name
-      });
     }
 
     // Compute prescriber display name (prescriber_name not in schema)
@@ -247,7 +235,7 @@ serve(async (req) => {
       }
     }
 
-    console.log('Generating prescription PDF for:', product_name, 'with dispensing option:', dispensing_option);
+    edgeLogger.info('Generating prescription PDF', { productName: product_name, dispensingOption: dispensing_option });
 
     try {
       // Create PDF document
@@ -518,7 +506,7 @@ serve(async (req) => {
       throw new Error('PDF generation failed - empty output');
     }
 
-    console.log('PDF generated successfully, size:', pdfOutput.byteLength, 'bytes');
+    edgeLogger.info('PDF generated successfully', { size: pdfOutput.byteLength });
 
     // Prepare for upload
     const fileName = is_office_dispensing 
@@ -561,11 +549,11 @@ serve(async (req) => {
           if (urlData?.url) {
             prescriptionUrl = urlData.url;
             uploadMethod = uploadData.storage_provider || 's3';
-            console.log('Prescription uploaded:', uploadData.storage_path);
+            edgeLogger.info('Prescription uploaded', { storagePath: uploadData.storage_path });
           }
         }
       } catch (s3Error) {
-        console.warn('S3 upload failed, falling back to Supabase Storage:', s3Error);
+        edgeLogger.warn('S3 upload failed, falling back to Supabase Storage', s3Error);
       }
 
       // Fallback to Supabase Storage if S3 upload failed
@@ -578,7 +566,7 @@ serve(async (req) => {
           });
 
         if (uploadError) {
-          console.error('Upload error:', uploadError);
+          edgeLogger.error('Upload error', uploadError);
           throw new Error(`Failed to upload prescription: ${uploadError.message}`);
         }
 
@@ -588,10 +576,10 @@ serve(async (req) => {
           .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
 
         prescriptionUrl = signedUrlData?.signedUrl || uploadData.path;
-        console.log('Prescription uploaded to Supabase Storage:', fileName);
+        edgeLogger.info('Prescription uploaded to Supabase Storage', { fileName });
       }
 
-      console.log(`Prescription generated successfully via ${uploadMethod}:`, fileName);
+      edgeLogger.info('Prescription generated successfully', { uploadMethod, fileName });
 
       return new Response(
         JSON.stringify({
@@ -606,12 +594,12 @@ serve(async (req) => {
       );
 
     } catch (pdfError) {
-      console.error('PDF generation error:', pdfError);
+      edgeLogger.error('PDF generation error', pdfError);
       throw new Error(`PDF generation failed: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}`);
     }
 
   } catch (error) {
-    console.error('Prescription PDF generation error:', error);
+    edgeLogger.error('Prescription PDF generation error', error);
     return handleError(
       supabase,
       error,

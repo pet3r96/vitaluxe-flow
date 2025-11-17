@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -112,7 +113,6 @@ serve(async (req) => {
         const { count } = await query;
         return count || 0;
       } catch (error) {
-        const { edgeLogger } = await import('../_shared/logger.ts');
         edgeLogger.error('Error counting table', error, { tableName: table });
         return 0;
       }
@@ -243,7 +243,7 @@ serve(async (req) => {
     }
 
     // EXECUTE MODE
-    console.log('Factory reset EXECUTE initiated by', user.email);
+    edgeLogger.info('Factory reset EXECUTE initiated', { userEmail: user.email });
     const startTime = Date.now();
     const deleted_counts: Record<string, number> = {};
 
@@ -273,13 +273,13 @@ serve(async (req) => {
         const { error } = await deleteQuery;
         
         if (error) {
-          console.error(`Error deleting from ${table}:`, error);
+          edgeLogger.error(`Error deleting from ${table}`, error);
           return 0;
         }
         
         return recordCount || 0;
       } catch (error) {
-        console.error(`Exception deleting from ${table}:`, error);
+        edgeLogger.error(`Exception deleting from ${table}`, error);
         return 0;
       }
     };
@@ -377,7 +377,7 @@ serve(async (req) => {
           await supabaseAdmin.auth.admin.deleteUser(profile.id);
           deletedAuthUsers++;
         } catch (error) {
-          console.error(`Error deleting auth user ${profile.id}:`, error);
+          edgeLogger.error('Error deleting auth user', error, { userId: profile.id });
         }
       }
     }
@@ -400,7 +400,7 @@ serve(async (req) => {
         },
       });
     } catch (logError) {
-      console.error('Error creating audit log:', logError);
+      edgeLogger.error('Error creating audit log', logError);
     }
 
     // Get final counts
@@ -430,7 +430,7 @@ serve(async (req) => {
       },
     };
 
-    console.log(`Factory reset complete: ${total_deleted} records deleted in ${response.execution_time_seconds}s`);
+    edgeLogger.info('Factory reset complete', { totalDeleted: total_deleted, executionTimeSeconds: response.execution_time_seconds });
 
     return new Response(
       JSON.stringify(response),
@@ -438,7 +438,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in factory-reset function:', error);
+    edgeLogger.error('Error in factory-reset function', error);
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : String(error),

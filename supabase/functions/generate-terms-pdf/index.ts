@@ -130,11 +130,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (termsError) {
-      console.error('Error fetching terms:', termsError);
+      edgeLogger.error('Error fetching terms', termsError);
     }
 
     if (!terms) {
-      console.error('Terms not found for ID:', terms_id);
+      edgeLogger.error('Terms not found', { termsId: terms_id });
       return new Response(
         JSON.stringify({ error: 'Terms not found', details: { terms_id } }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
         // Add logo on left side of header
         doc.addImage(logoBase64, 'PNG', 0.5, 0.25, 0.5, 0.5);
       } catch (e) {
-        console.warn('Failed to add logo to PDF:', e);
+        edgeLogger.warn('Failed to add logo to PDF: ' + String(e));
       }
     }
     
@@ -524,10 +524,10 @@ Deno.serve(async (req) => {
 
       if (!uploadError && uploadData?.success && uploadData.storage_path) {
         uploadMethod = uploadData.storage_provider || 's3';
-        console.log('Terms PDF uploaded:', uploadData.storage_path);
+        edgeLogger.info('Terms PDF uploaded', { storagePath: uploadData.storage_path });
       }
     } catch (uploadError) {
-      console.warn('Document upload failed, falling back to Supabase Storage:', uploadError);
+      edgeLogger.warn('Document upload failed, falling back to Supabase Storage: ' + String(uploadError));
     }
 
     // Fallback to Supabase Storage if S3 upload failed
@@ -540,14 +540,14 @@ Deno.serve(async (req) => {
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        edgeLogger.error('Upload error', uploadError);
         throw new Error('Failed to upload PDF');
       }
-      console.log('Terms PDF uploaded to Supabase Storage:', fileName);
+      edgeLogger.info('Terms PDF uploaded to Supabase Storage', { fileName });
     }
 
     // Record acceptance in unified user_terms_acceptances table
-    console.log('Recording terms acceptance for user:', targetUserId);
+    edgeLogger.info('Recording terms acceptance for user', { targetUserId });
     
     // Get user's role
     const { data: roleData } = await supabase

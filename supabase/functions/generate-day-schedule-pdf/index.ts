@@ -383,7 +383,7 @@ Deno.serve(async (req) => {
       new Uint8Array(pdfOutput).reduce((data, byte) => data + String.fromCharCode(byte), '')
     );
 
-    console.log(`[Print Day] PDF generated successfully, size: ${pdfBase64.length} bytes`);
+    edgeLogger.info('[Print Day] PDF generated successfully', { size: pdfBase64.length });
 
     return new Response(
       JSON.stringify({
@@ -395,7 +395,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[Print Day] Error:', error);
+    edgeLogger.error('[Print Day] Error', error);
     return new Response(
       JSON.stringify({
         success: false,
