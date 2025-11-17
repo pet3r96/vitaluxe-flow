@@ -238,7 +238,7 @@ export function DocumentsTab() {
         <DocumentFilters filters={filters} onFiltersChange={setFilters} />
       )}
 
-      <DocumentsDataTable documents={(documents as Document[]) || []} isLoading={isLoading} />
+      <DocumentsDataTable documents={documents as any || []} isLoading={isLoading} />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-4">
