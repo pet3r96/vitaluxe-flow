@@ -8,12 +8,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { logger } from "@/lib/logger";
 import { Edit2, Save, X, Loader2 } from "lucide-react";
 import { sanitizeEncrypted } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { formatPhoneNumber, validateNPI, validateDEA } from "@/lib/validators";
 import { verifyNPIDebounced } from "@/lib/npiVerification";
-import { logger } from "@/lib/logger";
 
 interface ProviderDetailsDialogProps {
   open: boolean;
@@ -60,10 +60,9 @@ export const ProviderDetailsDialog = ({
       setIsLoadingCredentials(true);
       
       try {
-        console.log('[ProviderDetailsDialog] 🔄 Loading credentials (plaintext-first) for provider:', {
+        logger.info('Loading credentials (plaintext-first) for provider', {
           providerId: provider.id,
-          userId: provider.user_id,
-          currentName: provider.profiles?.full_name || provider.prescriber_name
+          userId: provider.user_id
         });
         
         // STEP 1: Read plaintext values from profiles first
@@ -84,13 +83,13 @@ export const ProviderDetailsDialog = ({
         let decryptedData: any = null;
         
         if (needsDecryption) {
-          console.log('[ProviderDetailsDialog] 🔐 Some fields are [ENCRYPTED], decrypting...');
+          logger.info('Some fields are encrypted, decrypting');
           const { data: rpcData, error: rpcError } = await supabase.rpc('get_decrypted_profile_credentials', {
             p_user_id: provider.user_id
           });
           
           if (rpcError) {
-            console.error('[ProviderDetailsDialog] RPC error during decryption:', rpcError);
+            logger.error('RPC error during decryption', rpcError);
           } else {
             decryptedData = rpcData?.[0];
           }
@@ -126,7 +125,7 @@ export const ProviderDetailsDialog = ({
           phone: finalPhone,
         };
         
-        console.log('[ProviderDetailsDialog] ✅ Loaded credentials (plaintext-first):', {
+        logger.info('Loaded credentials (plaintext-first)', {
           name: finalName,
           hasNPI: !!finalNpi,
           hasDEA: !!finalDea,
@@ -137,7 +136,7 @@ export const ProviderDetailsDialog = ({
         setOriginalNpi(finalNpi);
         
       } catch (error) {
-        console.error('[ProviderDetailsDialog] ❌ Failed to load credentials:', error);
+        logger.error('Failed to load credentials', error);
         
         // Ultimate fallback - use only plaintext, no decryption
         const profiles = provider.profiles || {};
@@ -230,15 +229,11 @@ export const ProviderDetailsDialog = ({
       }
 
       if (Object.keys(profileUpdateData).length > 0) {
-        console.info('💾 [ProviderDetailsDialog] Saving provider - OVERWRITING existing data', {
+        logger.info('Saving provider - OVERWRITING existing data', logger.sanitize({
           providerId: provider.id,
           userId: provider.user_id,
-          updateFields: Object.keys(profileUpdateData),
-          beforeName: provider.profiles?.full_name || provider.prescriber_name,
-          afterName: profileUpdateData.full_name,
-          beforeNPI: provider.profiles?.npi,
-          afterNPI: profileUpdateData.npi
-        });
+          updateFields: Object.keys(profileUpdateData)
+        }));
 
         // ATOMIC UPDATE: Single query to overwrite all fields at once
         const { data: updateData, error: profileError } = await supabase
@@ -248,11 +243,11 @@ export const ProviderDetailsDialog = ({
           .select('id, full_name, prescriber_name, npi, dea, license_number, phone');
 
         if (profileError) {
-          console.error('❌ [ProviderDetailsDialog] Profile update failed:', profileError);
+          logger.error('Profile update failed', profileError);
           throw profileError;
         }
 
-        console.info('✅ [ProviderDetailsDialog] Profile updated - verify changes:', { 
+        logger.info('Profile updated', { 
           rowsAffected: updateData?.length,
           updatedData: updateData?.[0]
         });
@@ -265,12 +260,12 @@ export const ProviderDetailsDialog = ({
         .eq("id", provider.id);
 
       if (providerError) {
-        console.error('❌ Provider timestamp update failed:', providerError);
+        logger.error('Provider timestamp update failed', providerError);
         throw providerError;
       }
 
       // CRITICAL: Update local state immediately to prevent reversion on next render
-      console.log('🔄 [ProviderDetailsDialog] Updating local state with saved values...');
+      logger.info('Updating local state with saved values');
       setFormData({
         ...formData,
         fullName: profileUpdateData.full_name || formData.fullName,
@@ -283,7 +278,7 @@ export const ProviderDetailsDialog = ({
       setOriginalNpi(profileUpdateData.npi || formData.npi);
       
       // CRITICAL: Optimistically update ALL provider caches immediately for instant UI feedback
-      console.log('🔄 [ProviderDetailsDialog] Optimistically updating provider caches...');
+      logger.info('Optimistically updating provider caches');
       
       // Update all active 'providers' queries with the new data
       queryClient.setQueriesData({ queryKey: ['providers'] }, (oldData: any) => {
@@ -309,7 +304,7 @@ export const ProviderDetailsDialog = ({
       });
       
       // Then invalidate caches and refetch in background
-      console.log('🔄 [ProviderDetailsDialog] Invalidating caches for practice:', effectivePracticeId);
+      logger.info('Invalidating caches for practice', { practiceId: effectivePracticeId });
       
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['practice-rx-privileges'] }),
@@ -323,11 +318,11 @@ export const ProviderDetailsDialog = ({
         description: `${formData.fullName} - NPI: ${formData.npi}`
       });
       
-      console.log('✅ [ProviderDetailsDialog] Save complete, cache refreshed');
+      logger.info('Save complete, cache refreshed');
       setIsEditing(false);
       onSuccess();
     } catch (error: any) {
-      console.error('❌ Failed to update provider:', error);
+      logger.error('Failed to update provider', error);
       toast.error(error.message || "Failed to update provider. Please try again.");
     } finally {
       setLoading(false);
@@ -585,7 +580,7 @@ export const ProviderDetailsDialog = ({
                     });
                     setOriginalNpi(finalNpi);
                   } catch (error) {
-                    console.error('Error reloading credentials:', error);
+                    logger.error('Error reloading credentials', error);
                   }
                   setNpiVerificationStatus(null);
                 }}

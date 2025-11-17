@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { logger } from "@/lib/logger";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -129,7 +130,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
               return { patientId, address: patientData.address };
             }
           } catch (error) {
-            console.error(`Failed to fetch address for patient ${patientId}:`, error);
+            logger.error('Failed to fetch address for patient', error, { patientId });
           }
           return null;
         });
@@ -198,7 +199,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
           .download(filePath);
         
         if (error) {
-          console.error('Supabase storage download error:', error);
+          logger.error('Supabase storage download error', error);
           throw new Error(`Storage error: ${error.message}`);
         }
         
@@ -269,7 +270,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
         throw new Error('No prescription URL returned');
       }
     } catch (error: any) {
-      console.error('Error downloading prescription:', error);
+      logger.error('Error downloading prescription', error);
       toast.error(error.message || 'Failed to download prescription', { id: 'prescription' });
     }
   };
@@ -299,7 +300,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
 
       toast.success('Order summary downloaded', { id: 'summary' });
     } catch (error: any) {
-      console.error('Error downloading summary:', error);
+      logger.error('Error downloading summary', error);
       toast.error(error.message || 'Failed to download order summary', { id: 'summary' });
     }
   };
@@ -347,7 +348,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
         });
 
         if (error) {
-          console.error(`Error updating line ${line.id}:`, error);
+          logger.error('Error updating line', error, { lineId: line.id });
           throw error;
         }
       });
@@ -362,7 +363,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
       queryClient.invalidateQueries({ queryKey: ['order-shipping-details', orderId] });
       onUpdate();
     } catch (error: any) {
-      console.error('Error marking shipped:', error);
+      logger.error('Error marking shipped', error);
       toast.error(error.message || 'Failed to mark order as shipped');
     } finally {
       setIsMarkingShipped(false);
@@ -397,7 +398,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
       onUpdate();
       onClose();
     } catch (error: any) {
-      console.error('Error placing order on hold:', error);
+      logger.error('Error placing order on hold', error);
       toast.error(error.message || 'Failed to place order on hold');
     } finally {
       setIsSubmitting(false);
@@ -433,7 +434,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
       onUpdate();
       onClose();
     } catch (error: any) {
-      console.error('Error declining order:', error);
+      logger.error('Error declining order', error);
       toast.error(error.message || 'Failed to decline order');
     } finally {
       setIsSubmitting(false);

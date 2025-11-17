@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 import {
   Table,
   TableBody,
@@ -60,7 +61,7 @@ export const PharmaciesDataTable = () => {
           ) as { data: Array<{ id: string }> | null; error: any };
           
           if (visError) {
-            console.error('[PharmaciesDataTable] Visibility RPC error:', visError);
+            logger.error('Visibility RPC error', visError);
             toast.error('Could not determine pharmacy visibility');
             return [];
           } else if (visiblePharmacies && visiblePharmacies.length > 0) {
@@ -71,7 +72,7 @@ export const PharmaciesDataTable = () => {
             return [];
           }
         } catch (error) {
-          console.error('[PharmaciesDataTable] Error checking pharmacy visibility:', error);
+          logger.error('Error checking pharmacy visibility', error);
           toast.error('Could not determine pharmacy visibility');
           return [];
         }
