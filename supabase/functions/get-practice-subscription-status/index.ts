@@ -115,7 +115,7 @@ serve(async (req) => {
         const roles = (userRoles || []).map((r: any) => r.role);
         if (roles.includes('doctor')) {
           practiceId = actorUserId;
-          console.log('[get-practice-subscription-status] Using self (doctor) as practice', { practiceId });
+          edgeLogger.info('Using self (doctor) as practice', { practiceId });
         }
       }
     }
@@ -129,7 +129,7 @@ serve(async (req) => {
         .single();
       if (!selfProvErr && selfProvider?.practice_id) {
         practiceId = selfProvider.practice_id as string;
-        console.log('[get-practice-subscription-status] Using self provider.practice_id', { practiceId });
+        edgeLogger.info('Using self provider.practice_id', { practiceId });
       }
     }
 
@@ -142,13 +142,13 @@ serve(async (req) => {
         .maybeSingle();
       if (!selfStaffErr && selfStaff?.practice_id) {
         practiceId = selfStaff.practice_id as string;
-        console.log('[get-practice-subscription-status] Using self practice_staff.practice_id', { practiceId });
+        edgeLogger.info('Using self practice_staff.practice_id', { practiceId });
       }
     }
 
     // 5) Validate and use hinted practiceId if still not resolved
     if (!practiceId && hintedPracticeId) {
-      console.log('[get-practice-subscription-status] Validating hinted practiceId', { hintedPracticeId });
+      edgeLogger.info('Validating hinted practiceId', { hintedPracticeId });
       
       // Validate that actor is legitimately related to this practice
       let isValid = false;
@@ -214,14 +214,14 @@ serve(async (req) => {
 
       if (isValid) {
         practiceId = hintedPracticeId;
-        console.log('[get-practice-subscription-status] Using validated hinted practiceId', { practiceId });
+        edgeLogger.info('Using validated hinted practiceId', { practiceId });
       } else {
-        console.warn('[get-practice-subscription-status] Hinted practiceId failed validation', { hintedPracticeId });
+        edgeLogger.warn('Hinted practiceId failed validation', { hintedPracticeId });
       }
     }
 
     if (!practiceId) {
-      console.log('[get-practice-subscription-status] No valid practice context resolved');
+      edgeLogger.info('No valid practice context resolved');
       return new Response(
         JSON.stringify({
           isSubscribed: false,
@@ -242,11 +242,11 @@ serve(async (req) => {
       .maybeSingle();
 
     if (subError) {
-      console.error('[get-practice-subscription-status] Error fetching subscription', subError);
+      edgeLogger.error('Error fetching subscription', subError);
       throw subError;
     }
 
-    console.log('[get-practice-subscription-status] Subscription found:', subscription);
+    edgeLogger.info('Subscription found', { subscription });
 
     if (!subscription) {
       return new Response(
@@ -284,7 +284,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("[get-practice-subscription-status] Unexpected error:", error);
+    edgeLogger.error('Unexpected error in get-practice-subscription-status', error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(
       JSON.stringify({ error: "Internal server error", details: errorMessage }),

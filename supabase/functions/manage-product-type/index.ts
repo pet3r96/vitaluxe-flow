@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
         throw new Error('Invalid operation');
     }
   } catch (error) {
-    console.error('Error in manage-product-type function:', error);
+    edgeLogger.error('Error in manage-product-type function', error);
     return new Response(
       JSON.stringify({ error: 'An error occurred processing the request' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
