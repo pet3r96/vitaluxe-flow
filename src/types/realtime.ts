@@ -62,3 +62,17 @@ export interface IRealtimeManager {
   isSubscribed(table: string): boolean;
   getActiveSubscriptions(): string[];
 }
+
+/**
+ * Helper to safely access payload.new with type
+ */
+export function getPayloadNew<T>(payload: RealtimePostgresChangesPayload<T>): T | null {
+  return (payload.new && Object.keys(payload.new).length > 0) ? payload.new as T : null;
+}
+
+/**
+ * Helper to safely access payload.old with type
+ */
+export function getPayloadOld<T>(payload: RealtimePostgresChangesPayload<T>): T | null {
+  return (payload.old && Object.keys(payload.old).length > 0) ? payload.old as T : null;
+}

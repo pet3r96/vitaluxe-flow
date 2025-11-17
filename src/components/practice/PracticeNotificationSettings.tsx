@@ -17,6 +17,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { usePracticeNotificationSettings } from "@/hooks/usePracticeNotificationSettings";
 
+interface NotificationSettings {
+  enable_email_notifications?: boolean;
+  enable_sms_notifications?: boolean;
+}
+
 interface PracticeNotificationSettingsProps {
   practiceId: string;
 }
@@ -24,16 +29,18 @@ interface PracticeNotificationSettingsProps {
 export function PracticeNotificationSettings({ practiceId }: PracticeNotificationSettingsProps) {
   const { settings, isLoading, updateSettings, isUpdating } = usePracticeNotificationSettings(practiceId);
   
-  const [localEmailEnabled, setLocalEmailEnabled] = useState((settings as any)?.enable_email_notifications ?? true);
-  const [localSmsEnabled, setLocalSmsEnabled] = useState((settings as any)?.enable_sms_notifications ?? true);
+  const typedSettings = settings as NotificationSettings | null;
+  const [localEmailEnabled, setLocalEmailEnabled] = useState(typedSettings?.enable_email_notifications ?? true);
+  const [localSmsEnabled, setLocalSmsEnabled] = useState(typedSettings?.enable_sms_notifications ?? true);
   const [showDisableDialog, setShowDisableDialog] = useState(false);
   const [pendingChange, setPendingChange] = useState<{ type: 'email' | 'sms'; value: boolean } | null>(null);
 
   // Update local state when settings load
   useState(() => {
     if (settings) {
-      setLocalEmailEnabled((settings as any).enable_email_notifications);
-      setLocalSmsEnabled((settings as any).enable_sms_notifications);
+      const typed = settings as NotificationSettings;
+      setLocalEmailEnabled(typed.enable_email_notifications ?? true);
+      setLocalSmsEnabled(typed.enable_sms_notifications ?? true);
     }
   });
 
@@ -72,8 +79,8 @@ export function PracticeNotificationSettings({ practiceId }: PracticeNotificatio
   };
 
   const hasChanges = 
-    localEmailEnabled !== (settings as any)?.enable_email_notifications ||
-    localSmsEnabled !== (settings as any)?.enable_sms_notifications;
+    localEmailEnabled !== typedSettings?.enable_email_notifications ||
+    localSmsEnabled !== typedSettings?.enable_sms_notifications;
 
   if (isLoading) {
     return (
@@ -199,8 +206,8 @@ export function PracticeNotificationSettings({ practiceId }: PracticeNotificatio
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  setLocalEmailEnabled((settings as any)?.enable_email_notifications ?? true);
-                  setLocalSmsEnabled((settings as any)?.enable_sms_notifications ?? true);
+                  setLocalEmailEnabled(typedSettings?.enable_email_notifications ?? true);
+                  setLocalSmsEnabled(typedSettings?.enable_sms_notifications ?? true);
                 }}
                 disabled={isUpdating}
               >
