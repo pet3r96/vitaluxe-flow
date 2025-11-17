@@ -49,7 +49,7 @@ describe('Practice Upload - Unassigned Document', () => {
 
     // Mock edge function to create document record
     vi.mocked(supabase.functions.invoke).mockImplementation((funcName) => {
-      if (funcName === 'create-provider-document') {
+      if (funcName === 'manage-documents') {
         return Promise.resolve({
           data: {
             id: documentId,
@@ -66,6 +66,7 @@ describe('Practice Upload - Unassigned Document', () => {
 
     // Simulate upload
     const uploadData = {
+      action: 'create',
       documentName: 'Practice Internal Memo',
       documentType: 'internal_docs',
       tags: 'internal, staff-only',
@@ -75,7 +76,7 @@ describe('Practice Upload - Unassigned Document', () => {
       storagePath: `${practiceId}/documents/test-memo.pdf`,
     };
 
-    const result = await supabase.functions.invoke('create-provider-document', {
+    const result = await supabase.functions.invoke('manage-documents', {
       body: uploadData,
     });
 

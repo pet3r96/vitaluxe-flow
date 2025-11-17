@@ -42,7 +42,7 @@ describe('Practice Upload - Assigned Document', () => {
 
     // Mock edge function to create document with patient assignment
     vi.mocked(supabase.functions.invoke).mockImplementation((funcName) => {
-      if (funcName === 'create-provider-document') {
+      if (funcName === 'manage-documents') {
         return Promise.resolve({
           data: {
             id: documentId,
@@ -59,6 +59,7 @@ describe('Practice Upload - Assigned Document', () => {
     });
 
     const uploadData = {
+      action: 'create',
       documentName: 'Lab Results - Blood Work',
       documentType: 'lab_results',
       tags: 'urgent, review-required',
@@ -68,7 +69,7 @@ describe('Practice Upload - Assigned Document', () => {
       storagePath: `${practiceId}/documents/lab-results-2025.pdf`,
     };
 
-    const result = await supabase.functions.invoke('create-provider-document', {
+    const result = await supabase.functions.invoke('manage-documents', {
       body: uploadData,
     });
 
