@@ -60,7 +60,7 @@ export function validatePhone(phone: string | null | undefined): { valid: boolea
   const result = phoneSchema.safeParse(phone);
   return result.success 
     ? { valid: true } 
-    : { valid: false, error: result.error.errors[0]?.message };
+    : { valid: false, error: result.error.issues[0]?.message };
 }
 
 export function validateNPI(npi: string | null | undefined): { valid: boolean; error?: string } {
@@ -69,7 +69,7 @@ export function validateNPI(npi: string | null | undefined): { valid: boolean; e
   const result = npiSchema.safeParse(npi);
   return result.success 
     ? { valid: true } 
-    : { valid: false, error: result.error.errors[0]?.message };
+    : { valid: false, error: result.error.issues[0]?.message };
 }
 
 export function validateDEA(dea: string | null | undefined): { valid: boolean; error?: string } {
@@ -78,7 +78,7 @@ export function validateDEA(dea: string | null | undefined): { valid: boolean; e
   const result = deaSchema.safeParse(dea);
   return result.success 
     ? { valid: true } 
-    : { valid: false, error: result.error.errors[0]?.message };
+    : { valid: false, error: result.error.issues[0]?.message };
 }
 
 export function validateEmail(email: string | null | undefined): { valid: boolean; error?: string } {
@@ -87,7 +87,7 @@ export function validateEmail(email: string | null | undefined): { valid: boolea
   const result = emailSchema.safeParse(email);
   return result.success 
     ? { valid: true } 
-    : { valid: false, error: result.error.errors[0]?.message };
+    : { valid: false, error: result.error.issues[0]?.message };
 }
 
 /**
