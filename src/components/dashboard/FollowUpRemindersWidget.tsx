@@ -31,7 +31,7 @@ export function FollowUpRemindersWidget() {
         .limit(5);
 
       if (error) throw error;
-      return data as any[];
+      return data || [];
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
   });

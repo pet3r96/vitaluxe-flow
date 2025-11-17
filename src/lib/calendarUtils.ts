@@ -1,14 +1,9 @@
-interface AppointmentWithLayout {
-  id: string;
-  start_time: string;
-  end_time: string;
-  columnIndex: number;
-  columnWidth: number;
-  columnLeft: number;
-  maxConcurrent: number;
-}
+import type { CalendarAppointment, AppointmentWithLayout } from '@/types/domain/calendar';
 
-export function doAppointmentsOverlap(a: any, b: any): boolean {
+export function doAppointmentsOverlap(
+  a: CalendarAppointment,
+  b: CalendarAppointment
+): boolean {
   const aStart = new Date(a.start_time).getTime();
   const aEnd = new Date(a.end_time).getTime();
   const bStart = new Date(b.start_time).getTime();
@@ -17,7 +12,9 @@ export function doAppointmentsOverlap(a: any, b: any): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
 
-export function detectOverlaps(appointments: any[]): any[] {
+export function detectOverlaps(
+  appointments: CalendarAppointment[]
+): AppointmentWithLayout[] {
   if (appointments.length === 0) return [];
   
   // Sort appointments by start time, then by duration (longer first)
@@ -31,8 +28,8 @@ export function detectOverlaps(appointments: any[]): any[] {
     return bDuration - aDuration; // Longer appointments first
   });
   
-  const result: any[] = [];
-  const columns: any[][] = [];
+  const result: AppointmentWithLayout[] = [];
+  const columns: CalendarAppointment[][] = [];
   
   for (const appointment of sorted) {
     // Find the first column where this appointment doesn't overlap with any existing appointment

@@ -17,3 +17,4 @@ export * from './notifications';
 export * from './admin';
 export * from './cart';
 export * from './messages';
+export * from './calendar';

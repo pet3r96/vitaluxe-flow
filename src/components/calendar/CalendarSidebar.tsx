@@ -14,22 +14,23 @@ import { AppointmentsList } from "./AppointmentsList";
 import { useAppointmentSearch } from "@/hooks/useAppointmentSearch";
 import { cn } from "@/lib/utils";
 import { getProviderDisplayName } from "@/utils/providerNameUtils";
+import type { CalendarProvider, CalendarRoom, CalendarAppointment } from '@/types/domain/calendar';
 
 interface CalendarSidebarProps {
   currentDate: Date;
   onDateChange: (date: Date) => void;
-  providers: any[];
-  rooms: any[];
+  providers: CalendarProvider[];
+  rooms: CalendarRoom[];
   selectedProviders: string[];
   selectedRooms: string[];
   selectedStatuses: string[];
   onProviderToggle: (id: string) => void;
   onRoomToggle: (id: string) => void;
   onStatusToggle: (status: string) => void;
-  appointments?: any[];
+  appointments?: CalendarAppointment[];
   isOpen: boolean;
   onClose: () => void;
-  onAppointmentSelect?: (appointment: any) => void;
+  onAppointmentSelect?: (appointment: CalendarAppointment) => void;
   defaultTab?: 'appointments' | 'filters';
 }
 
@@ -71,12 +72,12 @@ export function CalendarSidebar({
     isSearching,
     handleSearchSubmit
   } = useAppointmentSearch({
-    appointments,
+    appointments: appointments as any[], // Type compatibility: CalendarAppointment extends base fields
     maxResults: 20,
     debounceMs: 300
   });
 
-  const handleSearchResultClick = (appointment: any) => {
+  const handleSearchResultClick = (appointment: CalendarAppointment) => {
     if (onAppointmentSelect) {
       onAppointmentSelect(appointment);
       // On mobile, close sidebar after selection
@@ -232,7 +233,15 @@ export function CalendarSidebar({
                         htmlFor={`provider-${provider.id}`}
                         className="flex items-center gap-2 flex-1 cursor-pointer"
                       >
-                        <ProviderAvatar provider={provider} size="sm" />
+                        <ProviderAvatar 
+                          provider={{
+                            first_name: provider.first_name || '',
+                            last_name: provider.last_name || '',
+                            avatar_url: provider.avatar_url,
+                            specialty: provider.specialty
+                          }} 
+                          size="sm" 
+                        />
                         <div className="flex-1 min-w-0 flex items-center gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium truncate">

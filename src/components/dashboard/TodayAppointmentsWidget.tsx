@@ -20,7 +20,7 @@ export function TodayAppointmentsWidget() {
     queryKey: ["today-appointments", effectivePracticeId],
     enabled: !!effectivePracticeId,
     queryFn: async () => {
-      if (!effectivePracticeId) return [] as any[];
+      if (!effectivePracticeId) return [];
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
@@ -30,7 +30,7 @@ export function TodayAppointmentsWidget() {
         .from("patient_appointments")
         .select(`
           *,
-          patient_account:patient_accounts(id, first_name, last_name)
+          patient_accounts(id, first_name, last_name, email, phone)
         `)
         .eq("practice_id", effectivePracticeId)
         .gte("start_time", today.toISOString())
@@ -40,12 +40,12 @@ export function TodayAppointmentsWidget() {
         .limit(5);
 
       if (error) throw error;
-      return (data || []) as any[];
+      return data || [];
     },
     staleTime: 60000, // 1 minute
   });
 
-  const { data: providers = [] } = useQuery<any[]>({
+  const { data: providers = [] } = useQuery({
     queryKey: ["widget-providers", effectivePracticeId, effectiveRole, effectiveUserId],
     enabled: !!effectivePracticeId,
     queryFn: async (): Promise<any[]> => {
@@ -173,18 +173,18 @@ export function TodayAppointmentsWidget() {
                   className="w-full justify-start text-left h-auto p-4 hover:bg-accent/50 rounded-lg transition-all duration-200 hover:scale-[1.01]"
                   onClick={() => handleAppointmentClick(appointment)}
                 >
-                  <div className="flex items-start gap-3 w-full">
+                      <div className="flex items-start gap-3 w-full">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <div className="font-semibold truncate flex-1 text-base">
-                          {appointment.patient_account 
-                            ? `${appointment.patient_account.first_name} ${appointment.patient_account.last_name}`
+                          {appointment.patient_accounts 
+                            ? `${appointment.patient_accounts.first_name} ${appointment.patient_accounts.last_name}`
                             : "Unknown Patient"}
                         </div>
-                        {appointment.patient_account?.id && (
+                        {appointment.patient_accounts?.id && (
                           <PatientQuickAccessButton
-                            patientId={appointment.patient_account.id}
-                            patientName={`${appointment.patient_account.first_name} ${appointment.patient_account.last_name}`}
+                            patientId={appointment.patient_accounts.id}
+                            patientName={`${appointment.patient_accounts.first_name} ${appointment.patient_accounts.last_name}`}
                             variant="icon"
                             size="sm"
                           />

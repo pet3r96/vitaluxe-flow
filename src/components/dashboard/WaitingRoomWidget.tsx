@@ -50,7 +50,7 @@ export function WaitingRoomWidget() {
           .limit(5);
 
         if (error) throw error;
-        return { count: count || 0, patients: (patients || []) as any[] };
+        return { count: count || 0, patients: patients || [] };
       }
 
       return { count: 0, patients: [] };
