@@ -7,21 +7,21 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('📧 [send-verification-email] Function START');
+  const { edgeLogger } = await import('../_shared/logger.ts');
+  edgeLogger.info('[send-verification-email] Function START');
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('[send-verification-email] CORS preflight request');
+    edgeLogger.info('[send-verification-email] CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('[send-verification-email] Parsing request body...');
     const { userId, email, name } = await req.json();
-    console.log('[send-verification-email] Request params:', { userId, email, hasName: !!name });
+    edgeLogger.info('[send-verification-email] Request params', { userId, hasEmail: !!email, hasName: !!name });
 
     if (!userId || !email) {
-      console.error("❌ [send-verification-email] Missing required fields:", { userId, email });
+      edgeLogger.error('[send-verification-email] Missing required fields', undefined, { userId: !!userId, email: !!email });
       return new Response(
         JSON.stringify({ error: 'Missing userId or email' }), 
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

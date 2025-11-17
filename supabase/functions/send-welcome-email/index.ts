@@ -15,10 +15,11 @@ interface WelcomeEmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log('📧 [send-welcome-email] Function START');
+  const { edgeLogger } = await import('../_shared/logger.ts');
+  edgeLogger.info('[send-welcome-email] Function START');
   
   if (req.method === "OPTIONS") {
-    console.log('[send-welcome-email] CORS preflight request');
+    edgeLogger.info('[send-welcome-email] CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 

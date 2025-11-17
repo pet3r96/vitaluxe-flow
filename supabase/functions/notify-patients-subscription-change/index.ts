@@ -24,7 +24,7 @@ serve(async (req) => {
     const nowInactive = ['cancelled', 'expired', 'payment_failed'].includes(newStatus);
 
     if (!wasActive || !nowInactive) {
-      console.log('[NotifyPatients] No notification needed (status change not significant)');
+      edgeLogger.info('[NotifyPatients] No notification needed (status change not significant)');
       return new Response(JSON.stringify({ message: 'No notification needed' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -46,11 +46,11 @@ serve(async (req) => {
       .eq('practice_id', practiceId);
 
     if (patientsError) {
-      console.error('[NotifyPatients] Error fetching patients:', patientsError);
+      edgeLogger.error('[NotifyPatients] Error fetching patients', patientsError);
       throw patientsError;
     }
 
-    console.log(`[NotifyPatients] Found ${patients?.length || 0} patients to notify`);
+    edgeLogger.info('[NotifyPatients] Found patients to notify', { count: patients?.length || 0 });
 
     let notificationCount = 0;
 
@@ -73,17 +73,17 @@ serve(async (req) => {
         });
 
         if (notifError) {
-          console.error('[NotifyPatients] Error creating notification for patient', patient.id, notifError);
+          edgeLogger.error('[NotifyPatients] Error creating notification for patient', notifError, { patientId: patient.id });
         } else {
           notificationCount++;
-          console.log(`[NotifyPatients] Notified patient ${patient.id} (${patient.first_name} ${patient.last_name})`);
+          edgeLogger.info('[NotifyPatients] Notified patient', { patientId: patient.id });
         }
       } catch (error) {
-        console.error('[NotifyPatients] Error processing patient', patient.id, error);
+        edgeLogger.error('[NotifyPatients] Error processing patient', error, { patientId: patient.id });
       }
     }
 
-    console.log(`[NotifyPatients] Successfully notified ${notificationCount} patients`);
+    edgeLogger.info('[NotifyPatients] Successfully notified patients', { count: notificationCount });
 
     return new Response(
       JSON.stringify({ 
@@ -94,7 +94,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('[NotifyPatients] Error:', error);
+    edgeLogger.error('[NotifyPatients] Error', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

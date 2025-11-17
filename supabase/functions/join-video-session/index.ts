@@ -55,16 +55,13 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (impersonationError) {
-      console.warn('⚠️ [join-video-session] Impersonation check failed (continuing as normal user):', impersonationError.message);
+      edgeLogger.warn('[join-video-session] Impersonation check failed (continuing as normal user)', { error: impersonationError.message });
     } else if (impersonationSession?.impersonated_user_id) {
       effectiveUserId = impersonationSession.impersonated_user_id;
-      console.log('👥 [join-video-session] Impersonation detected:', { 
-        adminUserId: user.id, 
-        effectiveUserId 
-      });
+      edgeLogger.info('[join-video-session] Impersonation detected', { adminUserId: user.id, effectiveUserId });
     }
 
-    console.log('✅ [join-video-session] Using effective user ID:', effectiveUserId);
+    edgeLogger.info('[join-video-session] Using effective user ID', { effectiveUserId });
 
     // Fetch session details
     const { data: session, error: sessionError } = await supabase
@@ -74,7 +71,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (sessionError) {
-      console.error('❌ [join-video-session] Session query error:', sessionError);
+      edgeLogger.error('[join-video-session] Session query error', sessionError);
       return new Response(JSON.stringify({ 
         error: 'Unable to find session',
         details: sessionError.message 
@@ -85,7 +82,7 @@ Deno.serve(async (req) => {
     }
 
     if (!session) {
-      console.error('❌ [join-video-session] Session not found:', sessionId);
+      edgeLogger.error('[join-video-session] Session not found', undefined, { sessionId });
       return new Response(JSON.stringify({ 
         error: 'Video session not found. It may have been ended or does not exist.' 
       }), {
@@ -94,7 +91,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('✅ [join-video-session] Session found:', { sessionId, status: session.status });
+    edgeLogger.info('[join-video-session] Session found', { sessionId, status: session.status });
 
     // Verify user authorization - properly resolve user_ids
     // Fetch provider to get user_id
