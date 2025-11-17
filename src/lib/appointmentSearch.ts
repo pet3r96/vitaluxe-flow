@@ -1,4 +1,5 @@
 import { parse, isValid, format } from "date-fns";
+import { logger } from "@/lib/logger";
 
 export type SearchType = 'name' | 'id' | 'date' | 'phone' | 'general';
 
@@ -240,7 +241,7 @@ export function saveRecentSearch(query: string) {
     const updated = [query, ...recent.filter(q => q !== query)].slice(0, 5);
     localStorage.setItem('appointment-search-recent', JSON.stringify(updated));
   } catch (error) {
-    console.error('Failed to save recent search:', error);
+    logger.error("Failed to save recent search", error);
   }
 }
 

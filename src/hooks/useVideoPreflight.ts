@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from "@/lib/logger";
 
 interface DiagnosticResult {
   name: string;
@@ -27,7 +28,7 @@ export const useVideoPreflight = () => {
     });
 
     try {
-      console.log('🔍 [Preflight] Starting edge-ping test...');
+      logger.info("Preflight starting edge-ping test");
       
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
@@ -38,21 +39,18 @@ export const useVideoPreflight = () => {
 
       clearTimeout(timeout);
 
-      console.log('📥 [Preflight] edge-ping response:', { data, error });
+      logger.info("Preflight edge-ping response", { hasData: !!data, hasError: !!error });
 
       if (error) {
-        console.error('❌ [Preflight] edge-ping error:', {
-          message: error.message,
-          name: error.name,
-          context: error.context,
-          status: error.status,
-          fullError: error
+        logger.error("Preflight edge-ping error", error, {
+          errorName: error.name,
+          errorStatus: error.status
         });
         throw error;
       }
 
       if (data?.ok) {
-        console.log('✅ [Preflight] edge-ping success:', data);
+        logger.info("Preflight edge-ping success", { region: data.region });
         addDiagnostic({
           name: 'Backend Ping',
           status: 'success',
@@ -64,7 +62,7 @@ export const useVideoPreflight = () => {
 
       throw new Error('Ping returned invalid response');
     } catch (err: any) {
-      console.error('❌ [Preflight] edge-ping catch block:', err);
+      logger.error("Preflight edge-ping failed", err);
       
       addDiagnostic({
         name: 'Backend Ping',

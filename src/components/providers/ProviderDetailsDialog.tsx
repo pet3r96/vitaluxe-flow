@@ -13,6 +13,7 @@ import { sanitizeEncrypted } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { formatPhoneNumber, validateNPI, validateDEA } from "@/lib/validators";
 import { verifyNPIDebounced } from "@/lib/npiVerification";
+import { logger } from "@/lib/logger";
 
 interface ProviderDetailsDialogProps {
   open: boolean;
@@ -49,7 +50,7 @@ export const ProviderDetailsDialog = ({
   useEffect(() => {
     const loadCredentialsPlaintextFirst = async () => {
       if (!provider?.user_id) {
-        console.warn('[ProviderDetailsDialog] No provider.user_id, skipping load');
+        logger.warn("No provider user_id, skipping credential load");
         return;
       }
       

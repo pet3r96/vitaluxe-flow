@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import AgoraRTC, { IAgoraRTCClient, ILocalAudioTrack, ILocalVideoTrack } from "agora-rtc-sdk-ng";
+import { logger } from "@/lib/logger";
 
 interface UseAgoraCallParams {
   channel: string;
@@ -34,8 +35,7 @@ export function useAgoraCall({
 
       const TOKEN_ENDPOINT = `${SUPABASE_URL}/functions/v1/agora-token`;
 
-      console.log("[TokenFetch] Requesting token from:", TOKEN_ENDPOINT);
-      console.log("[TokenFetch] Params:", { channel, uid: userId, role: "publisher", ttl: 3600 });
+      logger.info("Fetching Agora token", { channel, userId });
 
       const response = await fetch(TOKEN_ENDPOINT, {
         method: "POST",
@@ -53,7 +53,7 @@ export function useAgoraCall({
       const text = await response.text();
 
       if (!response.ok) {
-        console.error(`❌ Token fetch failed (${response.status}):`, text);
+        logger.error("Token fetch failed", null, { status: response.status });
         throw new Error(`Token fetch failed: ${response.status} - ${text}`);
       }
 
@@ -61,23 +61,20 @@ export function useAgoraCall({
       try {
         data = JSON.parse(text);
       } catch {
-        console.error("❌ Token fetch returned invalid JSON:", text);
+        logger.error("Token fetch returned invalid JSON");
         throw new Error("Token fetch returned invalid JSON");
       }
 
       if (!data.rtcToken) {
-        console.error("❌ Missing rtcToken:", data);
+        logger.error("Missing rtcToken in response");
         throw new Error("Missing rtcToken in response");
       }
 
-      console.log("✅ Token fetched:", {
-        prefix: data.rtcToken.substring(0, 16) + "...",
-        expiresAt: data.expiresAt,
-      });
+      logger.info("Agora token fetched successfully");
 
       return data.rtcToken;
     } catch (err) {
-      console.error("❌ fetchToken error:", err);
+      logger.error("fetchToken error", err);
       throw err;
     }
   }, [channel, userId]);
@@ -85,39 +82,39 @@ export function useAgoraCall({
   // Join channel
   const join = useCallback(async () => {
     if (isJoined || clientRef.current) {
-      console.warn("[useAgoraCall] Already joined");
+      logger.warn("Already joined Agora call");
       return;
     }
 
     try {
-      console.log("[useAgoraCall] Fetching token...");
+      logger.info("Fetching Agora token");
       const token = await fetchToken();
 
-      console.log("[useAgoraCall] Creating RTC client...");
+      logger.info("Creating Agora RTC client");
       const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       clientRef.current = client;
 
       // Setup token renewal listeners
       if (autoRenew) {
         client.on("token-privilege-will-expire", async () => {
-          console.log("[useAgoraCall] Token will expire, renewing...");
+          logger.info("Agora token will expire, renewing");
           try {
             const newToken = await fetchToken();
             await client.renewToken(newToken);
-            console.log("[useAgoraCall] Token renewed successfully");
+            logger.info("Agora token renewed successfully");
           } catch (error) {
-            console.error("[useAgoraCall] Token renewal failed:", error);
+            logger.error("Agora token renewal failed", error);
           }
         });
 
         client.on("token-privilege-did-expire", async () => {
-          console.error("[useAgoraCall] Token expired! Attempting immediate refresh...");
+          logger.error("Agora token expired, attempting immediate refresh");
           try {
             const newToken = await fetchToken();
             await client.renewToken(newToken);
-            console.log("[useAgoraCall] Emergency token refresh succeeded");
+            logger.info("Emergency token refresh succeeded");
           } catch (error) {
-            console.error("[useAgoraCall] Emergency token refresh failed, leaving call:", error);
+            logger.error("Emergency token refresh failed", error);
             await leave();
           }
         });
@@ -125,7 +122,7 @@ export function useAgoraCall({
 
       // Setup remote user handlers
       client.on("user-published", async (user, mediaType) => {
-        console.log("[useAgoraCall] Remote user published:", mediaType);
+        logger.info("Remote user published", { mediaType });
         await client.subscribe(user, mediaType);
 
         if (mediaType === "video" && remoteVideoRef.current) {
@@ -168,13 +165,13 @@ export function useAgoraCall({
       }
 
       // Publish tracks
-      console.log("[useAgoraCall] Publishing local tracks...");
+      logger.info("Publishing local tracks");
       await client.publish([mic, cam]);
 
       setIsJoined(true);
-      console.log("[useAgoraCall] Call setup complete");
+      logger.info("Agora call setup complete");
     } catch (error) {
-      console.error("[useAgoraCall] Join failed:", error);
+      logger.error("Agora join failed", error);
       await leave();
       throw error;
     }
@@ -183,30 +180,31 @@ export function useAgoraCall({
   // Leave channel
   const leave = useCallback(async () => {
     try {
-      console.log("[useAgoraCall] Leaving call...");
+      logger.info("Leaving Agora call");
 
       // Stop and close tracks
-      if (camRef.current) {
-        camRef.current.stop();
-        camRef.current.close();
-        camRef.current = null;
-      }
       if (micRef.current) {
         micRef.current.stop();
         micRef.current.close();
         micRef.current = null;
       }
 
-      // Leave channel
+      if (camRef.current) {
+        camRef.current.stop();
+        camRef.current.close();
+        camRef.current = null;
+      }
+
+      // Leave and destroy client
       if (clientRef.current) {
         await clientRef.current.leave();
         clientRef.current = null;
       }
 
       setIsJoined(false);
-      console.log("[useAgoraCall] Left successfully");
+      logger.info("Left Agora call successfully");
     } catch (error) {
-      console.error("[useAgoraCall] Leave error:", error);
+      logger.error("Agora leave error", error);
     }
   }, []);
 

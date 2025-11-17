@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface VideoErrorDetails {
   sessionId: string;
@@ -39,14 +40,14 @@ export const useVideoErrorLogger = () => {
       });
 
       if (error) {
-        console.error("Failed to log error to backend:", error);
+        logger.error("Failed to log video error to backend", error);
       } else {
-        console.log("✅ Error logged to backend with ID:", data?.logId);
+        logger.info("Video error logged to backend", { logId: data?.logId });
       }
 
       return data?.logId;
     } catch (err) {
-      console.error("Exception while logging video error:", err);
+      logger.error("Exception while logging video error", err);
       return null;
     }
   };

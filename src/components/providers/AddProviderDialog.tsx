@@ -14,6 +14,7 @@ import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { getCurrentCSRFToken } from "@/lib/csrf";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { logger } from "@/lib/logger";
 
 interface AddProviderDialogProps {
   open: boolean;
@@ -176,40 +177,7 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
         return;
       }
 
-      // Debug logging
-      console.log('🔍 AddProviderDialog: Submitting provider creation', {
-        effectiveRole,
-        effectiveUserId,
-        targetPracticeId,
-        formData: {
-          email: formData.email,
-          fullName: formData.fullName,
-          prescriberName: formData.prescriberName,
-          npi: formData.npi,
-          dea: formData.dea || '(not provided)',
-          licenseNumber: formData.licenseNumber,
-          phone: formData.phone || '(not provided)'
-        }
-      });
-
-      const requestBody = {
-        email: formData.email,
-        name: formData.email,
-        fullName: formData.fullName,
-        prescriberName: formData.prescriberName,
-        role: 'provider',
-        csrfToken, // Include in body as fallback
-        roleData: {
-          practiceId: targetPracticeId,
-          npi: formData.npi,
-          dea: formData.dea || null, // Explicit null if empty
-          licenseNumber: formData.licenseNumber,
-          phone: formData.phone || null, // Explicit null if empty
-        }
-      };
-
-      console.log('📤 Request body keys:', Object.keys(requestBody));
-      console.log('📤 RoleData keys:', Object.keys(requestBody.roleData));
+      logger.info("Submitting provider creation", { effectiveRole });
 
       const { data, error } = await supabase.functions.invoke('assign-user-role', {
         body: requestBody,
