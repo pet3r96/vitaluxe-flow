@@ -31,6 +31,7 @@ import type {
   AlertRule,
   TermsAndConditions,
   EncryptionKey,
+  PatientChart,
 } from '@/types/manual-schema';
 
 /**
@@ -68,3 +69,4 @@ export const AccountLockouts = () => table<AccountLockout>('account_lockouts');
 export const AlertRules = () => table<AlertRule>('alert_rules');
 export const TermsAndConds = () => table<TermsAndConditions>('terms_and_conditions');
 export const EncryptionKeys = () => table<EncryptionKey>('encryption_keys');
+export const PatientCharts = () => table<PatientChart>('patient_chart');

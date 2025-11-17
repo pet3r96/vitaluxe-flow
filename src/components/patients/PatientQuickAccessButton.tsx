@@ -90,6 +90,7 @@ export function PatientQuickAccessButton({
 
         data = {
           account,
+          // JUSTIFIED: JSONB boundary - patient_medical_vault uses dynamic record_data structure
           medications: (medications.data || []) as any,
           conditions: (conditions.data || []) as any,
           allergies: (allergies.data || []) as any,
@@ -101,6 +102,7 @@ export function PatientQuickAccessButton({
         };
       }
 
+      // JUSTIFIED: JSONB boundary - generateMedicalVaultPDF uses dynamic record_data structures
       const pdfBlob = await generateMedicalVaultPDF(
         data.account,
         data.medications as any,

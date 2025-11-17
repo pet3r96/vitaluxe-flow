@@ -54,15 +54,16 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
   // Update vital signs
   const updateVital = useCallback(async (vital: any) => {
     try {
-      const { error } = await (supabase as any)
+      // JUSTIFIED: patient_medical_vault table uses JSONB record_data field
+      const { error } = await supabase
         .from("patient_medical_vault")
-        .insert({
+        .insert([{
           patient_account_id: patientId,
           record_type: "vital",
           title: "Vital Signs",
           record_data: vital,
           date_recorded: new Date().toISOString(),
-        });
+        }] as any);
 
       if (error) throw error;
       

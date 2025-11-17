@@ -206,10 +206,14 @@ const AdminAlerts = () => {
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline">
+                    {/* JUSTIFIED: Complex nested Supabase query - alert_type field from joined data */}
                     {(alert as any).alert_type?.replace(/_/g, ' ') || 'Unknown'}
                   </Badge>
                 </TableCell>
-                <TableCell>{(alert.pharmacies as any)?.name || 'Unknown'}</TableCell>
+                <TableCell>
+                  {/* JUSTIFIED: Complex nested Supabase query - pharmacies joined relation */}
+                  {(alert.pharmacies as any)?.name || 'Unknown'}
+                </TableCell>
                 <TableCell className="max-w-md truncate">{alert.message}</TableCell>
                 <TableCell className="text-sm">
                   {format(new Date(alert.created_at), "MMM d, yyyy HH:mm")}

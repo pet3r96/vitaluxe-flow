@@ -8,6 +8,7 @@ import { Video, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { format, differenceInMinutes, isBefore, addMinutes } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { VideoSessionStatus } from "./VideoSessionStatus";
+import type { VideoSessionStatus as VideoSessionStatusType } from "@/types/video-session";
 
 interface PatientVirtualWaitingRoomProps {
   patientId: string;
@@ -160,7 +161,7 @@ export const PatientVirtualWaitingRoom = ({
                     {appointmentTime}
                   </div>
                 </div>
-                <VideoSessionStatus status={session.status as any} />
+                <VideoSessionStatus status={session.status as VideoSessionStatusType} />
               </div>
 
               {accessibility.status === 'provider_waiting' && (

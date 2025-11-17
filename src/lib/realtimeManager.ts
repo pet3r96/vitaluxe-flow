@@ -1,7 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { QueryClient } from '@tanstack/react-query';
 import { logger } from '@/lib/logger';
-import type { RealtimePayload, RealtimeCallback, IRealtimeManager, TableDependencies } from '@/types/realtime';
+import type { IRealtimeManager, TableDependencies, RealtimeCallback } from '@/types/realtime';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 /**
  * Centralized Realtime Manager
@@ -96,7 +97,7 @@ class RealtimeManager implements IRealtimeManager {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<T>) => {
           logger.info(`Realtime event on ${table}:`, { 
             event: payload.eventType,
             id: (payload.new as any)?.id || (payload.old as any)?.id 
@@ -107,7 +108,7 @@ class RealtimeManager implements IRealtimeManager {
 
           // Execute custom callback if provided
           if (callback) {
-            callback(payload as any);
+            callback(payload);
           }
         }
       )

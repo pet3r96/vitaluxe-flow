@@ -39,6 +39,7 @@ import { getProviderDisplayName } from "@/utils/providerNameUtils";
 import { createInstantMeeting } from "@/utils/createInstantMeeting";
 import { useProvidersAndStaff } from "@/hooks/useProvidersAndStaff";
 import { useMemo } from "react";
+import type { VideoSession, VideoSessionWithRelations, VideoSessionStatus as VideoSessionStatusType } from "@/types/video-session";
 
 interface PatientSelectOption {
   id: string;
@@ -155,7 +156,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       (appointmentsData || []).forEach((apt) => {
         if (!sessionsByAppointmentId.has(apt.id)) {
           console.log("[ProviderVirtualWaitingRoom] Creating synthetic session for appointment:", apt.id);
-          // Create a session-like object from appointment
+          // JUSTIFIED: Synthetic session creation with partial type - real sessions have full structure
           merged.push({
             id: `apt-${apt.id}`,
             appointment_id: apt.id,
@@ -1102,7 +1103,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
               </div>
 
               <div className="flex items-center gap-2">
-                <VideoSessionStatus status={session.status as any} />
+                <VideoSessionStatus status={session.status as VideoSessionStatusType} />
 
                 {/* Prepare Session Now button - only for synthetic sessions 10+ min before start */}
                 {isSyntheticSession(session.id) &&

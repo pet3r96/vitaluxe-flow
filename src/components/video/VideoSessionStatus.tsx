@@ -2,12 +2,16 @@ import { Badge } from "@/components/ui/badge";
 import { Video } from "lucide-react";
 
 interface VideoSessionStatusProps {
-  status: 'scheduled' | 'waiting' | 'active' | 'ended' | 'failed';
+  status: 'scheduled' | 'waiting' | 'active' | 'ended' | 'failed' | 'completed' | 'cancelled' | 'no_show';
   onClick?: () => void;
 }
 
 export const VideoSessionStatus = ({ status, onClick }: VideoSessionStatusProps) => {
-  const statusConfig = {
+  const statusConfig: Record<string, {
+    label: string;
+    variant: 'default' | 'secondary' | 'outline' | 'destructive';
+    className: string;
+  }> = {
     scheduled: {
       label: 'Scheduled',
       variant: 'secondary' as const,
@@ -28,6 +32,21 @@ export const VideoSessionStatus = ({ status, onClick }: VideoSessionStatusProps)
       variant: 'outline' as const,
       className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
     },
+    completed: {
+      label: 'Completed',
+      variant: 'outline' as const,
+      className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+    },
+    cancelled: {
+      label: 'Cancelled',
+      variant: 'outline' as const,
+      className: 'bg-muted text-muted-foreground'
+    },
+    no_show: {
+      label: 'No Show',
+      variant: 'outline' as const,
+      className: 'bg-muted text-muted-foreground'
+    },
     failed: {
       label: 'Failed',
       variant: 'destructive' as const,
@@ -35,7 +54,7 @@ export const VideoSessionStatus = ({ status, onClick }: VideoSessionStatusProps)
     }
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] || statusConfig.scheduled;
 
   return (
     <Badge

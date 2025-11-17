@@ -480,6 +480,15 @@ export function isRepProductPriceOverride(override: any): override is RepProduct
   return override && typeof override.rep_id === 'string' && typeof override.product_id === 'string';
 }
 
+// Patient chart table (for medical vault operations)
+export interface PatientChart {
+  id: string;
+  patient_account_id: string;
+  chart_data: any; // JSONB field with dynamic structure
+  created_at: string;
+  updated_at: string;
+}
+
 // Supabase client extension for custom tables
 export interface SupabaseClientExtensions {
   provider_documents: {
