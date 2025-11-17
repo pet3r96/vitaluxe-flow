@@ -1066,24 +1066,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      // Process password status and terms
+      // Process password status and terms - ADMIN BYPASS for resilience
       if (role === 'admin') {
         // Admins ALWAYS exempt, regardless of database value
         setMustChangePassword(false);
         setTermsAccepted(true);
-      } else if (passwordResult.status === 'fulfilled' && passwordResult.value.data) {
-        const passwordData = passwordResult.value.data as unknown as PasswordStatusData;
-        setMustChangePassword(passwordData.must_change_password || false);
-        
-        // Check terms acceptance from user_terms_acceptances table only
-        const hasUserTerms = patientTermsResult.status === 'fulfilled' && patientTermsResult.value.data !== null;
-        setTermsAccepted(hasUserTerms);
+        logger.info('Admin bypass: password and terms requirements skipped');
       } else {
-        // FALLBACK: If password check failed, check if user has terms acceptance
+        // Treat missing data as false, never throw
+        const pwdData = (passwordResult.status === 'fulfilled' && passwordResult.value.data) 
+          ? passwordResult.value.data as unknown as PasswordStatusData 
+          : null;
+        const mustChange = pwdData?.must_change_password || false;
+        
         const hasUserTerms = patientTermsResult.status === 'fulfilled' && patientTermsResult.value.data !== null;
-        logger.warn('Password status check failed, using safe defaults');
-        setMustChangePassword(false);
+        
+        setMustChangePassword(mustChange);
         setTermsAccepted(hasUserTerms);
+        logger.info('Non-admin status check', { mustChange, hasUserTerms });
       }
       // ALWAYS set this to true, even if checks fail
       setPasswordStatusChecked(true);
@@ -1180,8 +1180,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Not impersonating: direct read
       logger.info('checkPasswordStatus direct read of user_password_status and profiles');
       
+      // Check role first for admin bypass
+      const { data: userRoleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', uid)
+        .maybeSingle();
+      
+      const isAdminUser = userRoleData?.role === 'admin';
+      
+      // ADMIN BYPASS: Always allow admin through even if status records missing
+      if (isAdminUser) {
+        setMustChangePassword(false);
+        setTermsAccepted(true);
+        setPasswordStatusChecked(true);
+        logger.info('Admin bypass in checkPasswordStatus: allowing through');
+        return { mustChangePassword: false, termsAccepted: true };
+      }
+      
       // Check password status, profile, and user terms acceptance
-      const [passwordStatusResult, profileResult, userTermsResult] = await Promise.all([
+      const results = await Promise.allSettled([
         supabase
           .from('user_password_status')
           .select('must_change_password')
@@ -1198,17 +1216,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle()
       ]);
 
-      if (passwordStatusResult.error) {
-        logger.error('Error checking password status', passwordStatusResult.error);
-        setPasswordStatusChecked(true);
-        return { mustChangePassword: false, termsAccepted: false };
-      }
-
-      if (profileResult.error) {
-        logger.error('Error checking profile temp_password', profileResult.error);
-        setPasswordStatusChecked(true);
-        return { mustChangePassword: false, termsAccepted: false };
-      }
+      // Treat missing/error data as false, never block on errors
+      const passwordStatusResult = results[0].status === 'fulfilled' ? results[0].value : { data: null, error: null };
+      const profileResult = results[1].status === 'fulfilled' ? results[1].value : { data: null, error: null };
+      const userTermsResult = results[2].status === 'fulfilled' ? results[2].value : { data: null, error: null };
 
       // Check if user has temp_password flag set
       const hasTempPassword = profileResult.data?.temp_password || false;
