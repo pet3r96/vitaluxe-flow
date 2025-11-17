@@ -33,18 +33,54 @@ const ROLE_LABELS: Record<AppRole, string> = {
   staff: 'Practice Staff'
 };
 
+interface TermsData {
+  id: string;
+  role?: string;
+  title: string;
+  content: string;
+  version: number;
+  created_at: string;
+  updated_at?: string;
+  effective_date?: string;
+}
+
+interface TermsAcceptance {
+  id: string;
+  user_id: string;
+  role?: string;
+  version: number;
+  terms_version?: number;
+  accepted_at: string;
+  ip_address?: string;
+  user_agent?: string;
+  signature_name?: string;
+  signed_pdf_url?: string;
+  profiles?: { name?: string; email?: string };
+}
+
+interface AttestationData {
+  id: string;
+  title: string;
+  subtitle?: string;
+  content: string;
+  checkbox_text: string;
+  version?: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function AdminTermsManagement() {
   const [activeTab, setActiveTab] = useState('editor');
   const [activeRole, setActiveRole] = useState<AppRole>('doctor');
-  const [terms, setTerms] = useState<any>(null);
+  const [terms, setTerms] = useState<TermsData | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
-  const [acceptances, setAcceptances] = useState<any[]>([]);
+  const [acceptances, setAcceptances] = useState<TermsAcceptance[]>([]);
   const [loadingAcceptances, setLoadingAcceptances] = useState(false);
   
   // Checkout Attestation state
-  const [attestation, setAttestation] = useState<any>(null);
+  const [attestation, setAttestation] = useState<AttestationData | null>(null);
   const [attestationTitle, setAttestationTitle] = useState("");
   const [attestationSubtitle, setAttestationSubtitle] = useState("");
   const [attestationContent, setAttestationContent] = useState("");
@@ -62,8 +98,8 @@ export default function AdminTermsManagement() {
   }, []);
 
   const loadTerms = async () => {
-    let data: any = null;
-    let error: any = null;
+    let data: TermsData | null = null;
+    let error: Error | null = null;
 
       if (activeRole === 'patient') {
         const res = await PortalTerms()
@@ -77,7 +113,7 @@ export default function AdminTermsManagement() {
       const res = await supabase
         .from('terms_and_conditions')
         .select('*')
-        .eq('role', activeRole as any)
+        .eq('role', activeRole)
         .order('version', { ascending: false })
         .limit(1)
         .maybeSingle();

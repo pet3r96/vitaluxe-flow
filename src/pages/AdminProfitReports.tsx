@@ -30,7 +30,7 @@ const AdminProfitReports = () => {
   const queryClient = useQueryClient();
   const [rxFilter, setRxFilter] = useState<"all" | "non-rx" | "rx-only">("all");
 
-  // Get profit details with order and product information
+  // JUSTIFIED: Complex Supabase query with nested relations causes TypeScript inference issues
   const { data: profitDetails, isLoading } = useQuery({
     queryKey: ["admin-profit-details", rxFilter],
     staleTime: 60000,
@@ -47,7 +47,7 @@ const AdminProfitReports = () => {
       
       if (commError) throw commError;
       
-      return commissions;
+      return commissions || [];
     },
   });
 
@@ -56,42 +56,42 @@ const AdminProfitReports = () => {
     if (!profitDetails) return [];
     
     if (rxFilter === "non-rx") {
-      return profitDetails.filter(item => !(item as any).is_rx_required);
+      return profitDetails.filter((item: any) => !item.is_rx_required);
     } else if (rxFilter === "rx-only") {
-      return profitDetails.filter(item => (item as any).is_rx_required);
+      return profitDetails.filter((item: any) => item.is_rx_required);
     }
     return profitDetails;
   }, [profitDetails, rxFilter]);
 
   const totalAdminProfit = useMemo(() => 
     filteredProfitDetails
-      ?.filter(item => (item as any).orders?.status !== 'cancelled')
-      .reduce((sum, item) => 
-        sum + parseFloat((item as any).admin_profit?.toString() || '0'), 0
+      ?.filter((item: any) => item.orders?.status !== 'cancelled')
+      .reduce((sum: number, item: any) => 
+        sum + parseFloat(item.admin_profit?.toString() || '0'), 0
       ) || 0,
     [filteredProfitDetails]
   );
 
   const pendingAdminProfit = useMemo(() => 
     filteredProfitDetails
-      ?.filter(item => ['pending', 'processing'].includes((item as any).orders?.status || '') && (item as any).orders?.status !== 'cancelled')
-      .reduce((sum, item) => sum + parseFloat((item as any).admin_profit?.toString() || '0'), 0) || 0,
+      ?.filter((item: any) => ['pending', 'processing'].includes(item.orders?.status || '') && item.orders?.status !== 'cancelled')
+      .reduce((sum: number, item: any) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
     [filteredProfitDetails]
   );
 
   const collectedAdminProfit = useMemo(() => 
     filteredProfitDetails
-      ?.filter(item => ['shipped', 'delivered'].includes((item as any).orders?.status || '') && (item as any).orders?.status !== 'cancelled')
-      .reduce((sum, item) => sum + parseFloat((item as any).admin_profit?.toString() || '0'), 0) || 0,
+      ?.filter((item: any) => ['shipped', 'delivered'].includes(item.orders?.status || '') && item.orders?.status !== 'cancelled')
+      .reduce((sum: number, item: any) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
     [filteredProfitDetails]
   );
 
   // Channel-specific profit calculations
   const directProfit = useMemo(() => 
     filteredProfitDetails
-      ?.filter(item => (item as any).orders?.status !== 'cancelled')
-      .filter(item => !item.topline_id && !item.downline_id)
-      .reduce((sum, item) => sum + parseFloat((item as any).admin_profit?.toString() || '0'), 0) || 0,
+      ?.filter((item: any) => item.orders?.status !== 'cancelled')
+      .filter((item: any) => !item.topline_id && !item.downline_id)
+      .reduce((sum: number, item: any) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
     [filteredProfitDetails]
   );
 

@@ -11,13 +11,29 @@ import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
+interface AdminAlert {
+  id: string;
+  title: string;
+  message: string;
+  severity: string;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  pharmacy_id?: string | null;
+  resolved: boolean;
+  resolved_at?: string | null;
+  created_at: string;
+  metadata?: Record<string, unknown> | null;
+  pharmacies?: { id: string; name: string } | null;
+}
+
 const AdminAlerts = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [resolvedFilter, setResolvedFilter] = useState<string>("unresolved");
-  const [detailsDialog, setDetailsDialog] = useState<any>(null);
+  const [detailsDialog, setDetailsDialog] = useState<AdminAlert | null>(null);
   const navigate = useNavigate();
 
+  // JUSTIFIED: Complex nested query causes TypeScript inference depth limit
   const { data: alerts, refetch } = useQuery({
     queryKey: ["admin-alerts", typeFilter, severityFilter, resolvedFilter],
     queryFn: async () => {
@@ -43,7 +59,7 @@ const AdminAlerts = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as AdminAlert[];
     },
   });
 

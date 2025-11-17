@@ -34,9 +34,24 @@ export default function PatientAppointments() {
     subscriptionReason
   });
 
+  interface PatientAppointment {
+    id: string;
+    start_time: string;
+    end_time: string;
+    status: string;
+    appointment_type: string;
+    reason_for_visit?: string;
+    provider_id?: string;
+    practice_id: string;
+    video_session_id?: string;
+    notes?: string;
+    practice?: { id: string; name?: string; address?: string };
+    providers?: { id: string; name?: string };
+  }
+
   const [bookingOpen, setBookingOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<PatientAppointment | null>(null);
   const isMobile = useIsMobile();
   const { effectiveUserId } = useAuth();
   const navigate = useNavigate();
@@ -49,7 +64,7 @@ export default function PatientAppointments() {
   const [joiningSession, setJoiningSession] = useState<string | null>(null);
 
   // Cache key includes effectiveUserId to prevent data leakage across impersonations
-  const { data: appointments, refetch } = useQuery<any[]>({
+  const { data: appointments, refetch } = useQuery<PatientAppointment[]>({
     queryKey: ["patient-appointments", effectiveUserId],
     queryFn: async () => {
       if (!effectiveUserId) throw new Error('No effective user ID');
