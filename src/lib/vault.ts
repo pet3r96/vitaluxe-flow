@@ -1,14 +1,17 @@
 // Typed accessor layer for patient_medical_vault records
 // Provides safe access to nested record_data fields
 
-export type VaultRecordBase = {
+export interface VaultRecordBase {
   id: string;
   record_type: string;
-  record_data: any;
+  record_data: any; // Keep as any for read operations - type safety is at write boundary
   patient_account_id: string;
   created_at: string;
   updated_at?: string;
-};
+  is_active?: boolean;
+  title?: string;
+  patient_id?: string;
+}
 
 export function asMedication(r: VaultRecordBase) {
   return (r?.record_data ?? {}) as {
