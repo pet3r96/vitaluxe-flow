@@ -85,13 +85,17 @@ export const PriceOverrideManager = () => {
     queryFn: async () => {
       if (!selectedRepId) return [];
       
+import type { RepProductPriceOverride } from '@/types/manual-schema';
+
+// ... existing code
+
       const { data, error } = await supabase
-        .from('rep_product_price_overrides' as any)
+        .from('rep_product_price_overrides')
         .select('id, product_id, override_topline_price, override_downline_price, override_retail_price, created_at, updated_at')
         .eq('rep_id', selectedRepId);
       
       if (error) throw error;
-      return (data || []) as unknown as RepProductPriceOverride[];
+      return (data || []) as RepProductPriceOverride[];
     },
     enabled: !!selectedRepId,
   });
@@ -233,7 +237,7 @@ export const PriceOverrideManager = () => {
   // Clear override mutation
   const clearMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('rep_product_price_overrides')
         .delete()
         .eq('rep_id', selectedRepId)
@@ -265,7 +269,7 @@ export const PriceOverrideManager = () => {
   // Clear all overrides for rep
   const clearAllMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('rep_product_price_overrides')
         .delete()
         .eq('rep_id', selectedRepId);

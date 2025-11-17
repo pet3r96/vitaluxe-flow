@@ -18,3 +18,4 @@ export * from './admin';
 export * from './cart';
 export * from './messages';
 export * from './calendar';
+export * from './medical-vault';

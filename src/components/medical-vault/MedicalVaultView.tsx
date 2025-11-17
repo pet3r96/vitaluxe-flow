@@ -28,6 +28,7 @@ import { SharedNotesSection } from "@/components/medical-vault/SharedNotesSectio
 import { PDFViewer } from "@/components/documents/PDFViewer";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { DocumentsSection } from "@/components/medical-vault/DocumentsSection";
+import type { MedicalVaultAuditLog } from '@/types/domain/medical-vault';
 import { PatientNotesSection } from "@/components/patients/PatientNotesSection";
 import type { TypedVaultRecord } from "@/types/vault/records";
 import { flattenForPdf } from "@/lib/vault";
@@ -446,7 +447,7 @@ export function MedicalVaultView({
           }
           setAuditDialogOpen(open);
         }}
-        auditLogs={auditLogs as any}
+        auditLogs={auditLogs as MedicalVaultAuditLog[]}
         patientName={displayName}
         patientAccountId={patientAccountId}
         isLoading={isLoadingAuditLogs}
