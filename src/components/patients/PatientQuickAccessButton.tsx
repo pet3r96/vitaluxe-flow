@@ -90,27 +90,27 @@ export function PatientQuickAccessButton({
 
         data = {
           account,
-          medications: medications.data || [],
-          conditions: conditions.data || [],
-          allergies: allergies.data || [],
-          vitals: vitals.data || [],
-          immunizations: immunizations.data || [],
-          surgeries: surgeries.data || [],
-          pharmacies: pharmacies.data || [],
-          emergencyContacts: emergencyContacts.data || [],
+          medications: (medications.data || []) as any,
+          conditions: (conditions.data || []) as any,
+          allergies: (allergies.data || []) as any,
+          vitals: (vitals.data || []) as any,
+          immunizations: (immunizations.data || []) as any,
+          surgeries: (surgeries.data || []) as any,
+          pharmacies: (pharmacies.data || []) as any,
+          emergencyContacts: (emergencyContacts.data || []) as any,
         };
       }
 
       const pdfBlob = await generateMedicalVaultPDF(
         data.account,
-        data.medications,
-        data.conditions,
-        data.allergies,
-        data.vitals,
-        data.immunizations,
-        data.surgeries,
-        data.pharmacies,
-        data.emergencyContacts
+        data.medications as any,
+        data.conditions as any,
+        data.allergies as any,
+        data.vitals as any,
+        data.immunizations as any,
+        data.surgeries as any,
+        data.pharmacies as any,
+        data.emergencyContacts as any
       );
 
       const pdfUrl = URL.createObjectURL(pdfBlob);
