@@ -101,7 +101,6 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
     if (!phoneToUse) {
       const storedPhone = localStorage.getItem(`vitaluxe_2fa_phone_${userId}`);
       if (storedPhone && isValidPhone(storedPhone)) {
-        console.log('[Sms2FADialog] Loaded phone from localStorage');
         phoneToUse = storedPhone;
       }
     }
@@ -109,7 +108,6 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
     if (phoneToUse) {
       // Validate phone before proceeding
       if (!isValidPhone(phoneToUse)) {
-        console.log('[Sms2FADialog] Invalid phone, showing phone input');
         return;
       }
       
@@ -134,7 +132,6 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
   };
 
   const handleReturnToLogin = async () => {
-    console.log('[Sms2FADialog] Return to login clicked');
     await supabase.auth.signOut();
     window.location.assign('/auth');
   };
@@ -179,7 +176,6 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
         const lockData: LockData = JSON.parse(lockStr);
         const age = Date.now() - lockData.timestamp;
         if (age < LOCK_TTL && lockData.userId === userId) {
-          console.log('[Sms2FADialog] Another tab is sending SMS, waiting');
           setError('Another tab is sending a code, please wait...');
           setTimeout(() => setError(''), 3000);
           return;
@@ -197,8 +193,6 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
     try {
       const normalizedPhone = normalizePhone(phoneToUse);
 
-      console.log('[Sms2FADialog] Sending SMS to:', maskPhone(normalizedPhone));
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error('Not authenticated');
 
@@ -213,8 +207,6 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
         throw new Error(data?.error || 'Failed to send verification code');
       }
 
-      console.log('[Sms2FADialog] SMS sent successfully, attemptId:', data.attemptId);
-
       setAttemptId(data.attemptId);
       setCodeSent(true);
       setStep('verify');
@@ -224,7 +216,6 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
       localStorage.setItem(COOLDOWN_KEY, JSON.stringify({ timestamp: Date.now(), userId }));
 
     } catch (err: any) {
-      console.error('[Sms2FADialog] Send SMS error:', err);
       setError(err.message || 'Failed to send verification code');
       setCodeSent(false);
       setAttemptId('');
@@ -270,8 +261,6 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
     try {
       const normalizedPhone = normalizePhone(phoneNumber);
 
-      console.log('[Sms2FADialog] Verifying code for attemptId:', attemptId);
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error('Not authenticated');
 
@@ -289,8 +278,6 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
       if (!data?.success) {
         throw new Error(data?.error || 'Verification failed');
       }
-
-      console.log('[Sms2FADialog] ✅ Verification successful');
 
       // Store phone in localStorage for future logins
       localStorage.setItem(`vitaluxe_2fa_phone_${userId}`, normalizedPhone);
@@ -312,19 +299,16 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
           .select('is_enrolled, phone_verified')
           .eq('user_id', userId)
           .maybeSingle();
-        console.log('[Sms2FADialog] DB verification (non-blocking):', settingsData);
       } catch (dbErr) {
-        console.warn('[Sms2FADialog] DB check failed (non-fatal):', dbErr);
+        // DB check non-fatal
       }
 
       // Immediate redirect if on auth page
       if (window.location.pathname === '/auth') {
-        console.log('[Sms2FADialog] Redirecting to home...');
         window.location.assign('/');
       }
 
     } catch (err: any) {
-      console.error('[Sms2FADialog] Verify error:', err);
       setError(err.message || 'Invalid or expired code');
       setCode('');
     } finally {

@@ -89,8 +89,6 @@ export const OrdersDataTable = () => {
       time('Orders:load');
       mark('Orders:query-start', { role: effectiveRole, userId: effectiveUserId });
       const queryStart = Date.now();
-      console.time('OrdersQuery');
-      console.log('[OrdersDataTable] Query starting for role:', effectiveRole);
       
       try {
         logger.info('OrdersDataTable query START', logger.sanitize({ 
@@ -101,15 +99,13 @@ export const OrdersDataTable = () => {
 
       // USE SINGLE EDGE FUNCTION FOR ALL ROLES
       if (["admin", "practice", "doctor", "provider", "staff", "pharmacy", "topline", "downline"].includes(effectiveRole)) {
-        console.time(`OrdersEdgeFunctionQuery-${effectiveRole}`);
-        console.log(`[OrdersDataTable] Using edge function for role: ${effectiveRole}`);
+        logger.info('OrdersDataTable using edge function', logger.sanitize({ effectiveRole, effectiveUserId }));
         
         // Compute scopeId based on actual role (NO NORMALIZATION)
         let scopeId: string | null = null;
         if (effectiveRole === "doctor" || effectiveRole === "practice") {
           // Practice owner / doctor – use practice ID if available, otherwise fallback to userId
           scopeId = effectivePracticeId || effectiveUserId;
-          console.log(`[OrdersDataTable] Practice-level scopeId:`, scopeId);
         } else if (effectiveRole === "staff") {
           // Staff: must use their practice_id
           if (!effectivePracticeId) {
@@ -121,29 +117,17 @@ export const OrdersDataTable = () => {
             throw new Error('Missing practice context for staff user');
           }
           scopeId = effectivePracticeId;
-          console.log(`[OrdersDataTable] Staff role - scopeId (practice_id):`, scopeId);
         } else if (effectiveRole === "topline" || effectiveRole === "downline") {
           // For reps, scopeId is their own user ID (edge function will lookup rep record)
           scopeId = effectiveUserId;
-          console.log(`[OrdersDataTable] ${effectiveRole} role - scopeId:`, scopeId);
         } else if (effectiveRole === "provider") {
           // Provider – use their user ID; edge function will look up provider record
           scopeId = effectiveUserId;
-          console.log(`[OrdersDataTable] Provider role - scopeId:`, scopeId);
         } else if (effectiveRole === "pharmacy") {
           // Pharmacy – use their user ID; edge function will look up pharmacy record
           scopeId = effectiveUserId;
-          console.log(`[OrdersDataTable] Pharmacy role - scopeId:`, scopeId);
         }
         // Admin: scopeId remains null (no filter)
-        
-        console.log(`[OrdersDataTable] Invoking edge function:`, {
-          role: effectiveRole,
-          scopeId,
-          authUserId: user?.id,
-          statusFilter,
-          searchQuery
-        });
         
         if (!session?.access_token) {
           toast({
@@ -167,10 +151,9 @@ export const OrdersDataTable = () => {
             Authorization: `Bearer ${session.access_token}`
           }
         });
-        console.timeEnd(`OrdersEdgeFunctionQuery-${effectiveRole}`);
         
         if (edgeError) {
-          console.error('[OrdersDataTable] Edge function error:', edgeError);
+          logger.error('OrdersDataTable edge function error', edgeError, logger.sanitize({ effectiveRole, scopeId: scopeId }));
           
           // Log detailed error for debugging
           if (edgeError.message?.includes('Unauthorized') || edgeError.message?.includes('401')) {
@@ -201,14 +184,12 @@ export const OrdersDataTable = () => {
           throw new Error('Invalid response from orders service');
         }
         
-        console.log(`[OrdersDataTable] ✅ Edge function returned ${edgeData.orders.length} orders`);
-        console.timeEnd(`OrdersEdgeFunctionQuery-${effectiveRole}`);
         timeEnd('Orders:load');
         mark('Orders:query-complete', { count: edgeData.orders.length, duration: Date.now() - queryStart });
         
         // Warn if edge function returns 0 orders (potential filtering issue)
         if (edgeData.orders.length === 0 && edgeData.total === 0) {
-          console.warn('[OrdersDataTable] ⚠️ Edge function returned 0 orders - check filtering logic');
+          logger.warn('OrdersDataTable returned 0 orders', logger.sanitize({ effectiveRole, scopeId: scopeId }));
         }
         
         return edgeData.orders;
@@ -246,7 +227,7 @@ export const OrdersDataTable = () => {
     // Real-time event handler to immediately refetch on INSERT
     (payload) => {
       if (payload.eventType === 'INSERT') {
-        console.log('[OrdersDataTable] Real-time INSERT detected, refetching orders');
+        logger.info('OrdersDataTable real-time INSERT detected');
         refetch();
       }
     }

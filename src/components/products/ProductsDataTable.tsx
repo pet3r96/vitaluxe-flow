@@ -21,6 +21,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
 import { isValidStateCode } from "@/lib/addressUtils";
+import { logger } from "@/lib/logger";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -157,7 +158,7 @@ export const ProductsDataTable = () => {
       
       return provider?.id || null;
     } catch (error) {
-      console.error("Error getting provider ID:", error);
+      logger.error("Error getting provider ID", error);
       return null;
     }
   };
@@ -174,7 +175,7 @@ export const ProductsDataTable = () => {
       
       return provider?.practice_id || null;
     } catch (error) {
-      console.error("Error getting practice ID from provider:", error);
+      logger.error("Error getting practice ID from provider", error);
       return null;
     }
   };
@@ -198,7 +199,7 @@ export const ProductsDataTable = () => {
       
       return rep?.id || null;
     } catch (error) {
-      console.error("Error getting topline rep ID:", error);
+      logger.error("Error getting topline rep ID", error);
       return null;
     }
   };
@@ -231,7 +232,7 @@ export const ProductsDataTable = () => {
           
           if (providerData?.practice_id) {
             resolvedDoctorId = providerData.practice_id;
-            console.log('[ProductsDataTable] ✅ Resolved provider practice:', resolvedDoctorId);
+            logger.info('ProductsDataTable resolved provider practice', logger.sanitize({ practiceId: resolvedDoctorId }));
           }
         } catch (error) {
           console.error('[ProductsDataTable] ❌ Error resolving provider practice:', error);
