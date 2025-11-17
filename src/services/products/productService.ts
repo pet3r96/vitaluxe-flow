@@ -5,6 +5,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { ProductQueryParams } from "@/types/domain/products";
+import { logger } from "@/lib/logger";
 
 export async function fetchProducts(params: ProductQueryParams) {
   const { effectiveUserId, effectiveRole, effectivePracticeId, isImpersonating } = params;
