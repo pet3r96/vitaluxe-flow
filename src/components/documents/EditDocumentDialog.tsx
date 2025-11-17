@@ -88,10 +88,9 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
         updates.reviewed_at = new Date().toISOString();
       }
 
-      const { error } = await supabase
-        .from("provider_documents" as any)
-        .update(updates as any)
-        .eq("id", document.id);
+      // Direct table access - provider_documents not in generated types
+      const docTable: any = supabase.from("provider_documents");
+      const { error } = await docTable.update(updates).eq("id", document.id);
 
       if (error) throw error;
     },

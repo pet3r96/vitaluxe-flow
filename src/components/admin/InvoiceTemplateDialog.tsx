@@ -230,7 +230,7 @@ export function InvoiceTemplateDialog({
           notes,
           subtotal,
           total_due: totalDue
-        } as any
+        } as any // JSONB cast at DB boundary
       };
 
       if (existingInvoice) {
@@ -303,7 +303,7 @@ export function InvoiceTemplateDialog({
           notes,
           subtotal,
           total_due: totalDue
-        } as any
+        } as any // JSONB cast at DB boundary
       };
 
 

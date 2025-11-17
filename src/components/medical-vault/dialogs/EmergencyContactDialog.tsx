@@ -16,6 +16,7 @@ import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs"
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asEmergencyContact } from "@/lib/vault";
 import React from "react";
+import { insertVaultRecord, type EmergencyContactRecordData } from "@/lib/medicalVaultInsert";
 
 const emergencyContactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -99,17 +100,25 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
         }
         console.log('[EmergencyContactDialog] UPDATE success');
       } else {
-        const insertData = {
-          record_type: "emergency_contact",
-          record_data: recordData as any,
-          patient_account_id: patientAccountId,
-          created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
+        const recordData: EmergencyContactRecordData = {
+          name: data.name,
+          relationship: data.relationship,
+          phone: data.phone,
+          email: data.email || undefined,
+          address: data.address || undefined,
+          preferred_contact_method: data.preferred_contact_method,
+          is_primary: false,
         };
         
-        const { error } = await (supabase as any)
-          .from("patient_medical_vault")
-          .insert(insertData);
+        const { error} = await insertVaultRecord(supabase, {
+          record_type: "emergency_contact",
+          record_data: recordData,
+          patient_account_id: patientAccountId,
+          patient_id: patientAccountId,
+          title: data.name,
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+        });
         
         if (error) {
           console.error('[EmergencyContactDialog] INSERT failed:', {

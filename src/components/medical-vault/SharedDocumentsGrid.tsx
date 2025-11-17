@@ -91,10 +91,7 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
 
       // For practice view, only show shared documents
       if (mode === 'practice') {
-        return documents.filter((doc) => {
-          const docData = doc as any;
-          return docData.record_data?.share_with_practice === true;
-        });
+        return documents.filter((doc) => doc.share_with_practice === true);
       }
 
       return documents;

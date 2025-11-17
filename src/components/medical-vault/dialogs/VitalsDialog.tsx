@@ -16,6 +16,7 @@ import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs"
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { VaultRecordBase, asVital } from "@/lib/vault";
+import { insertVaultRecord, type VitalsRecordData as VitalsInsertData } from "@/lib/medicalVaultInsert";
 
 const vitalsSchema = z.object({
   vital_type: z.string().optional(),
@@ -208,16 +209,16 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
           effectiveRole
         });
         
-        // Insert new record - using (as any) due to vitals record_type complexity
-        const { error } = await (supabase as any)
-          .from("patient_medical_vault")
-          .insert({
-            record_type: "vitals",
-            record_data: formattedData,
-            patient_account_id: patientAccountId,
-            created_by_user_id: authUser.id,
-            created_by_role: mapRoleToAuditRole(effectiveRole),
-          });
+        // Insert new record using type-safe wrapper
+        const { error } = await insertVaultRecord(supabase, {
+          record_type: "vitals",
+          record_data: formattedData,
+          patient_account_id: patientAccountId,
+          patient_id: patientAccountId,
+          title: `Vitals - ${format(new Date(), 'MMM d, yyyy')}`,
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+        });
         
         if (error) {
           console.error('[VitalsDialog] Insert error:', {

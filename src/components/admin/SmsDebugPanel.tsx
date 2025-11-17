@@ -15,16 +15,16 @@ export function SmsDebugPanel() {
   const { data: smsCodesData, isLoading: codesLoading, refetch: refetchCodes } = useQuery({
     queryKey: ["admin-sms-codes"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sms_codes")
-        .select("*, profiles!sms_codes_user_id_fkey(name, email)")
+      const codesQuery: any = supabase.from("sms_codes");
+      const { data, error } = await codesQuery
+        .select("*, profiles(name, email)")
         .order("created_at", { ascending: false })
         .limit(20);
       
       if (error) throw error;
-      return data;
+      return data as Array<SmsVerificationCodeWithProfile>;
     },
-    enabled: effectiveRole === "admin",
+    enabled: effectiveRole === 'admin',
   });
 
   const { data: auditLogData, isLoading: auditLoading, refetch: refetchAudit } = useQuery({
@@ -87,9 +87,9 @@ export function SmsDebugPanel() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(smsCodesData as any[])?.map((code) => {
+                {smsCodesData?.map((code) => {
                   const isExpired = new Date(code.expires_at) < new Date();
-                  const profile = code.profiles as any;
+                  const profile = code.profiles;
                   
                   return (
                     <TableRow key={code.id}>

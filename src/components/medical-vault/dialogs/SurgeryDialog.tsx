@@ -14,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asSurgery } from "@/lib/vault";
+import { insertVaultRecord, type SurgeryRecordData } from "@/lib/medicalVaultInsert";
 
 const surgerySchema = z.object({
   surgery_type: z.string().min(1, "Surgery type is required"),
@@ -76,17 +77,20 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
         }
         console.log('[SurgeryDialog] UPDATE success');
       } else {
-        const insertData = {
-          record_type: "surgery",
-          record_data: recordData as any,
-          patient_account_id: patientAccountId,
-          created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
+        const recordData: SurgeryRecordData = {
+          surgery_type: data.surgery_type,
+          surgery_date: `${data.surgery_date}-01`,
         };
         
-        const { error } = await (supabase as any)
-          .from("patient_medical_vault")
-          .insert(insertData);
+        const { error } = await insertVaultRecord(supabase, {
+          record_type: "surgery",
+          record_data: recordData,
+          patient_account_id: patientAccountId,
+          patient_id: patientAccountId,
+          title: data.surgery_type,
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+        });
         
         if (error) {
           console.error('[SurgeryDialog] INSERT failed:', {

@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asCondition } from "@/lib/vault";
+import { insertVaultRecord, type ConditionRecordData } from "@/lib/medicalVaultInsert";
 
 const conditionSchema = z.object({
   condition_name: z.string().min(1, "Condition name is required"),
@@ -131,18 +132,27 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
         }
         console.log('[ConditionDialog] UPDATE success');
       } else {
-        const insertData = {
-          record_type: "condition",
-          record_data: recordData as any,
-          patient_account_id: patientAccountId,
+        const recordData: ConditionRecordData = {
+          condition_name: data.condition_name,
+          description: data.description || undefined,
+          date_diagnosed: data.date_diagnosed,
+          severity: data.severity || undefined,
+          treatment_plan: data.treatment_plan || undefined,
+          associated_provider: data.associated_provider || undefined,
+          notes: data.notes || undefined,
           is_active: true,
-          created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
         };
         
-        const { error } = await (supabase as any)
-          .from("patient_medical_vault")
-          .insert(insertData);
+        const { error } = await insertVaultRecord(supabase, {
+          record_type: "condition",
+          record_data: recordData,
+          patient_account_id: patientAccountId,
+          patient_id: patientAccountId,
+          title: data.condition_name,
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+          is_active: true,
+        });
         
         if (error) {
           console.error('[ConditionDialog] INSERT failed:', {

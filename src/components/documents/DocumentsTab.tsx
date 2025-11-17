@@ -38,25 +38,10 @@ export function DocumentsTab() {
 
       // Fetch practice documents AND patient-shared documents in parallel
       const [practiceResult, patientSharedResult] = await Promise.allSettled([
-        // 1. Practice documents from provider_documents table
-        supabase
-          .from('provider_documents' as any)
-          .select(`
-            id,
-            practice_id,
-            document_name,
-            document_type,
-            status,
-            is_internal,
-            storage_path,
-            uploaded_by,
-            created_at,
-            updated_at,
-            assigned_staff_id,
-            provider_document_patients:provider_document_patients(document_id, patient_id)
-          `)
-          .eq('practice_id', effectivePracticeId)
-          .order('created_at', { ascending: false }),
+        // 1. Practice documents via RPC
+        supabase.rpc('get_provider_documents', {
+          p_practice_id: effectivePracticeId
+        }),
         
         // 2. Patient-shared documents via RPC
         supabase.rpc('get_provider_documents', {
