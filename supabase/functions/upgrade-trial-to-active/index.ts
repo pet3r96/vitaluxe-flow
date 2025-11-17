@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,7 +53,7 @@ serve(async (req) => {
       throw new Error("Practice ID not found");
     }
 
-    console.log(`Upgrading trial to active for practice: ${practiceId}`);
+    edgeLogger.info('[upgrade-trial-to-active] Upgrading trial subscription', { practiceId });
 
     // Get the subscription
     const { data: subscription, error: subError } = await supabaseClient
@@ -86,7 +87,7 @@ serve(async (req) => {
       .limit(1);
 
     if (paymentError) {
-      console.error("Error fetching payment methods:", paymentError);
+      edgeLogger.error('[upgrade-trial-to-active] Error fetching payment methods', paymentError);
       throw new Error("Failed to fetch payment methods");
     }
 
@@ -100,9 +101,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Found active payment method: ${paymentMethods[0].id}`);
+    edgeLogger.info('[upgrade-trial-to-active] Found active payment method', { 
+      paymentMethodId: paymentMethods[0].id 
+    });
 
-    console.log(`Processing payment for subscription: ${subscription.id}`);
+    edgeLogger.info('[upgrade-trial-to-active] Processing payment', { 
+      subscriptionId: subscription.id 
+    });
 
     // Process the payment using existing edge function
     const paymentResponse = await supabaseClient.functions.invoke(
@@ -112,15 +117,16 @@ serve(async (req) => {
       }
     );
 
-    console.log("Payment response data:", paymentResponse.data);
+    edgeLogger.info('[upgrade-trial-to-active] Payment response received');
     if (paymentResponse.error) {
-      console.error("Payment processing error:", paymentResponse.error);
+      edgeLogger.error('[upgrade-trial-to-active] Payment processing error', paymentResponse.error);
       throw new Error(`Payment failed: ${paymentResponse.error.message}`);
     }
 
     const paymentResult = paymentResponse.data;
     
     if (!paymentResult?.success) {
+      edgeLogger.error('[upgrade-trial-to-active] Payment was not successful', new Error(paymentResult?.error || 'Payment declined'));
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -130,7 +136,9 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Payment successful. Transaction ID: ${paymentResult.transactionId}`);
+    edgeLogger.info('[upgrade-trial-to-active] Payment successful', { 
+      transactionId: paymentResult.transactionId 
+    });
 
     // Update subscription to active status
     const now = new Date().toISOString();
@@ -149,11 +157,13 @@ serve(async (req) => {
       .eq("id", subscription.id);
 
     if (updateError) {
-      console.error("Error updating subscription:", updateError);
+      edgeLogger.error('[upgrade-trial-to-active] Error updating subscription', updateError);
       throw new Error("Failed to update subscription status");
     }
 
-    console.log(`Subscription ${subscription.id} upgraded to active`);
+    edgeLogger.info('[upgrade-trial-to-active] Subscription upgraded successfully', { 
+      subscriptionId: subscription.id 
+    });
 
     // Create success notification
     await supabaseClient
@@ -175,7 +185,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("Upgrade error:", error);
+    edgeLogger.error('[upgrade-trial-to-active] Fatal error', error);
     return new Response(
       JSON.stringify({ 
         success: false, 

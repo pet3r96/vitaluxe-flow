@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -65,7 +66,7 @@ Deno.serve(async (req) => {
     const rawAppId = Deno.env.get('AGORA_APP_ID');
 
     if (!customerId || !customerSecret || !rawAppId) {
-      console.error('Missing Agora Cloud Recording credentials');
+      edgeLogger.error('[start-video-recording] Missing Agora Cloud Recording credentials', new Error('Configuration error'));
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -74,9 +75,7 @@ Deno.serve(async (req) => {
 
     const appId = rawAppId.trim();
     if (!/^[a-f0-9]{32}$/i.test(appId)) {
-      console.error('Invalid Agora App ID format for recording', {
-        appIdSample: appId.substring(0, 6) + '...'
-      });
+      edgeLogger.error('[start-video-recording] Invalid Agora App ID format', new Error('Format validation failed'));
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -174,6 +173,12 @@ Deno.serve(async (req) => {
       event_data: { resourceId, sid }
     });
 
+    edgeLogger.info('[start-video-recording] Recording started successfully', { 
+      sessionId,
+      resourceId,
+      sid
+    });
+
     return new Response(JSON.stringify({
       success: true,
       resourceId,
@@ -184,7 +189,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error starting video recording:', error);
+    edgeLogger.error('[start-video-recording] Fatal error', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

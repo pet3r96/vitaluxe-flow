@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,7 +27,7 @@ serve(async (req) => {
       timezone
     } = await req.json();
 
-    console.log('Updating appointment settings for practice:', practiceId);
+    edgeLogger.info('[update-appointment-settings] Updating settings', { practiceId });
 
     // Validate inputs
     if (!practiceId) {
@@ -74,11 +75,11 @@ serve(async (req) => {
       .single();
 
     if (error) {
-      console.error('Error upserting appointment settings:', error);
+      edgeLogger.error('[update-appointment-settings] Error upserting settings', error);
       throw error;
     }
 
-    console.log('Appointment settings updated successfully:', data);
+    edgeLogger.info('[update-appointment-settings] Settings updated successfully');
 
     // If daySettings provided, upsert per-day hours into practice_calendar_hours
     if (daySettings && Array.isArray(daySettings)) {
@@ -100,10 +101,10 @@ serve(async (req) => {
           });
 
         if (calendarError) {
-          console.error(`Error upserting calendar hours for day ${dayOfWeek}:`, calendarError);
+          edgeLogger.error('[update-appointment-settings] Error upserting calendar hours', calendarError, { dayOfWeek });
         }
       }
-      console.log('Per-day calendar hours updated successfully');
+      edgeLogger.info('[update-appointment-settings] Calendar hours updated successfully');
     }
 
     return new Response(
@@ -114,7 +115,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error in update-appointment-settings:', error);
+    edgeLogger.error('[update-appointment-settings] Fatal error', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       {
