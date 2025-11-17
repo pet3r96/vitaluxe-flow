@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeChannel } from "@/lib/video/normalizeChannel";
+import { logger } from "@/lib/logger";
 
 export interface InstantMeetingResult {
   channelId: string;
