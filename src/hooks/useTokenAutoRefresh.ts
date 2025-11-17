@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 
 interface UseTokenAutoRefreshProps {
   client: IAgoraRTCClient | null;
@@ -53,11 +54,11 @@ export const useTokenAutoRefresh = ({
     setStatus(prev => ({ ...prev, isRefreshing: true }));
     
     const refreshStartTime = Date.now() / 1000;
-    console.log("🔄 Refreshing Agora tokens...");
-    console.log(`📊 Token Status Before Refresh:`);
-    console.log(`   Current Time: ${new Date(refreshStartTime * 1000).toISOString()}`);
-    console.log(`   Token Expires: ${new Date(tokenExpiryRef.current * 1000).toISOString()}`);
-    console.log(`   Time Until Expiry: ${Math.round((tokenExpiryRef.current - refreshStartTime) / 60)} minutes`);
+    logger.info("Refreshing Agora tokens", {
+      currentTime: new Date(refreshStartTime * 1000).toISOString(),
+      tokenExpires: new Date(tokenExpiryRef.current * 1000).toISOString(),
+      timeUntilExpiry: Math.round((tokenExpiryRef.current - refreshStartTime) / 60)
+    });
 
     try {
       const { data, error } = await supabase.functions.invoke('agora-token', {
@@ -75,24 +76,23 @@ export const useTokenAutoRefresh = ({
         throw new Error("Invalid token response");
       }
 
-      console.log("RAW BACKEND TOKEN RESPONSE (auto refresh):", data);
-      console.log("===== FE TOKEN DEBUG (auto refresh) =====");
-      console.log("FE RTC Token (full):", data?.rtcToken);
-      console.log("FE RTM Token (full):", data?.rtmToken);
-      console.log("RTC Token length:", data?.rtcToken?.length);
-      console.log("RTM Token length:", data?.rtmToken?.length);
-      console.log("RTC Token prefix:", data?.rtcToken?.substring(0, 20));
-      console.log("RTM Token prefix:", data?.rtmToken?.substring(0, 20));
-      console.log("================================");
+      logger.info("Backend token response (auto refresh)", { 
+        rtcToken: data?.rtcToken, 
+        rtmToken: data?.rtmToken,
+        rtcTokenLength: data?.rtcToken?.length,
+        rtmTokenLength: data?.rtmToken?.length,
+        rtcTokenPrefix: data?.rtcToken?.substring(0, 20),
+        rtmTokenPrefix: data?.rtmToken?.substring(0, 20)
+      });
 
       // Renew RTC token
       await client.renewToken(data.rtcToken);
-      console.log("✅ RTC token renewed successfully");
+      logger.info("RTC token renewed successfully");
 
       // Notify RTM token refresh
       if (onRtmTokenRefresh && data.rtmToken) {
         onRtmTokenRefresh(data.rtmToken);
-        console.log("✅ RTM token renewal initiated");
+        logger.info("RTM token renewal initiated");
       }
 
       // Update expiry time and refresh count
@@ -102,9 +102,11 @@ export const useTokenAutoRefresh = ({
       
       const currentTime = Date.now() / 1000;
       
-      console.log(`✅ Token Refresh Complete (#${refreshCountRef.current})`);
-      console.log(`   New Token Expires: ${new Date(newExpiryTime * 1000).toISOString()}`);
-      console.log(`   Valid For: ${Math.round((newExpiryTime - currentTime) / 60)} minutes`);
+      logger.info("Token Refresh Complete", {
+        refreshCount: refreshCountRef.current,
+        newTokenExpires: new Date(newExpiryTime * 1000).toISOString(),
+        validFor: Math.round((newExpiryTime - currentTime) / 60)
+      });
 
       setStatus({
         lastRefreshTime: currentTime,

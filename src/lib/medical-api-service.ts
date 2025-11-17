@@ -209,7 +209,7 @@ export async function searchAllergens(query: string): Promise<MedicalSuggestion[
 
     return unique.slice(0, 10);
   } catch (error) {
-    console.error('Error fetching medication allergens:', error);
+    logger.error('Error fetching medication allergens', error);
     // Return common allergens as fallback
     return commonMatches;
   }

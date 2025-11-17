@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
 import type { Cart, CartLine } from "@/types/domain/cart";
+import { logger } from "@/lib/logger";
 
 interface UseCartOptions {
   productFields?: string;
@@ -46,7 +47,7 @@ export function useCart(
     queryKey: ["cart", userId],
     queryFn: async (): Promise<Cart> => {
       if (!userId) {
-        console.log('[useCart] No userId provided, returning empty cart');
+        logger.info('[useCart] No userId provided, returning empty cart');
         return { id: '', lines: [] };
       }
 
@@ -62,13 +63,13 @@ export function useCart(
         });
 
         if (error) {
-          console.error('[useCart] Error from get-cart function:', error);
+          logger.error('[useCart] Error from get-cart function', error);
           throw error;
         }
 
         return data || { id: '', lines: [] };
       } catch (error) {
-        console.error('[useCart] Error fetching cart:', error);
+        logger.error('[useCart] Error fetching cart', error);
         return { id: '', lines: [] };
       }
     },

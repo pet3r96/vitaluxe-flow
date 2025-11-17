@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 export interface NetworkQualityStats {
   uplinkQuality: number;
@@ -46,7 +47,7 @@ export const useNetworkQuality = (
             })
             .eq("id", sessionId);
         } catch (error) {
-          console.error("Failed to log quality metrics:", error);
+          logger.error("Failed to log quality metrics", error);
         }
       }
     }, 30000);

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { logger } from "@/lib/logger";
 
 export const useCartCount = (cartOwnerId: string | null) => {
   const queryClient = useQueryClient();
@@ -15,7 +16,7 @@ export const useCartCount = (cartOwnerId: string | null) => {
       clearTimeout(debounceTimerRef.current);
     }
     debounceTimerRef.current = setTimeout(() => {
-      console.log('[useCartCount] Realtime event - invalidating cart-count');
+      logger.info('[useCartCount] Realtime event - invalidating cart-count');
       queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
     }, 300);
   }, [queryClient, cartOwnerId]);
@@ -41,11 +42,11 @@ export const useCartCount = (cartOwnerId: string | null) => {
         .maybeSingle();
 
       if (!cart) {
-        console.log('[useCartCount] No cart found for owner:', cartOwnerId);
+        logger.info('[useCartCount] No cart found for owner', { cartOwnerId });
         return;
       }
 
-      console.log('[useCartCount] Setting up realtime subscription for cart:', cart.id);
+      logger.info('[useCartCount] Setting up realtime subscription for cart', { cartId: cart.id });
 
       // Subscribe to cart_lines changes for this specific cart
       const channel = supabase
@@ -59,12 +60,12 @@ export const useCartCount = (cartOwnerId: string | null) => {
             filter: `cart_id=eq.${cart.id}`
           },
           (payload) => {
-            console.log('[useCartCount] Realtime event received:', payload.eventType);
+            logger.info('[useCartCount] Realtime event received', { eventType: payload.eventType });
             debouncedInvalidate();
           }
         )
         .subscribe((status) => {
-          console.log('[useCartCount] Subscription status:', status);
+          logger.info('[useCartCount] Subscription status', { status });
         });
 
       channelRef.current = channel;
@@ -86,7 +87,7 @@ export const useCartCount = (cartOwnerId: string | null) => {
   // Listen for impersonation changes - only invalidate if owner changed
   useEffect(() => {
     const handleImpersonationChange = () => {
-      console.log('[useCartCount] Impersonation changed - invalidating cart queries');
+      logger.info('[useCartCount] Impersonation changed - invalidating cart queries');
       // Only invalidate if cartOwnerId actually changed
       if (lastOwnerIdRef.current !== cartOwnerId) {
         queryClient.invalidateQueries({ 
@@ -112,22 +113,22 @@ export const useCartCount = (cartOwnerId: string | null) => {
     queryKey: ["cart-count", cartOwnerId],
     queryFn: async () => {
       if (!cartOwnerId) {
-        console.log('[useCartCount] No cart owner ID provided');
+        logger.info('[useCartCount] No cart owner ID provided');
         return 0;
       }
 
-      console.log('[useCartCount] Fetching count for owner:', cartOwnerId);
+      logger.info('[useCartCount] Fetching count for owner', { cartOwnerId });
 
       const { data, error } = await supabase.functions.invoke('get-cart-count', {
         body: { cartOwnerId }
       });
 
       if (error) {
-        console.error('[useCartCount] Error:', error);
+        logger.error('[useCartCount] Error', error);
         throw error;
       }
-      
-      console.log('[useCartCount] Final count:', data?.count || 0);
+
+      logger.info('[useCartCount] Final count', { count: data?.count || 0 });
       return data?.count || 0;
     },
     enabled: !!cartOwnerId,

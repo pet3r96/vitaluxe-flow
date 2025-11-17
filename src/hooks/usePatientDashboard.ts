@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 export interface PatientDashboardData {
   patientAccount: {
@@ -69,7 +70,7 @@ export function usePatientDashboard(effectiveUserId: string | null, effectiveRol
     queryFn: async () => {
       if (!effectiveUserId) throw new Error('No effective user ID');
 
-      console.log('[usePatientDashboard] 🚀 Fetching batched dashboard data for user:', effectiveUserId);
+      logger.info('[usePatientDashboard] Fetching batched dashboard data for user', { effectiveUserId });
 
       const { data, error } = await supabase.functions.invoke<PatientDashboardData>(
         'get-patient-dashboard-data',
@@ -79,16 +80,16 @@ export function usePatientDashboard(effectiveUserId: string | null, effectiveRol
       );
 
       if (error) {
-        console.error('[usePatientDashboard] ❌ Error:', error);
+        logger.error('[usePatientDashboard] Error', error);
         throw error;
       }
 
       if (!data) {
-        console.error('[usePatientDashboard] ❌ No data returned');
+        logger.error('[usePatientDashboard] No data returned');
         throw new Error('No data returned from dashboard endpoint');
       }
 
-      console.log('[usePatientDashboard] ✅ Successfully fetched batched dashboard data');
+      logger.info('[usePatientDashboard] Successfully fetched batched dashboard data');
       return data;
     },
     enabled: !!effectiveUserId && effectiveRole === 'patient',

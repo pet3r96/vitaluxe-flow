@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface AddToCartParams {
   cartOwnerId: string;
@@ -16,21 +17,21 @@ export const useAddToCart = () => {
 
   return useMutation({
     mutationFn: async (params: AddToCartParams) => {
-      console.log('[useAddToCart] Adding to cart:', params);
+      logger.info('[useAddToCart] Adding to cart', { params });
 
       const { data, error } = await supabase.functions.invoke('manage-cart', {
         body: { action: 'add', ...params }
       });
 
       if (error) {
-        console.error('[useAddToCart] Error:', error);
+        logger.error('[useAddToCart] Error', error);
         throw error;
       }
 
       return data;
     },
     onSuccess: (_, variables) => {
-      console.log('[useAddToCart] Success - cart added for:', variables.cartOwnerId);
+      logger.info('[useAddToCart] Success - cart added for', { cartOwnerId: variables.cartOwnerId });
       // Realtime subscription in useCartCount will handle the update automatically
       // Only invalidate the main cart query for immediate UI feedback
       queryClient.invalidateQueries({ queryKey: ['cart'] });
