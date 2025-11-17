@@ -46,17 +46,14 @@ serve(async (req) => {
     const { email, user_agent } = requestData;
 
     // Extract IP from request headers (NOT from request body)
-    let ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || null;
+    const ipHeader = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "";
+    const clientIp = (ipHeader.split(",")[0] || "").trim();
     
-    // Sanitize IP address - convert invalid formats to null
-    if (ip && typeof ip === "string") {
-      const ipv4Regex = /^(?:\d{1,3}\.){3}\d{1,3}$/;
-      if (!ipv4Regex.test(ip)) {
-        // Invalid format - store as null
-        ip = null;
-      }
-    } else {
-      ip = null;
+    // Validate IP format (IPv4/IPv6) - reject malformed input
+    const ip = /^[0-9a-fA-F:.\s]+$/.test(clientIp) ? clientIp : null;
+    
+    if (!ip) {
+      console.warn('Invalid IP address format detected:', clientIp);
     }
 
     console.log(`Tracking failed login for email: ${email} from IP: ${ip || 'unknown'}`);
