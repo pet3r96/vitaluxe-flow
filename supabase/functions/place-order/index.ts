@@ -239,7 +239,7 @@ serve(async (req) => {
           group.shipping_cost = shippingData.shipping_cost;
         }
       } catch (error) {
-        console.error('[place-order] Shipping calculation failed:', error);
+        edgeLogger.error('Shipping calculation failed', error);
         throw new Error(`Unable to calculate shipping for ${group.shipping_speed} shipping`);
       }
     }
@@ -371,7 +371,7 @@ serve(async (req) => {
       }]);
     }
 
-    console.log(`[place-order] Creating ${ordersToCreate.length} orders with keys:`, ordersToCreate.length > 0 ? Object.keys(ordersToCreate[0]) : []);
+    edgeLogger.info('Creating orders', { orderCount: ordersToCreate.length, keys: ordersToCreate.length > 0 ? Object.keys(ordersToCreate[0]) : [] });
 
     // Batch insert all orders using admin client (bypasses RLS)
     const { data: createdOrders, error: ordersError } = await supabaseAdmin
@@ -380,11 +380,11 @@ serve(async (req) => {
       .select();
 
     if (ordersError || !createdOrders) {
-      console.error("[place-order] Failed to create orders:", ordersError);
+      edgeLogger.error('Failed to create orders', ordersError);
       throw new Error("Failed to create orders");
     }
 
-    console.log(`[place-order] Created ${createdOrders.length} orders successfully`);
+    edgeLogger.info('Created orders successfully', { orderCount: createdOrders.length });
 
     // Batch insert all order lines using admin client (bypasses RLS)
     const allOrderLines: any[] = [];
@@ -401,7 +401,7 @@ serve(async (req) => {
 
     // CRITICAL: Validate we have order lines before proceeding
     if (allOrderLines.length === 0) {
-      console.error("[place-order] No order lines generated - aborting order creation");
+      edgeLogger.error('No order lines generated - aborting order creation', new Error('No order lines'));
       
       // Rollback: Delete the orders we just created
       if (createdOrders.length > 0) {
@@ -419,7 +419,7 @@ serve(async (req) => {
       .insert(allOrderLines);
 
     if (orderLinesError) {
-      console.error("[place-order] Failed to create order lines:", orderLinesError);
+      edgeLogger.error('Failed to create order lines', orderLinesError);
       
       // Rollback: Delete the orders we just created
       if (createdOrders.length > 0) {
@@ -432,7 +432,7 @@ serve(async (req) => {
       throw new Error("Failed to create order lines");
     }
 
-    console.log(`[place-order] Created ${allOrderLines.length} order lines successfully for ${createdOrders.length} orders`);
+    edgeLogger.info('Created order lines successfully', { orderLineCount: allOrderLines.length, orderCount: createdOrders.length });
 
     // Process payments for each order
     const failedPayments: any[] = [];
@@ -488,7 +488,7 @@ serve(async (req) => {
 
             // Send one batched call per pharmacy
             for (const [pharmacyId, lines] of linesByPharmacy.entries()) {
-              console.log(`[place-order] Sending ${lines.length} order lines to pharmacy ${pharmacyId}`);
+              edgeLogger.info('Sending order lines to pharmacy', { lineCount: lines.length, pharmacyId });
               await supabaseAdmin.functions.invoke("send-order-to-pharmacy", {
                 body: {
                   order_id: order.id,
@@ -498,7 +498,7 @@ serve(async (req) => {
               });
             }
           } catch (apiError) {
-            console.error("[place-order] Failed to send order to pharmacy API:", apiError);
+            edgeLogger.error('Failed to send order to pharmacy API', apiError);
             // Non-fatal - order was already paid and created successfully
           }
         }
@@ -527,7 +527,7 @@ serve(async (req) => {
           p_code: discount_code
         });
       } catch (error) {
-        console.error("[place-order] Failed to increment discount usage:", error);
+        edgeLogger.error('Failed to increment discount usage', error);
         // Non-fatal
       }
     }
@@ -535,7 +535,7 @@ serve(async (req) => {
     // CRITICAL: Clear cart lines atomically after successful order placement
     let deletedCartLineIds: string[] = [];
     if (failedPayments.length === 0) {
-      console.log(`[place-order] Clearing cart_lines for cart_id: ${cart_id}`);
+      edgeLogger.info('Clearing cart_lines', { cartId: cart_id });
       const { data: deletedLines, error: deleteError } = await supabaseAdmin
         .from("cart_lines")
         .delete()
@@ -543,15 +543,14 @@ serve(async (req) => {
         .select('id');
 
       if (deleteError) {
-        console.error("[place-order] Failed to clear cart:", deleteError);
+        edgeLogger.error('Failed to clear cart', deleteError);
       } else {
-        deletedCartLineIds = (deletedLines || []).map((l: any) => l.id);
-        console.log(`[place-order] ✅ Successfully cleared ${deletedCartLineIds.length} cart lines`);
+        edgeLogger.info('Successfully cleared cart lines', { clearedCount: deletedCartLineIds.length });
       }
     }
 
     const executionTimeSeconds = (Date.now() - startTime) / 1000;
-    console.log(`[place-order] Completed in ${executionTimeSeconds}s - ${createdOrders.length} orders, ${failedPayments.length} payment failures`);
+    edgeLogger.info('Order placement completed', { executionTime: executionTimeSeconds, orderCount: createdOrders.length, failedPayments: failedPayments.length });
 
     return new Response(
       JSON.stringify({
@@ -568,7 +567,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("[place-order] Fatal error:", error);
+    edgeLogger.error('Fatal error in place-order', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ error: errorMessage }),

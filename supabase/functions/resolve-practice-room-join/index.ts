@@ -5,6 +5,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createAgoraTokens } from '../_shared/agoraTokenService.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,7 +23,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('[resolve-practice-room-join] Request received');
+    edgeLogger.info('Resolve practice room join request received');
 
     // Get Supabase client (use service role for impersonation checks)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('[resolve-practice-room-join] Auth error:', authError);
+      edgeLogger.error('Auth error in resolve-practice-room-join', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -53,16 +54,13 @@ Deno.serve(async (req) => {
 
     if (impersonationSession) {
       effectiveUserId = impersonationSession.impersonated_user_id;
-      console.log('[resolve-practice-room-join] Impersonation detected:', {
-        adminUserId: user.id,
-        effectiveUserId
-      });
+      edgeLogger.info('Impersonation detected in practice room join', { adminUserId: user.id, effectiveUserId });
     }
 
     // Parse request
     const { roomKey }: ResolveRoomRequest = await req.json();
 
-    console.log('[resolve-practice-room-join] Resolving room:', roomKey);
+    edgeLogger.info('Resolving practice room', { roomKey });
 
     // Get practice room
     const { data: practiceRoom, error: roomError } = await supabase
@@ -72,7 +70,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (roomError || !practiceRoom) {
-      console.error('[resolve-practice-room-join] Room not found:', roomError);
+      edgeLogger.error('Practice room not found', roomError);
       return new Response(
         JSON.stringify({ error: 'Practice room not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -96,7 +94,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!isPracticeOwner && !provider && !staff) {
-      console.error('[resolve-practice-room-join] Unauthorized');
+      edgeLogger.error('Unauthorized practice room access', new Error('Not authorized'));
       return new Response(
         JSON.stringify({ error: 'Not authorized for this practice' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -118,12 +116,12 @@ Deno.serve(async (req) => {
     let channelName = practiceRoom.channel_name;
 
     if (existingSession) {
-      console.log('[resolve-practice-room-join] Joining existing session:', existingSession.id);
+      edgeLogger.info('Joining existing practice room session', { sessionId: existingSession.id });
       sessionId = existingSession.id;
       channelName = existingSession.channel_name;
     } else {
       // Create new session if none active
-      console.log('[resolve-practice-room-join] Creating new practice room session');
+      edgeLogger.info('Creating new practice room session');
 
       const { data: newSession, error: createError } = await supabase
         .from('video_sessions')
@@ -139,12 +137,12 @@ Deno.serve(async (req) => {
         .single();
 
       if (createError) {
-        console.error('[resolve-practice-room-join] Session creation error:', createError);
+        edgeLogger.error('Session creation error', createError);
         throw createError;
       }
 
       sessionId = newSession.id;
-      console.log('[resolve-practice-room-join] New session created:', sessionId);
+      edgeLogger.info('New practice room session created', { sessionId });
     }
 
     // Generate Agora tokens using shared service
@@ -156,7 +154,7 @@ Deno.serve(async (req) => {
       3600
     );
 
-    console.log('[resolve-practice-room-join] Tokens generated successfully');
+    edgeLogger.info('Practice room tokens generated successfully');
 
     return new Response(
       JSON.stringify({
@@ -172,7 +170,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[resolve-practice-room-join] Unexpected error:', error);
+    edgeLogger.error('Unexpected error in resolve-practice-room-join', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: errorMessage }),

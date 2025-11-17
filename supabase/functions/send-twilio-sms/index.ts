@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -103,7 +104,7 @@ serve(async (req) => {
 
     // Handle idempotent duplicate (unique constraint violation on window_key)
     if (insertError?.code === '23505') {
-      console.log('[Twilio] Idempotent duplicate detected | User:', user.id, '| Window:', windowBucket);
+      edgeLogger.info('Idempotent duplicate detected', { userId: user.id, windowBucket });
       
       const { data: existingAttempt, error: fetchError } = await supabase
         .from('sms_verification_attempts')
@@ -112,7 +113,7 @@ serve(async (req) => {
         .single();
 
       if (fetchError || !existingAttempt) {
-        console.error('[Twilio] Failed to fetch existing attempt:', fetchError);
+        edgeLogger.error('Failed to fetch existing attempt', fetchError);
         throw new Error('Failed to retrieve verification attempt');
       }
 
@@ -127,7 +128,7 @@ serve(async (req) => {
         }
       });
 
-      console.log('[Twilio] Idempotent duplicate blocked | Attempt:', existingAttempt.attempt_id);
+      edgeLogger.info('Idempotent duplicate blocked', { attemptId: existingAttempt.attempt_id });
 
       return new Response(
         JSON.stringify({ 
@@ -142,14 +143,14 @@ serve(async (req) => {
     }
 
     if (insertError || !attemptData) {
-      console.error('[Twilio] Attempt insert failed:', insertError);
+      edgeLogger.error('Attempt insert failed', insertError);
       throw new Error('Failed to create verification attempt');
     }
 
     const attemptId = attemptData.attempt_id;
 
     // Send SMS via Twilio with 12-second timeout
-    console.log('[Twilio] Attempt:', attemptId, '| Sending SMS');
+    edgeLogger.info('Sending SMS', { attemptId });
     
     const twilioStartTime = Date.now();
     const controller = new AbortController();
@@ -177,11 +178,11 @@ serve(async (req) => {
       const twilioEndTime = Date.now();
       const responseTime = twilioEndTime - twilioStartTime;
 
-      console.log('[Twilio] Attempt:', attemptId, '| Response:', twilioResponse.status, '| Time:', responseTime, 'ms');
+      edgeLogger.info('SMS sent', { attemptId, status: twilioResponse.status, responseTime });
 
       if (!twilioResponse.ok) {
         const errorText = await twilioResponse.text();
-        console.error('[Twilio] Attempt:', attemptId, '| API failed:', errorText);
+        edgeLogger.error('Twilio API failed', null, { attemptId, errorText: errorText.substring(0, 100) });
         
         // For transient errors (5xx), treat as queued
         if (twilioResponse.status >= 500 && twilioResponse.status < 600) {
@@ -199,7 +200,7 @@ serve(async (req) => {
           });
 
           const totalTime = Date.now() - startTime;
-          console.log('[Twilio] Attempt:', attemptId, '| Queued (5xx) | Total:', totalTime, 'ms');
+          edgeLogger.info('SMS queued (5xx)', { attemptId, totalTime: Date.now() - startTime });
 
           return new Response(
             JSON.stringify({ 
@@ -239,7 +240,7 @@ serve(async (req) => {
       });
 
       const totalTime = Date.now() - startTime;
-      console.log('[Twilio] Attempt:', attemptId, '| Success | Total:', totalTime, 'ms');
+      edgeLogger.info('SMS sent successfully', { attemptId, totalTime: Date.now() - startTime });
 
       return new Response(
         JSON.stringify({ 

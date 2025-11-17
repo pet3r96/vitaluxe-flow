@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
     // Get gender from order line, with fallback to "U" for practice orders
     const patientGender = normalizeGender(firstLine.gender_at_birth);
 
-    console.log(`📋 Patient gender: ${firstLine.gender_at_birth} → ${patientGender}`);
+    edgeLogger.info('Patient gender mapped', { original: firstLine.gender_at_birth, mapped: patientGender });
 
     // Build BareMeds payload
     const payload = {
@@ -175,13 +175,9 @@ Deno.serve(async (req) => {
 
     const endpoint = `${apiUrl}/api/v1/rx-orders/${siteId}`;
 
-    console.log("🚀 Sending to BareMeds:", {
-      apiUrl,
-      siteId,
-      endpoint,
-      patientName: `${payload.patient.firstName} ${payload.patient.lastName}`,
-      patientGender: payload.patient.gender,
-      prescriptionCount: payload.prescription.length,
+    edgeLogger.info('Sending to BareMeds', {
+      lineCount: order.order_lines.length,
+      orderId: order.id
     });
 
     // Send to BareMeds API
@@ -198,17 +194,16 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error("❌ BareMeds API Response:", {
+      edgeLogger.error('BareMeds API Response error', null, {
         status: response.status,
         statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        body: errorData.substring(0, 500), // Log first 500 chars
+        body: errorData
       });
       throw new Error(`BareMeds API error (${response.status}): ${errorData.substring(0, 200)}`);
     }
 
     const responseData = await response.json();
-    console.log("✅ BareMeds Response:", responseData);
+    edgeLogger.info('BareMeds Response', responseData);
 
     return new Response(
       JSON.stringify({
@@ -222,7 +217,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err: any) {
-    console.error("❌ Error sending to BareMeds:", err.message);
+    edgeLogger.error('Error sending to BareMeds', err);
 
     return new Response(
       JSON.stringify({

@@ -112,7 +112,7 @@ serve(async (req) => {
         const data = await response.json();
         const orders = data.orders || [];
 
-        console.log(`Received ${orders.length} tracking updates from ${pharmacy.name}`);
+        edgeLogger.info('Received tracking updates from pharmacy', { updateCount: orders.length, pharmacyName: pharmacy.name });
 
         // Process each tracking update
         for (const update of orders) {
@@ -163,7 +163,7 @@ serve(async (req) => {
         });
 
       } catch (error) {
-        console.error(`Error polling pharmacy ${pharmacy.name}:`, error);
+        edgeLogger.error('Error polling pharmacy', error, { pharmacyName: pharmacy.name });
         results.push({
           pharmacy_id: pharmacy.id,
           pharmacy_name: pharmacy.name,
@@ -242,7 +242,7 @@ serve(async (req) => {
       }
     }
 
-    console.log("Pharmacy tracking poll complete");
+    edgeLogger.info('Pharmacy tracking poll complete');
 
     return new Response(
       JSON.stringify({ 
@@ -254,7 +254,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Error in poll-pharmacy-tracking:", error);
+    edgeLogger.error('Error in poll-pharmacy-tracking', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
