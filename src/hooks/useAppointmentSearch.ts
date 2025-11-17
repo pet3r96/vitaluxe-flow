@@ -59,10 +59,10 @@ export function useAppointmentSearch<T extends SearchableAppointment = Appointme
   const searchResults = useMemo(() => {
     if (!debouncedQuery.trim()) return [];
 
-    return filterAppointments(filteredByAdvancedFilters, debouncedQuery, {
+    return filterAppointments(filteredByAdvancedFilters as any, debouncedQuery, {
       maxResults,
       dateRange: dateFilter
-    });
+    }) as unknown as T[];
   }, [debouncedQuery, filteredByAdvancedFilters, maxResults, dateFilter]);
 
   // Check if search is active

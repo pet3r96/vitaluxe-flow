@@ -252,8 +252,8 @@ describe('Authentication Flow Integration Tests', () => {
       
       auditLog.push({
         action: 'user_created',
-        user_id: user.id,
-        timestamp: new Date().toISOString(),
+        userId: user.id,
+        timestamp: Date.now(),
       });
       
       // Assert

@@ -176,7 +176,7 @@ export default function PatientAppointments() {
             .select('id,user_id')
             .in('id', providerIds);
           providers = provs || [];
-          const userIds = Array.from(new Set(providers.map(p => p.user_id).filter(Boolean)));
+          const userIds = Array.from(new Set(providers.map(p => p.user_id as string).filter(Boolean)));
           if (userIds.length > 0) {
             const { data: profs } = await supabase
               .from('profiles')

@@ -53,10 +53,10 @@ export const PatientsDataTable = () => {
   const { data: patients, isLoading, refetch } = usePatients();
 
   const filteredPatients = useMemo(() => patients?.filter(patient => {
-    const displayName = patient.name || 
+    const displayName = (patient.name || 
       (patient.first_name && patient.last_name 
         ? `${patient.first_name} ${patient.last_name}`.trim() 
-        : patient.first_name || patient.last_name || patient.email?.split('@')[0] || 'Unknown');
+        : patient.first_name || patient.last_name || (patient.email as string)?.split('@')[0] || 'Unknown')) as string;
     return displayName.toLowerCase().includes(searchQuery.toLowerCase());
   }) || [], [patients, searchQuery]);
 
@@ -380,19 +380,19 @@ export const PatientsDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedPatients?.map((patient) => (
-                <TableRow key={patient.id}>
+              paginatedPatients?.map((patient: any) => (
+                <TableRow key={patient.id as string}>
                   <TableCell className="font-medium">
                     {patient.name || 
                       (patient.first_name && patient.last_name 
                         ? `${patient.first_name} ${patient.last_name}`.trim() 
-                        : patient.first_name || patient.last_name || patient.email?.split('@')[0] || 'Unknown')}
+                        : patient.first_name || patient.last_name || (patient.email as string)?.split('@')[0] || 'Unknown')}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{formatPatientEmail(patient.email)}</TableCell>
-                  <TableCell>{formatPhoneNumber(patient.phone)}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatPatientEmail(patient.email as string)}</TableCell>
+                  <TableCell>{formatPhoneNumber(patient.phone as string)}</TableCell>
                   <TableCell className="max-w-xs truncate">
                     {(() => {
-                      if (patient.address_formatted) return patient.address_formatted;
+                      if (patient.address_formatted) return patient.address_formatted as string;
                       
                       const street = patient.address_street || patient.address || '';
                       const city = patient.address_city || patient.city || '';
@@ -408,14 +408,14 @@ export const PatientsDataTable = () => {
                   </TableCell>
                   <TableCell>
                     <PatientPortalStatusBadge
-                      userId={patient.user_id}
-                      lastLoginAt={patient.last_login_at}
-                      status={patient.status}
+                      userId={patient.user_id as string}
+                      lastLoginAt={patient.last_login_at as string}
+                      status={patient.status as string}
                     />
                   </TableCell>
                   {isAdmin && (
                     <TableCell>
-                      {patient.practice?.name || "-"}
+                      {(patient.practice as any)?.name || "-"}
                     </TableCell>
                   )}
                   <TableCell className="text-right">
@@ -472,13 +472,13 @@ export const PatientsDataTable = () => {
                           </Button>
                           
                           <TooltipProvider>
-                            {isSubscribed && !portalStatusMap?.get(patient.id)?.has_portal_access ? (
+                            {isSubscribed && !portalStatusMap?.get(patient.id as string)?.has_portal_access ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => handleGrantPortalAccess(patient.id)}
+                                    onClick={() => handleGrantPortalAccess(patient.id as string)}
                                     disabled={invitePatientMutation.isPending}
                                   >
                                     <UserPlus className="h-4 w-4" />
