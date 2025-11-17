@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
 
         if (insertError) throw insertError;
 
-        console.log('[manage-documents] Document created with provider:', storage_provider || 's3');
+        edgeLogger.info('Document created with provider', { storageProvider: storage_provider || 's3' });
 
         return new Response(
           JSON.stringify({ success: true, document }),
@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
 
         if (awsAccessKeyId && awsSecretAccessKey && s3BucketName) {
           try {
-            console.log('[manage-documents] Attempting S3 upload...');
+            edgeLogger.info('Attempting S3 upload');
             const s3Client = new S3Client({
               region: awsRegion,
               credentials: {
@@ -204,9 +204,9 @@ Deno.serve(async (req) => {
             await s3Client.send(command);
             uploadSuccess = true;
             usedProvider = 's3';
-            console.log('[manage-documents] ✅ S3 upload successful');
+            edgeLogger.info('S3 upload successful');
           } catch (s3Error: any) {
-            console.error('[manage-documents] ⚠️ S3 upload failed:', s3Error.message);
+            edgeLogger.error('S3 upload failed', s3Error);
             errorDetails = s3Error.message;
             uploadSuccess = false;
           }
@@ -218,7 +218,7 @@ Deno.serve(async (req) => {
         // FALLBACK TO SUPABASE STORAGE IF S3 FAILED
         if (!uploadSuccess) {
           try {
-            console.log('[manage-documents] Attempting Supabase Storage fallback...');
+            edgeLogger.info('Attempting Supabase Storage fallback');
             
             const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
               .from('provider-documents')
@@ -236,9 +236,9 @@ Deno.serve(async (req) => {
 
             uploadSuccess = true;
             usedProvider = 'supabase';
-            console.log('[manage-documents] ✅ Supabase Storage fallback successful');
+            edgeLogger.info('Supabase Storage fallback successful');
           } catch (supabaseError: any) {
-            console.error('[manage-documents] ❌ Supabase Storage fallback also failed:', supabaseError.message);
+            edgeLogger.error('Supabase Storage fallback also failed', supabaseError);
             throw new Error(`Both S3 and Supabase Storage uploads failed. S3: ${errorDetails}, Supabase: ${supabaseError.message}`);
           }
         }

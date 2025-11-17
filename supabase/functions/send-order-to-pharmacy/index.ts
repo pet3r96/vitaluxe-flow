@@ -281,7 +281,7 @@ serve(async (req) => {
 
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);
-        console.error(`Attempt ${attempt + 1} failed:`, lastError);
+        edgeLogger.error('Pharmacy transmission attempt failed', error, { attempt: attempt + 1 });
 
         if (attempt < maxRetries - 1) {
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
@@ -321,7 +321,7 @@ serve(async (req) => {
         })
       });
     } catch (alertError) {
-      console.error('Error checking alerts:', alertError);
+      edgeLogger.error('Error checking alerts', alertError);
     }
 
     return new Response(
@@ -333,7 +333,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Error in send-order-to-pharmacy:", error);
+    edgeLogger.error('Error in send-order-to-pharmacy', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

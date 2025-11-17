@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error('[manage-entity-status] Error:', error);
+    edgeLogger.error('Error in manage-entity-status', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -109,7 +109,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[get-orders-page] 🔍 Request:`, { 
+    edgeLogger.info('Request details', { 
       page, 
       pageSize: safePageSize, 
       role: roleNorm, 
@@ -149,11 +149,11 @@ serve(async (req) => {
     }
 
     // Role-based filtering
-    console.log(`[get-orders-page] 🎯 Filtering by role: ${roleNorm}`);
+    edgeLogger.info('Filtering by role', { role: roleNorm });
     
     if (roleNorm === 'doctor') {
       // DOCTOR = practice owner
-      console.log('[get-orders-page] Doctor (practice owner) filter. practiceId:', practiceId, 'userId:', userId);
+      edgeLogger.info('Doctor (practice owner) filter', { practiceId, userId });
       
       const doctorFilterId = practiceId || userId;
       
@@ -167,7 +167,7 @@ serve(async (req) => {
         .limit(2000);
       
       if (orderIdsError) {
-        console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
+        edgeLogger.error('Error fetching order IDs', orderIdsError);
         return new Response(
           JSON.stringify({ error: `Failed to fetch order IDs: ${parseErr(orderIdsError)}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -205,7 +205,7 @@ serve(async (req) => {
         .maybeSingle();
       
       if (providerError) {
-        console.error('[get-orders-page] ❌ Error fetching provider:', parseErr(providerError));
+        edgeLogger.error('Error fetching provider', providerError);
         return new Response(
           JSON.stringify({ error: `Failed to fetch provider record: ${parseErr(providerError)}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -213,7 +213,7 @@ serve(async (req) => {
       }
       
       if (!providerRecord) {
-        console.warn('[get-orders-page] ⚠️ No active provider found for user');
+        edgeLogger.warn('No active provider found for user');
         return new Response(
           JSON.stringify({
             orders: [],

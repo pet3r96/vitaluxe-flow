@@ -143,7 +143,7 @@ serve(async (req) => {
 
           if (!lastAttempt || hoursSinceLastAttempt! > 24) {
             // First attempt or 24 hours since last attempt - schedule retry
-            console.log(`First payment attempt failed for ${subscription.id}, will retry in 24 hours`);
+            edgeLogger.info('First payment attempt failed, will retry in 24 hours', { subscriptionId: subscription.id });
             
             await supabaseClient
               .from("practice_subscriptions")
@@ -174,7 +174,7 @@ serve(async (req) => {
             });
           } else {
             // Second attempt failed - suspend with grace period
-            console.log(`Second payment attempt failed for ${subscription.id}, suspending`);
+            edgeLogger.info('Second payment attempt failed, suspending', { subscriptionId: subscription.id });
             
             const gracePeriodEnd = new Date();
             gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 3);
@@ -213,7 +213,7 @@ serve(async (req) => {
           }
         }
       } catch (error: any) {
-        console.error(`Renewal error for ${subscription.id}:`, error);
+        edgeLogger.error('Renewal error for subscription', error, { subscriptionId: subscription.id });
         results.push({ subscriptionId: subscription.id, status: "error", error: error.message });
       }
     }
@@ -223,7 +223,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("Subscription renewal error:", error);
+    edgeLogger.error('Subscription renewal error', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
