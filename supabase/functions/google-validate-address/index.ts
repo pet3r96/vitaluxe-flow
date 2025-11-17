@@ -203,7 +203,7 @@ serve(async (req) => {
       );
     }
   } catch (error) {
-    console.error('❌ Error in google-validate-address:', error);
+    edgeLogger.error('❌ Error in google-validate-address', error);
     return new Response(
       JSON.stringify({
         is_valid: false,

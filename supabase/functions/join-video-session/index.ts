@@ -237,24 +237,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('✅ [join-video-session] Token generated successfully');
+    edgeLogger.info('✅ [join-video-session] Token generated successfully');
 
     // Enhanced diagnostic logging for comparison with frontend
-    console.log('=== TOKEN GENERATION PARAMETERS (BACKEND) ===');
-    console.log('Backend Parameters (used to generate token):');
-    console.log('  [BE] appId:', tokenData.appId);
-    console.log('  [BE] channel:', tokenData.channelName);
-    console.log('  [BE] uid:', tokenData.uid);
-    console.log('  [BE] rtcToken.len:', tokenData.token.length);
-    console.log('  [BE] rtcToken.prefix:', tokenData.token.slice(0, 15));
-    console.log('  [BE] rtcToken starts with 007:', tokenData.token.startsWith('007'));
-    console.log('  [BE] rtmToken.len:', tokenData.rtmToken.length);
-    console.log('  [BE] rtmToken.prefix:', tokenData.rtmToken.slice(0, 15));
-    console.log('  [BE] rtmToken starts with 007:', tokenData.rtmToken.startsWith('007'));
-    console.log('  [BE] rtmUid:', tokenData.rtmUid);
-    console.log('  [BE] Cert8:', agoraAppCertificate?.slice(0, 8) || 'not-set');
-    console.log('  NOTE: Frontend should log IDENTICAL values when client.join() is called');
-    console.log('=============================================');
+    edgeLogger.info('=== TOKEN GENERATION PARAMETERS (BACKEND) ===');
+    edgeLogger.info('Backend Parameters (used to generate token)', {
+      appId: tokenData.appId,
+      channel: tokenData.channelName,
+      uid: tokenData.uid,
+      rtcTokenLen: tokenData.token.length,
+      rtcTokenPrefix: tokenData.token.slice(0, 15),
+      rtcTokenStartsWith007: tokenData.token.startsWith('007'),
+      rtmTokenLen: tokenData.rtmToken.length,
+      rtmTokenPrefix: tokenData.rtmToken.slice(0, 15),
+      rtmTokenStartsWith007: tokenData.rtmToken.startsWith('007'),
+      rtmUid: tokenData.rtmUid,
+      cert8: agoraAppCertificate?.slice(0, 8) || 'not-set',
+      note: 'Frontend should log IDENTICAL values when client.join() is called'
+    });
+    edgeLogger.info('=============================================');
 
     return new Response(JSON.stringify({
       success: true,

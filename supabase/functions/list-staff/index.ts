@@ -167,9 +167,9 @@ Deno.serve(async (req) => {
       practice: practiceProfilesMap.get(s.practice_id) || null,
     }));
 
-    console.log('[list-staff] Found', staff.length, 'staff members for practice', practiceId);
+    edgeLogger.info('[list-staff] Found staff members', { count: staff.length, practiceId });
     if (staff.length > 0) {
-      console.log('[list-staff] First staff profile:', staff[0].profiles?.name || staff[0].profiles?.email || 'no-name');
+      edgeLogger.info('[list-staff] First staff profile', { name: staff[0].profiles?.name || staff[0].profiles?.email || 'no-name' });
     }
 
     return new Response(JSON.stringify({ staff }), {

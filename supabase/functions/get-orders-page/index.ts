@@ -411,7 +411,7 @@ serve(async (req) => {
       const practiceIds = linkedPractices?.map(p => p.id) || [];
       
       if (practiceIds.length === 0) {
-        console.warn('[get-orders-page] No practices linked to downline rep:', repData.id);
+        edgeLogger.warn('[get-orders-page] No practices linked to downline rep', { repId: repData.id });
         return new Response(
           JSON.stringify({
             orders: [],

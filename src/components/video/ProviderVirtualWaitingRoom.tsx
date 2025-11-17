@@ -425,7 +425,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
 
   const handleGenerateGuestLink = async (sessionId: string) => {
     setGeneratingLink(sessionId);
-    console.time(`[ProviderVirtualWaitingRoom] generate-guest-link-${sessionId}`);
+    time(`ProviderVirtualWaitingRoom generate-guest-link-${sessionId}`);
 
     try {
       let realSessionId = sessionId;
@@ -457,7 +457,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       });
 
       const { data, error } = (await Promise.race([invokePromise, timeoutPromise])) as { data?: any; error?: any };
-      console.timeEnd(`[ProviderVirtualWaitingRoom] generate-guest-link-${sessionId}`);
+      timeEnd(`ProviderVirtualWaitingRoom generate-guest-link-${sessionId}`);
 
       if (error) throw error;
 
@@ -498,7 +498,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
   const handleCancelAppointment = async (appointmentId: string) => {
     setCancellingSession(appointmentId);
     try {
-      console.log("🔥 [UI] Cancelling appointment:", appointmentId);
+      logger.info('🔥 [UI] Cancelling appointment', { appointmentId });
 
       const { error } = await supabase.functions.invoke("cancel-appointment", {
         body: { appointmentId },
@@ -510,7 +510,8 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       queryClient.setQueryData<any[]>(["provider-video-sessions", practiceId], (old) => {
         if (!old) return old;
         const next = old.filter((s) => s.appointment_id !== appointmentId);
-        console.log("🧹 [UI] Optimistically removed session(s) for appointment", appointmentId, {
+        logger.info('🧹 [UI] Optimistically removed session(s) for appointment', {
+          appointmentId,
           before: old.length,
           after: next.length,
         });
@@ -533,9 +534,9 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       };
 
       const confirmed = await waitForVideoSessionEnd();
-      console.log("⏱️ [UI] Backend confirmation that session ended:", confirmed);
+      logger.info('⏱️ [UI] Backend confirmation that session ended', { confirmed });
 
-      console.log("✅ [UI] Appointment cancelled, invalidating and refetching queries");
+      logger.info('✅ [UI] Appointment cancelled, invalidating and refetching queries');
 
       // Force immediate refetch of the sessions list
       await queryClient.invalidateQueries({
@@ -549,7 +550,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         description: "The video appointment has been successfully cancelled",
       });
 
-      console.log("✅ [UI] Queries refreshed, appointment should be removed from list");
+      logger.info('✅ [UI] Queries refreshed, appointment should be removed from list');
     } catch (error: any) {
       logger.error('Error cancelling appointment', error);
       toast({
@@ -567,14 +568,14 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
   const handleCompleteAppointment = async (appointmentId: string) => {
     setCompletingAppointment(appointmentId);
     try {
-      console.log("🎉 [UI] Completing appointment:", appointmentId);
+      logger.info('🎉 [UI] Completing appointment', { appointmentId });
 
       const { error } = await supabase.functions.invoke("complete-video-appointment", {
         body: { appointmentId },
       });
 
       if (error) {
-        console.error("❌ [UI] Complete appointment error:", error);
+        logger.error('❌ [UI] Complete appointment error', error);
         let errorDescription = "Failed to complete appointment";
 
         // Parse error response for better messaging
@@ -599,7 +600,8 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       queryClient.setQueryData<any[]>(["provider-video-sessions", practiceId], (old) => {
         if (!old) return old;
         const next = old.filter((s) => s.appointment_id !== appointmentId);
-        console.log("🧹 [UI] Optimistically removed completed appointment", appointmentId, {
+        logger.info('🧹 [UI] Optimistically removed completed appointment', {
+          appointmentId,
           before: old.length,
           after: next.length,
         });
