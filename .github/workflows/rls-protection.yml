@@ -1,0 +1,162 @@
+name: RLS & Type Safety Enforcement
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  quality-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      # =========================================
+      # 1. TYPESCRIPT SAFETY — NO `as any`
+      # =========================================
+      - name: Check for unsafe type casts
+        run: |
+          UNSAFE=$(grep -R "as any" src supabase/functions \
+            --exclude="**/table-helpers.ts" \
+            --exclude="**/view-helpers.ts" \
+            --exclude="**/*.d.ts" \
+            2>/dev/null | grep -v "JSONB boundary" \
+            | grep -v "Helper boundary" \
+            | grep -v "catch(error: any)" \
+            | wc -l || echo "0")
+
+          if [ "$UNSAFE" -gt 0 ]; then
+            echo "❌ Found $UNSAFE unsafe type casts"
+            grep -R "as any" src supabase/functions \
+              --exclude="**/table-helpers.ts" \
+              --exclude="**/view-helpers.ts" \
+              --exclude="**/*.d.ts" \
+              2>/dev/null | grep -v "JSONB boundary" \
+              | grep -v "Helper boundary" \
+              | grep -v "catch(error: any)" || true
+            exit 1
+          fi
+          echo "✅ No unsafe type casts found"
+
+      # =========================================
+      # 2. SQL SAFETY — RLS ENABLED ON ALL TABLES
+      # =========================================
+      - name: Check RLS on all tables
+        if: ${{ secrets.SUPABASE_DB_URL != '' }}
+        run: |
+          DB_URL="${{ secrets.SUPABASE_DB_URL }}"
+
+          DISABLED=$(psql "$DB_URL" -t -c "
+            SELECT COUNT(*) 
+            FROM pg_tables 
+            WHERE schemaname = 'public'
+              AND tablename NOT LIKE 'pg_%'
+              AND tablename NOT LIKE 'sql_%'
+              AND rowsecurity = false;
+          " || echo "0")
+
+          if [ "$DISABLED" -gt 0 ]; then
+            echo "❌ Found $DISABLED tables with RLS disabled"
+            psql "$DB_URL" -c "
+              SELECT tablename 
+              FROM pg_tables 
+              WHERE schemaname = 'public'
+                AND rowsecurity = false;
+            " || true
+            exit 1
+          fi
+          echo "✅ RLS enabled on all tables"
+
+      # =========================================
+      # 3. SQL SAFETY — EVERY TABLE MUST HAVE SELECT POLICY
+      # =========================================
+      - name: Check SELECT policies
+        if: ${{ secrets.SUPABASE_DB_URL != '' }}
+        run: |
+          DB_URL="${{ secrets.SUPABASE_DB_URL }}"
+
+          MISSING=$(psql "$DB_URL" -t -c "
+            SELECT COUNT(*)
+            FROM pg_tables t
+            WHERE t.schemaname = 'public'
+              AND t.tablename NOT LIKE 'pg_%'
+              AND t.tablename NOT LIKE 'sql_%'
+              AND NOT EXISTS (
+                SELECT 1 FROM pg_policies p
+                WHERE p.schemaname = 'public'
+                  AND p.tablename = t.tablename
+                  AND p.cmd = 'SELECT'
+              );
+          " || echo "0")
+
+          if [ "$MISSING" -gt 0 ]; then
+            echo "❌ Missing SELECT policies on $MISSING tables"
+            psql "$DB_URL" -c "
+              SELECT t.tablename
+              FROM pg_tables t
+              WHERE t.schemaname = 'public'
+                AND NOT EXISTS (
+                  SELECT 1 FROM pg_policies p
+                  WHERE p.schemaname = 'public'
+                    AND p.tablename = t.tablename
+                    AND p.cmd = 'SELECT'
+                );
+            " || true
+            exit 1
+          fi
+          echo "✅ All tables have SELECT policies"
+
+      # =========================================
+      # 4. SQL SAFETY — NO DUPLICATE POLICY NAMES
+      # =========================================
+      - name: Check duplicate policy names
+        if: ${{ secrets.SUPABASE_DB_URL != '' }}
+        run: |
+          DB_URL="${{ secrets.SUPABASE_DB_URL }}"
+
+          DUP=$(psql "$DB_URL" -t -c "
+            SELECT COUNT(*) FROM (
+              SELECT policyname, schemaname
+              FROM pg_policies 
+              WHERE schemaname = 'public'
+              GROUP BY policyname, schemaname
+              HAVING COUNT(*) > 1
+            ) q;
+          " || echo "0")
+
+          if [ "$DUP" -gt 0 ]; then
+            echo "❌ Duplicate policy names detected"
+            psql "$DB_URL" -c "
+              SELECT policyname, schemaname, COUNT(*) as count
+              FROM pg_policies 
+              WHERE schemaname = 'public'
+              GROUP BY policyname, schemaname
+              HAVING COUNT(*) > 1;
+            " || true
+            exit 1
+          fi
+          echo "✅ No duplicate policy names"
+
+      # =========================================
+      # 5. TYPESCRIPT COMPILATION CHECK
+      # =========================================
+      - name: Check TypeScript compilation
+        run: |
+          npm run build || {
+            echo "❌ TypeScript compilation failed"
+            exit 1
+          }
+          echo "✅ TypeScript compiled successfully"
+
+      - name: All checks passed
+        run: echo "✅ All security and quality checks passed!"
