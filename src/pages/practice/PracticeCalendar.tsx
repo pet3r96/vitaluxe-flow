@@ -166,7 +166,7 @@ export default function PracticeCalendar() {
         }
       } else {
         // Admin/doctor/staff: select all personnel (providers + staff)
-        console.log(`🔧 Auto-selecting all ${providers.length} personnel (providers + staff) for ${effectiveRole}`);
+        logger.info(`Auto-selecting all personnel`, { count: providers.length, role: effectiveRole });
         setSelectedProviders(providers.map((p: any) => p.id));
       }
     }

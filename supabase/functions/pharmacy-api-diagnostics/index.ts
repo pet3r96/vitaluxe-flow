@@ -180,7 +180,7 @@ serve(async (req) => {
     }
 
     // All diagnostics passed
-    console.log(`[Diagnostics] All checks passed for pharmacy ${pharmacy_id}`);
+    edgeLogger.info('Diagnostics all checks passed', { pharmacyId: pharmacy_id });
     return new Response(
       JSON.stringify({ 
         success: true,
@@ -191,7 +191,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("[Diagnostics] Error:", error);
+    edgeLogger.error("Diagnostics error", error);
     return new Response(
       JSON.stringify({ 
         success: false,

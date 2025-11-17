@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from './logger.ts';
 
 /**
  * Centralized Error Handler for Edge Functions
@@ -73,8 +74,7 @@ export async function logError(
     });
   } catch (logError) {
     // Fallback logging if RPC fails - keep console for critical errors
-    console.error('Failed to log error to audit_logs:', logError);
-    console.error('Original error:', error);
+    edgeLogger.error('Failed to log error to audit_logs', logError, { originalError: error });
   }
   
   return errorId;

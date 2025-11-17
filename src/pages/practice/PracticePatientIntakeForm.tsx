@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/AuthContext";
 import PatientIntakeForm from "@/pages/patient/PatientIntakeForm";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,7 +42,7 @@ export default function PracticePatientIntakeForm() {
     if (!isLoading && patient) {
       // Check if user's practice matches patient's practice
       if (effectivePracticeId !== patient.practice_id) {
-        console.error('[PracticeIntakeForm] Access denied: practice mismatch');
+        logger.error('PracticeIntakeForm access denied - practice mismatch');
         navigate('/patients', { replace: true });
         return;
       }

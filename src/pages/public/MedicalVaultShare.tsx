@@ -38,7 +38,7 @@ export default function MedicalVaultShare() {
 
       // Handle edge function errors (410, 404, etc.)
       if (functionError) {
-        console.error('[MedicalVaultShare] Edge function error:', functionError);
+        logger.error('MedicalVaultShare edge function error', functionError);
         
         // Try multiple ways to extract error type from response
         let errorType: ErrorType = 'internal_error';
@@ -63,7 +63,7 @@ export default function MedicalVaultShare() {
           errorType = (functionError as any).error as ErrorType;
         }
         
-        console.log('[MedicalVaultShare] Extracted error type:', errorType);
+        logger.info('MedicalVaultShare extracted error type', { errorType });
         setError(errorType);
         setLoading(false);
         return;
@@ -71,7 +71,7 @@ export default function MedicalVaultShare() {
 
       // Handle unsuccessful validation responses
       if (!data?.success) {
-        console.log('[MedicalVaultShare] Data validation failed:', data);
+        logger.warn('MedicalVaultShare data validation failed', { data });
         const errorType = data?.error || 'internal_error';
         setError(errorType as ErrorType);
         setLoading(false);
@@ -79,7 +79,7 @@ export default function MedicalVaultShare() {
       }
 
       // Generate PDF from the returned data
-      console.log('[MedicalVaultShare] Generating PDF from data...');
+      logger.info('MedicalVaultShare generating PDF from data');
       const pdfBlob = await generateMedicalVaultPDF(
         data.patient,
         data.medications,
@@ -92,7 +92,7 @@ export default function MedicalVaultShare() {
         data.emergencyContacts
       );
 
-      console.log('[MedicalVaultShare] PDF generated successfully');
+      logger.info('MedicalVaultShare PDF generated successfully');
       const url = URL.createObjectURL(pdfBlob);
       
       // Force immediate download
@@ -107,7 +107,7 @@ export default function MedicalVaultShare() {
       setLoading(false);
 
     } catch (err) {
-      console.error('[MedicalVaultShare] Error loading shared medical vault:', err);
+      logger.error('MedicalVaultShare error loading shared medical vault', err);
       setError('internal_error');
       setLoading(false);
     }

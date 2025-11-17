@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
             uploadSuccess = false;
           }
         } else {
-          console.log('[manage-documents] ⚠️ S3 credentials not configured, skipping S3');
+          edgeLogger.info('S3 credentials not configured, skipping S3');
           errorDetails = 'S3 credentials not configured';
         }
 
@@ -319,7 +319,7 @@ Deno.serve(async (req) => {
         // FALLBACK TO SUPABASE STORAGE IF PRIMARY FAILED
         if (!signedUrl) {
           try {
-            console.log('[manage-documents] Generating Supabase Storage signed URL...');
+            edgeLogger.info('Generating Supabase Storage signed URL');
             const { data: urlData, error: urlError } = await supabaseAdmin.storage
               .from('provider-documents')
               .createSignedUrl(storagePath, expiresIn);
@@ -328,9 +328,9 @@ Deno.serve(async (req) => {
 
             signedUrl = urlData.signedUrl;
             usedProvider = 'supabase';
-            console.log('[manage-documents] ✅ Supabase Storage signed URL generated');
+            edgeLogger.info('Supabase Storage signed URL generated');
           } catch (supabaseError: any) {
-            console.error('[manage-documents] ❌ Supabase Storage signed URL generation also failed:', supabaseError.message);
+            edgeLogger.error('Supabase Storage signed URL generation also failed', supabaseError);
             throw new Error('Both S3 and Supabase Storage signed URL generation failed');
           }
         }
@@ -354,7 +354,7 @@ Deno.serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error('[manage-documents] Error:', error);
+    edgeLogger.error('manage-documents error', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -42,7 +42,7 @@ serve(async (req) => {
       .single();
 
     if (pharmacyError) {
-      console.error('Error fetching pharmacy:', pharmacyError);
+      edgeLogger.error('Error fetching pharmacy', pharmacyError);
       throw new Error('Pharmacy not found');
     }
 
@@ -61,7 +61,7 @@ serve(async (req) => {
       .single();
 
     if (orderError) {
-      console.error('Error fetching order:', orderError);
+      edgeLogger.error('Error fetching order', orderError);
       throw orderError;
     }
 
@@ -73,7 +73,7 @@ serve(async (req) => {
       .eq('assigned_pharmacy_id', pharmacy.id);
 
     if (assignedError || !assignedLines || assignedLines.length === 0) {
-      console.error('Pharmacy not assigned to this order');
+      edgeLogger.error('Pharmacy not assigned to this order');
       throw new Error('You are not authorized to decline this order');
     }
 
@@ -94,7 +94,7 @@ serve(async (req) => {
       .eq('assigned_pharmacy_id', pharmacy.id);
 
     if (updateError) {
-      console.error('Error updating order lines:', updateError);
+      edgeLogger.error('Error updating order lines', updateError);
       throw updateError;
     }
 
@@ -111,12 +111,12 @@ serve(async (req) => {
       });
 
     if (threadError) {
-      console.error('Error creating message thread:', threadError);
+      edgeLogger.error('Error creating message thread', threadError);
       // Don't throw - this is not critical
     }
 
     // Trigger automatic refund
-    console.log('Initiating automatic refund for order:', order_id);
+    edgeLogger.info('Initiating automatic refund for order', { orderId: order_id });
     
     const { data: refundData, error: refundError } = await supabase.functions.invoke(
       'authorizenet-refund-transaction',
@@ -131,7 +131,7 @@ serve(async (req) => {
     );
 
     if (refundError) {
-      console.error('Error processing refund:', refundError);
+      edgeLogger.error('Error processing refund', refundError);
       // Log but don't fail - we want to track this
       await supabase.from('error_logs').insert({
         error_message: `Refund failed for declined order ${order_id}: ${refundError.message}`,
@@ -140,7 +140,7 @@ serve(async (req) => {
         severity: 'error',
       });
     } else {
-      console.log('Refund processed successfully:', refundData);
+      edgeLogger.info('Refund processed successfully', refundData);
     }
 
     // Send notification to practice
@@ -162,7 +162,7 @@ serve(async (req) => {
       });
 
       if (notifError) {
-        console.error('Error creating notification:', notifError);
+        edgeLogger.error('Error creating notification', notifError);
         // Don't throw - this is not critical
       }
     }
@@ -179,7 +179,7 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error('Error in pharmacy-decline-order:', error);
+    edgeLogger.error('Error in pharmacy-decline-order', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
