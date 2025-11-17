@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { logger } from "@/lib/logger";
 
 interface FollowUpData {
   id: string;
@@ -51,8 +52,6 @@ interface FollowUpManagerProps {
 }
 
 export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps) {
-  console.log("[FollowUpManager] Mounted with patientId:", patientId, "patientName:", patientName);
-  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFollowUp, setEditingFollowUp] = useState<FollowUpData | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -62,8 +61,6 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
   const { data: followUps, isLoading, refetch } = useQuery<FollowUpData[]>({
     queryKey: ["patient-follow-ups", patientId, statusFilter],
     queryFn: async () => {
-      console.log("[FollowUpManager] Fetching follow-ups for patient:", patientId, "with status filter:", statusFilter);
-      
       let query = supabase
         .from("patient_follow_ups")
         .select("*")
@@ -76,10 +73,8 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
 
       const { data, error } = await query;
       
-      console.log("[FollowUpManager] Query result:", { data, error, count: data?.length });
-      
       if (error) {
-        console.error("[FollowUpManager] Query error:", error);
+        logger.error("Follow-ups query error", error, { patientId, statusFilter });
         throw error;
       }
 
@@ -113,7 +108,6 @@ export function FollowUpManager({ patientId, patientName }: FollowUpManagerProps
         })
       );
 
-      console.log("[FollowUpManager] Enriched data:", enrichedData);
       return enrichedData;
     },
   });

@@ -98,7 +98,7 @@ export const PatientDialog = ({
             fullPatient = fetchedPatient;
           }
         } catch (error) {
-          console.error('[PatientDialog] Failed to fetch full patient data:', error);
+          logger.error("Failed to fetch full patient data", error, { patientId: patient.id });
           toast.error('Failed to load complete patient information');
           onOpenChange(false);
           return;
@@ -181,7 +181,7 @@ export const PatientDialog = ({
           });
         }
       } catch (error) {
-        console.error('[PatientDialog] Failed to decrypt patient PHI:', error);
+        logger.error("Failed to decrypt patient PHI", error, { patientId: fullPatient.id });
         toast.error('Failed to load patient information');
         // Fallback to empty on error
         setFormData({

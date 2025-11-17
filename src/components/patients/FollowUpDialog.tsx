@@ -119,16 +119,10 @@ export function FollowUpDialog({
         _patient_account_id: patientId
       });
 
-      console.log('[FollowUpDialog] Practice membership check:', {
-        userId: user.id,
-        userEmail: user.email,
-        patientId,
-        belongsToPractice: practiceCheck,
-        rpcError: rpcError?.message,
-      });
-
       if (rpcError) {
-        console.error('[FollowUpDialog] RPC check failed:', rpcError);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error("Practice membership RPC check failed", rpcError, { patientId });
+        });
         throw new Error(`Practice access check failed: ${rpcError.message}`);
       }
 
@@ -151,16 +145,6 @@ export function FollowUpDialog({
         status: "pending",
       };
 
-      console.log('[FollowUpDialog] Attempting follow-up operation:', {
-        operation: followUp ? 'UPDATE' : 'INSERT',
-        patientId,
-        patientName,
-        userId: user.id,
-        userEmail: user.email,
-        payload,
-        followUpId: followUp?.id,
-      });
-
       if (followUp) {
         const { error, data: result } = await supabase
           .from("patient_follow_ups")
@@ -168,18 +152,11 @@ export function FollowUpDialog({
           .eq("id", followUp.id);
         
         if (error) {
-          console.error('[FollowUpDialog] UPDATE failed - RLS policy blocked:', {
-            error: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-            followUpId: followUp.id,
-            patientId,
+          import('@/lib/logger').then(({ logger }) => {
+            logger.error("Follow-up UPDATE failed", error, { followUpId: followUp.id, patientId });
           });
           throw error;
         }
-        
-        console.log('[FollowUpDialog] UPDATE success:', { followUpId: followUp.id });
       } else {
         const { error, data: result } = await supabase
           .from("patient_follow_ups")
@@ -187,21 +164,11 @@ export function FollowUpDialog({
           .select();
         
         if (error) {
-          console.error('[FollowUpDialog] INSERT failed - RLS policy blocked:', {
-            error: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-            patientId,
-            userId: user.id,
+          import('@/lib/logger').then(({ logger }) => {
+            logger.error("Follow-up INSERT failed", error, { patientId });
           });
           throw error;
         }
-        
-        console.log('[FollowUpDialog] INSERT success:', { 
-          patientId,
-          resultCount: result?.length || 0,
-        });
       }
     },
     onSuccess: () => {
@@ -212,7 +179,9 @@ export function FollowUpDialog({
       reset();
     },
     onError: (error: any) => {
-      console.error('[FollowUpDialog] Mutation error:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Follow-up mutation error", error, { patientId });
+      });
       toast.error(error.message || "Failed to save follow-up");
     },
   });
