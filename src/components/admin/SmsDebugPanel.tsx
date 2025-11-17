@@ -87,9 +87,9 @@ export function SmsDebugPanel() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {smsCodesData?.map((code: SmsVerificationCodeWithProfile) => {
+                {(smsCodesData as any[] || []).map((code) => {
                   const isExpired = new Date(code.expires_at) < new Date();
-                  const profile = code.profiles;
+                  const profile = code.profiles as any;
                   
                   return (
                     <TableRow key={code.id}>

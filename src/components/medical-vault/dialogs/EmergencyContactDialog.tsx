@@ -100,17 +100,15 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
         }
         console.log('[EmergencyContactDialog] UPDATE success');
       } else {
-        const insertData: Partial<TypedVaultRecord> = {
-          record_type: "emergency_contact",
-          record_data: recordData,
-          patient_account_id: patientAccountId,
-          created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
-        };
-        
         const { error } = await supabase
           .from("patient_medical_vault")
-          .insert(insertData);
+          .insert({
+            record_type: "emergency_contact",
+            record_data: recordData,
+            patient_account_id: patientAccountId,
+            created_by_user_id: authUser.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         
         if (error) {
           console.error('[EmergencyContactDialog] INSERT failed:', {

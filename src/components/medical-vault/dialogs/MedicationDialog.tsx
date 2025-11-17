@@ -168,18 +168,16 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         }
         console.log('[MedicationDialog] UPDATE success');
       } else {
-        const insertData: Partial<TypedVaultRecord> = {
-          record_type: "medication",
-          record_data: recordData,
-          patient_account_id: patientAccountId,
-          is_active: true,
-          created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
-        };
-        
         const { error } = await supabase
           .from("patient_medical_vault")
-          .insert(insertData);
+          .insert({
+            record_type: "medication",
+            record_data: recordData,
+            patient_account_id: patientAccountId,
+            is_active: true,
+            created_by_user_id: authUser.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         
         if (error) {
           console.error('[MedicationDialog] INSERT failed:', {

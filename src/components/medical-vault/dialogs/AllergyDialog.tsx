@@ -156,17 +156,16 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           .eq("id", allergy.id);
         if (error) throw error;
       } else {
-        const insertData: Partial<TypedVaultRecord> = {
-          record_type: "allergy",
-          record_data: recordData,
-          patient_account_id: patientAccountId,
-          is_active: true,
-          created_by_user_id: user?.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
-        };
         const { error } = await supabase
           .from("patient_medical_vault")
-          .insert(insertData);
+          .insert({
+            record_type: "allergy",
+            record_data: recordData,
+            patient_account_id: patientAccountId,
+            is_active: true,
+            created_by_user_id: user?.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          } as any);
         if (error) throw error;
       }
     },
