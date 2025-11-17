@@ -64,7 +64,7 @@ export function CalendarSidebar({
   const [roomsExpanded, setRoomsExpanded] = useState(false);
   const [statusesExpanded, setStatusesExpanded] = useState(false);
 
-  // Search functionality
+  // Search functionality - CalendarAppointment is compatible with search requirements
   const {
     searchQuery,
     setSearchQuery,
@@ -72,7 +72,7 @@ export function CalendarSidebar({
     isSearching,
     handleSearchSubmit
   } = useAppointmentSearch({
-    appointments: appointments as any[], // Type compatibility: CalendarAppointment extends base fields
+    appointments,
     maxResults: 20,
     debounceMs: 300
   });

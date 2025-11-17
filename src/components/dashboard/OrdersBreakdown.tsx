@@ -12,7 +12,7 @@ interface OrdersBreakdownProps {
 export function OrdersBreakdown({ data: externalData }: OrdersBreakdownProps) {
   const { effectiveRole, effectiveUserId, effectivePracticeId } = useAuth();
 
-  // Fetch orders data using optimized RPC function
+  // Fetch orders data from order_lines table
   const { data: ordersData } = useQuery({
     queryKey: ["orders-breakdown", effectiveUserId, effectiveRole, effectivePracticeId],
     staleTime: 5 * 60 * 1000, // 5 minutes cache
@@ -25,42 +25,36 @@ export function OrdersBreakdown({ data: externalData }: OrdersBreakdownProps) {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 90);
 
-      // Use optimized RPC function for server-side aggregation
-      const { data: statusCounts, error } = await (supabase.rpc as any)(
-        'get_orders_by_status',
-        {
-          p_user_id: effectiveUserId,
-          p_role: effectiveRole,
-          p_practice_id: effectivePracticeId || null,
-          p_start_date: startDate.toISOString(),
-          p_end_date: endDate.toISOString()
-        }
-      );
+      // Query order_lines for status counts
+      const { data: orderLines, error } = await supabase
+        .from('order_lines')
+        .select('status')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString());
 
       if (error) {
         console.error('Error fetching orders breakdown:', error);
         return { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
       }
 
-      // Convert RPC result to counts object
+      // Aggregate status counts
       const counts = { pending: 0, on_hold: 0, processing: 0, shipped: 0, completed: 0, declined: 0 };
-      (statusCounts || []).forEach((row: any) => {
-        const status = String(row.status).toLowerCase();
-        const count = Number(row.count) || 0;
+      (orderLines || []).forEach((line) => {
+        const status = String(line.status).toLowerCase();
         
         // Map status to our display categories
         if (status === 'new' || status === 'pending') {
-          counts.pending += count;
+          counts.pending += 1;
         } else if (status === 'on_hold') {
-          counts.on_hold += count;
+          counts.on_hold += 1;
         } else if (status === 'processing' || status === 'approved') {
-          counts.processing += count;
+          counts.processing += 1;
         } else if (status === 'shipped' || status === 'in_transit') {
-          counts.shipped += count;
+          counts.shipped += 1;
         } else if (status === 'delivered' || status === 'completed') {
-          counts.completed += count;
+          counts.completed += 1;
         } else if (status === 'declined' || status === 'denied') {
-          counts.declined += count;
+          counts.declined += 1;
         }
       });
 

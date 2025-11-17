@@ -3,17 +3,30 @@ import { useDebounce } from './use-debounce';
 import { filterAppointments, saveRecentSearch } from '@/lib/appointmentSearch';
 import type { Appointment } from '@/types/domain/hooks';
 
-export interface UseAppointmentSearchOptions {
-  appointments: Appointment[];
+// Base appointment interface with required fields for search
+interface SearchableAppointment {
+  id: string;
+  start_time: string;
+  status: string;
+  provider_id: string;
+  patient_accounts?: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+  };
+}
+
+export interface UseAppointmentSearchOptions<T extends SearchableAppointment = Appointment> {
+  appointments: T[];
   maxResults?: number;
   debounceMs?: number;
 }
 
-export function useAppointmentSearch({
+export function useAppointmentSearch<T extends SearchableAppointment = Appointment>({
   appointments,
   maxResults = 10,
   debounceMs = 300
-}: UseAppointmentSearchOptions) {
+}: UseAppointmentSearchOptions<T>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<{ start: Date; end: Date } | undefined>();
   const [providerFilter, setProviderFilter] = useState<string[]>([]);

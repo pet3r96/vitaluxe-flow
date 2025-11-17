@@ -21,14 +21,20 @@ export interface Appointment {
   id: string;
   patient_account_id: string;
   provider_id: string;
-  appointment_datetime: string;
-  duration_minutes: number;
+  appointment_datetime?: string; // Legacy field
+  start_time: string; // Current field used in patient_appointments table
+  duration_minutes?: number;
   status: string;
   service_type_id?: string;
   notes?: string;
   telehealth?: boolean;
   patient_name?: string;
   provider_name?: string;
+  patient_accounts?: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+  };
 }
 
 export interface AppointmentSearchFilters {
