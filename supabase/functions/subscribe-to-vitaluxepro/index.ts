@@ -45,7 +45,7 @@ serve(async (req) => {
 
     // Resolve effective practice for subscription
     // Support: practice self, admin impersonating practice or provider, provider self linking to their practice
-    console.log('[subscribe-to-vitaluxepro] Start - resolve effective practice');
+    edgeLogger.info('Start - resolve effective practice');
 
     // Safely parse body (optional)
     let body: any = null;
@@ -109,7 +109,7 @@ serve(async (req) => {
         .select('role')
         .eq('user_id', actorUserId);
       if (rolesError) {
-        console.warn('[subscribe-to-vitaluxepro] user_roles lookup error', rolesError);
+        edgeLogger.warn('user_roles lookup error', rolesError);
       }
       const roles = (userRoles || []).map((r: any) => r.role);
       if (roles.includes('doctor')) {
@@ -205,7 +205,7 @@ serve(async (req) => {
 
         subscription = updated.id;
       } else if (existingSub.status === 'active' || existingSub.status === 'trial') {
-        console.log('[subscribe-to-vitaluxepro] Existing subscription found with status:', existingSub.status);
+        edgeLogger.info('Existing subscription found', { status: existingSub.status });
         const trialEndsAt = existingSub.trial_ends_at ? new Date(existingSub.trial_ends_at) : null;
         const isInTrial = existingSub.status === 'trial';
         

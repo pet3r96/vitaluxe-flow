@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
 
     // Check for active impersonation session with detailed logging
     const currentTimestamp = new Date().toISOString();
-    console.log('[send-patient-message] Checking impersonation for admin user:', user.id, 'at', currentTimestamp);
+    edgeLogger.info('Checking impersonation for admin user', { userId: user.id, timestamp: currentTimestamp });
     
     const { data: impersonationSession, error: impersonationError } = await supabaseAdmin
       .from('active_impersonation_sessions')
@@ -79,17 +79,16 @@ Deno.serve(async (req) => {
     
     const hasActiveImpersonation = !!impersonationSession && !impersonationError;
     
-    console.log('[send-patient-message] Impersonation query result:', { 
+    edgeLogger.info('Impersonation query result', { 
       found: hasActiveImpersonation,
       role: impersonationSession?.impersonated_role,
-      impersonated_user_id: impersonationSession?.impersonated_user_id,
-      expires_at: impersonationSession?.expires_at,
-      current_time: currentTimestamp,
-      error: impersonationError
+      impersonatedUserId: impersonationSession?.impersonated_user_id,
+      expiresAt: impersonationSession?.expires_at,
+      currentTime: currentTimestamp
     });
 
     if (impersonationError) {
-      console.error('[send-patient-message] Impersonation check error:', impersonationError);
+      edgeLogger.error('Impersonation check error', impersonationError);
     }
 
     if (!message?.trim()) {
@@ -102,7 +101,7 @@ Deno.serve(async (req) => {
 
     // === PROVIDER MODE: Provider replying to patient ===
     if (isProviderMode) {
-      console.log('[send-patient-message] PROVIDER MODE - Resolving practice context');
+      edgeLogger.info('PROVIDER MODE - Resolving practice context');
       
       let effectivePracticeId: string | null = null;
 
@@ -193,7 +192,7 @@ Deno.serve(async (req) => {
       }
 
       if (!effectivePracticeId) {
-        console.error('[send-patient-message] No practice context for provider mode');
+        edgeLogger.error('No practice context for provider mode');
         return new Response(
           JSON.stringify({ error: 'No practice context', code: 'no_practice_context' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -255,7 +254,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (insertError) {
-        console.error('[send-patient-message] Insert error:', insertError);
+        edgeLogger.error('Insert error', insertError);
         return new Response(
           JSON.stringify({ error: `Failed to send message: ${insertError.message}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -368,7 +367,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log('[send-patient-message] Provider message sent successfully');
+      edgeLogger.info('Provider message sent successfully');
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -451,10 +450,10 @@ Deno.serve(async (req) => {
       .from('patient_messages')
       .insert(patientPayload)
       .select()
-      .single();
+        .single();
 
-    if (insertError) {
-      console.error('[send-patient-message] Insert error:', insertError);
+      if (insertError) {
+        edgeLogger.error('Insert error', insertError);
       return new Response(
         JSON.stringify({ error: `Failed to send message: ${insertError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -522,10 +521,10 @@ Deno.serve(async (req) => {
             entity_type: 'message',
             entity_id: insertedMessage.id
           }
-        });
+          });
 
         if (notificationError) {
-          console.error('[send-patient-message] Failed to create team notification:', notificationError);
+          edgeLogger.error('Failed to create team notification', notificationError);
         }
       }
       
