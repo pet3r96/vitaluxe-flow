@@ -16,6 +16,7 @@ import {
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 
 interface EndOfDayReportsProps {
   dateRange: { from: Date; to: Date };

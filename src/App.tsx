@@ -196,7 +196,7 @@ const SidebarLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
-  console.time('App-Mount');
+  if (import.meta.env.DEV) console.time('App-Mount');
   
   return (
     <QueryClientProvider client={queryClient}>

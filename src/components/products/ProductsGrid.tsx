@@ -42,6 +42,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { logger } from "@/lib/logger";
 
 export const ProductsGrid = () => {
   const { effectiveRole, effectiveUserId, effectivePracticeId, isImpersonating, isProviderAccount } = useAuth();

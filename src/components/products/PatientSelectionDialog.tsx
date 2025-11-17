@@ -29,6 +29,7 @@ import { useNavigate } from "react-router-dom";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { PatientAccount } from '@/types/database-queries';
 import { PrescriptionWriterDialog } from "./PrescriptionWriterDialog";
+import { logger } from "@/lib/logger";
 
 interface PatientSelectionDialogProps {
   open: boolean;

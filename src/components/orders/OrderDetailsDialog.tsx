@@ -66,7 +66,7 @@ export const OrderDetailsDialog = ({
   const { data: fullOrderDetails } = useQuery({
     queryKey: ["order-full-details", order.id],
     queryFn: async () => {
-      console.time(`[OrderDetails] Load full data for ${order.id}`);
+      if (import.meta.env.DEV) console.time(`[OrderDetails] Load full data for ${order.id}`);
       
       const { data, error } = await supabase
         .from("orders")
@@ -99,7 +99,7 @@ export const OrderDetailsDialog = ({
         .eq("id", order.id)
         .single();
       
-      console.timeEnd(`[OrderDetails] Load full data for ${order.id}`);
+      if (import.meta.env.DEV) console.timeEnd(`[OrderDetails] Load full data for ${order.id}`);
       
       if (error) {
         logger.error('Failed to fetch full order details', error);

@@ -362,7 +362,7 @@ export function WaitingRoomPanel({
   };
 
   const handleStartVideoSession = async (sessionId: string) => {
-    console.time(`[WaitingRoomPanel] start-video-session-${sessionId}`);
+    if (import.meta.env.DEV) console.time(`[WaitingRoomPanel] start-video-session-${sessionId}`);
     try {
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('timeout')), 12000)
@@ -374,7 +374,7 @@ export function WaitingRoomPanel({
 
       const result = await Promise.race([invokePromise, timeoutPromise]);
       const { data, error } = result as { data: any; error: any };
-      console.timeEnd(`[WaitingRoomPanel] start-video-session-${sessionId}`);
+      if (import.meta.env.DEV) console.timeEnd(`[WaitingRoomPanel] start-video-session-${sessionId}`);
 
       if (error) throw error;
 
@@ -384,7 +384,7 @@ export function WaitingRoomPanel({
 
       refetchVideo();
     } catch (error: any) {
-      console.timeEnd(`[WaitingRoomPanel] start-video-session-${sessionId}`);
+      if (import.meta.env.DEV) console.timeEnd(`[WaitingRoomPanel] start-video-session-${sessionId}`);
       
       if (error.message === 'timeout') {
         toast.info("Still Processing", {

@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { logger } from "@/lib/logger";
 
 interface Alert {
   id: string;
@@ -85,7 +86,7 @@ export const AlertsViewer = () => {
     },
     onError: (error) => {
       toast.error("Failed to resolve alert");
-      console.error("Failed to resolve alert:", error);
+      logger.error("Failed to resolve alert", error);
     },
   });
 
@@ -103,7 +104,7 @@ export const AlertsViewer = () => {
     },
     onError: (error) => {
       toast.error("Failed to delete alert");
-      console.error("Failed to delete alert:", error);
+      logger.error("Failed to delete alert", error);
     },
   });
 
