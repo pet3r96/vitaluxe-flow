@@ -18,7 +18,8 @@ serve(async (req) => {
     );
 
     const now = new Date();
-    console.log('Checking for expired trials to convert...');
+    const { edgeLogger } = await import("../_shared/logger.ts");
+    edgeLogger.info('Checking for expired trials to convert');
 
     // Get trials that have ended
     const { data: expiredTrials } = await supabaseClient
@@ -37,7 +38,7 @@ serve(async (req) => {
       .eq("status", "trial")
       .lt("trial_ends_at", now.toISOString());
 
-    console.log(`Found ${expiredTrials?.length || 0} expired trials`);
+    edgeLogger.info('Found expired trials', { count: expiredTrials?.length || 0 });
 
     const results = [];
 
@@ -45,12 +46,12 @@ serve(async (req) => {
       const profile = trial.profiles as any;
       const hasPaymentMethod = profile.authorizenet_customer_profile_id != null;
 
-      console.log(`Processing expired trial for practice ${profile.name}, has payment: ${hasPaymentMethod}`);
+      edgeLogger.info('Processing expired trial', { practiceName: profile.name, hasPaymentMethod });
 
       if (hasPaymentMethod) {
         // Attempt to charge first payment
         try {
-          console.log(`Attempting to charge first payment for subscription ${trial.id}`);
+          edgeLogger.info('Attempting to charge first payment', { subscriptionId: trial.id });
           
           const paymentResponse = await supabaseClient.functions.invoke(
             "process-subscription-payment",
@@ -93,12 +94,12 @@ serve(async (req) => {
               next_billing_date: nextPeriodEnd.toISOString() 
             });
             
-            console.log(`Successfully activated subscription ${trial.id}`);
+            edgeLogger.info('Successfully activated subscription', { subscriptionId: trial.id });
           } else {
             throw new Error(paymentResponse.data?.error || "Payment failed");
           }
         } catch (error: any) {
-          console.error(`Payment failed for subscription ${trial.id}:`, error);
+          edgeLogger.error('Payment failed for subscription', error, { subscriptionId: trial.id });
           
           // Payment failed - suspend subscription with grace period
           const gracePeriodEnd = new Date(now);

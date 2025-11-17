@@ -43,7 +43,8 @@ Deno.serve(async (req) => {
         .eq('user_id', user.id);
 
       if (updateError) {
-        console.error('Error updating token:', updateError);
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.error('Error updating token', updateError);
         throw updateError;
       }
     } else {
@@ -57,7 +58,8 @@ Deno.serve(async (req) => {
         });
 
       if (insertError) {
-        console.error('Error inserting token:', insertError);
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.error('Error inserting token', insertError);
         throw insertError;
       }
     }
@@ -66,7 +68,8 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const feedUrl = `${supabaseUrl}/functions/v1/calendar-feed?token=${token}`;
 
-    console.log('Calendar sync token generated for user:', user.id);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('Calendar sync token generated', { userId: user.id });
 
     return new Response(
       JSON.stringify({
@@ -79,7 +82,8 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error generating calendar sync token:', error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('Error generating calendar sync token', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
       JSON.stringify({ error: errorMessage }),

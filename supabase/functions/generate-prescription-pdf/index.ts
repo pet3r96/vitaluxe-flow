@@ -33,7 +33,8 @@ serve(async (req) => {
 
     // Check if order_line_id is provided (new mode)
     if (requestData.order_line_id) {
-      console.log('Fetching prescription data from order_line_id:', requestData.order_line_id);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.info('Fetching prescription data from order_line_id', { orderLineId: requestData.order_line_id });
       
       // Fetch order line
       const { data: orderLine, error: lineError } = await supabase
@@ -43,7 +44,8 @@ serve(async (req) => {
         .single();
 
       if (lineError || !orderLine) {
-        console.error('Error fetching order line:', lineError);
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.error('Error fetching order line', lineError);
         return new Response(
           JSON.stringify({ error: 'Order line not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -58,7 +60,8 @@ serve(async (req) => {
         .single();
 
       if (productError || !product) {
-        console.error('Error fetching product:', productError);
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.error('Error fetching product', productError);
         return new Response(
           JSON.stringify({ error: 'Product not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -73,7 +76,8 @@ serve(async (req) => {
         .single();
 
       if (providerError || !provider) {
-        console.error('Error fetching provider:', providerError);
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.error('Error fetching provider', providerError);
         return new Response(
           JSON.stringify({ error: 'Provider not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -88,7 +92,8 @@ serve(async (req) => {
         .single();
 
       if (profileError || !providerProfile) {
-        console.error('Error fetching provider profile:', profileError);
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.error('Error fetching provider profile', profileError);
         return new Response(
           JSON.stringify({ error: 'Provider profile not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

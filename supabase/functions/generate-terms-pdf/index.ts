@@ -88,7 +88,8 @@ Deno.serve(async (req) => {
 
     const validation = validateGenerateTermsRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -33,7 +33,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Found ${expiredSessions.length} expired recordings to clean up`);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('Found expired recordings to clean up', { count: expiredSessions.length });
 
     // Update sessions to remove recording URLs
     const sessionIds = expiredSessions.map(s => s.id);
@@ -76,7 +77,8 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error cleaning up expired recordings:', error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('Error cleaning up expired recordings', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

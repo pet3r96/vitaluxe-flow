@@ -42,7 +42,8 @@ serve(async (req) => {
 
   try {
     // Log deprecation warning
-    console.warn('⚠️ DEPRECATED: /generate-agora-token called. Please migrate to /agora-token');
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.warn('DEPRECATED endpoint called', { endpoint: '/generate-agora-token', migrateendpoint: '/agora-token' });
     
     // Parse request body
     const body = await req.json();
@@ -76,7 +77,7 @@ serve(async (req) => {
     }
 
     // Generate tokens using shared service
-    console.log('[generate-agora-token] Token request:', {
+    edgeLogger.info('[generate-agora-token] Token request', {
       channel,
       uid,
       role,
@@ -107,7 +108,8 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[generate-agora-token] Error:', error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('[generate-agora-token] Error', error);
     
     const errorMessage = error instanceof Error ? error.message : String(error);
     

@@ -77,13 +77,14 @@ Deno.serve(async (req) => {
     const todayYMD = nowInPracticeTZ.toISOString().split('T')[0];
     const nowMinutes = nowInPracticeTZ.getHours() * 60 + nowInPracticeTZ.getMinutes();
 
-    console.log('[find-soonest-availability] Starting search:', JSON.stringify({
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('[find-soonest-availability] Starting search', {
       practiceTimezone,
       todayYMD,
       nowMinutes,
       nowUTC: nowUTC.toISOString(),
       duration
-    }));
+    });
 
     // Search up to 30 days ahead
     const maxDays = 30;

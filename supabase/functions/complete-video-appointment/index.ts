@@ -15,7 +15,8 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     
     if (!authHeader) {
-      console.error('❌ [complete-video-appointment] No auth header');
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('[complete-video-appointment] No auth header');
       return new Response(JSON.stringify({ error: 'Unauthorized: missing auth header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -30,14 +31,16 @@ Deno.serve(async (req) => {
     } = await supabaseAuth.auth.getUser();
 
     if (userError || !user) {
-      console.error('❌ [complete-video-appointment] Auth failed:', userError);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('[complete-video-appointment] Auth failed', userError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('✅ [complete-video-appointment] Authenticated user:', user.id);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('[complete-video-appointment] Authenticated user', { userId: user.id });
 
     // Use service role client for database operations (bypass RLS)
     const supabaseClient = createAdminClient();
@@ -54,7 +57,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('✅ [complete-video-appointment] Completing appointment:', appointmentId);
+    edgeLogger.info('[complete-video-appointment] Completing appointment', { appointmentId });
 
     // Check for active impersonation
     const { data: impersonationData } = await supabaseClient
@@ -67,7 +70,7 @@ Deno.serve(async (req) => {
 
     const effectiveUserId = impersonationData?.impersonated_user_id || user.id;
 
-    console.log('👤 [complete-video-appointment] User check:', {
+    edgeLogger.info('[complete-video-appointment] User check', {
       authUserId: user.id,
       effectiveUserId,
       isImpersonating: !!impersonationData,
@@ -81,7 +84,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (appointmentError || !appointment) {
-      console.error('❌ [complete-video-appointment] Appointment not found:', appointmentError);
+      edgeLogger.error('[complete-video-appointment] Appointment not found', appointmentError);
       return new Response(
         JSON.stringify({ error: 'Appointment not found' }),
         {

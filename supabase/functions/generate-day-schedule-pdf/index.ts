@@ -29,7 +29,8 @@ Deno.serve(async (req) => {
       throw new Error('practiceId and date are required');
     }
 
-    console.log(`[Print Day] Request from user ${user.id} for practice ${practiceId}, date ${date}, provider ${providerId || 'all'}`);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('[Print Day] Request received', { userId: user.id, practiceId, date, providerId: providerId || 'all' });
 
     // Check user roles
     const { data: roles } = await supabaseClient
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
       throw new Error('Insufficient permissions to print schedule');
     }
 
-    console.log(`[Print Day] User authorized: admin=${isAdmin}, practice=${isPractice}, staff=${isStaff}, provider=${isProvider}`);
+    edgeLogger.info('[Print Day] User authorized', { isAdmin, isPractice, isStaff, isProvider });
 
     // Query appointments for the day
     const startOfDay = `${date}T00:00:00Z`;
@@ -111,11 +112,11 @@ Deno.serve(async (req) => {
     const { data: appointments, error: appointmentsError } = await query;
     
     if (appointmentsError) {
-      console.error('[Print Day] Error fetching appointments:', appointmentsError);
+      edgeLogger.error('[Print Day] Error fetching appointments', appointmentsError);
       throw appointmentsError;
     }
 
-    console.log(`[Print Day] Found ${appointments?.length || 0} appointments`);
+    edgeLogger.info('[Print Day] Found appointments', { count: appointments?.length || 0 });
 
     // Get practice name and address
     const { data: practice } = await supabaseClient
