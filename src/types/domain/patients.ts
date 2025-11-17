@@ -16,21 +16,28 @@ export type {
   TypedVaultRecord,
 } from "@/types/vault/records";
 
-import type { TypedVaultRecord } from "@/types/vault/records";
-
-// Extract specific typed records from the discriminated union
-type ExtractVaultRecord<T extends TypedVaultRecord['record_type']> = Extract<TypedVaultRecord, { record_type: T }>;
+// Flexible vault record type for runtime data (database returns string, not literal types)
+interface VaultRecordBase {
+  id: string;
+  patient_account_id: string;
+  record_type: string;
+  record_data: Record<string, unknown>;
+  created_at: string;
+  updated_at?: string;
+  is_active?: boolean;
+  [key: string]: unknown;
+}
 
 export interface PatientMedicalData {
   account: any; // Database row type
-  medications: Array<ExtractVaultRecord<'medication'>>;
-  conditions: Array<ExtractVaultRecord<'condition'>>;
-  allergies: Array<ExtractVaultRecord<'allergy'>>;
-  vitals: Array<ExtractVaultRecord<'vital'>>;
-  immunizations: Array<ExtractVaultRecord<'immunization'>>;
-  surgeries: Array<ExtractVaultRecord<'surgery'>>;
-  pharmacies: Array<ExtractVaultRecord<'pharmacy'>>;
-  emergencyContacts: Array<ExtractVaultRecord<'emergency_contact'>>;
+  medications: VaultRecordBase[];
+  conditions: VaultRecordBase[];
+  allergies: VaultRecordBase[];
+  vitals: VaultRecordBase[];
+  immunizations: VaultRecordBase[];
+  surgeries: VaultRecordBase[];
+  pharmacies: VaultRecordBase[];
+  emergencyContacts: VaultRecordBase[];
 }
 
 export interface PatientQueryParams {

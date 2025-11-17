@@ -87,7 +87,7 @@ export interface VideoSession {
   id: string;
   practice_id: string;
   appointment_id: string;
-  session_id: string;
+  session_id?: string; // Optional for synthetic sessions
   channel_name: string;
   agora_token?: string;
   status: 'scheduled' | 'waiting' | 'active' | 'completed' | 'cancelled';
@@ -99,7 +99,7 @@ export interface VideoSession {
   created_at: string;
   updated_at: string;
   isSynthetic?: boolean;
-  patient_appointments?: CalendarAppointment & {
+  patient_appointments?: Partial<CalendarAppointment> & {
     patient?: CalendarPatient;
     provider_id?: string;
   };

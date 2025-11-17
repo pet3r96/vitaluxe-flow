@@ -140,7 +140,7 @@ export function asDocument(r: VaultRecordBase) {
 }
 
 // Helpers to flatten vault records for PDF generation
-export function flattenForPdf(records: VaultRecordBase[], recordType: string): Array<Record<string, unknown> & { id: string; created_at: string }> {
+export function flattenForPdf(records: VaultRecordBase[], recordType: string): Array<Record<string, unknown>> {
   if (!records || records.length === 0) return [];
   
   return records.map(r => {
