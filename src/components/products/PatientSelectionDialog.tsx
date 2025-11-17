@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import type { PatientAccount } from '@/types/database-queries';
 import { PrescriptionWriterDialog } from "./PrescriptionWriterDialog";
 
 interface PatientSelectionDialogProps {
@@ -139,7 +140,7 @@ export const PatientSelectionDialog = ({
       if (error) throw error;
       
       // Filter out patients with incomplete data that would cause cart errors
-      const validPatients = (data as any[] || []).filter((patient: any) => {
+      const validPatients = ((data || []) as unknown as PatientAccount[]).filter((patient) => {
         const hasEmail = !!patient.email;
         const hasId = !!patient.id;
         return hasEmail && hasId;

@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getLastAutoTableY } from '@/types/pdf';
 
 // Data Structures
 export interface PatientAccount {
@@ -372,7 +373,7 @@ export const generateMedicalVaultPDF = async (
     margin: { left: 10, right: 10 },
   });
 
-  yPos = (doc as any).lastAutoTable.finalY + 15;
+  yPos = getLastAutoTableY(doc) + 15;
 
   // MEDICATIONS Section
   if (medications.length > 0) {
@@ -418,7 +419,7 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = getLastAutoTableY(doc) + 15;
   }
 
   // CONDITIONS Section
@@ -465,7 +466,7 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = getLastAutoTableY(doc) + 15;
   }
 
   // ALLERGIES Section
@@ -476,7 +477,7 @@ export const generateMedicalVaultPDF = async (
       allergy.allergen || allergy.allergen_name || 'Unknown',
       allergy.reaction || allergy.reaction_type || 'N/A',
       allergy.severity || 'N/A',
-      (allergy as any).is_active !== undefined ? ((allergy as any).is_active ? 'Active' : 'Inactive') : 'Active',
+      allergy.is_active !== undefined ? (allergy.is_active ? 'Active' : 'Inactive') : 'Active',
     ]);
 
     autoTable(doc, {
@@ -510,7 +511,7 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = getLastAutoTableY(doc) + 15;
   }
 
   // VITAL SIGNS Section
@@ -562,7 +563,7 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = getLastAutoTableY(doc) + 15;
   }
 
   // IMMUNIZATIONS Section
@@ -607,7 +608,7 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = getLastAutoTableY(doc) + 15;
   }
 
   // SURGERIES Section
@@ -652,7 +653,7 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = getLastAutoTableY(doc) + 15;
   }
 
   // PHARMACIES Section
@@ -697,7 +698,7 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = getLastAutoTableY(doc) + 15;
   }
 
   // EMERGENCY CONTACTS Section
@@ -742,7 +743,7 @@ export const generateMedicalVaultPDF = async (
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = getLastAutoTableY(doc) + 15;
   }
 
   // Add footer with page numbers and timestamp to all pages

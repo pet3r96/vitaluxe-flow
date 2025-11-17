@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
+import { getLastAutoTableY, getTotalPages } from '@/types/pdf';
 
 interface TreatmentPlan {
   id: string;
@@ -129,7 +130,7 @@ export const generateTreatmentPlanPDF = async (data: TreatmentPlanPDFData): Prom
 
   // Add footer function
   const addFooter = (): void => {
-    const totalPages = (doc as any).internal.pages.length - 1;
+    const totalPages = getTotalPages(doc);
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
@@ -306,7 +307,7 @@ export const generateTreatmentPlanPDF = async (data: TreatmentPlanPDFData): Prom
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = getLastAutoTableY(doc) + 10;
   } else {
     checkPageBreak(10);
     doc.setFont('helvetica', 'italic');
@@ -361,7 +362,7 @@ export const generateTreatmentPlanPDF = async (data: TreatmentPlanPDFData): Prom
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = getLastAutoTableY(doc) + 10;
   } else {
     checkPageBreak(10);
     doc.setFont('helvetica', 'italic');
@@ -415,7 +416,7 @@ export const generateTreatmentPlanPDF = async (data: TreatmentPlanPDFData): Prom
       margin: { left: 10, right: 10 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = getLastAutoTableY(doc) + 10;
     
     checkPageBreak(10);
     doc.setFont('helvetica', 'italic');

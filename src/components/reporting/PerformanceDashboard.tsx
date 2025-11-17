@@ -6,6 +6,7 @@ import { BarChart3, Users, XCircle, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
+import type { ProviderStats } from '@/types/database-queries';
 
 interface PerformanceDashboardProps {
   dateRange: { from: Date; to: Date };
@@ -240,14 +241,14 @@ export function PerformanceDashboard({ dateRange }: PerformanceDashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {(metrics?.providerStats as any[])?.map((provider: any, idx: number) => {
+              {(metrics?.providerStats as ProviderStats[] | undefined)?.map((provider, idx) => {
                 const util = provider.total > 0 
                   ? ((provider.completed / provider.total) * 100).toFixed(0) 
                   : '0';
                 return (
                   <div key={idx} className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium">{provider.name}</p>
+                      <p className="text-sm font-medium">{provider.provider_name}</p>
                       <p className="text-xs text-muted-foreground">
                         {provider.completed} of {provider.total} completed
                       </p>
@@ -256,7 +257,7 @@ export function PerformanceDashboard({ dateRange }: PerformanceDashboardProps) {
                   </div>
                 );
               })}
-              {(!metrics?.providerStats || (metrics.providerStats as any[]).length === 0) && (
+              {(!metrics?.providerStats || (metrics.providerStats as ProviderStats[]).length === 0) && (
                 <p className="text-sm text-muted-foreground">No provider data available</p>
               )}
             </div>

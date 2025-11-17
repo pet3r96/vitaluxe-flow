@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
+import { getErrorMessage, getErrorName } from '@/types/errors';
 
 interface Props {
   children: ReactNode;
@@ -37,8 +38,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Detect dynamic import failures (chunk loading errors)
-    const msg = (error as any)?.message || '';
-    const name = (error as any)?.name || '';
+    const msg = getErrorMessage(error);
+    const name = getErrorName(error);
     
     // Detect AuthContext errors (React Error #185)
     const isAuthContextError = 
