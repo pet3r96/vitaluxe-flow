@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -87,15 +88,15 @@ serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    console.log(`Subscription cancelled for user ${user.id} (${profile?.email})`);
+    edgeLogger.info('Subscription cancelled', { userId: user.id, email: profile?.email });
 
-    return successResponse({ 
+    return successResponse({
       message: 'Subscription cancelled successfully',
       cancelled_at: new Date().toISOString(),
     });
 
   } catch (error) {
-    console.error('Error in cancel-subscription:', error);
+    edgeLogger.error('Error in cancel-subscription', error);
     return errorResponse(error instanceof Error ? error.message : String(error), 500);
   }
 });
