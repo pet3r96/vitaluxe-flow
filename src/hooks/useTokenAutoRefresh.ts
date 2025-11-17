@@ -126,7 +126,7 @@ export const useTokenAutoRefresh = ({
       });
 
     } catch (error) {
-      console.error("❌ Token refresh failed:", error);
+      logger.error("Token refresh failed", error);
       setStatus(prev => ({ ...prev, isRefreshing: false }));
       
       toast({
@@ -153,11 +153,12 @@ export const useTokenAutoRefresh = ({
     const timeUntilRefresh = Math.max(0, timeUntilExpiry - refreshBuffer);
     const nextRefreshTime = now + timeUntilRefresh;
 
-    console.log(`⏰ Token Refresh Schedule:`);
-    console.log(`   Current Time: ${new Date(now * 1000).toISOString()}`);
-    console.log(`   Token Expires: ${new Date(tokenExpiryRef.current * 1000).toISOString()}`);
-    console.log(`   Next Refresh: ${new Date(nextRefreshTime * 1000).toISOString()}`);
-    console.log(`   Time Until Refresh: ${Math.round(timeUntilRefresh / 60)} minutes`);
+    logger.info("Token Refresh Schedule", {
+      currentTime: new Date(now * 1000).toISOString(),
+      tokenExpires: new Date(tokenExpiryRef.current * 1000).toISOString(),
+      nextRefresh: new Date(nextRefreshTime * 1000).toISOString(),
+      timeUntilRefreshMinutes: Math.round(timeUntilRefresh / 60)
+    });
 
     setStatus(prev => ({ ...prev, nextRefreshTime }));
 
@@ -170,16 +171,17 @@ export const useTokenAutoRefresh = ({
   useEffect(() => {
     if (!client || !enabled) return;
 
-    console.log(`🎬 Token Auto-Refresh Initialized`);
-    console.log(`   Initial Token Expiry: ${new Date(tokenExpiryRef.current * 1000).toISOString()}`);
-    console.log(`   Refresh Buffer: 5 minutes before expiry`);
+    logger.info("Token Auto-Refresh Initialized", {
+      initialTokenExpiry: new Date(tokenExpiryRef.current * 1000).toISOString(),
+      refreshBuffer: "5 minutes before expiry"
+    });
     
     scheduleNextRefresh();
 
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-        console.log(`🛑 Token Auto-Refresh Cleanup`);
+        logger.info("Token Auto-Refresh Cleanup");
       }
     };
   }, [client, enabled, scheduleNextRefresh]);

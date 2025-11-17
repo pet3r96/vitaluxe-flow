@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 export const useValidateAgoraConfig = () => {
   const validateConfig = useCallback(async (appId: string) => {
@@ -13,16 +14,17 @@ export const useValidateAgoraConfig = () => {
       }
 
       if (!data.match) {
-        console.error("❌ Agora App ID mismatch!", data);
-        console.error(`   Frontend: ${data.frontendAppId}`);
-        console.error(`   Backend: ${data.backendAppId}`);
+        logger.error("Agora App ID mismatch", null, {
+          frontendAppId: data.frontendAppId,
+          backendAppId: data.backendAppId
+        });
         throw new Error("App ID mismatch between frontend and backend");
       }
 
-      console.log("✅ Agora App ID verified:", data.backendAppId);
+      logger.info("Agora App ID verified", { backendAppId: data.backendAppId });
       return data;
     } catch (error) {
-      console.error("❌ Failed to validate Agora config:", error);
+      logger.error("Failed to validate Agora config", error);
       throw error;
     }
   }, []);

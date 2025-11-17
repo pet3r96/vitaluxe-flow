@@ -202,7 +202,7 @@ export function useCreateTreatmentPlan() {
       toast.success("Treatment plan created successfully");
     },
     onError: (error) => {
-      console.error('Error creating treatment plan:', error);
+      logger.error('Error creating treatment plan', error);
       toast.error("Failed to create treatment plan");
     },
   });
@@ -243,7 +243,7 @@ export function useUpdateTreatmentPlan() {
       toast.success("Treatment plan updated successfully");
     },
     onError: (error) => {
-      console.error('Error updating treatment plan:', error);
+      logger.error('Error updating treatment plan', error);
       toast.error("Failed to update treatment plan");
     },
   });
@@ -267,7 +267,7 @@ export function useDeleteTreatmentPlan() {
       toast.success("Treatment plan deleted successfully");
     },
     onError: (error) => {
-      console.error('Error deleting treatment plan:', error);
+      logger.error('Error deleting treatment plan', error);
       toast.error("Failed to delete treatment plan");
     },
   });
@@ -293,7 +293,7 @@ export function useAddGoal() {
       toast.success("Goal added successfully");
     },
     onError: (error) => {
-      console.error('Error adding goal:', error);
+      logger.error('Error adding goal', error);
       toast.error("Failed to add goal");
     },
   });
@@ -320,7 +320,7 @@ export function useUpdateGoal() {
       toast.success("Goal updated successfully");
     },
     onError: (error) => {
-      console.error('Error updating goal:', error);
+      logger.error('Error updating goal', error);
       toast.error("Failed to update goal");
     },
   });
@@ -346,7 +346,7 @@ export function useAddPlanUpdate() {
       toast.success("Update added successfully");
     },
     onError: (error) => {
-      console.error('Error adding update:', error);
+      logger.error('Error adding update', error);
       toast.error("Failed to add update");
     },
   });
@@ -384,7 +384,7 @@ export function useLockPlan() {
       toast.success(variables.lock ? "Plan locked successfully" : "Plan unlocked successfully");
     },
     onError: (error) => {
-      console.error('Error locking/unlocking plan:', error);
+      logger.error('Error locking/unlocking plan', error);
       toast.error("Failed to update plan lock status");
     },
   });
@@ -440,7 +440,7 @@ export function useUploadAttachment() {
       toast.success("File uploaded successfully");
     },
     onError: (error) => {
-      console.error('Error uploading attachment:', error);
+      logger.error('Error uploading attachment', error);
       toast.error("Failed to upload file");
     },
   });
@@ -457,7 +457,7 @@ export function useDeleteAttachment() {
         .from('patient-documents')
         .remove([data.storagePath]);
 
-      if (storageError) console.error('Storage delete error:', storageError);
+      if (storageError) logger.error('Storage delete error', storageError);
 
       // Soft delete from database
       const { error: dbError } = await supabase
@@ -472,7 +472,7 @@ export function useDeleteAttachment() {
       toast.success("Attachment deleted successfully");
     },
     onError: (error) => {
-      console.error('Error deleting attachment:', error);
+      logger.error('Error deleting attachment', error);
       toast.error("Failed to delete attachment");
     },
   });
