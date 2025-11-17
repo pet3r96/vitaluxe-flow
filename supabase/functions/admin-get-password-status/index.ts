@@ -1,6 +1,7 @@
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -8,7 +9,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { edgeLogger } = await import('../_shared/logger.ts');
     
     const authHeader = req.headers.get('Authorization');
 
@@ -60,7 +60,6 @@ Deno.serve(async (req) => {
     ]);
 
     if (statusResult.error) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('Error reading user_password_status', statusResult.error);
       return new Response(
         JSON.stringify({ error: 'Failed to read password status' }),
@@ -69,7 +68,6 @@ Deno.serve(async (req) => {
     }
 
     if (profileResult.error) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('Error reading profiles temp_password', profileResult.error);
       return new Response(
         JSON.stringify({ error: 'Failed to read profile status' }),
@@ -91,7 +89,6 @@ Deno.serve(async (req) => {
       terms_accepted: termsAccept,
     };
 
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.info('Returning password status', { targetUserId: target_user_id });
 
     return new Response(
@@ -99,7 +96,6 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.error('Unexpected error', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(

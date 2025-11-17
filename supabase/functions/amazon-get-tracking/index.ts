@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,14 +37,12 @@ Deno.serve(async (req) => {
       throw new Error('Authentication failed');
     }
 
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.info('Authenticated user', { userId: user.id });
 
     // Validate CSRF token
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
@@ -63,8 +62,10 @@ Deno.serve(async (req) => {
       throw new Error('Insufficient permissions');
     }
 
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.info('Amazon tracking API called');
+
+    // Parse request body
+    const { orderLineId, trackingNumber } = await req.json();
 
     if (!orderLineId || !trackingNumber) {
       edgeLogger.error('Missing required parameters', { hasOrderLineId: !!orderLineId, hasTrackingNumber: !!trackingNumber });
