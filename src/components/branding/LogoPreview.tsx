@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface LogoPreviewProps {
   logoUrl?: string | null;
@@ -26,7 +27,7 @@ export function LogoPreview({ logoUrl, logoStoragePath, practiceName = "" }: Log
         if (error) throw error;
         setSignedUrl(data.signedUrl);
       } catch (error) {
-        console.error("Error getting signed URL for logo:", error);
+        logger.error("Error getting signed URL for logo", error);
         setSignedUrl(null);
       }
     }

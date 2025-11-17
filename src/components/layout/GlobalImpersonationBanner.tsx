@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { ImpersonationBanner } from "./ImpersonationBanner";
+import { logger } from "@/lib/logger";
 
 /**
  * GlobalImpersonationBanner - Root-level wrapper for impersonation UI
@@ -26,7 +27,7 @@ export function GlobalImpersonationBanner({ children }: GlobalImpersonationBanne
     isImpersonating = auth.isImpersonating || false;
   } catch (error) {
     // Auth context not available yet - this is OK during initial render
-    console.warn('Auth context not available in GlobalImpersonationBanner');
+    logger.warn('Auth context not available in GlobalImpersonationBanner');
   }
   
   return (
