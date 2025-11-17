@@ -43,7 +43,7 @@ export async function fetchProducts(params: ProductQueryParams) {
     } else {
       // Fallback: rely on RLS to return permitted products for this user/practice
       // Do not early-return empty to avoid false negatives when RPC is misconfigured
-      console.warn('[productService] No visible product IDs from RPC, falling back to RLS-only select');
+      logger.warn('No visible product IDs from RPC, falling back to RLS-only select');
     }
   }
 
