@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,7 +44,7 @@ async function listAllFiles(
       });
 
     if (error) {
-      console.error(`Error listing ${bucketName}/${prefix}:`, error);
+      edgeLogger.error('Error listing files', error, { bucket: bucketName, prefix });
       break;
     }
 
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
     // Authentication check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('Missing authorization header');
+      edgeLogger.error('Missing authorization header');
       return new Response(
         JSON.stringify({ success: false, error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
     if (userError || !user) {
-      console.error('Authentication failed:', userError?.message || 'No user found');
+      edgeLogger.error('Authentication failed', userError);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`User authenticated: ${user.email}`);
+    edgeLogger.info('User authenticated', { email: user.email });
 
     // Admin-only check
     const { data: roleCheck, error: roleError } = await supabaseAdmin
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (roleError || !roleCheck) {
-      console.error(`Access denied for user: ${user.email}`);
+      edgeLogger.error('Access denied - admin role required', undefined, { email: user.email });
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -162,7 +163,7 @@ Deno.serve(async (req) => {
       'quarantine'
     ];
 
-    console.log(`Starting storage cleanup for buckets: ${bucketsToClean.join(', ')}`);
+    edgeLogger.info('Starting storage cleanup', { buckets: bucketsToClean });
 
     const results: Record<string, BucketResult> = {};
     let totalFilesDeleted = 0;
@@ -176,7 +177,7 @@ Deno.serve(async (req) => {
       };
 
       try {
-        console.log(`Processing bucket: ${bucketName}`);
+        edgeLogger.info('Processing bucket', { bucketName });
         
         // Recursively list all files in bucket (including nested folders)
         const allFilePaths = await listAllFiles(supabaseAdmin, bucketName);
@@ -184,12 +185,12 @@ Deno.serve(async (req) => {
         bucketResult.files_found = allFilePaths.length;
         
         if (allFilePaths.length === 0) {
-          console.log(`Bucket ${bucketName} is empty`);
+          edgeLogger.info('Bucket is empty', { bucketName });
           results[bucketName] = bucketResult;
           continue;
         }
 
-        console.log(`Found ${allFilePaths.length} files in ${bucketName} (including nested)`);
+        edgeLogger.info('Found files in bucket', { bucketName, count: allFilePaths.length });
 
         // Delete files in batches of 100
         const batchSize = 100;
@@ -203,18 +204,18 @@ Deno.serve(async (req) => {
 
           if (deleteError) {
             bucketResult.errors.push(`Batch delete error: ${deleteError.message}`);
-            console.error(`Error deleting batch in ${bucketName}:`, deleteError);
+            edgeLogger.error('Error deleting batch', deleteError, { bucketName });
           } else {
             const deletedCount = deleteData?.length || batch.length;
             bucketResult.files_deleted += deletedCount;
             totalFilesDeleted += deletedCount;
-            console.log(`Deleted ${deletedCount} files from ${bucketName} (batch ${Math.floor(i / batchSize) + 1})`);
+            edgeLogger.info('Deleted files batch', { bucketName, deletedCount, batchNum: Math.floor(i / batchSize) + 1 });
           }
         }
 
       } catch (bucketError: any) {
         bucketResult.errors.push(`Bucket error: ${bucketError.message}`);
-        console.error(`Error processing bucket ${bucketName}:`, bucketError);
+        edgeLogger.error('Error processing bucket', bucketError, { bucketName });
       }
 
       results[bucketName] = bucketResult;
@@ -222,7 +223,7 @@ Deno.serve(async (req) => {
 
     const executionTimeSeconds = (Date.now() - startTime) / 1000;
 
-    console.log(`Storage cleanup complete. Total files deleted: ${totalFilesDeleted} in ${executionTimeSeconds}s`);
+    edgeLogger.info('Storage cleanup complete', { totalFilesDeleted, executionTimeSeconds });
 
     // Prepare response
     const responseData = {
