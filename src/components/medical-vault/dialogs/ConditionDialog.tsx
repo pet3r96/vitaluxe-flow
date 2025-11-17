@@ -131,20 +131,16 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
         }
         console.log('[ConditionDialog] UPDATE success');
       } else {
-import type { MedicalVaultRecord, ConditionRecordData } from '@/types/domain/medical-vault';
-
-// ... existing code
-
-        const insertData: Partial<MedicalVaultRecord> = {
+        const insertData = {
           record_type: "condition",
-          record_data: recordData as ConditionRecordData,
+          record_data: recordData as any,
           patient_account_id: patientAccountId,
           is_active: true,
           created_by_user_id: authUser.id,
           created_by_role: mapRoleToAuditRole(effectiveRole),
         };
         
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("patient_medical_vault")
           .insert(insertData);
         

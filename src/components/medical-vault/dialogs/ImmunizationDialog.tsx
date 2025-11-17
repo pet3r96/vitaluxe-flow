@@ -76,15 +76,15 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
         }
         console.log('[ImmunizationDialog] UPDATE success');
       } else {
-        const insertData: Partial<MedicalVaultRecord> = {
+        const insertData = {
           record_type: "immunization",
-          record_data: formattedData as ImmunizationRecordData,
+          record_data: formattedData as any,
           patient_account_id: patientAccountId,
           created_by_user_id: authUser.id,
           created_by_role: mapRoleToAuditRole(effectiveRole),
         };
         
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("patient_medical_vault")
           .insert(insertData);
         

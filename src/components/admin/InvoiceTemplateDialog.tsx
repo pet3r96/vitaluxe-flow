@@ -11,6 +11,7 @@ import { format, addDays, startOfMonth } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import type { InvoiceTemplateData } from '@/types/manual-schema';
 
 const DEFAULT_NOTES = `Notes:
 - This invoice represents the monthly Practice Development Fee for non-clinical administrative, educational, and compliance-related services.
@@ -229,7 +230,7 @@ export function InvoiceTemplateDialog({
           notes,
           subtotal,
           total_due: totalDue
-        } as InvoiceTemplateData
+        } as any
       };
 
       if (existingInvoice) {
@@ -302,7 +303,7 @@ export function InvoiceTemplateDialog({
           notes,
           subtotal,
           total_due: totalDue
-        } as InvoiceTemplateData
+        } as any
       };
 
 

@@ -104,8 +104,8 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         
         for (const p of allPharmacies || []) {
           if (p.id !== pharmacy?.id) {
-            const updatedData: PharmacyRecordData = { 
-              ...(p.record_data as PharmacyRecordData), 
+            const updatedData: any = { 
+              ...(p.record_data as any), 
               is_preferred: false 
             };
             await supabase
@@ -128,15 +128,15 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         }
         console.log('[PharmacyDialog] UPDATE success');
       } else {
-        const insertData: Partial<MedicalVaultRecord> = {
+        const insertData = {
           record_type: "pharmacy",
-          record_data: recordData as PharmacyRecordData,
+          record_data: recordData as any,
           patient_account_id: patientAccountId,
           created_by_user_id: authUser.id,
           created_by_role: mapRoleToAuditRole(effectiveRole),
         };
         
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("patient_medical_vault")
           .insert(insertData);
         
