@@ -120,7 +120,7 @@ export const useVideoEvents = ({
     setChannel(realtimeChannel);
 
     return () => {
-      console.log('[useVideoEvents] Cleaning up realtime subscription');
+      logger.info('[useVideoEvents] Cleaning up realtime subscription');
       realtimeChannel.unsubscribe();
     };
   }, [enabled, sessionId, userUid]);
@@ -128,7 +128,7 @@ export const useVideoEvents = ({
   // Emit patient_waiting event
   const emitWaiting = useCallback(async () => {
     try {
-      console.log('[useVideoEvents] Emitting patient_waiting event');
+      logger.info('[useVideoEvents] Emitting patient_waiting event');
       const { error } = await supabase
         .from('video_session_events')
         .insert({
@@ -140,9 +140,9 @@ export const useVideoEvents = ({
       if (error) throw error;
 
       setIsWaiting(true);
-      console.log('[useVideoEvents] Patient waiting event emitted');
+      logger.info('[useVideoEvents] Patient waiting event emitted');
     } catch (error) {
-      console.error('[useVideoEvents] Error emitting waiting event:', error);
+      logger.error('[useVideoEvents] Error emitting waiting event', error);
       throw error;
     }
   }, [sessionId, userUid]);
@@ -150,7 +150,7 @@ export const useVideoEvents = ({
   // Emit patient_admitted event
   const emitAdmitted = useCallback(async (patientUid: string) => {
     try {
-      console.log('[useVideoEvents] Emitting patient_admitted event for:', patientUid);
+      logger.info('[useVideoEvents] Emitting patient_admitted event for', { patientUid });
       const { error } = await supabase
         .from('video_session_events')
         .insert({
@@ -161,9 +161,9 @@ export const useVideoEvents = ({
 
       if (error) throw error;
 
-      console.log('[useVideoEvents] Patient admitted event emitted');
+      logger.info('[useVideoEvents] Patient admitted event emitted');
     } catch (error) {
-      console.error('[useVideoEvents] Error emitting admitted event:', error);
+      logger.error('[useVideoEvents] Error emitting admitted event', error);
       throw error;
     }
   }, [sessionId]);
@@ -171,7 +171,7 @@ export const useVideoEvents = ({
   // Emit joined event
   const emitJoined = useCallback(async () => {
     try {
-      console.log('[useVideoEvents] Emitting joined event');
+      logger.info('[useVideoEvents] Emitting joined event');
       const { error } = await supabase
         .from('video_session_events')
         .insert({
@@ -182,9 +182,9 @@ export const useVideoEvents = ({
 
       if (error) throw error;
 
-      console.log('[useVideoEvents] Joined event emitted');
+      logger.info('[useVideoEvents] Joined event emitted');
     } catch (error) {
-      console.error('[useVideoEvents] Error emitting joined event:', error);
+      logger.error('[useVideoEvents] Error emitting joined event', error);
       throw error;
     }
   }, [sessionId, userUid]);
@@ -192,7 +192,7 @@ export const useVideoEvents = ({
   // Emit left event
   const emitLeft = useCallback(async () => {
     try {
-      console.log('[useVideoEvents] Emitting left event');
+      logger.info('[useVideoEvents] Emitting left event');
       const { error } = await supabase
         .from('video_session_events')
         .insert({
@@ -203,9 +203,9 @@ export const useVideoEvents = ({
 
       if (error) throw error;
 
-      console.log('[useVideoEvents] Left event emitted');
+      logger.info('[useVideoEvents] Left event emitted');
     } catch (error) {
-      console.error('[useVideoEvents] Error emitting left event:', error);
+      logger.error('[useVideoEvents] Error emitting left event', error);
       // Don't throw - leaving should always succeed
     }
   }, [sessionId, userUid]);

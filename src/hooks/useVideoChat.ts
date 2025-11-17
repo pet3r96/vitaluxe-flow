@@ -187,29 +187,29 @@ export const useVideoChat = ({
     if (!clientRef.current || !channelRef.current) return;
     
     try {
-      console.log("🔄 [RTM Renewal] Starting logout/login cycle");
+      logger.info("[RTM Renewal] Starting logout/login cycle");
       
       // Step 1: Leave channel gracefully
       await channelRef.current.leave();
-      console.log("✅ [RTM Renewal] Left channel");
+      logger.info("[RTM Renewal] Left channel");
       
       // Step 2: Logout from RTM client
       await clientRef.current.logout();
-      console.log("✅ [RTM Renewal] Logged out");
+      logger.info("[RTM Renewal] Logged out");
       
       // Step 3: Login with new token
       await clientRef.current.login({ uid: rtmUid, token: newToken });
-      console.log("✅ [RTM Renewal] Logged in with new token");
+      logger.info("[RTM Renewal] Logged in with new token");
       
       // Step 4: Rejoin channel
       await channelRef.current.join();
-      console.log("✅ [RTM Renewal] Rejoined channel");
+      logger.info("[RTM Renewal] Rejoined channel");
       
       currentTokenRef.current = newToken;
-      console.log("✅ [RTM Renewal] Complete - Chat operational");
+      logger.info("[RTM Renewal] Complete - Chat operational");
       
     } catch (error) {
-      console.error("❌ [RTM Renewal] Failed:", error);
+      logger.error("[RTM Renewal] Failed", error);
       throw error; // Let parent handle
     }
   };

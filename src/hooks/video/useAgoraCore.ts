@@ -153,7 +153,7 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
 
   const join = useCallback(async (channel: string, token: string, uid: string | number) => {
     try {
-      console.log('[useAgoraCore] Joining channel:', channel, uid);
+      logger.info('[useAgoraCore] Joining channel', { channel, uid });
       
       if (!appId) {
         throw new Error('Agora App ID is required');
@@ -172,9 +172,9 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
       setLocalAudioTrack(audioTrack);
       setLocalVideoTrack(videoTrack);
 
-      console.log('[useAgoraCore] Joined successfully');
+      logger.info('[useAgoraCore] Joined successfully');
     } catch (error) {
-      console.error('[useAgoraCore] Join error:', error);
+      logger.error('[useAgoraCore] Join error', error);
       onError?.(error as Error);
       throw error;
     }
@@ -182,7 +182,7 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
 
   const leave = useCallback(async () => {
     try {
-      console.log('[useAgoraCore] Leaving channel');
+      logger.info('[useAgoraCore] Leaving channel');
       
       // Unpublish if published
       if (isJoined) {
@@ -200,9 +200,9 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
       setIsJoined(false);
       setRemoteUsers([]);
       
-      console.log('[useAgoraCore] Left successfully');
+      logger.info('[useAgoraCore] Left successfully');
     } catch (error) {
-      console.error('[useAgoraCore] Leave error:', error);
+      logger.error('[useAgoraCore] Leave error', error);
       onError?.(error as Error);
     }
   }, [client, isJoined, localAudioTrack, localVideoTrack, onError]);
@@ -213,11 +213,11 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
         throw new Error('Local tracks not created');
       }
 
-      console.log('[useAgoraCore] Publishing tracks');
+      logger.info('[useAgoraCore] Publishing tracks');
       await client.publish([localAudioTrack, localVideoTrack]);
-      console.log('[useAgoraCore] Published successfully');
+      logger.info('[useAgoraCore] Published successfully');
     } catch (error) {
-      console.error('[useAgoraCore] Publish error:', error);
+      logger.error('[useAgoraCore] Publish error', error);
       onError?.(error as Error);
       throw error;
     }
@@ -227,22 +227,22 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
     try {
       if (!localAudioTrack || !localVideoTrack) return;
       
-      console.log('[useAgoraCore] Unpublishing tracks');
+      logger.info('[useAgoraCore] Unpublishing tracks');
       await client.unpublish([localAudioTrack, localVideoTrack]);
-      console.log('[useAgoraCore] Unpublished successfully');
+      logger.info('[useAgoraCore] Unpublished successfully');
     } catch (error) {
-      console.error('[useAgoraCore] Unpublish error:', error);
+      logger.error('[useAgoraCore] Unpublish error', error);
       onError?.(error as Error);
     }
   }, [client, localAudioTrack, localVideoTrack, onError]);
 
   const renewToken = useCallback(async (newToken: string) => {
     try {
-      console.log('[useAgoraCore] Renewing token');
+      logger.info('[useAgoraCore] Renewing token');
       await client.renewToken(newToken);
-      console.log('[useAgoraCore] Token renewed');
+      logger.info('[useAgoraCore] Token renewed');
     } catch (error) {
-      console.error('[useAgoraCore] Token renewal error:', error);
+      logger.error('[useAgoraCore] Token renewal error', error);
       onError?.(error as Error);
       throw error;
     }
@@ -255,9 +255,9 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
       const newMutedState = !isMicMuted;
       await localAudioTrack.setEnabled(!newMutedState);
       setIsMicMuted(newMutedState);
-      console.log('[useAgoraCore] Mic toggled:', newMutedState ? 'muted' : 'unmuted');
+      logger.info('[useAgoraCore] Mic toggled', { state: newMutedState ? 'muted' : 'unmuted' });
     } catch (error) {
-      console.error('[useAgoraCore] Toggle mic error:', error);
+      logger.error('[useAgoraCore] Toggle mic error', error);
       onError?.(error as Error);
     }
   }, [localAudioTrack, isMicMuted, onError]);
@@ -269,16 +269,16 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
       const newCameraState = !isCameraOff;
       await localVideoTrack.setEnabled(!newCameraState);
       setIsCameraOff(newCameraState);
-      console.log('[useAgoraCore] Camera toggled:', newCameraState ? 'off' : 'on');
+      logger.info('[useAgoraCore] Camera toggled', { state: newCameraState ? 'off' : 'on' });
     } catch (error) {
-      console.error('[useAgoraCore] Toggle camera error:', error);
+      logger.error('[useAgoraCore] Toggle camera error', error);
       onError?.(error as Error);
     }
   }, [localVideoTrack, isCameraOff, onError]);
 
   const switchCamera = useCallback(async (deviceId: string) => {
     try {
-      console.log('[useAgoraCore] Switching camera to:', deviceId);
+      logger.info('[useAgoraCore] Switching camera to', { deviceId });
       
       // Close old track
       if (localVideoTrack) {
@@ -299,9 +299,9 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
         await client.publish(newVideoTrack);
       }
       
-      console.log('[useAgoraCore] Camera switched');
+      logger.info('[useAgoraCore] Camera switched');
     } catch (error) {
-      console.error('[useAgoraCore] Switch camera error:', error);
+      logger.error('[useAgoraCore] Switch camera error', error);
       onError?.(error as Error);
       throw error;
     }
@@ -309,7 +309,7 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
 
   const switchMicrophone = useCallback(async (deviceId: string) => {
     try {
-      console.log('[useAgoraCore] Switching microphone to:', deviceId);
+      logger.info('[useAgoraCore] Switching microphone to', { deviceId });
       
       // Close old track
       if (localAudioTrack) {
@@ -332,9 +332,9 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
         await client.publish(newAudioTrack);
       }
       
-      console.log('[useAgoraCore] Microphone switched');
+      logger.info('[useAgoraCore] Microphone switched');
     } catch (error) {
-      console.error('[useAgoraCore] Switch microphone error:', error);
+      logger.error('[useAgoraCore] Switch microphone error', error);
       onError?.(error as Error);
       throw error;
     }
@@ -343,7 +343,7 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
   // Cleanup on unmount
   useEffect(() => {
     cleanupRef.current = () => {
-      console.log('[useAgoraCore] Cleanup on unmount');
+      logger.info('[useAgoraCore] Cleanup on unmount');
       leave();
     };
 

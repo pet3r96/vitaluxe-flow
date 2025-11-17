@@ -126,7 +126,7 @@ export const usePracticeProviders = (practiceId: string | null | undefined) => {
   
   const providers = allPersonnel?.filter(p => p.type === 'provider') || [];
   
-  console.info('[usePracticeProviders] Filtered to providers only:', providers.length);
+  logger.info('[usePracticeProviders] Filtered to providers only', { count: providers.length });
   
   return {
     data: providers,
