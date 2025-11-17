@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
       userIds.push(effectiveUserId);
     }
 
-    console.log(`Processing ${repIds.length} rep(s) and ${userIds.length} user ID(s)`);
+    edgeLogger.info('Processing rep IDs and user IDs', { repCount: repIds.length, userCount: userIds.length });
 
     // Find all active doctor practices linked to these user_ids (exclude rep profiles)
     const { data: practices, error: practicesErr2 } = await supabaseAdmin

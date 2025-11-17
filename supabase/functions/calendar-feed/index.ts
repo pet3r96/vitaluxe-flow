@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,7 +48,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (tokenError || !tokenData || !tokenData.is_active) {
-      console.error('Invalid token:', tokenError);
+      edgeLogger.error('Invalid token', tokenError);
       return new Response('Invalid or inactive token', {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'text/plain' },

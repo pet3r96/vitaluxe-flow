@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,7 +29,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    console.log('Checking encryption key rotation status...');
+    edgeLogger.info('Checking encryption key rotation status');
 
     // Get the most recent encryption key
     const { data: keys, error: keysError } = await supabaseClient
@@ -38,12 +39,12 @@ serve(async (req) => {
       .limit(1);
 
     if (keysError) {
-      console.error('Error fetching encryption keys:', keysError);
+      edgeLogger.error('Error fetching encryption keys', keysError);
       throw keysError;
     }
 
     if (!keys || keys.length === 0) {
-      console.warn('No encryption keys found in database');
+      edgeLogger.warn('No encryption keys found in database');
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -62,11 +63,11 @@ serve(async (req) => {
       (Date.now() - lastRotationDate.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    console.log(`Encryption key last rotated ${daysSinceRotation} days ago`);
+    edgeLogger.info('Encryption key age calculated', { daysSinceRotation });
 
     // Check if rotation is needed (90+ days)
     if (daysSinceRotation >= 90) {
-      console.warn(`⚠️ Encryption key rotation OVERDUE by ${daysSinceRotation - 90} days`);
+      edgeLogger.warn('Encryption key rotation OVERDUE', { daysOverdue: daysSinceRotation - 90 });
 
       // Create high-severity security event
       const { error: eventError } = await supabaseClient.from('security_events').insert({
@@ -81,9 +82,9 @@ serve(async (req) => {
       });
 
       if (eventError) {
-        console.error('Failed to create security event:', eventError);
+        edgeLogger.error('Failed to create security event', eventError);
       } else {
-        console.log('✓ Security event created for key rotation requirement');
+        edgeLogger.info('Security event created for key rotation requirement');
       }
 
       // Also create an alert for immediate notification
@@ -100,9 +101,9 @@ serve(async (req) => {
       });
 
       if (alertError) {
-        console.error('Failed to trigger alert:', alertError);
+        edgeLogger.error('Failed to trigger alert', alertError);
       } else {
-        console.log('✓ Alert triggered for administrators');
+        edgeLogger.info('Alert triggered for administrators');
       }
 
       return new Response(
@@ -121,7 +122,7 @@ serve(async (req) => {
 
     // Rotation not yet required
     const daysUntilRotation = 90 - daysSinceRotation;
-    console.log(`✓ Encryption keys are up to date. Next rotation due in ${daysUntilRotation} days`);
+    edgeLogger.info('Encryption keys are up to date', { daysUntilRotation });
 
     return new Response(
       JSON.stringify({ 
@@ -138,7 +139,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in check-key-rotation function:', error);
+    edgeLogger.error('Error in check-key-rotation function', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
