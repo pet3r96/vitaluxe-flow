@@ -235,7 +235,7 @@ export const PriceOverrideManager = () => {
   // Clear override mutation
   const clearMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('rep_product_price_overrides')
         .delete()
         .eq('rep_id', selectedRepId)
@@ -267,7 +267,7 @@ export const PriceOverrideManager = () => {
   // Clear all overrides for rep
   const clearAllMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('rep_product_price_overrides')
         .delete()
         .eq('rep_id', selectedRepId);

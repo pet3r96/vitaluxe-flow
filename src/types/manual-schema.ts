@@ -69,12 +69,13 @@ export interface PracticeDevelopmentFeeInvoice {
 export interface SmsVerificationCodeWithProfile {
   id: string;
   user_id: string;
-  phone_number: string;
+  phone: string;
   code: string;
   expires_at: string;
   verified: boolean;
-  attempts: number;
+  attempt_count: number;
   created_at: string;
+  verified_at: string;
   profiles?: {
     id: string;
     name?: string;

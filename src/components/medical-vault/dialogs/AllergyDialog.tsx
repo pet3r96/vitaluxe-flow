@@ -106,7 +106,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
   const mutation = useOptimisticMutation(
     async (data: AllergyFormData) => {
       // Check for conflicts before submission
-      const existingResult = await supabase
+      const existingResult = await (supabase as any)
         .from("patient_medical_vault")
         .select("id, record_data")
         .eq("patient_account_id", patientAccountId)
@@ -115,7 +115,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
 
       const existingAllergies = existingResult.data?.map(r => ({ 
         id: r.id, 
-        nka: (r.record_data as AllergyRecordData)?.nka || false 
+        nka: (r.record_data as any)?.nka || false 
       })) || [];
 
       // If adding NKA, check for existing specific allergies
@@ -155,15 +155,15 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           .eq("id", allergy.id);
         if (error) throw error;
       } else {
-        const insertData: Partial<MedicalVaultRecord> = {
+        const insertData = {
           record_type: "allergy",
-          record_data: recordData as AllergyRecordData,
+          record_data: recordData as any,
           patient_account_id: patientAccountId,
           is_active: true,
           created_by_user_id: user?.id,
           created_by_role: mapRoleToAuditRole(effectiveRole),
         };
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("patient_medical_vault")
           .insert(insertData);
         if (error) throw error;
