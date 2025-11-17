@@ -127,7 +127,7 @@ export default function PracticePatients() {
 
       // Don't fail the entire operation if email fails
       if (emailError) {
-        console.warn('[Patient Portal] Email sending failed:', emailError);
+        logger.warn('Patient Portal email sending failed', emailError);
         return { 
           accountData, 
           emailError,
