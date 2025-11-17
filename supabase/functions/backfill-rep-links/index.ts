@@ -165,9 +165,9 @@ Deno.serve(async (req) => {
 
             if (!linkError) {
               linksAdded++;
-              console.log(`Linked practice ${practice.id} to rep user ${targetRep.user_id} via linked_topline_id`);
+              edgeLogger.info('Linked practice to rep', { practiceId: practice.id, repUserId: targetRep.user_id });
             } else {
-              console.error(`Failed to link rep ${targetRepId} to practice ${practice.id}:`, linkError);
+              edgeLogger.error('Failed to link rep to practice', linkError, { repId: targetRepId, practiceId: practice.id });
             }
           }
         }
@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in backfill-rep-links:', error);
+    edgeLogger.error('Error in backfill-rep-links', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
       JSON.stringify({ error: errorMessage }),

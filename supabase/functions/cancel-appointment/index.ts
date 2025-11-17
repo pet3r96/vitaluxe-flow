@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
         .eq('id', videoSession.id);
 
       if (vsError) {
-        console.error('❌ [cancel-appointment] Video session update error:', vsError);
+        edgeLogger.error('[cancel-appointment] Video session update error', vsError);
         throw new Error('Video session update failed: ' + vsError.message);
       }
       // Log the cancellation (use admin client to ensure it persists)
@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (patientUserError) {
-        console.error('[cancel-appointment] Error fetching patient user data:', patientUserError);
+        edgeLogger.error('[cancel-appointment] Error fetching patient user data', patientUserError);
       } else if (patientWithUser) {
         const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
         
@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
           
           if (patientWithUser.user_id) {
             // Patient has portal access - use handleNotifications
-            console.log('[cancel-appointment] Patient has portal access, calling handleNotifications');
+            edgeLogger.info('[cancel-appointment] Patient has portal access, calling handleNotifications');
             try {
               await supabaseAdmin.functions.invoke('handleNotifications', {
                 body: {
@@ -278,13 +278,13 @@ Deno.serve(async (req) => {
                   }
                 }
               });
-              console.log('[cancel-appointment] Notification sent via handleNotifications');
+              edgeLogger.info('[cancel-appointment] Notification sent via handleNotifications');
             } catch (notifError) {
-              console.error('[cancel-appointment] Error calling handleNotifications:', notifError);
+              edgeLogger.error('[cancel-appointment] Error calling handleNotifications', notifError);
             }
           } else {
             // No portal access - send email/SMS directly
-            console.log('[cancel-appointment] Patient has no portal access, sending direct email/SMS');
+            edgeLogger.info('[cancel-appointment] Patient has no portal access, sending direct email/SMS');
             
             if (patientWithUser.email) {
               try {
@@ -314,9 +314,9 @@ Deno.serve(async (req) => {
                     eventType: 'appointment_cancellation'
                   }
                 });
-                console.log('[cancel-appointment] Email sent to:', patientWithUser.email);
+                edgeLogger.info('[cancel-appointment] Email sent');
               } catch (emailError) {
-                console.error('[cancel-appointment] Error sending email:', emailError);
+                edgeLogger.error('[cancel-appointment] Error sending email', emailError);
               }
             }
             

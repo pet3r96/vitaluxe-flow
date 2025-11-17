@@ -171,7 +171,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Webhook processing error:", error);
+    edgeLogger.error("Webhook processing error", error);
     return handleError(
       supabase,
       error,

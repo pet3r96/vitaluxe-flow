@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
     const { data: appointments, error: appointmentsError } = await query;
 
     if (appointmentsError) {
-      console.error('Error fetching appointments:', appointmentsError);
+      edgeLogger.error('Error fetching appointments', appointmentsError);
       throw appointmentsError;
     }
 
@@ -209,7 +209,7 @@ END:VEVENT
       },
     });
   } catch (error) {
-    console.error('Error generating calendar feed:', error);
+    edgeLogger.error('Error generating calendar feed', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(`Error: ${errorMessage}`, {
       status: 500,

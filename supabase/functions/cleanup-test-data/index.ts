@@ -119,7 +119,7 @@ serve(async (req) => {
         // Start comprehensive cleanup process
         const cleanupDetails: any = {};
         
-        console.log(`Starting cascade deletion for user ${userId}`);
+        edgeLogger.info('Starting cascade deletion for user', { userId });
 
         // STEP 0: Check if this is a PATIENT user (has patient_accounts with user_id)
         const { data: patientAccount } = await supabaseAdmin
@@ -129,7 +129,7 @@ serve(async (req) => {
           .maybeSingle();
 
         if (patientAccount) {
-          console.log(`🩺 Detected PATIENT account: ${targetEmail}`);
+          edgeLogger.info('Detected PATIENT account');
           
           // Delete patient-specific medical vault data from patient_medical_vault table
           await supabaseAdmin.from('patient_medical_vault').delete().eq('patient_account_id', patientAccount.id);
@@ -141,7 +141,7 @@ serve(async (req) => {
           await supabaseAdmin.from('patient_accounts').delete().eq('id', patientAccount.id);
           
           cleanupDetails.patient_account_deleted = true;
-          console.log(`✓ Deleted patient account and medical vault data`);
+          edgeLogger.info('Deleted patient account and medical vault data');
         }
 
         // STEP 1: Delete medical vault data (for patient_accounts linked to this practice)
@@ -152,7 +152,7 @@ serve(async (req) => {
 
         if (patientAccounts && patientAccounts.length > 0) {
           const patientAccountIds = patientAccounts.map(p => p.id);
-          console.log(`Deleting medical vault data for ${patientAccountIds.length} patient accounts`);
+          edgeLogger.info('Deleting medical vault data', { count: patientAccountIds.length });
 
           await supabaseAdmin.from('patient_medical_vault').delete().in('patient_account_id', patientAccountIds);
           
@@ -186,7 +186,7 @@ serve(async (req) => {
 
         if (orders && orders.length > 0) {
           const orderIds = orders.map(o => o.id);
-          console.log(`Deleting ${orderIds.length} orders and their dependencies`);
+          edgeLogger.info('Deleting orders and their dependencies', { count: orderIds.length });
 
           await supabaseAdmin.from('order_profits').delete().in('order_id', orderIds);
           await supabaseAdmin.from('order_lines').delete().in('order_id', orderIds);
@@ -247,16 +247,16 @@ serve(async (req) => {
             await supabaseAdmin.from('providers').delete().eq('user_id', userId);
             
             cleanupDetails.providers_deleted = providerIds.length;
-            console.log(`✓ Deleted ${providers.length} provider records`);
+            edgeLogger.info('Deleted provider records', { count: providers.length });
           } else {
-            console.log('ℹ No provider records found (this is OK)');
+            edgeLogger.info('No provider records found (this is OK)');
             cleanupDetails.providers_deleted = 0;
           }
 
           // Also delete if user is a provider under another practice
           await supabaseAdmin.from('providers').delete().eq('user_id', userId);
         } catch (error: any) {
-          console.warn(`Warning deleting provider data for ${targetEmail}:`, error.message);
+          edgeLogger.warn('Warning deleting provider data', { targetEmail, error: error.message });
           cleanupDetails.provider_deletion_warning = error.message;
         }
 
@@ -264,9 +264,9 @@ serve(async (req) => {
         try {
           await supabaseAdmin.from('practice_staff').delete().eq('user_id', userId);
           await supabaseAdmin.from('practice_staff').delete().eq('practice_id', userId);
-          console.log('✓ Deleted practice staff records');
+          edgeLogger.info('Deleted practice staff records');
         } catch (error: any) {
-          console.warn(`Warning deleting practice staff for ${targetEmail}:`, error.message);
+          edgeLogger.warn('Warning deleting practice staff', { error: error.message });
         }
 
         // STEP 7: Delete rep dependencies (optional - may not exist)
@@ -300,13 +300,13 @@ serve(async (req) => {
               .eq('user_id', userId);
             
             cleanupDetails.reps_deleted = repIds.length;
-            console.log(`✓ Deleted ${reps.length} rep records`);
+            edgeLogger.info('Deleted rep records', { count: reps.length });
           } else {
-            console.log('ℹ No rep records found (this is OK)');
+            edgeLogger.info('No rep records found (this is OK)');
             cleanupDetails.reps_deleted = 0;
           }
         } catch (error: any) {
-          console.warn(`Warning deleting rep data for ${targetEmail}:`, error.message);
+          edgeLogger.warn('Warning deleting rep data', { error: error.message });
           cleanupDetails.rep_deletion_warning = error.message;
         }
 
@@ -316,9 +316,9 @@ serve(async (req) => {
           await supabaseAdmin.from('user_roles').delete().eq('user_id', userId);
           await supabaseAdmin.from('user_password_status').delete().eq('user_id', userId);
           await supabaseAdmin.from('pending_reps').delete().eq('created_by_user_id', userId);
-          console.log('✓ Deleted user metadata (sessions, roles, password status)');
+          edgeLogger.info('Deleted user metadata (sessions, roles, password status)');
         } catch (error: any) {
-          console.error(`❌ CRITICAL: Failed to delete user metadata for ${targetEmail}:`, error.message);
+          edgeLogger.error('CRITICAL: Failed to delete user metadata', error);
           throw new Error(`Failed to delete critical user metadata: ${error.message}`);
         }
 

@@ -480,24 +480,22 @@ serve(async (req) => {
       
       roleDataForRpc.parentId = parentRep.id; // Use rep_id, not user_id
       delete roleDataForRpc.linkedToplineId; // Remove user_id to prevent RPC from using wrong field
-      console.log(`Downline creation: mapped user_id to rep_id ${parentRep.id}, linkedToplineId removed`);
+      edgeLogger.info('Downline creation: mapped user_id to rep_id', { repId: parentRep.id });
     }
     
     // For toplines, ensure no parentId/linkedToplineId is sent
     if (signupData.role === 'topline') {
       delete roleDataForRpc.parentId;
       delete roleDataForRpc.linkedToplineId;
-      console.log('Topline creation: ensuring no parentId is sent to RPC');
+      edgeLogger.info('Topline creation: ensuring no parentId is sent to RPC');
     }
 
-    // Log RPC args keys for debugging
-    console.log('RPC args keys:', Object.keys({ 
-      p_user_id: userId, 
-      p_email: signupData.email, 
-      p_name: signupData.name, 
-      p_role: signupData.role, 
-      p_role_data: roleDataForRpc 
-    }));
+    // Log RPC args for debugging
+    edgeLogger.info('RPC args prepared', { 
+      userId,
+      role: signupData.role,
+      hasRoleData: !!roleDataForRpc
+    });
 
     // Use atomic function to create user with role (with new Phase 2 parameters)
     const { data: creationResult, error: creationError } = await supabaseAdmin.rpc(
@@ -517,15 +515,11 @@ serve(async (req) => {
     );
 
     if (creationError || !creationResult?.success) {
-      console.error('❌ User creation RPC failed:', {
-        error: creationError,
+      edgeLogger.error('User creation RPC failed', creationError, {
         result: creationResult,
         role: signupData.role,
-        roleDataSent: roleDataForRpc,
         userId: userId,
-        errorCode: creationError?.code,
-        errorDetails: creationError?.details,
-        errorMessage: creationError?.message
+        errorCode: creationError?.code
       });
       
       // Check if it's a duplicate key constraint violation
@@ -708,7 +702,7 @@ serve(async (req) => {
       if (toplineRep) {
         toplineRepsId = toplineRep.id;
       } else {
-        console.warn('Topline rep not found, creating one on the fly');
+        edgeLogger.warn('Topline rep not found, creating one on the fly');
         const { error: createToplineRepError } = await supabaseAdmin
           .from('reps')
           .insert({
@@ -719,7 +713,7 @@ serve(async (req) => {
           });
 
         if (createToplineRepError) {
-          console.error('Failed creating topline rep record:', createToplineRepError);
+          edgeLogger.error('Failed creating topline rep record', createToplineRepError);
         }
 
         // Re-fetch after attempting creation
@@ -732,7 +726,7 @@ serve(async (req) => {
         if (createdToplineRep) {
           toplineRepsId = createdToplineRep.id;
         } else {
-          console.error('Topline rep lookup error:', toplineError || refetchError);
+          edgeLogger.error('Topline rep lookup error', toplineError || refetchError);
           await supabaseAdmin.auth.admin.deleteUser(userId);
           return new Response(
             JSON.stringify({ error: 'Invalid topline rep assignment' }),
