@@ -202,9 +202,9 @@ Deno.serve(async (req) => {
                   eventType: 'appointment_reschedule'
                 }
               });
-              console.log('[approve-reschedule] Email sent to:', patientWithUser.email);
+              edgeLogger.info('[approve-reschedule] Email sent', { to: patientWithUser.email });
             } catch (emailError) {
-              console.error('[approve-reschedule] Error sending email:', emailError);
+              edgeLogger.error('[approve-reschedule] Error sending email', emailError);
             }
           }
           
@@ -216,9 +216,9 @@ Deno.serve(async (req) => {
                 message: `Appointment rescheduled to ${appointmentDateFormatted} at ${appointmentTimeFormatted}.`,
                 metadata: { appointmentId: updated.id }
               });
-              console.log('[approve-reschedule] SMS sent to:', normalizedPhone);
+              edgeLogger.info('[approve-reschedule] SMS sent', { to: normalizedPhone });
             } catch (smsError) {
-              console.error('[approve-reschedule] Error sending SMS:', smsError);
+              edgeLogger.error('[approve-reschedule] Error sending SMS', smsError);
             }
           }
         }
@@ -250,7 +250,7 @@ Deno.serve(async (req) => {
 
       if (insertError) throw insertError;
 
-      console.log('New appointment created:', newAppointment.id);
+      edgeLogger.info('New appointment created', { appointmentId: newAppointment.id });
 
       // Clear reschedule request from original appointment
       const { error: clearError } = await supabaseClient
@@ -265,9 +265,9 @@ Deno.serve(async (req) => {
         })
         .eq('id', appointmentId);
 
-      if (clearError) console.error('Error clearing reschedule request:', clearError);
+      if (clearError) edgeLogger.error('Error clearing reschedule request', clearError);
 
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         success: true, 
         appointment: newAppointment, 
         action: 'duplicated',
@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Approve reschedule error:', error);
+    edgeLogger.error('Approve reschedule error', error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

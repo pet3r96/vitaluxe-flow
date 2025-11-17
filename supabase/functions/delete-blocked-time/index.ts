@@ -34,7 +34,8 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Error deleting blocked time:', error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('Error deleting blocked time', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

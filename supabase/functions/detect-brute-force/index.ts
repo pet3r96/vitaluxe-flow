@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validateDetectBruteForceRequest } from "../_shared/requestValidators.ts";
+import { edgeLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +19,7 @@ serve(async (req) => {
     try {
       requestData = await req.json();
     } catch (error) {
-      console.error('Invalid JSON in request body:', error);
+      edgeLogger.error('Invalid JSON in request body', error);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -28,7 +29,7 @@ serve(async (req) => {
     // Validate input
     const validation = validateDetectBruteForceRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request data', 
@@ -57,7 +58,7 @@ serve(async (req) => {
       ip = null;
     }
 
-    console.log(`Detecting brute force: ${attempt_count} attempts for ${email} from ${ip || 'unknown'}`);
+    edgeLogger.info('Detecting brute force', { attempt_count, ip: ip || 'unknown' });
 
     // Log critical security event
     await supabaseClient.from("security_events").insert({
@@ -95,7 +96,7 @@ serve(async (req) => {
         lockout_reason: "brute_force_detected",
         locked_until: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min
       });
-      console.log(`Account locked for ${email} until ${new Date(Date.now() + 30 * 60 * 1000).toISOString()}`);
+      edgeLogger.warn('Account locked', { locked_until: new Date(Date.now() + 30 * 60 * 1000).toISOString() });
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -103,7 +104,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error detecting brute force:", error);
+    edgeLogger.error("Error detecting brute force", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

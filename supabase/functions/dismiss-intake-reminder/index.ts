@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { edgeLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,7 +41,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      console.error('[dismiss-intake-reminder] Auth error:', authError);
+      edgeLogger.error('[dismiss-intake-reminder] Auth error', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -53,7 +54,7 @@ serve(async (req) => {
 
     // Validate that the authenticated user matches the userId
     if (user.id !== userId) {
-      console.error('[dismiss-intake-reminder] User ID mismatch', { 
+      edgeLogger.error('[dismiss-intake-reminder] User ID mismatch', { 
         authenticatedUserId: user.id, 
         requestedUserId: userId 
       });
@@ -63,7 +64,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[dismiss-intake-reminder] Dismissing intake reminder for user:', userId);
+    edgeLogger.info('[dismiss-intake-reminder] Dismissing intake reminder', { userId });
 
     // Verify user is a patient
     const { data: patientAccount, error: patientError } = await supabaseClient
@@ -73,7 +74,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (patientError) {
-      console.error('[dismiss-intake-reminder] Error checking patient account:', patientError);
+      edgeLogger.error('[dismiss-intake-reminder] Error checking patient account', patientError);
       throw patientError;
     }
 
@@ -93,11 +94,11 @@ serve(async (req) => {
       .eq('user_id', userId);
 
     if (updateError) {
-      console.error('[dismiss-intake-reminder] Error updating patient account:', updateError);
+      edgeLogger.error('[dismiss-intake-reminder] Error updating patient account', updateError);
       throw updateError;
     }
 
-    console.log('[dismiss-intake-reminder] Successfully dismissed intake reminder for user:', userId);
+    edgeLogger.info('[dismiss-intake-reminder] Successfully dismissed intake reminder', { userId });
 
     return new Response(
       JSON.stringify({ 
@@ -111,7 +112,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[dismiss-intake-reminder] Error:', error);
+    edgeLogger.error('[dismiss-intake-reminder] Error', error);
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Internal server error'

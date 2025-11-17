@@ -1,6 +1,7 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -22,7 +23,7 @@ Deno.serve(async (req) => {
     // Verify user is authenticated using the raw JWT token
     const { data: { user }, error: userError } = await db.auth.getUser(token);
     if (userError || !user) {
-      console.error('[get-active-impersonation] Authentication failed:', userError);
+      edgeLogger.error('[get-active-impersonation] Authentication failed', userError);
       // Return no session instead of 401 - invalid token just means no active impersonation
       return successResponse({ session: null });
     }
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (sessionError) {
-      console.error('[get-active-impersonation] Error fetching session:', sessionError);
+      edgeLogger.error('[get-active-impersonation] Error fetching session', sessionError);
       // Check for RLS violation
       if (sessionError.code === '42501') {
         return new Response(
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
 
     // Check if session is expired
     if (session && new Date(session.expires_at) < new Date()) {
-      console.log('[get-active-impersonation] Session expired, cleaning up');
+      edgeLogger.info('[get-active-impersonation] Session expired, cleaning up');
       
       // Clean up expired session
       await db
@@ -73,12 +74,12 @@ Deno.serve(async (req) => {
         .eq('id', session.id);
     }
 
-    console.log('[get-active-impersonation] Success:', { hasSession: !!session });
+    edgeLogger.info('[get-active-impersonation] Success', { hasSession: !!session });
 
     return successResponse({ session });
 
   } catch (error) {
-    console.error('[get-active-impersonation] Unexpected error:', error);
+    edgeLogger.error('[get-active-impersonation] Unexpected error', error);
     return errorResponse('Internal server error', 500);
   }
 });
