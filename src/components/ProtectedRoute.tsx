@@ -1,6 +1,7 @@
 import { ReactNode, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from '@/lib/logger';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -172,7 +173,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   // While role is being determined, show a lightweight loader
   if (user && !effectiveRole) {
-    console.log('[ProtectedRoute] Waiting for role resolution');
+    logger.info('[ProtectedRoute] Waiting for role resolution');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">

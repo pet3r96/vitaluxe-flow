@@ -11,6 +11,7 @@ import { realtimeManager } from "@/lib/realtimeManager";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import type { SharedDocument } from '@/types/manual-schema';
+import { logger } from '@/lib/logger';
 
 interface SharedDocumentsGridProps {
   patientAccountId: string;
@@ -103,20 +104,20 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   const { data: providerDocs, isLoading: loadingProviderDocs, error: providerDocsError } = useQuery({
     queryKey: ['shared-provider-documents', patientAccountId],
     queryFn: async () => {
-      console.log('[SharedDocumentsGrid] Fetching provider documents for patient:', patientAccountId);
+      logger.info('[SharedDocumentsGrid] Fetching provider documents', { patientAccountId });
       
       const { data, error } = await supabase
         .rpc('get_patient_unified_documents', { p_patient_id: patientAccountId });
       
       if (error) {
-        console.error('[SharedDocumentsGrid] Provider docs error:', error);
+        logger.error('[SharedDocumentsGrid] Provider docs error', error);
         throw error;
       }
       
       // Filter to only show provider-assigned documents
       const providerAssignedDocs = (data || []).filter(doc => doc.source === 'provider_assigned');
       
-      console.log('[SharedDocumentsGrid] Provider docs loaded:', providerAssignedDocs.length);
+      logger.info('[SharedDocumentsGrid] Provider docs loaded', { count: providerAssignedDocs.length });
       return providerAssignedDocs;
     },
     staleTime: 10000,
@@ -158,8 +159,8 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
   const handleDownload = async (doc: any) => {
     try {
       const bucketName = doc.docType === 'provider' ? 'provider-documents' : 'patient-documents';
-      console.log('[SharedDocumentsGrid] Download attempt:', { 
-        docType: doc.docType, 
+      logger.info('[SharedDocumentsGrid] Download attempt', { 
+        docType: doc.docType,
         bucketName, 
         storagePath: doc.storage_path,
         documentName: doc.document_name 
@@ -175,7 +176,7 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
       });
 
       if (error) {
-        console.error('[SharedDocumentsGrid] Signed URL error:', error);
+        logger.error('[SharedDocumentsGrid] Signed URL error', error);
         throw error;
       }
 
@@ -199,8 +200,8 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
         description: "Document is downloading" 
       });
     } catch (error: any) {
-      console.error('[SharedDocumentsGrid] Download error:', error);
-      toast({ 
+      logger.error('[SharedDocumentsGrid] Download error', error);
+      toast({
         title: "Download Failed", 
         description: error.message,
         variant: "destructive" 

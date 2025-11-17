@@ -8,6 +8,7 @@ import { Loader2, Monitor, LogOut } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { getErrorMessage } from '@/types/errors';
+import { logger } from '@/lib/logger';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,7 +89,7 @@ export function ActivityLogSection() {
       if (error) throw error;
       setSessions((data || []) as ActiveSession[]);
     } catch (error: unknown) {
-      console.error('Error fetching sessions:', error);
+      logger.error('Error fetching sessions', error);
       toast({
         title: "Error loading activity log",
         description: getErrorMessage(error),
@@ -137,7 +138,7 @@ export function ActivityLogSection() {
       // Refresh the sessions list
       fetchSessions();
     } catch (error: any) {
-      console.error('Error signing out:', error);
+      logger.error('Error signing out', error);
       toast({
         title: "Error signing out",
         description: error.message || "Failed to sign out from other devices.",

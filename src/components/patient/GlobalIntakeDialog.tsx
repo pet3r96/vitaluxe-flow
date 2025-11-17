@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { IntakeCompletionDialog } from "@/components/patient/IntakeCompletionDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from '@/lib/logger';
 
 /**
  * Global Intake Dialog Manager
@@ -17,7 +18,7 @@ export const GlobalIntakeDialog = () => {
   try {
     authData = useAuth();
   } catch (error) {
-    console.warn('[GlobalIntakeDialog] Auth context not available yet');
+    logger.warn('[GlobalIntakeDialog] Auth context not available yet');
     return null;
   }
 
@@ -55,13 +56,13 @@ export const GlobalIntakeDialog = () => {
   }
 
   const handleComplete = () => {
-    console.log('[GlobalIntakeDialog] Navigating to intake form');
+    logger.info('[GlobalIntakeDialog] Navigating to intake form');
     setShowIntakeDialog(false);
     navigate('/intake');
   };
 
   const handleDismiss = async (dontAskAgain: boolean) => {
-    console.log('[GlobalIntakeDialog] Dismissing dialog', { dontAskAgain });
+    logger.info('[GlobalIntakeDialog] Dismissing dialog', { dontAskAgain });
     setShowIntakeDialog(false);
 
     if (dontAskAgain && effectiveUserId) {
@@ -71,7 +72,7 @@ export const GlobalIntakeDialog = () => {
         });
 
         if (error) {
-          console.error('[GlobalIntakeDialog] Error dismissing reminder:', error);
+          logger.error('[GlobalIntakeDialog] Error dismissing reminder', error);
           toast({
             title: "Error",
             description: "Failed to save preference. Please try again.",
@@ -80,13 +81,13 @@ export const GlobalIntakeDialog = () => {
           return;
         }
 
-        console.log('[GlobalIntakeDialog] Intake reminder permanently dismissed');
+        logger.info('[GlobalIntakeDialog] Intake reminder permanently dismissed');
         toast({
           title: "Preference Saved",
           description: "You won't see this reminder again.",
         });
       } catch (err) {
-        console.error('[GlobalIntakeDialog] Exception dismissing reminder:', err);
+        logger.error('[GlobalIntakeDialog] Exception dismissing reminder', err);
       }
     }
   };

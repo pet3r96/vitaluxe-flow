@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Calendar, Building, Loader2, AlertCircle, CheckCircle, Info, ChevronDown } from "lucide-react";
 import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
 import { usePatientPracticeSubscription } from "@/hooks/usePatientPracticeSubscription";
+import { logger } from '@/lib/logger';
 
 interface AppointmentBookingDialogProps {
   open: boolean;
@@ -49,10 +50,10 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
         effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
       } catch (e) {
-        console.warn('[AppointmentBooking] get-active-impersonation failed, using real user id');
+        logger.warn('[AppointmentBooking] get-active-impersonation failed, using real user id');
       }
       
-      console.log("👤 [AppointmentBooking] Effective user ID:", effectiveUserId);
+      logger.info('[AppointmentBooking] Effective user ID determined', { userId: effectiveUserId });
       
       // Get patient_account with practice_id only (no join)
       const { data, error } = await supabase
@@ -72,7 +73,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
           .single();
         
         if (!practiceError && practiceData) {
-          console.log("📋 [AppointmentBooking] Practice loaded:", practiceData.name);
+          logger.info('[AppointmentBooking] Practice loaded', { practiceName: practiceData.name });
           return {
             ...data,
             practice: practiceData
@@ -80,7 +81,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         }
       }
       
-      console.log("📋 [AppointmentBooking] Patient account:", data);
+      logger.info('[AppointmentBooking] Patient account loaded', { patientId: data?.id });
       return data;
     },
   });
@@ -93,7 +94,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
     queryKey: ["practice-providers", patientAccount?.practice_id],
     queryFn: async () => {
       if (!patientAccount?.practice_id) return [] as ProviderWithUser[];
-      console.log('[AppointmentBooking] Fetching providers for practice:', patientAccount.practice_id);
+      logger.info('[AppointmentBooking] Fetching providers', { practiceId: patientAccount.practice_id });
       const { data, error } = await supabase
         .from("providers")
         .select(`
@@ -105,7 +106,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         `)
         .eq("practice_id", patientAccount.practice_id);
       if (error) throw error;
-      console.log('[AppointmentBooking] Providers loaded:', data?.length);
+      logger.info('[AppointmentBooking] Providers loaded', { count: data?.length });
       
       // Format provider display name with robust fallback
       return (data || []).map((provider: any) => {
@@ -192,7 +193,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         setValidationMessage({ type: 'error', text: message });
       }
     } catch (error: any) {
-      console.error('Error finding availability:', error);
+      logger.error('Error finding availability', error);
       const message = error.message || 'Failed to find availability';
       toast.error(message);
       setValidationMessage({ type: 'error', text: message });
@@ -236,7 +237,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
         setValidationMessage({ type: 'error', text: data?.error || 'Time slot is not available' });
       }
     } catch (error: any) {
-      console.error('Validation error:', error);
+      logger.error('Validation error', error);
       setValidationMessage({ type: 'error', text: error.message || 'Failed to validate time' });
     } finally {
       setValidating(false);
@@ -312,7 +313,7 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
       setSelectedTime('');
       setValidationMessage(null);
     } catch (error: any) {
-      console.error('Booking error:', error);
+      logger.error('Booking error', error);
       toast.error(error.message || "Failed to book appointment");
     } finally {
       setLoading(false);

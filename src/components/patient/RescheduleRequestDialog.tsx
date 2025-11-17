@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Calendar } from "lucide-react";
+import { logger } from '@/lib/logger';
 
 interface RescheduleRequestDialogProps {
   open: boolean;
@@ -67,7 +68,7 @@ export function RescheduleRequestDialog({
       });
 
       if (error) {
-        console.error("Reschedule error:", error);
+        logger.error('Reschedule error', error);
         throw new Error(error.message || "Failed to send reschedule request");
       }
 
@@ -82,7 +83,7 @@ export function RescheduleRequestDialog({
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Reschedule request failed:", error);
+      logger.error('Reschedule request failed', error);
       toast.error(error.message || "Failed to request reschedule");
     } finally {
       setLoading(false);

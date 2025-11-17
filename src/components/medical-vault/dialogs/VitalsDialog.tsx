@@ -203,12 +203,12 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (!authUser) throw new Error("Not authenticated");
         
-        console.log('[VitalsDialog] Adding vitals:', {
+        logger.info('[VitalsDialog] Adding vitals', logger.sanitize({
           authUserId: authUser.id,
           patientAccountId,
           vitalType,
           effectiveRole
-        });
+        }));
         
         // Insert new record using type-safe wrapper
         const { error } = await insertVaultRecord(supabase, {
@@ -222,8 +222,8 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
         });
         
         if (error) {
-          console.error('[VitalsDialog] Insert error:', {
-            error,
+          logger.error('[VitalsDialog] Insert error', error, {
+            errorCode: error.code,
             code: error.code,
             message: error.message,
             details: error.details
@@ -231,7 +231,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
           throw error;
         }
         
-        console.log('[VitalsDialog] Insert successful');
+        logger.info('[VitalsDialog] Insert successful');
       }
     },
     {
