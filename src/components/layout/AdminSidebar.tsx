@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
+import { logger } from "@/lib/logger";
 import {
   Sidebar,
   SidebarContent,
@@ -68,7 +69,7 @@ export function AdminSidebar() {
     try {
       await signOut();
     } catch (error) {
-      console.error("Error signing out:", error);
+      logger.error("Error signing out", error);
     }
   };
 

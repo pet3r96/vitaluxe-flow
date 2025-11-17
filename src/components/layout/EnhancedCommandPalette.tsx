@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Loader2, User, Package, FileText, Building2, Users, SearchX } from "lucide-react";
+import { logger } from "@/lib/logger";
 import {
   CommandDialog,
   CommandEmpty,
@@ -107,7 +108,7 @@ export function EnhancedCommandPalette() {
           });
         });
       } catch (err) {
-        console.error('Patients search error:', err);
+        logger.error('Patients search error', err);
       }
 
       // Search representatives (for admin, topline, pharmacy)
@@ -144,7 +145,7 @@ export function EnhancedCommandPalette() {
             }
           });
         } catch (err) {
-          console.error('Representatives search error:', err);
+          logger.error('Representatives search error', err);
         }
       }
 
@@ -177,7 +178,7 @@ export function EnhancedCommandPalette() {
             });
           });
         } catch (err) {
-          console.error('Practices search error:', err);
+          logger.error('Practices search error', err);
         }
       }
 
@@ -208,13 +209,13 @@ export function EnhancedCommandPalette() {
             });
           });
         } catch (err) {
-          console.error('Products search error:', err);
+          logger.error('Products search error', err);
         }
       }
 
       setResults(searchResults);
     } catch (error) {
-      console.error('Search error:', error);
+      logger.error('Search error', error);
     } finally {
       setLoading(false);
     }

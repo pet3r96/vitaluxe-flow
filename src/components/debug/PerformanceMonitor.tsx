@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, Clock, Database } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 /**
  * Performance Monitor Component (Dev Only)
@@ -31,7 +32,7 @@ export const PerformanceMonitor = () => {
       entries.forEach((entry) => {
         // Log slow network requests (>2 seconds)
         if (entry.duration > 2000) {
-          console.warn(`🐌 Slow query detected: ${entry.name} took ${entry.duration.toFixed(0)}ms`);
+          logger.warn(`🐌 Slow query detected: ${entry.name} took ${entry.duration.toFixed(0)}ms`);
           setSlowQueries(prev => [...prev, `${entry.name} (${entry.duration.toFixed(0)}ms)`].slice(-5));
         }
       });

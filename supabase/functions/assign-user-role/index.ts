@@ -390,7 +390,7 @@ serve(async (req) => {
     const userExists = existingUser?.users?.some(u => u.email?.toLowerCase() === signupData.email.toLowerCase());
     
     if (userExists) {
-      console.warn('User already exists with email:', signupData.email);
+      edgeLogger.warn('User already exists with email', { email: signupData.email });
       return new Response(
         JSON.stringify({ error: 'A user with this email already exists. Please use a different email address.' }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -399,7 +399,7 @@ serve(async (req) => {
 
     // Check for orphaned provider records before creating auth user
     if (signupData.role === 'provider' && signupData.roleData?.practiceId) {
-      console.log('🔍 Checking for orphaned provider records for practice:', signupData.roleData.practiceId);
+      edgeLogger.info('🔍 Checking for orphaned provider records for practice', { practiceId: signupData.roleData.practiceId });
       
       const { data: orphanedProviders, error: orphanCheckError } = await supabaseAdmin
         .from('providers')
@@ -407,14 +407,14 @@ serve(async (req) => {
         .eq('practice_id', signupData.roleData.practiceId);
       
       if (!orphanCheckError && orphanedProviders && orphanedProviders.length > 0) {
-        console.log(`Found ${orphanedProviders.length} existing provider record(s) for this practice`);
+        edgeLogger.info(`Found existing provider records for practice`, { count: orphanedProviders.length });
         
         // Check if any are orphaned (user_id exists but auth user doesn't)
         for (const provider of orphanedProviders) {
           if (provider.user_id) {
             const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(provider.user_id);
             if (!authUser.user) {
-              console.log(`🧹 Cleaning up orphaned provider record: ${provider.id} with invalid user_id: ${provider.user_id}`);
+              edgeLogger.info('🧹 Cleaning up orphaned provider record', { providerId: provider.id, userId: provider.user_id });
               await supabaseAdmin.from('providers').delete().eq('id', provider.id);
             }
           }
@@ -439,7 +439,7 @@ serve(async (req) => {
     });
 
     if (authError) {
-      console.error('Auth error:', authError);
+      edgeLogger.error('Auth error', authError);
       
       // Check if it's a duplicate email error
       const errorMessage = authError.message.toLowerCase().includes('already registered') || 
@@ -470,7 +470,7 @@ serve(async (req) => {
         .single();
       
       if (repLookupError || !parentRep) {
-        console.error('Failed to find parent topline rep:', repLookupError);
+        edgeLogger.error('Failed to find parent topline rep', repLookupError);
         await supabaseAdmin.auth.admin.deleteUser(userId);
         return new Response(
           JSON.stringify({ error: 'Invalid parent topline representative. Please select a valid topline rep.' }),
@@ -539,9 +539,9 @@ serve(async (req) => {
       );
       
       // Clean up: delete the auth user if profile/role creation fails
-      console.log('Cleaning up auth user due to profile creation failure...');
+      edgeLogger.info('Cleaning up auth user due to profile creation failure', { userId });
       await supabaseAdmin.auth.admin.deleteUser(userId);
-      console.log('Auth user cleanup complete');
+      edgeLogger.info('Auth user cleanup complete');
       
       // Provide specific error messages
       let errorMessage: string;
@@ -566,7 +566,7 @@ serve(async (req) => {
 
     // Sync practice address to provider if this is a provider creation
     if (signupData.role === 'provider' && signupData.roleData?.practiceId) {
-      console.log('🔄 Syncing practice address to new provider...');
+      edgeLogger.info('🔄 Syncing practice address to new provider', { practiceId: signupData.roleData.practiceId });
       
       const { error: syncError } = await supabaseAdmin.rpc(
         'sync_practice_address_to_providers',
@@ -574,10 +574,10 @@ serve(async (req) => {
       );
       
       if (syncError) {
-        console.error('⚠️ Failed to sync practice address:', syncError);
+        edgeLogger.error('⚠️ Failed to sync practice address', syncError);
         // Don't fail the whole operation, just log it
       } else {
-        console.log('✅ Practice address synced to provider successfully');
+        edgeLogger.info('✅ Practice address synced to provider successfully');
       }
     }
 
@@ -664,14 +664,14 @@ serve(async (req) => {
         .eq('id', userId);
 
       if (profileError) {
-        console.error('Profile update error:', profileError);
-        console.warn('Profile additional data update failed but user was created successfully');
+        edgeLogger.error('Profile update error', profileError);
+        edgeLogger.warn('Profile additional data update failed but user was created successfully');
       }
     }
 
     // Link practice to rep via profiles.linked_topline_id - for doctor (practice) role only
     if (signupData.role === 'doctor' && signupData.roleData.linkedToplineId) {
-      console.log('Linking practice to rep via linked_topline_id:', signupData.roleData.linkedToplineId);
+      edgeLogger.info('Linking practice to rep via linked_topline_id', { linkedToplineId: signupData.roleData.linkedToplineId });
       
       // Update the practice profile to set linked_topline_id
       const { error: linkError } = await supabaseAdmin
@@ -683,15 +683,15 @@ serve(async (req) => {
         .eq('id', userId);
       
       if (linkError) {
-        console.error('Failed to link practice to rep via linked_topline_id:', linkError);
+        edgeLogger.error('Failed to link practice to rep via linked_topline_id', linkError);
       } else {
-        console.log('✅ Successfully linked practice to rep via linked_topline_id');
+        edgeLogger.info('✅ Successfully linked practice to rep via linked_topline_id');
       }
     }
 
     // Topline rep record is already created by the RPC function
     if (signupData.role === 'topline') {
-      console.log('Topline rep already created by RPC, skipping manual insert');
+      edgeLogger.info('Topline rep already created by RPC, skipping manual insert');
     }
 
     if (signupData.role === 'downline') {
@@ -755,7 +755,7 @@ serve(async (req) => {
         );
 
       if (repError) {
-        console.error('Rep creation/update error:', repError);
+        edgeLogger.error('Rep creation/update error', repError);
         await supabaseAdmin.auth.admin.deleteUser(userId);
         return new Response(
           JSON.stringify({ error: 'Failed to create or link rep record' }),
@@ -775,8 +775,8 @@ serve(async (req) => {
         .eq('user_id', userId);
 
       if (priorityMapError) {
-        console.error('Priority map update error:', priorityMapError);
-        console.warn('Priority map update failed but user was created successfully');
+        edgeLogger.error('Priority map update error', priorityMapError);
+        edgeLogger.warn('Priority map update failed but user was created successfully');
       }
     }
 
@@ -785,12 +785,12 @@ serve(async (req) => {
 
     // Generate token for staff members (will be sent by frontend)
     if (signupData.role === 'staff') {
-      console.log(`Staff account created: generating activation token for ${signupData.email}`);
+      edgeLogger.info('Staff account created: generating activation token', { email: signupData.email });
       
       // CRITICAL FIX: Ensure practice_staff record exists for staff membership
       const staffPracticeId = signupData.roleData.practiceId;
       if (staffPracticeId) {
-        console.log(`✅ Creating practice_staff record for staff user ${userId} in practice ${staffPracticeId}`);
+        edgeLogger.info('✅ Creating practice_staff record for staff user', { userId, staffPracticeId });
         const { error: staffError } = await supabaseAdmin
           .from('practice_staff')
           .upsert({
@@ -801,14 +801,14 @@ serve(async (req) => {
           }, { onConflict: 'user_id' });
         
         if (staffError) {
-          console.error('❌ Failed to create practice_staff record:', staffError);
+          edgeLogger.error('❌ Failed to create practice_staff record', staffError);
           // Don't fail the whole operation, but log it prominently
-          console.error('⚠️ CRITICAL: Staff user created but practice membership failed! User may not have proper access.');
+          edgeLogger.error('⚠️ CRITICAL: Staff user created but practice membership failed! User may not have proper access.');
         } else {
-          console.log('✅ practice_staff record created successfully');
+          edgeLogger.info('✅ practice_staff record created successfully');
         }
       } else {
-        console.error('❌ CRITICAL: Staff user created without practiceId! No practice_staff record created.');
+        edgeLogger.error('❌ CRITICAL: Staff user created without practiceId! No practice_staff record created.');
       }
       
       // Generate secure token
@@ -826,24 +826,24 @@ serve(async (req) => {
         });
       
       if (tokenError) {
-        console.error('Error creating password token for staff:', tokenError);
+        edgeLogger.error('Error creating password token for staff', tokenError);
         generatedToken = null; // Clear token on error
       } else {
-        console.log('✅ Activation token generated for staff member');
+        edgeLogger.info('✅ Activation token generated for staff member');
       }
     }
 
     // Handle email sending based on flow type
-    console.log('[assign-user-role] Email sending phase - isSelfSignup:', isSelfSignup, 'isAdminCreated:', isAdminCreated);
+    edgeLogger.info('[assign-user-role] Email sending phase', { isSelfSignup, isAdminCreated });
     
     if (isSelfSignup) {
       // Self-signup: Send verification email
-      console.log(`✉️ [assign-user-role] Self-signup flow: sending verification email to ${signupData.email}`);
-      console.log('[assign-user-role] Invoking send-verification-email function with userId:', userId);
+      edgeLogger.info('✉️ [assign-user-role] Self-signup flow: sending verification email', { email: signupData.email });
+      edgeLogger.info('[assign-user-role] Invoking send-verification-email function', { userId });
       
       try {
         const correlationId = crypto.randomUUID();
-        console.log(`[assign-user-role] ${correlationId} - Invoking email-dispatcher for verification`);
+        edgeLogger.info(`[assign-user-role] Invoking email-dispatcher for verification`, { correlationId });
         
         const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('email-dispatcher', {
           body: {
@@ -856,17 +856,17 @@ serve(async (req) => {
         });
 
         if (emailError) {
-          console.error(`❌ [assign-user-role] ${correlationId} - Email dispatch failed:`, emailError);
+          edgeLogger.error(`[assign-user-role] Email dispatch failed`, emailError, { correlationId });
         } else {
-          console.log(`✅ [assign-user-role] ${correlationId} - Email dispatched:`, emailData);
+          edgeLogger.info(`[assign-user-role] Email dispatched`, { correlationId, emailData });
         }
       } catch (emailErr) {
-        console.error('❌ [assign-user-role] Exception invoking email-dispatcher:', emailErr);
+        edgeLogger.error('[assign-user-role] Exception invoking email-dispatcher', emailErr);
       }
     } else if (isAdminCreated && signupData.role !== 'admin' && signupData.role !== 'staff') {
       // Admin-created (but NOT staff): Send temp password email and set password status
-      console.log(`✉️ [assign-user-role] Admin-created flow: sending welcome email to ${signupData.email}`);
-      console.log('[assign-user-role] Invoking send-welcome-email function with userId:', userId);
+      edgeLogger.info('✉️ [assign-user-role] Admin-created flow: sending welcome email', { email: signupData.email });
+      edgeLogger.info('[assign-user-role] Invoking send-welcome-email function', { userId });
       
       // Insert password status record for forced password change
       const { error: statusError } = await supabaseAdmin
@@ -879,15 +879,15 @@ serve(async (req) => {
         });
 
       if (statusError) {
-        console.error('❌ [assign-user-role] Error creating password status:', statusError);
+        edgeLogger.error('[assign-user-role] Error creating password status', statusError);
       } else {
-        console.log('✅ [assign-user-role] Password status record created');
+        edgeLogger.info('[assign-user-role] Password status record created');
       }
 
       // Send welcome email using email-dispatcher with retry logic
       try {
         const correlationId = crypto.randomUUID();
-        console.log(`[assign-user-role] ${correlationId} - Invoking email-dispatcher for welcome`);
+        edgeLogger.info('[assign-user-role] Invoking email-dispatcher for welcome', { correlationId });
         
         const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('email-dispatcher', {
           body: {
@@ -901,22 +901,22 @@ serve(async (req) => {
         });
 
         if (emailError) {
-          console.error(`❌ [assign-user-role] ${correlationId} - Welcome email failed:`, emailError);
+          edgeLogger.error('[assign-user-role] Welcome email failed', emailError, { correlationId });
         } else {
-          console.log(`✅ [assign-user-role] ${correlationId} - Welcome email sent:`, emailData);
+          edgeLogger.info('[assign-user-role] Welcome email sent', { correlationId, emailData });
         }
       } catch (emailErr) {
-        console.error('❌ [assign-user-role] Exception invoking email-dispatcher:', emailErr);
+        edgeLogger.error('[assign-user-role] Exception invoking email-dispatcher', emailErr);
       }
     } else {
-      console.log('[assign-user-role] No email sent - not self-signup or admin-created flow');
+      edgeLogger.info('[assign-user-role] No email sent - not self-signup or admin-created flow');
     }
 
-    console.log('[assign-user-role] Email phase complete, proceeding to audit log...');
+    edgeLogger.info('[assign-user-role] Email phase complete, proceeding to audit log');
 
     // Log user creation in audit logs
 
-    console.log('✅ [assign-user-role] User creation complete, returning success response');
+    edgeLogger.info('[assign-user-role] User creation complete, returning success response');
     return new Response(
       JSON.stringify({ 
         success: true,
@@ -932,8 +932,8 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('❌ [assign-user-role] CRITICAL ERROR:', error);
-    console.error('[assign-user-role] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    edgeLogger.error('[assign-user-role] CRITICAL ERROR', error);
+    edgeLogger.error('[assign-user-role] Error stack', error instanceof Error ? { stack: error.stack } : {});
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ error: 'An error occurred processing the request', details: errorMessage }),
