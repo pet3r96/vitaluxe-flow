@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
       .single();
 
     if (sessionError || !session) {
-      console.error('[start-video-session] Session not found:', sessionError?.message);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('[start-video-session] Session not found', sessionError);
       return new Response(JSON.stringify({ error: 'Session not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -65,7 +66,8 @@ Deno.serve(async (req) => {
     const providerName = providerProfile?.full_name || providerProfile?.name || 'Provider';
 
     if (providerError || !provider) {
-      console.error('[start-video-session] Provider not found:', providerError?.message);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('[start-video-session] Provider not found', providerError);
       return new Response(JSON.stringify({ error: 'Provider not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
