@@ -136,43 +136,8 @@ export function CreateInternalMessageDialog({
         .select()
         .single();
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Reply } from "lucide-react";
-import { MessageBubble } from "./MessageBubble";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface ThreadViewProps {
-  selectedMessage: any;
-  replyText: string;
-  setReplyText: (text: string) => void;
-  sendReplyMutation: any;
-}
-
-export function ThreadView({ selectedMessage, replyText, setReplyText, sendReplyMutation }: ThreadViewProps) {
-  const threadId = selectedMessage.thread_id || selectedMessage.id;
-
-  // Fetch all messages in this thread
-  const { data: threadMessages, isLoading } = useQuery({
-    queryKey: ["thread-messages", threadId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patient_messages")
-        .select(`
-          *,
-          patient:patient_accounts(first_name, last_name, email),
-          sender:profiles(name)
-        `)
-        .eq("thread_id", threadId)
-        .order("created_at", { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!threadId,
-  });
+      if (messageError) {
+        console.error('❌ Error inserting internal_messages:', messageError);
         
         // Check if it's a FK constraint error on patient_id
         if (messageError.message?.includes('internal_messages_patient_id_fkey')) {
