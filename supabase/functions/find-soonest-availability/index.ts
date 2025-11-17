@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -77,7 +78,6 @@ Deno.serve(async (req) => {
     const todayYMD = nowInPracticeTZ.toISOString().split('T')[0];
     const nowMinutes = nowInPracticeTZ.getHours() * 60 + nowInPracticeTZ.getMinutes();
 
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.info('[find-soonest-availability] Starting search', {
       practiceTimezone,
       todayYMD,
@@ -107,25 +107,22 @@ Deno.serve(async (req) => {
         });
 
       if (hoursError) {
-        console.error('Error fetching hours:', hoursError);
+        edgeLogger.error('Error fetching hours', hoursError);
         continue;
       }
 
       const practiceHours = hours?.[0];
       
-      console.log(`[find-soonest-availability] Day ${dayOfWeek} (${dayNames[dayOfWeek]})`, JSON.stringify({
+      edgeLogger.info('[find-soonest-availability] Day info', { 
+        day: dayOfWeek, 
+        dayName: dayNames[dayOfWeek],
         dateStr,
-        dayOffset,
-        practiceHours: practiceHours ? {
-          start: practiceHours.start_time,
-          end: practiceHours.end_time,
-          isClosed: practiceHours.is_closed
-        } : null
-      }));
+        isToday: dayOffset === 0 
+      });
 
       // Skip if closed or no hours defined
       if (!practiceHours || practiceHours.is_closed) {
-        console.log(`[find-soonest-availability] Day ${dayOfWeek} SKIPPED: Closed`);
+        edgeLogger.info('[find-soonest-availability] Day SKIPPED: Closed', { day: dayOfWeek });
         continue;
       }
 
@@ -136,7 +133,7 @@ Deno.serve(async (req) => {
       const startMin = parseInt(startTimeStr.split(':')[1]);
       const endHour = parseInt(endTimeStr.split(':')[0]);
       const endMin = parseInt(endTimeStr.split(':')[1]);
-      console.log('[find-soonest-availability] Day', dayOfWeek, 'hours', { startTimeStr, endTimeStr, duration });
+      edgeLogger.info('[find-soonest-availability] Day hours', { day: dayOfWeek, startTimeStr, endTimeStr, duration });
       
       const startMinutes = startHour * 60 + startMin;
       const endMinutes = endHour * 60 + endMin;
@@ -146,15 +143,15 @@ Deno.serve(async (req) => {
       if (dayOffset === 0) {
         const nextSlot = Math.ceil((nowMinutes + 1) / 30) * 30; // next 30-min boundary after now
         firstMinute = Math.max(startMinutes, nextSlot);
-        console.log(`[find-soonest-availability] Today: Starting from ${minutesToHHMM(firstMinute)} (now=${minutesToHHMM(nowMinutes)})`);
+        edgeLogger.info('[find-soonest-availability] Today: Starting from', { startTime: minutesToHHMM(firstMinute), now: minutesToHHMM(nowMinutes) });
       }
 
       // Latest start time (appointment can end exactly at closing)
       const latestStart = endMinutes - duration;
-      console.log(`[find-soonest-availability] Scan range: ${minutesToHHMM(firstMinute)} to ${minutesToHHMM(latestStart)}`);
+      edgeLogger.info('[find-soonest-availability] Scan range', { from: minutesToHHMM(firstMinute), to: minutesToHHMM(latestStart) });
       
       if (firstMinute > latestStart) {
-        console.log(`[find-soonest-availability] Day ${dayOfWeek} SKIPPED: No valid time slots`);
+        edgeLogger.info('[find-soonest-availability] Day SKIPPED: No valid time slots', { day: dayOfWeek });
         continue;
       }
 
@@ -178,11 +175,11 @@ Deno.serve(async (req) => {
           .gt('end_time', startIso);
 
         if (blockedError) {
-          console.error('Error checking blocked time:', blockedError);
+          edgeLogger.error('Error checking blocked time', blockedError);
           continue;
         }
         if (blocked && blocked.length > 0) {
-          console.log(`[find-soonest-availability] Slot ${timeSlot} BLOCKED (${blocked.length} conflicts)`);
+          edgeLogger.info('[find-soonest-availability] Slot BLOCKED', { timeSlot, conflictCount: blocked.length });
           continue;
         }
         
@@ -196,11 +193,11 @@ Deno.serve(async (req) => {
           .gt('end_time', startIso);
 
         if (conflictError) {
-          console.error('Error checking conflicts:', conflictError);
+          edgeLogger.error('Error checking conflicts', conflictError);
           continue;
         }
         if (conflicts && conflicts.length > 0) {
-          console.log(`[find-soonest-availability] Slot ${timeSlot} CONFLICT (${conflicts.length} appointments)`);
+          edgeLogger.info('[find-soonest-availability] Slot CONFLICT', { timeSlot, appointmentCount: conflicts.length });
           continue;
         }
         
@@ -215,7 +212,7 @@ Deno.serve(async (req) => {
         const ampm = slotHour >= 12 ? 'PM' : 'AM';
         const displayTime = `${displayHour}:${String(slotMin).padStart(2, '0')} ${ampm}`;
         
-        console.log('[find-soonest-availability] Found slot', { date: dateStr, time: timeSlot, displayTime, day: dayName });
+        edgeLogger.info('[find-soonest-availability] Found slot', { date: dateStr, time: timeSlot, displayTime, day: dayName });
         return new Response(
           JSON.stringify({
             available: true,
@@ -239,7 +236,7 @@ Deno.serve(async (req) => {
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Error finding availability:', error);
+    edgeLogger.error('Error finding availability', error);
     return new Response(
       JSON.stringify({ 
         available: false,

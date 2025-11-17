@@ -230,7 +230,7 @@ END:VEVENT
 
     icalContent += 'END:VCALENDAR';
 
-    console.log(`Calendar export generated for user ${user.id}, ${appointments?.length || 0} appointments`);
+    edgeLogger.info('Calendar export generated', { userId: user.id, appointmentCount: appointments?.length || 0 });
 
     return new Response(icalContent, {
       headers: {
@@ -240,7 +240,7 @@ END:VEVENT
       },
     });
   } catch (error) {
-    console.error('Error exporting calendar:', error);
+    edgeLogger.error('Error exporting calendar', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
       JSON.stringify({ error: errorMessage }),
