@@ -10,6 +10,7 @@ import { PatientInvitationDialog } from "@/components/patients/PatientInvitation
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatPatientEmail } from "@/lib/email/emailValidation";
+import { logger } from "@/lib/logger";
 
 export default function PracticePatients() {
   const { user, effectivePracticeId } = useAuth();
@@ -22,11 +23,11 @@ export default function PracticePatients() {
     queryKey: ['patients-with-portal-status', effectivePracticeId],
     queryFn: async () => {
       if (!effectivePracticeId) {
-        console.warn('[PracticePatients] ❌ No effectivePracticeId available');
+        logger.warn('No effectivePracticeId available for patients query');
         return [];
       }
       
-      console.log('[PracticePatients] 🔍 Querying patients for practice:', effectivePracticeId);
+      logger.info('Querying patients for practice', logger.sanitize({ practiceId: effectivePracticeId }));
       
       const { data, error } = await supabase
         .from('v_patients_with_portal_status')
@@ -35,17 +36,14 @@ export default function PracticePatients() {
         .order('first_name', { ascending: true });
 
       if (error) {
-        console.error('[PracticePatients] ❌ Query error:', error);
-        console.error('[PracticePatients] ❌ Error details:', {
-          message: error.message,
-          code: error.code,
-          hint: error.hint,
-          details: error.details
-        });
+        logger.error('Patient query error', error, logger.sanitize({
+          practiceId: effectivePracticeId,
+          code: error.code
+        }));
         throw error;
       }
       
-      console.log('[PracticePatients] ✅ Fetched patients:', data?.length || 0, 'for practice:', effectivePracticeId);
+      logger.info('Fetched patients successfully', { count: data?.length || 0 });
       return data || [];
     },
     enabled: !!effectivePracticeId,
@@ -69,7 +67,7 @@ export default function PracticePatients() {
   // Invite individual patient mutation
   const invitePatientMutation = useMutation({
     mutationFn: async (patientId: string) => {
-      console.log('[PracticePatients] Inviting patient:', { patientId });
+      logger.info('Inviting patient to portal', logger.sanitize({ patientId }));
       
       // Invalidate any cached patient data to ensure fresh data
       await queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
@@ -84,20 +82,18 @@ export default function PracticePatients() {
         { body: { patientId } }
       );
 
-      console.log('[PracticePatients] Account creation response:', { 
-        success: !accountError, 
-        error: accountError,
-        data: accountData 
+      logger.info('Account creation response received', { 
+        success: !accountError
       });
 
       if (accountError) {
-        console.error('[Patient Portal] Edge function invocation error:', accountError);
+        logger.error('Portal account creation failed', accountError);
         const errorMessage = accountError.message || 'Failed to create portal account';
         throw new Error(errorMessage);
       }
 
       if (!accountData?.success) {
-        console.error('[Patient Portal] Function returned error:', accountData);
+        logger.error('Portal account creation returned error', { error: accountData?.error });
         throw new Error(accountData?.error || 'Failed to create portal account');
       }
 
@@ -162,7 +158,7 @@ export default function PracticePatients() {
       queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
     },
     onError: (error: Error) => {
-      console.error('[PracticePatients] Failed to invite patient:', error);
+      logger.error('Failed to invite patient', error);
       
       // Provide specific error guidance
       let errorMessage = 'Failed to invite patient to portal';

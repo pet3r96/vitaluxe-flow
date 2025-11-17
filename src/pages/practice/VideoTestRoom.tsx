@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { CredentialValidator } from "@/components/video/CredentialValidator";
+import { logger } from "@/lib/logger";
 
 export default function VideoTestRoom() {
   const { toast } = useToast();
@@ -32,12 +33,12 @@ export default function VideoTestRoom() {
     setIsJoining(true);
 
     try {
-      console.group("🧪 TEST ROOM - Join Attempt");
-      console.log("App ID:", appId.substring(0, 8) + "...");
-      console.log("Channel:", channelName);
-      console.log("UID:", uid);
-      console.log("Token Preview:", token.substring(0, 30) + "...");
-      console.groupEnd();
+      logger.info('Test room join attempt', { 
+        appIdPreview: appId.substring(0, 8) + "...",
+        channelName,
+        uid,
+        tokenPreview: token.substring(0, 30) + "..."
+      });
 
       // Enable detailed Agora logging
       AgoraRTC.setLogLevel(4);
@@ -45,11 +46,11 @@ export default function VideoTestRoom() {
       const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       
       agoraClient.on("connection-state-change", (curState, revState, reason) => {
-        console.log("🔄 Connection state:", curState, "Reason:", reason);
+        logger.info('Connection state change', { curState, revState, reason });
       });
 
       agoraClient.on("user-published", async (user, mediaType) => {
-        console.log("👤 User published:", user.uid, mediaType);
+        logger.info('User published', { uid: user.uid, mediaType });
         await agoraClient.subscribe(user, mediaType);
         if (mediaType === "video") {
           user.videoTrack?.play(`remote-player-${user.uid}`);
@@ -60,35 +61,28 @@ export default function VideoTestRoom() {
       });
 
       // Join channel
-      console.log("===== FE TOKEN DEBUG (VideoTestRoom) =====");
-      console.log("FE RTC Token (full):", token);
-      console.log("RTC Token length:", token?.length);
-      console.log("RTC Token prefix:", token?.substring(0, 20));
-      console.log("Agora Join Params:", {
+      logger.info('Attempting Agora join', {
         appId,
         channelName,
         uid,
+        tokenLength: token?.length,
+        tokenPrefix: token?.substring(0, 20)
       });
-      console.log("================================");
       
       try {
         await agoraClient.join(appId, channelName, token, uid);
-        console.log("✅ [VideoTestRoom] Successfully joined channel!");
+        logger.info('Successfully joined channel');
       } catch (err: any) {
-        console.error("=== AGORA RTC JOIN ERROR (Test Room) ===");
-        console.error("Error Code:", err.code);
-        console.error("Error Name:", err.name);
-        console.error("Error Message:", err.message);
-        console.error("Full Error Object:", err);
-        console.error("Error Stack:", err.stack);
-        console.error("Parameters Used:", {
+        logger.error('Agora RTC join error', err, {
+          code: err.code,
+          name: err.name,
+          message: err.message,
           appId,
           channelName,
           uid,
           tokenPrefix: token.substring(0, 20),
-          tokenLength: token.length,
+          tokenLength: token.length
         });
-        console.error("========================================");
         throw err;
       }
 

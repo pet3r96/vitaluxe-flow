@@ -4,6 +4,7 @@ import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeChannel } from "@/lib/video/normalizeChannel";
 import { PreCallTestPrompt } from "@/components/video/PreCallTestPrompt";
+import { logger } from "@/lib/logger";
 
 const VideoConsultationRoom = () => {
   const { sessionId } = useParams();
@@ -18,11 +19,11 @@ const VideoConsultationRoom = () => {
   const [patientId, setPatientId] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
 
-  console.log("[PracticeVideoRoom] Session ID:", sessionId);
+  logger.info('Video consultation room initialized', logger.sanitize({ sessionId }));
 
   useEffect(() => {
     if (!sessionId) {
-      console.error("[PracticeVideoRoom] Missing session ID.");
+      logger.error('Missing session ID for video consultation');
       return;
     }
 
@@ -39,12 +40,12 @@ const VideoConsultationRoom = () => {
           });
           
           if (configError || !configData?.match) {
-            console.error("[VideoRoom] Agora config mismatch:", configData);
+            logger.error('Agora config mismatch', configError);
             setError("Configuration error. Please contact support.");
             return;
           }
         } catch (configErr) {
-          console.warn("[VideoRoom] Config verification unavailable, continuing...");
+          logger.warn('Config verification unavailable, continuing');
         }
 
         // Fetch channel name + patient ID

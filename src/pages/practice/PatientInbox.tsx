@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PriorityBadge } from "@/components/internal-chat/PriorityBadge";
 import { ThreadView } from "@/components/internal-chat/ThreadView";
+import { logger } from "@/lib/logger";
 
 export default function PatientInbox() {
   const queryClient = useQueryClient();
@@ -142,7 +143,7 @@ export default function PatientInbox() {
           filter: `practice_id=eq.${practiceId}`
         },
         (payload) => {
-          console.log('Patient message change:', payload);
+          logger.info('Patient message change detected', { event: payload.eventType });
           queryClient.invalidateQueries({ queryKey: ["patient-messages-inbox", practiceId] });
           queryClient.invalidateQueries({ queryKey: ['inbox-unread-threads', practiceId] });
         }

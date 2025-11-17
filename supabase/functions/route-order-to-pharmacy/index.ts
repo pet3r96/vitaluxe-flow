@@ -76,7 +76,11 @@ async function routeOrderToPharmacy(
     };
   }
 
-  edgeLogger.info('Routing order for product', { productId: product_id, state: trimmedState, toplineRepId: user_topline_rep_id || 'N/A' });
+  edgeLogger.info('Routing order for product', { 
+    productId: product_id, 
+    state: trimmedState, 
+    hasToplineRep: !!user_topline_rep_id 
+  });
 
   // 1. Get all pharmacies assigned to this product
   const { data: assignments, error } = await supabase
@@ -101,11 +105,9 @@ async function routeOrderToPharmacy(
   }
 
   edgeLogger.info('Product pharmacies query result', { assignmentCount: assignments?.length || 0 });
-  edgeLogger.info('[DIAGNOSTIC] Product routing', { productId: product_id, state: trimmedState, assignmentsFound: assignments?.length || 0 });
   
   if (!assignments || assignments.length === 0) {
     edgeLogger.info('No pharmacies assigned to product', { productId: product_id });
-    edgeLogger.info('[DIAGNOSTIC] Zero assignments', { productId: product_id, reason: 'no pharmacies in product_pharmacies table' });
     return {
       pharmacy_id: null, 
       reason: "No pharmacies assigned to product" 
@@ -141,11 +143,13 @@ async function routeOrderToPharmacy(
       !scopedPharmacyIds.has(p.id) || userPharmacyIds.has(p.id)
     );
     
-    console.log(`After topline scoping: ${eligiblePharmacies.length} pharmacies available`);
+    edgeLogger.info('After topline scoping', { count: eligiblePharmacies.length });
   }
 
-  console.log(`Found ${eligiblePharmacies.length} eligible pharmacies for state ${trimmedState}`);
-  console.log(`[DIAGNOSTIC] Eligible count: ${eligiblePharmacies.length}, State: ${trimmedState}, User topline: ${user_topline_rep_id || 'none'}`);
+  edgeLogger.info('Eligible pharmacies found', { 
+    count: eligiblePharmacies.length, 
+    state: trimmedState 
+  });
 
   if (eligiblePharmacies.length === 0) {
     const diagnostics = {
@@ -156,7 +160,7 @@ async function routeOrderToPharmacy(
       ).length,
       filtered_by_topline: user_topline_rep_id ? true : false
     };
-    console.log(`[DIAGNOSTIC] No eligible pharmacies - breakdown:`, diagnostics);
+    edgeLogger.info('No eligible pharmacies found', diagnostics);
     
     await supabase.from("order_routing_log").insert({
       product_id,
@@ -180,7 +184,7 @@ async function routeOrderToPharmacy(
     const selectedPharmacy = eligiblePharmacies[0];
     const priority = getPriority(selectedPharmacy, trimmedState);
     
-    console.log(`Single pharmacy match: ${selectedPharmacy.name}`);
+    edgeLogger.info('Single pharmacy match', { name: selectedPharmacy.name, priority });
     
     await supabase.from("order_routing_log").insert({
       product_id,

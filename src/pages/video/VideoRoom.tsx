@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TelehealthRoomUnified from "@/components/video/TelehealthRoomUnified";
 import { PreCallTestPrompt } from "@/components/video/PreCallTestPrompt";
+import { logger } from "@/lib/logger";
 
 export default function VideoRoom() {
   const navigate = useNavigate();
@@ -92,7 +93,7 @@ export default function VideoRoom() {
         setLoading(false);
 
       } catch (err: any) {
-        console.error('[VideoRoom] Error loading session:', err);
+        logger.error('Error loading video session', err);
         if (isMounted) {
           setError(err.message || 'Failed to load video session');
           setLoading(false);

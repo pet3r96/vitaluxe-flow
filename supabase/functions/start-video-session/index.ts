@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
     if (sessionError || !session) {
       const { edgeLogger } = await import('../_shared/logger.ts');
-      edgeLogger.error('[start-video-session] Session not found', sessionError);
+      edgeLogger.error('Video session not found', sessionError);
       return new Response(JSON.stringify({ error: 'Session not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
 
     if (providerError || !provider) {
       const { edgeLogger } = await import('../_shared/logger.ts');
-      edgeLogger.error('[start-video-session] Provider not found', providerError);
+      edgeLogger.error('Provider not found', providerError);
       return new Response(JSON.stringify({ error: 'Provider not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -113,7 +113,8 @@ Deno.serve(async (req) => {
     }
 
     if (!authorized) {
-      console.error('[start-video-session] Authorization failed:', { provider_user_id: provider.user_id, auth_user_id: user.id, effectiveUserId });
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Authorization failed for video session start');
       return new Response(JSON.stringify({ error: 'Not authorized to start this session' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -128,7 +129,8 @@ Deno.serve(async (req) => {
       .single();
 
     if (appointmentError || !appointment) {
-      console.error('[start-video-session] Appointment not found:', appointmentError?.message);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Appointment not found', appointmentError);
       return new Response(JSON.stringify({ error: 'Appointment not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -143,7 +145,8 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (profileError) {
-      console.error('[start-video-session] Patient profile not found:', profileError?.message);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.warn('Patient profile not found');
     }
 
     // Verify appointment is video type
@@ -184,7 +187,7 @@ Deno.serve(async (req) => {
     
     if (patientAlreadyJoined) {
       const { edgeLogger } = await import('../_shared/logger.ts');
-      edgeLogger.info('[start-video-session] Patient already joined - skipping SMS notification');
+      edgeLogger.info('Patient already joined - skipping SMS notification');
     }
 
     if (patientPhone && !patientAlreadyJoined) {

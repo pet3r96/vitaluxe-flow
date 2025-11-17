@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 /**
  * PracticeVideoRoomLink
@@ -28,11 +29,11 @@ const PracticeVideoRoomLink = () => {
       }
 
       try {
-        console.log('[PracticeVideoRoomLink] Resolving room key:', roomKey);
+        logger.info('Resolving practice room key', logger.sanitize({ roomKey }));
 
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          console.log('[PracticeVideoRoomLink] Not authenticated, redirecting to auth');
+          logger.info('Not authenticated, redirecting to auth');
           navigate('/auth');
           return;
         }
@@ -45,12 +46,12 @@ const PracticeVideoRoomLink = () => {
         );
 
         if (fnError) {
-          console.error('[PracticeVideoRoomLink] Resolution error:', fnError);
+          logger.error('Practice room resolution error', fnError);
           throw new Error(fnError.message || 'Failed to resolve practice room');
         }
 
         if (!data.success) {
-          console.error('[PracticeVideoRoomLink] Resolution failed:', data.error);
+          logger.error('Practice room resolution failed', { error: data.error });
           
           if (data.error === 'invalid_room_key') {
             setError('This practice room link is invalid. Please check the URL.');
@@ -63,14 +64,14 @@ const PracticeVideoRoomLink = () => {
           return;
         }
 
-        console.log('[PracticeVideoRoomLink] Room resolved, redirecting to session:', data.sessionId);
+        logger.info('Practice room resolved, redirecting', logger.sanitize({ sessionId: data.sessionId }));
 
         if (mounted) {
           // Redirect to the unified video room
           navigate('/video/room', { replace: true });
         }
       } catch (e: any) {
-        console.error('[PracticeVideoRoomLink] Error:', e);
+        logger.error('Practice room resolution error', e);
         if (mounted) {
           setError(e.message || 'Failed to resolve practice room');
           setLoading(false);

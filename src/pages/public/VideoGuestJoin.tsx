@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import TelehealthRoomUnified from "@/components/video/TelehealthRoomUnified";
 import { PreCallTestPrompt } from "@/components/video/PreCallTestPrompt";
 import { Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 const VideoGuestJoin = () => {
   const { token } = useParams();
@@ -34,7 +35,7 @@ const VideoGuestJoin = () => {
       }
 
       try {
-        console.log('[VideoGuestJoin] Validating guest token:', token.substring(0, 8) + '...');
+        logger.info('Validating guest token for video');
 
         const { data, error: fnError } = await supabase.functions.invoke(
           'validate-video-guest-token',
@@ -44,12 +45,12 @@ const VideoGuestJoin = () => {
         );
 
         if (fnError) {
-          console.error('[VideoGuestJoin] Validation error:', fnError);
+          logger.error('Guest token validation error', fnError);
           throw new Error(fnError.message || 'Failed to validate guest link');
         }
 
         if (!data.success) {
-          console.error('[VideoGuestJoin] Validation failed:', data.error);
+          logger.error('Guest token validation failed', { error: data.error });
           
           // Handle different error types
           if (data.error === 'expired') {
@@ -65,7 +66,7 @@ const VideoGuestJoin = () => {
           return;
         }
 
-        console.log('[VideoGuestJoin] Guest validated successfully');
+        logger.info('Guest validated successfully for video');
 
         if (mounted) {
           setSessionData({
@@ -82,7 +83,7 @@ const VideoGuestJoin = () => {
           setLoading(false);
         }
       } catch (e: any) {
-        console.error('[VideoGuestJoin] Error:', e);
+        logger.error('Guest token validation error', e);
         if (mounted) {
           setError(e.message || 'Failed to validate guest link');
           setLoading(false);

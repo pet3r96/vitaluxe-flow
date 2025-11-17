@@ -31,6 +31,7 @@ import { PrintDayDialog } from "@/components/calendar/PrintDayDialog";
 import { Menu } from "lucide-react";
 import { MobileCalendarFAB } from "@/components/calendar/MobileCalendarFAB";
 import { usePracticeProviders, useProvidersAndStaff } from "@/hooks/useProvidersAndStaff";
+import { logger } from "@/lib/logger";
 
 export default function PracticeCalendar() {
   const navigate = useNavigate();
@@ -111,15 +112,12 @@ export default function PracticeCalendar() {
       if (error) throw error;
       const wrapped = data as any;
       const payload = wrapped && typeof wrapped === 'object' && 'data' in wrapped ? (wrapped as any).data : wrapped;
-      console.info('[PracticeCalendar] Calendar range', {
-        startDate: `${startDate}T00:00:00.000Z`,
-        endDate: `${endDate}T23:59:59.999Z`,
-      });
-      console.info('[PracticeCalendar] Appointments received', {
-        count: Array.isArray(payload?.appointments) ? payload.appointments.length : 0,
+      logger.info('Calendar data loaded', {
+        range: `${startDate} to ${endDate}`,
+        count: Array.isArray(payload?.appointments) ? payload.appointments.length : 0
       });
       if (!payload) {
-        console.warn('[PracticeCalendar] Empty calendar payload from get-calendar-data');
+        logger.warn('Empty calendar payload received');
       }
       return payload;
     },
@@ -137,9 +135,9 @@ export default function PracticeCalendar() {
   // Use all personnel (providers + staff) for calendar
   const providers = providersAndStaff;
   
-  console.info('[PracticeCalendar] Personnel loaded:', {
-    providers: providersAndStaff.filter(p => p.type === 'provider').length,
-    staff: providersAndStaff.filter(p => p.type === 'staff').length,
+  logger.info('Personnel loaded for calendar', {
+    providersCount: providersAndStaff.filter(p => p.type === 'provider').length,
+    staffCount: providersAndStaff.filter(p => p.type === 'staff').length,
     total: providersAndStaff.length
   });
 
@@ -163,7 +161,7 @@ export default function PracticeCalendar() {
         // Provider: only select their own record
         const myProvider = providers.find((p: any) => p.user_id === effectiveUserId);
         if (myProvider) {
-          console.log(`🔧 Auto-selecting provider ${myProvider.id} for logged-in provider`);
+          logger.info('Auto-selecting provider for calendar', logger.sanitize({ providerId: myProvider.id }));
           setSelectedProviders([myProvider.id]);
         }
       } else {
