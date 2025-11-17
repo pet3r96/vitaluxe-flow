@@ -222,28 +222,35 @@ async function routeOrderToPharmacy(
   });
 
   // Log all eligible pharmacies with their priorities
-  console.log(`Eligible pharmacies for ${trimmedState}:`, 
-    pharmaciesWithPriority.map((p: any) => ({ 
+  edgeLogger.info('Eligible pharmacies for state', { 
+    state: trimmedState, 
+    pharmacies: eligiblePharmacies.map((p: any) => ({ 
+      id: p.id, 
       name: p.name, 
-      priority: p.priority,
-      id: p.id 
-    }))
-  );
+      priority: getPriority(p, trimmedState) 
+    })) 
+  });
 
-  // 6. Random selection within highest priority tier
-  const highestPriority = pharmaciesWithPriority[0].priority;
-  const topPriorityPharmacies = pharmaciesWithPriority.filter(
-    (p: any) => p.priority === highestPriority
-  );
+  // Get all pharmacies with the top priority
+  const topPriority = pharmaciesWithPriority[0].priority;
+  const topPriorityPharmacies = pharmaciesWithPriority.filter((p: any) => p.priority === topPriority);
 
   // Random selection for load distribution
   const selectedPharmacy = topPriorityPharmacies[
     Math.floor(Math.random() * topPriorityPharmacies.length)
   ];
 
-  console.log(`Priority routing selected: ${selectedPharmacy.name} (Priority ${selectedPharmacy.priority})`);
-  console.log(`Selected from ${topPriorityPharmacies.length} pharmacies with same priority`);
-  console.log(`[DIAGNOSTIC] SUCCESS - Pharmacy: ${selectedPharmacy.id} (${selectedPharmacy.name}), Priority: ${selectedPharmacy.priority}, Candidates: ${topPriorityPharmacies.length}`);
+  edgeLogger.info('Priority routing selected pharmacy', { 
+    pharmacyName: selectedPharmacy.name, 
+    priority: selectedPharmacy.priority, 
+    candidateCount: topPriorityPharmacies.length 
+  });
+  edgeLogger.info('Pharmacy routing diagnostic', { 
+    pharmacyId: selectedPharmacy.id, 
+    pharmacyName: selectedPharmacy.name, 
+    priority: selectedPharmacy.priority, 
+    candidates: topPriorityPharmacies.length 
+  });
 
   // 7. Audit logging
   await supabase.from("order_routing_log").insert({
@@ -291,7 +298,7 @@ Deno.serve(async (req) => {
 
     const validation = validateRouteOrderRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -325,7 +332,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error in route-order-to-pharmacy:', error);
+    edgeLogger.error('Error in route-order-to-pharmacy', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: 'An error occurred processing the request' }),

@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
-      console.error('[practice-context] Auth error:', authError);
+      edgeLogger.error('Auth error in practice-context', authError);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     const effectiveUserId = impersonationSession?.impersonated_user_id || user.id;
     const effectiveRole = impersonationSession?.impersonated_role;
 
-    console.log('[practice-context] User:', user.id, 'Effective:', effectiveUserId, 'Role:', effectiveRole);
+    edgeLogger.info('Practice context resolution', { userId: user.id, effectiveUserId, effectiveRole });
 
     let practiceId: string | null = null;
     let roleContext: string = 'unknown';
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
     if (patientAccount?.practice_id) {
       practiceId = patientAccount.practice_id;
       roleContext = 'patient';
-      console.log('[practice-context] Resolved as patient:', patientAccount.id, 'practice:', practiceId);
+      edgeLogger.info('Resolved as patient', { patientId: patientAccount.id, practiceId });
     }
 
     // 2. Check if user is a doctor (practice owner)
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
       if (userRoles) {
         practiceId = effectiveUserId;
         roleContext = 'doctor';
-        console.log('[practice-context] Resolved as doctor (practice owner):', practiceId);
+        edgeLogger.info('Resolved as doctor (practice owner)', { practiceId });
       }
     }
 
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
       if (provider?.practice_id) {
         practiceId = provider.practice_id;
         roleContext = 'provider';
-        console.log('[practice-context] Resolved as provider, practice:', practiceId);
+        edgeLogger.info('Resolved as provider', { practiceId });
       }
     }
 
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
       if (staff?.practice_id) {
         practiceId = staff.practice_id;
         roleContext = 'staff';
-        console.log('[practice-context] Resolved as staff, practice:', practiceId);
+        edgeLogger.info('Resolved as staff', { practiceId });
       }
     }
 
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
 
       if (adminRole) {
         roleContext = 'admin';
-        console.log('[practice-context] User is admin with no specific practice');
+        edgeLogger.info('User is admin with no specific practice');
         return new Response(
           JSON.stringify({
             success: false,
@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
 
     // If no practice found, return not-found state
     if (!practiceId) {
-      console.log('[practice-context] No practice found for user:', effectiveUserId);
+      edgeLogger.info('No practice found for user', { effectiveUserId });
       return new Response(
         JSON.stringify({
           success: false,
@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (practiceError || !practice) {
-      console.error('[practice-context] Practice fetch error:', practiceError);
+      edgeLogger.error('Practice fetch error', practiceError);
       return new Response(
         JSON.stringify({
           success: false,
@@ -213,12 +213,12 @@ Deno.serve(async (req) => {
       };
     }
 
-    console.log('[practice-context] Final result:', {
+    edgeLogger.info('Practice context final result', {
+      success: !!practiceId,
       practiceId,
-      practiceName: practice.name,
       roleContext,
-      subscriptionStatus: subscriptionStatus.status,
-      isSubscribed: subscriptionStatus.isSubscribed
+      userId: user.id,
+      effectiveUserId
     });
 
     return new Response(
@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[practice-context] Unexpected error:', error);
+    edgeLogger.error('Unexpected error in practice-context', error);
     return new Response(
       JSON.stringify({
         success: false,

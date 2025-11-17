@@ -130,7 +130,7 @@ serve(async (req) => {
       });
 
     if (insertError) {
-      console.error("Failed to insert tracking update:", insertError);
+      edgeLogger.error('Failed to insert tracking update', insertError);
       return new Response(
         JSON.stringify({ error: "Failed to save tracking update" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
@@ -151,7 +151,7 @@ serve(async (req) => {
         .eq("id", orderLineId);
     }
 
-    console.log(`Successfully processed webhook from pharmacy ${pharmacy.name} for order line ${orderLineId}`);
+    edgeLogger.info('Successfully processed webhook from pharmacy', { pharmacyName: pharmacy.name, orderLineId });
 
     return new Response(
       JSON.stringify({ success: true, message: "Tracking update received" }),
@@ -159,7 +159,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Error in receive-pharmacy-webhook:", error);
+    edgeLogger.error('Error in receive-pharmacy-webhook', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
