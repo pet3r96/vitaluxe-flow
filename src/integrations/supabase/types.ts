@@ -6512,6 +6512,10 @@ export type Database = {
         Args: { _actor: string; _practice_id: string }
         Returns: boolean
       }
+      can_access_practice_orders: {
+        Args: { _practice_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_act_for_practice: {
         Args: { p_practice_id: string }
         Returns: boolean
@@ -6527,6 +6531,10 @@ export type Database = {
       }
       can_manage_video_session: {
         Args: { _session_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_order_for_practice: {
+        Args: { _practice_id: string; _user_id: string }
         Returns: boolean
       }
       can_topline_view_practice: {
