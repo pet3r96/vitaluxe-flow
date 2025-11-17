@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ProviderDocuments } from '@/integrations/supabase/table-helpers';
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -88,8 +89,7 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
         updates.reviewed_at = new Date().toISOString();
       }
 
-      // Direct table access - provider_documents not in generated types
-      const { error } = await (supabase as any).from("provider_documents").update(updates).eq("id", document.id);
+      const { error } = await ProviderDocuments().update(updates).eq("id", document.id);
 
       if (error) throw error;
     },

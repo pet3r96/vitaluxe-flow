@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ProviderDocuments } from '@/integrations/supabase/table-helpers';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, FileText, Calendar, Package, CheckCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
