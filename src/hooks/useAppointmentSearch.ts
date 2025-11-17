@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useDebounce } from './use-debounce';
 import { filterAppointments, saveRecentSearch } from '@/lib/appointmentSearch';
+import type { Appointment } from '@/types/domain/hooks';
 
 export interface UseAppointmentSearchOptions {
-  appointments: any[];
+  appointments: Appointment[];
   maxResults?: number;
   debounceMs?: number;
 }

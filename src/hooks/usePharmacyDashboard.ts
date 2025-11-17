@@ -1,13 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-interface PharmacyDashboardStats {
-  ordersCount: number;
-  pendingOrdersCount: number;
-  productsCount: number;
-  recentActivity: any[];
-  ordersByStatus: Record<string, number>;
-}
+import type { PharmacyDashboardResponse } from '@/types/domain/api';
 
 export function usePharmacyDashboard(effectiveUserId: string | null, effectiveRole: string | null) {
   return useQuery({
@@ -17,7 +10,7 @@ export function usePharmacyDashboard(effectiveUserId: string | null, effectiveRo
 
       console.log('[usePharmacyDashboard] 🚀 Fetching batched dashboard stats');
 
-      const { data, error } = await supabase.functions.invoke<PharmacyDashboardStats>(
+      const { data, error } = await supabase.functions.invoke<PharmacyDashboardResponse>(
         'get-pharmacy-dashboard-stats',
         { 
           method: 'POST',

@@ -1,11 +1,12 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
+import type { QueryKey } from '@/types/domain/hooks';
 
 /**
  * Optimized React Query wrapper for dashboard widgets
  * Provides extended staleTime and caching to prevent unnecessary refetches
  */
 export function useDashboardQuery<TData = unknown>(
-  queryKey: any[],
+  queryKey: QueryKey,
   queryFn: () => Promise<TData>,
   options?: Omit<UseQueryOptions<TData, Error>, 'queryKey' | 'queryFn'>
 ) {
