@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,14 +76,14 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
       if (tokenError) {
-        console.error("Error creating reset token:", tokenError);
+        edgeLogger.error("Error creating reset token", tokenError);
         throw tokenError;
       }
 
       const resetLink = `https://app.vitaluxeservices.com/change-password?token=${token}`;
       const correlationId = crypto.randomUUID();
       
-      console.log(`[send-password-reset] 📧 Calling unified-email-sender - correlationId: ${correlationId}, to: ${email}`);
+      edgeLogger.info('[send-password-reset] Calling unified-email-sender', { correlationId, to: email });
 
       // Call unified email sender
       const emailPayload = {
@@ -105,12 +106,12 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
       if (emailResult.error) {
-        console.error("Unified email sender error:", emailResult.error);
+        edgeLogger.error("Unified email sender error", emailResult.error);
         throw new Error(`Email sending failed: ${emailResult.error.message}`);
       }
 
       const result = emailResult.data;
-      console.log(`[send-password-reset] ✅ Email sent - correlationId: ${correlationId}, messageId: ${result.MessageID}`);
+      edgeLogger.info('[send-password-reset] Email sent', { correlationId, messageId: result.MessageID });
 
       // Log audit event
       await supabaseAdmin.rpc('log_audit_event', {
@@ -131,7 +132,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error: any) {
-    console.error("Error in send-password-reset-email function:", error);
+    edgeLogger.error("Error in send-password-reset-email function", error);
     return new Response(
       JSON.stringify({ 
         success: false, 

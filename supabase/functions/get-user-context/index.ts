@@ -1,5 +1,6 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -169,7 +170,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error fetching user context:', error);
+    edgeLogger.error('Error fetching user context', error);
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error' 
