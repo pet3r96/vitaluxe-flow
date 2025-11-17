@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +18,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('[get-or-create-practice-room] Request received');
+    edgeLogger.info('[get-or-create-practice-room] Request received');
 
     const supabase = createAuthClient(req.headers.get('Authorization'));
     const supabaseAdmin = createAdminClient();
@@ -25,7 +26,7 @@ Deno.serve(async (req) => {
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('[get-or-create-practice-room] Auth error:', authError);
+      edgeLogger.error('[get-or-create-practice-room] Auth error', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
 
     if (impersonationSession) {
       effectiveUserId = impersonationSession.impersonated_user_id;
-      console.log('[get-or-create-practice-room] Impersonation detected:', {
+      edgeLogger.info('[get-or-create-practice-room] Impersonation detected', {
         adminUserId: user.id,
         effectiveUserId
       });
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[get-or-create-practice-room] Practice ID:', practice_id, 'Effective User:', effectiveUserId);
+    edgeLogger.info('[get-or-create-practice-room] Practice ID', { practiceId: practice_id, effectiveUserId });
 
     // Verify user has access to this practice using admin client
     const isPracticeOwner = effectiveUserId === practice_id;
@@ -77,14 +78,14 @@ Deno.serve(async (req) => {
       .eq('practice_id', practice_id)
       .maybeSingle();
 
-    console.log('[get-or-create-practice-room] Authorization check:', {
+    edgeLogger.info('[get-or-create-practice-room] Authorization check', {
       isPracticeOwner,
       hasProvider: !!provider,
       hasStaff: !!staff
     });
 
     if (!isPracticeOwner && !provider && !staff) {
-      console.error('[get-or-create-practice-room] Unauthorized');
+      edgeLogger.error('[get-or-create-practice-room] Unauthorized', new Error('Access denied'));
       return new Response(
         JSON.stringify({ error: 'Not authorized for this practice' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -101,7 +102,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (existingRoom) {
-      console.log('[get-or-create-practice-room] Room already exists:', existingRoom.room_key);
+      edgeLogger.info('[get-or-create-practice-room] Room already exists', { roomKey: existingRoom.room_key });
       return new Response(
         JSON.stringify({
           success: true,

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +17,7 @@ serve(async (req) => {
 
     const { practiceId, oldStatus, newStatus } = await req.json();
 
-    console.log('[NotifyPatients] Subscription changed:', { practiceId, oldStatus, newStatus });
+    edgeLogger.info('[NotifyPatients] Subscription changed', { practiceId, oldStatus, newStatus });
 
     // Only notify when going from active → inactive
     const wasActive = ['trial', 'active', 'suspended'].includes(oldStatus);

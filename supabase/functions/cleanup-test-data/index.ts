@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,7 +36,7 @@ serve(async (req) => {
     // Verify caller
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !user) {
-      console.error('Auth error:', userError);
+      edgeLogger.error('Auth error', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -51,7 +52,7 @@ serve(async (req) => {
       .single();
 
     if (roleError || !roleData) {
-      console.error('Admin check failed:', roleError);
+      edgeLogger.error('Admin check failed', roleError);
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -83,7 +84,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing deletion request for ${emailList.length} users by admin ${user.email}`);
+    edgeLogger.info('Processing deletion request', { count: emailList.length, adminEmail: user.email });
 
     const results: Array<{ email: string; success: boolean; message: string; details?: any }> = [];
     let deletedCount = 0;
@@ -92,7 +93,7 @@ serve(async (req) => {
     // Process each email
     for (const targetEmail of emailList) {
       try {
-        console.log(`Processing user: ${targetEmail}`);
+        edgeLogger.info('Processing user', { targetEmail });
 
         // Find user by email (case-insensitive)
         const { data: profile, error: profileError } = await supabaseAdmin
@@ -102,7 +103,7 @@ serve(async (req) => {
           .single();
 
         if (profileError || !profile) {
-          console.log(`User not found: ${targetEmail}`);
+          edgeLogger.info('User not found', { targetEmail });
           results.push({
             email: targetEmail,
             success: false,
@@ -113,7 +114,7 @@ serve(async (req) => {
         }
 
         const userId = profile.id;
-        console.log(`Found user ${userId} for ${targetEmail}`);
+        edgeLogger.info('Found user', { userId, targetEmail });
 
         // Start comprehensive cleanup process
         const cleanupDetails: any = {};

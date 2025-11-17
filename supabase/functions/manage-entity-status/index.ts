@@ -1,5 +1,6 @@
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 /**
  * Consolidated Entity Status Management Endpoint
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    console.log('[manage-entity-status] Action:', action, 'User:', user.id);
+    edgeLogger.info('[manage-entity-status] Action', { action, userId: user.id });
 
     switch (action) {
       case 'provider-status': {

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,7 +27,7 @@ const isUUID = (str: string): boolean => {
 
 serve(async (req) => {
   const requestStart = Date.now();
-  console.log(`[get-orders-page] ⏱️ Request started at ${new Date().toISOString()}`);
+  edgeLogger.info('[get-orders-page] Request started', { timestamp: new Date().toISOString() });
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -35,7 +36,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('[get-orders-page] Missing Authorization header');
+      edgeLogger.error('[get-orders-page] Missing Authorization header', new Error('No auth header'));
       return new Response(
         JSON.stringify({ error: 'Unauthorized: missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -44,7 +45,7 @@ serve(async (req) => {
 
     const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
     if (!token || token.length < 10) {
-      console.error('[get-orders-page] Invalid Authorization token');
+      edgeLogger.error('[get-orders-page] Invalid Authorization token', new Error('Invalid token'));
       return new Response(
         JSON.stringify({ error: 'Unauthorized: invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -55,7 +56,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
     
     if (!supabaseUrl || !supabaseKey) {
-      console.error('[get-orders-page] Missing Supabase envs');
+      edgeLogger.error('[get-orders-page] Missing Supabase envs', new Error('Config error'));
       return new Response(
         JSON.stringify({ error: 'Server misconfiguration' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -68,7 +69,7 @@ serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
-      console.error('[get-orders-page] Auth failed:', userError?.message);
+      edgeLogger.error('[get-orders-page] Auth failed', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -93,7 +94,7 @@ serve(async (req) => {
 
     // NO ROLE NORMALIZATION - keep roles separate
     const roleNorm = role;
-    console.log('[get-orders-page] Incoming role:', roleNorm);
+    edgeLogger.info('[get-orders-page] Incoming role', { role: roleNorm });
 
     // Default to last 90 days if no startDate provided
     const defaultStartDate = new Date();

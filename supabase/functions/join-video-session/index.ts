@@ -1,18 +1,19 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const agoraAppCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
 
 Deno.serve(async (req) => {
-  console.log('🚀 [join-video-session] Request received', req.method);
+  edgeLogger.info('[join-video-session] Request received', { method: req.method });
   
   if (req.method === 'OPTIONS') {
-    console.log('✅ [join-video-session] OPTIONS handled');
+    edgeLogger.info('[join-video-session] OPTIONS handled');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('🔄 [join-video-session] Processing request...');
+    edgeLogger.info('[join-video-session] Processing request');
     const supabase = createAdminClient();
     
     // Authenticate user
@@ -29,7 +30,7 @@ Deno.serve(async (req) => {
 
     const { sessionId } = await req.json();
     
-    console.log("join-video-session invoked", {
+    edgeLogger.info('join-video-session invoked', {
       sessionId,
       timestamp: new Date().toISOString()
     });
@@ -41,7 +42,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('🔍 [join-video-session] Request:', { sessionId, authUserId: user.id });
+    edgeLogger.info('[join-video-session] Request details', { sessionId, authUserId: user.id });
 
     // Check for active impersonation session
     let effectiveUserId = user.id;

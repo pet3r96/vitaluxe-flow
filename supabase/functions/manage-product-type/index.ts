@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { validateManageProductTypeRequest } from '../_shared/requestValidators.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,7 +71,7 @@ Deno.serve(async (req) => {
 
     const validation = validateManageProductTypeRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -79,7 +80,7 @@ Deno.serve(async (req) => {
 
     const { operation, typeName, oldTypeName, newTypeName } = requestData;
 
-    console.log('Product type operation:', operation, { typeName, oldTypeName, newTypeName });
+    edgeLogger.info('Product type operation', { operation, typeName, oldTypeName, newTypeName });
 
     switch (operation) {
       case 'add': {

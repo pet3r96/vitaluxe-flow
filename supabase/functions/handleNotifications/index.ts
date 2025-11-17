@@ -5,6 +5,7 @@ import { sendNotificationSms } from "../_shared/notificationSmsSender.ts";
 import { generateNotificationEmailHTML, generateNotificationEmailText } from "../_shared/emailTemplates.ts";
 import { logNotificationDelivery } from "../_shared/notificationLogger.ts";
 import { shouldCheckPracticeSettings, getNotificationCategory } from "../_shared/notificationTypeClassifier.ts";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,10 +42,11 @@ function normalizePhoneToE164(phone: string): string {
 }
 
 serve(async (req) => {
-  console.log('[handleNotifications] ===== NEW REQUEST RECEIVED =====');
-  console.log('[handleNotifications] Timestamp:', new Date().toISOString());
-  console.log('[handleNotifications] Method:', req.method);
-  console.log('[handleNotifications] Headers:', Object.fromEntries(req.headers));
+  edgeLogger.info('[handleNotifications] New request received', { 
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    headers: Object.fromEntries(req.headers)
+  });
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -52,24 +54,25 @@ serve(async (req) => {
 
   try {
     const supabase = createAdminClient();
-    console.log('[handleNotifications] Supabase admin client created');
+    edgeLogger.info('[handleNotifications] Supabase admin client created');
 
     const payload: NotificationPayload = await req.json();
-    console.log('[handleNotifications] ===== PAYLOAD RECEIVED =====');
-    console.log('[handleNotifications] Full Payload:', JSON.stringify(payload, null, 2));
-    console.log('[handleNotifications] User ID:', payload.user_id);
-    console.log('[handleNotifications] Type:', payload.notification_type);
-    console.log('[handleNotifications] Title:', payload.title);
+    edgeLogger.info('[handleNotifications] Payload received', {
+      fullPayload: JSON.stringify(payload, null, 2),
+      userId: payload.user_id,
+      type: payload.notification_type,
+      title: payload.title
+    });
 
     // Step 1: Map notification_type to event_type
     const eventType = mapNotificationTypeToEventType(payload.notification_type);
-    console.log(`[handleNotifications] Type mapping: ${payload.notification_type} → ${eventType}`);
+    edgeLogger.info('[handleNotifications] Type mapping', { from: payload.notification_type, to: eventType });
 
     // Determine if this notification should respect practice settings
     const respectPracticeSettings = shouldCheckPracticeSettings(payload.notification_type);
     const notificationCategory = getNotificationCategory(payload.notification_type);
     
-    console.log('[handleNotifications] Notification classification:', {
+    edgeLogger.info('[handleNotifications] Notification classification', {
       type: payload.notification_type,
       category: notificationCategory,
       respectsPracticeSettings: respectPracticeSettings
@@ -84,7 +87,7 @@ serve(async (req) => {
       .single();
 
     if (prefError) {
-      console.log('[handleNotifications] No preferences found, using defaults');
+      edgeLogger.info('[handleNotifications] No preferences found, using defaults');
     }
 
     const emailEnabled = preferences?.email_enabled ?? true;
@@ -93,7 +96,7 @@ serve(async (req) => {
 
     // Step 3: Check if all channels disabled
     if (!emailEnabled && !smsEnabled && !inAppEnabled) {
-      console.log('[handleNotifications] All channels disabled, skipping notification');
+      edgeLogger.info('[handleNotifications] All channels disabled, skipping notification');
       
       // Log skipped status for all channels
       await logNotificationDelivery({

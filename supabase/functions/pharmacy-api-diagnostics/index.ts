@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,7 +27,7 @@ serve(async (req) => {
     const supabaseAdmin = createAdminClient();
 
     const { pharmacy_id }: DiagnosticsRequest = await req.json();
-    console.log(`[Diagnostics] Starting diagnostics for pharmacy ${pharmacy_id}`);
+    edgeLogger.info('[Diagnostics] Starting diagnostics for pharmacy', { pharmacyId: pharmacy_id });
 
     const results: DiagnosticStep[] = [];
 

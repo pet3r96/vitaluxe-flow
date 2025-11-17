@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,7 +32,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    console.log(`Pharmacy user ${user.id} declining order ${order_id}`);
+    edgeLogger.info('Pharmacy user declining order', { userId: user.id, orderId: order_id });
 
     // Get pharmacy ID
     const { data: pharmacy, error: pharmacyError } = await supabase

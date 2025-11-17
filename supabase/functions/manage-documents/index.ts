@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { S3Client, PutObjectCommand, GetObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.485.0";
 import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.485.0";
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 /**
  * Consolidated Document Management Endpoint with Dual-Provider Fallback
@@ -46,7 +47,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    console.log('[manage-documents] Action:', action, 'User:', user.id);
+    edgeLogger.info('[manage-documents] Action', { action, userId: user.id });
 
     switch (action) {
       case 'create': {

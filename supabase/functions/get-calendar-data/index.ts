@@ -1,6 +1,7 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -10,7 +11,7 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      console.error('[get-calendar-data] Auth error:', authError);
+      edgeLogger.error('[get-calendar-data] Auth error', authError);
       return errorResponse('Not authenticated', 401);
     }
 
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id);
     
     const callerRole = userRoles?.[0]?.role || null;
-    console.log('Caller role:', callerRole, 'User ID:', user.id);
+    edgeLogger.info('Caller role', { callerRole, userId: user.id });
 
     // Determine provider scoping
     let providerRecord = null;
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
       
       providerRecord = data;
       isProviderScoped = !!providerRecord;
-      console.log('Provider scope (by role):', isProviderScoped, 'Provider ID:', providerRecord?.id);
+      edgeLogger.info('Provider scope (by role)', { isProviderScoped, providerId: providerRecord?.id });
     } else if (callerRole === 'admin' && effectiveProviderUserId) {
       // Admin impersonating provider: scope to the effective provider
       const { data } = await supabaseClient
@@ -62,11 +63,11 @@ Deno.serve(async (req) => {
       
       providerRecord = data;
       isProviderScoped = true;
-      console.log('Provider scope (admin impersonation):', isProviderScoped, 'Effective Provider ID:', providerRecord?.id);
+      edgeLogger.info('Provider scope (admin impersonation)', { isProviderScoped, effectiveProviderId: providerRecord?.id });
     }
 
     const fetchStartTime = Date.now();
-    console.log('[get-calendar-data] Starting fetch for role:', callerRole, 'providerScoped:', isProviderScoped);
+    edgeLogger.info('[get-calendar-data] Starting fetch', { callerRole, providerScoped: isProviderScoped });
 
     // Build query - optimized with only essential columns
     // CRITICAL: Use LEFT JOIN for patient_accounts and providers to ensure appointments are always returned
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
     // If provider-scoped, filter to only their appointments
     if (isProviderScoped && providerRecord) {
       query = query.eq('provider_id', providerRecord.id);
-      console.log('Filtering appointments to provider:', providerRecord.id);
+      edgeLogger.info('Filtering appointments to provider', { providerId: providerRecord.id });
     }
 
     // Apply filters (ignore provider filters if provider-scoped)

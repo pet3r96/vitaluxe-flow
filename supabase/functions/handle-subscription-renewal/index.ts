@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,11 +49,11 @@ serve(async (req) => {
         const profile = subscription.profiles as any;
         const hasPaymentMethod = profile?.authorizenet_customer_profile_id != null;
 
-        console.log(`Processing renewal for subscription ${subscription.id}, has payment: ${hasPaymentMethod}`);
+        edgeLogger.info('Processing renewal for subscription', { subscriptionId: subscription.id, hasPayment: hasPaymentMethod });
 
         // Check if payment method exists BEFORE attempting charge
         if (!hasPaymentMethod) {
-          console.log(`No payment method for subscription ${subscription.id}, suspending`);
+          edgeLogger.info('No payment method for subscription, suspending', { subscriptionId: subscription.id });
           
           const gracePeriodEnd = new Date();
           gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 3); // 3-day grace period

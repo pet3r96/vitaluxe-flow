@@ -1,7 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
-console.log('[practice-context] Function loaded');
+edgeLogger.info('[practice-context] Function loaded');
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,7 +12,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('[practice-context] Missing Authorization header');
+      edgeLogger.error('[practice-context] Missing Authorization header', new Error('No auth header'));
       return new Response(
         JSON.stringify({ 
           success: false, 

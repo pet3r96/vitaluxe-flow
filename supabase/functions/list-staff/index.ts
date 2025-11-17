@@ -1,4 +1,5 @@
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +17,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
     
     if (userError || !user) {
-      console.error('[list-staff] Auth error:', userError);
+      edgeLogger.error('[list-staff] Auth error', userError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -26,7 +27,7 @@ Deno.serve(async (req) => {
     // Use admin client for data queries
     const supabase = createAdminClient();
 
-    console.log('[list-staff] User:', user.id);
+    edgeLogger.info('[list-staff] User', { userId: user.id });
 
     // Get user's role and practice
     const { data: userRoles } = await supabase
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id);
 
     const roles = userRoles?.map(r => r.role) || [];
-    console.log('[list-staff] User roles:', roles);
+    edgeLogger.info('[list-staff] User roles', { roles });
 
     let practiceId: string | null = null;
     let practiceIdSource = 'none';
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
       practiceId = staffData?.practice_id || null;
       practiceIdSource = 'computed-staff';
     } else {
-      console.error('[list-staff] No valid role for user (providers cannot view staff list)');
+      edgeLogger.error('[list-staff] No valid role for user (providers cannot view staff list)', new Error('Invalid role'));
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
     console.log('[list-staff] practiceId:', practiceId, 'source:', practiceIdSource);
 
     if (!practiceId && !roles.includes('admin')) {
-      console.error('[list-staff] No practice_id found for user');
+      edgeLogger.error('[list-staff] No practice_id found for user', new Error('No practice ID'));
       return new Response(JSON.stringify({ staff: [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -109,7 +110,7 @@ Deno.serve(async (req) => {
     const { data: staffRows, error: staffError } = await staffQuery;
 
     if (staffError) {
-      console.error('[list-staff] Query error:', staffError);
+      edgeLogger.error('[list-staff] Query error', staffError);
       return new Response(JSON.stringify({ error: staffError.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

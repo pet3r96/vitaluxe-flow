@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,7 +52,7 @@ serve(async (req) => {
       throw new Error('GOOGLE_API_KEY not configured');
     }
 
-    console.log('📍 Google Address Validation: Processing address:', { street, city, state, zip });
+    edgeLogger.info('Google Address Validation: Processing address', { street, city, state, zip });
 
     // If manual override, skip validation
     if (manual_override) {
@@ -91,12 +92,12 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Google API error:', response.status, errorText);
+      edgeLogger.error('Google API error', new Error(`Status ${response.status}: ${errorText}`));
       throw new Error(`Google API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('📦 Google API response:', JSON.stringify(data, null, 2));
+    edgeLogger.info('Google API response', { response: JSON.stringify(data, null, 2) });
 
     const result = data.result;
     const verdict = result?.verdict;
