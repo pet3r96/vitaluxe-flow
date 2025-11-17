@@ -1,5 +1,6 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from "../_shared/cors.ts";
+import { edgeLogger } from '../_shared/logger.ts';
 
 /**
  * Normalize gender values to BareMeds API format
@@ -17,7 +18,7 @@ function normalizeGender(genderValue: string | null | undefined): "M" | "F" | "U
   if (normalized === "f" || normalized === "female") return "F";
   if (normalized === "u") return "U";
   
-  console.warn(`⚠️ Unknown gender value: "${genderValue}", using "U"`);
+  edgeLogger.warn(`Unknown gender value: "${genderValue}", using "U"`);
   return "U";
 }
 
@@ -30,14 +31,14 @@ Deno.serve(async (req) => {
   try {
     const { order_id, pharmacy_email, pharmacy_name, payment_status } = await req.json();
 
-    console.log("📦 Processing order:", { order_id, pharmacy_email, payment_status });
+    edgeLogger.info('Processing order', { order_id, pharmacy_email, payment_status });
 
     // Get configured pharmacy email
     const configuredPharmacyEmail = Deno.env.get("BAREMEDS_EMAIL");
     
     // Skip if not configured pharmacy or not paid
     if (configuredPharmacyEmail && pharmacy_email?.toLowerCase() !== configuredPharmacyEmail.toLowerCase()) {
-      console.log("⏭️ Skipping: not configured pharmacy");
+      edgeLogger.info('Skipping: not configured pharmacy');
       return new Response(
         JSON.stringify({ success: true, sent: false, reason: "Not configured pharmacy" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
     }
 
     if (payment_status !== "paid") {
-      console.log("⏭️ Skipping: payment not paid");
+      edgeLogger.info('Skipping: payment not paid');
       return new Response(
         JSON.stringify({ success: true, sent: false, reason: "Payment not paid" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -82,11 +83,11 @@ Deno.serve(async (req) => {
       .single();
 
     if (error || !order) {
-      console.error("❌ Order not found:", error);
+      edgeLogger.error('Order not found', error);
       throw new Error(`Order not found: ${error?.message || "Unknown error"}`);
     }
 
-    console.log("✅ Order fetched successfully");
+    edgeLogger.info('Order fetched successfully');
 
     // Get patient info from first order line (assuming all lines have same patient)
     const firstLine = order.order_lines[0];
@@ -98,7 +99,7 @@ Deno.serve(async (req) => {
     const isPatientOrder = firstLine.patient_id !== null;
 
     if (!isPatientOrder) {
-      console.log("⏭️ Skipping: Practice order (no patient_id)");
+      edgeLogger.info('Skipping: Practice order (no patient_id)');
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -109,7 +110,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("✅ Patient order confirmed, proceeding with BareMeds transmission");
+    edgeLogger.info('Patient order confirmed, proceeding with BareMeds transmission');
 
     // Parse patient name (assuming format "FirstName LastName" or just a single name)
     const nameParts = (firstLine.patient_name || "Unknown Patient").split(" ");

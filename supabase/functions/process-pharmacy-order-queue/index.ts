@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       }
     });
 
-    console.log(`[process-pharmacy-order-queue] Send result:`, sendResult);
+    edgeLogger.info('[process-pharmacy-order-queue] Send result', { sendResult });
 
     // Update job based on result
     if (!sendError && sendResult?.sent) {
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
         })
         .eq('id', job.id);
 
-      console.log(`[process-pharmacy-order-queue] Job ${job.id} completed successfully`);
+      edgeLogger.info('[process-pharmacy-order-queue] Job completed successfully', { jobId: job.id });
 
       return new Response(
         JSON.stringify({ 
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
         })
         .eq('id', job.id);
 
-      console.log(`[process-pharmacy-order-queue] Job ${job.id} failed (attempt ${newAttemptCount}/${job.max_attempts}): ${errorMessage}`);
+      edgeLogger.warn('[process-pharmacy-order-queue] Job failed', { jobId: job.id, attempt: newAttemptCount, maxAttempts: job.max_attempts, error: errorMessage });
 
       return new Response(
         JSON.stringify({ 
@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('[process-pharmacy-order-queue] Error:', error);
+    edgeLogger.error('[process-pharmacy-order-queue] Error', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ 

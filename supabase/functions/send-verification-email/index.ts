@@ -28,7 +28,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[send-verification-email] Creating admin client...');
+    edgeLogger.info('[send-verification-email] Creating admin client');
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -39,10 +39,10 @@ serve(async (req) => {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     const correlationId = crypto.randomUUID();
 
-    console.log("📧 [send-verification-email] Generated verification token for:", email, "expires:", expiresAt.toISOString());
+    edgeLogger.info('[send-verification-email] Generated verification token', { expires: expiresAt.toISOString() });
 
     // Insert token into database
-    console.log('[send-verification-email] Inserting token into database...');
+    edgeLogger.info('[send-verification-email] Inserting token into database');
     const { error: insertError } = await supabaseAdmin
       .from("email_verification_tokens")
       .insert({
@@ -52,18 +52,18 @@ serve(async (req) => {
       });
 
     if (insertError) {
-      console.error("❌ [send-verification-email] Failed to insert token:", insertError);
+      edgeLogger.error('[send-verification-email] Failed to insert token', insertError);
       return new Response(
         JSON.stringify({ error: "Failed to store token" }), 
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    console.log('✅ [send-verification-email] Token stored successfully');
+    edgeLogger.info('[send-verification-email] Token stored successfully');
 
     // Build verification link
     const verificationUrl = `https://app.vitaluxeservices.com/verify-email?token=${token}`;
     
-    console.log("📤 [send-verification-email] Calling unified-email-sender for:", email);
+    edgeLogger.info('[send-verification-email] Calling unified-email-sender');
 
     // Call unified email sender
     const emailPayload = {

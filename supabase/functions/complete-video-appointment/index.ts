@@ -1,5 +1,6 @@
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +16,6 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     
     if (!authHeader) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('[complete-video-appointment] No auth header');
       return new Response(JSON.stringify({ error: 'Unauthorized: missing auth header' }), {
         status: 401,
@@ -31,7 +31,6 @@ Deno.serve(async (req) => {
     } = await supabaseAuth.auth.getUser();
 
     if (userError || !user) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('[complete-video-appointment] Auth failed', userError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -39,7 +38,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.info('[complete-video-appointment] Authenticated user', { userId: user.id });
 
     // Use service role client for database operations (bypass RLS)
@@ -122,7 +120,7 @@ Deno.serve(async (req) => {
 
     isAuthorized = isProvider || isPracticeOwner || isStaff;
 
-    console.log('🔐 [complete-video-appointment] Authorization:', {
+    edgeLogger.info('[complete-video-appointment] Authorization', {
       isProvider,
       isPracticeOwner,
       isStaff,
@@ -151,7 +149,7 @@ Deno.serve(async (req) => {
       .eq('id', appointmentId);
 
     if (updateAppointmentError) {
-      console.error('❌ [complete-video-appointment] Failed to update appointment:', updateAppointmentError);
+      edgeLogger.error('[complete-video-appointment] Failed to update appointment', updateAppointmentError);
       throw updateAppointmentError;
     }
 
@@ -172,7 +170,7 @@ Deno.serve(async (req) => {
         .eq('id', videoSession.id);
 
       if (endSessionError) {
-        console.error('❌ [complete-video-appointment] Failed to end video session:', endSessionError);
+        edgeLogger.error('[complete-video-appointment] Failed to end video session', endSessionError);
       }
 
       // Log completion event
@@ -188,7 +186,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('✅ [complete-video-appointment] Appointment completed successfully');
+    edgeLogger.info('[complete-video-appointment] Appointment completed successfully');
 
     return new Response(
       JSON.stringify({ success: true, message: 'Appointment completed successfully' }),
@@ -199,7 +197,7 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ [complete-video-appointment] Error:', error);
+    edgeLogger.error('[complete-video-appointment] Error', error);
     return new Response(
       JSON.stringify({ error: errorMessage || 'Internal server error' }),
       {

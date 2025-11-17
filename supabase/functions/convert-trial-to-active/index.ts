@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -140,7 +141,7 @@ serve(async (req) => {
         }
       } else {
         // No payment method - suspend with grace period
-        console.log(`No payment method for subscription ${trial.id}, suspending`);
+        edgeLogger.info('No payment method for subscription, suspending', { subscriptionId: trial.id });
         
         const gracePeriodEnd = new Date(now);
         gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 3);
@@ -179,7 +180,7 @@ serve(async (req) => {
           });
         
         if (reminderError) {
-          console.error('Error recording suspension reminder:', reminderError);
+          edgeLogger.error('Error recording suspension reminder', reminderError);
         }
 
         results.push({ 
@@ -200,7 +201,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("Error converting trials:", error);
+    edgeLogger.error('Error converting trials', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
