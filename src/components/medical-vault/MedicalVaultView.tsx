@@ -32,6 +32,7 @@ import type { MedicalVaultAuditLog } from '@/types/domain/medical-vault';
 import { PatientNotesSection } from "@/components/patients/PatientNotesSection";
 import type { TypedVaultRecord } from "@/types/vault/records";
 import { flattenForPdf } from "@/lib/vault";
+import { logger } from "@/lib/logger";
 
 interface MedicalVaultViewProps {
   patientAccountId: string;
@@ -62,20 +63,9 @@ export function MedicalVaultView({
   // Fetch audit logs
   const { data: auditLogs = [], isLoading: isLoadingAuditLogs, refetch: refetchAuditLogs } = useAuditLogs(patientAccountId);
 
-  // Debug audit logs state
-  useEffect(() => {
-    console.log('[MedicalVault] Audit logs state:', {
-      patientAccountId,
-      auditLogsCount: auditLogs.length,
-      isLoading: isLoadingAuditLogs,
-      auditLogs: auditLogs.slice(0, 2) // Log first 2 for brevity
-    });
-  }, [auditLogs, isLoadingAuditLogs, patientAccountId]);
-
   // Real-time subscriptions for automatic updates
   useEffect(() => {
     if (patientAccountId) {
-      console.log(`[MedicalVault] Subscribing to realtime updates for patient ${patientAccountId}`);
       
       const tables = [
         'patient_medical_vault',
@@ -322,7 +312,7 @@ export function MedicalVaultView({
             document.body.removeChild(printFrame);
           }, 1000);
         } catch (err) {
-          console.error('Print error:', err);
+          logger.error("Print error", err);
           document.body.removeChild(printFrame);
         }
       }, 500);

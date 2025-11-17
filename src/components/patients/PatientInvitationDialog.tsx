@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { logger } from "@/lib/logger";
 
 interface PatientInvitationDialogProps {
   open: boolean;
@@ -76,7 +77,7 @@ export const PatientInvitationDialog = ({
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error('Bulk invitation error:', error);
+      logger.error("Bulk invitation error", error);
       toast.error('Failed to send invitations', {
         description: error.message,
       });

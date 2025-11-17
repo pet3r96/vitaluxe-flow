@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { VaultRecordBase, asVital } from "@/lib/vault";
 import { insertVaultRecord, type VitalsRecordData as VitalsInsertData } from "@/lib/medicalVaultInsert";
+import { logger } from "@/lib/logger";
 
 const vitalsSchema = z.object({
   vital_type: z.string().optional(),

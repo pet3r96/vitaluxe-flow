@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCreatePatientNote } from "@/hooks/usePatientNotes";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface CreatePatientNoteDialogProps {
   open: boolean;
@@ -49,7 +50,7 @@ export function CreatePatientNoteDialog({
       
       userName = profile?.full_name || user.email || 'Unknown User';
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      logger.error("Error fetching user profile", error);
       userName = user.email || 'Unknown User';
     }
 

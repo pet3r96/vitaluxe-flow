@@ -16,6 +16,7 @@ import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs"
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asPharmacy } from "@/lib/vault";
 import { insertVaultRecord, type PharmacyRecordData } from "@/lib/medicalVaultInsert";
+import { logger } from "@/lib/logger";
 
 const pharmacySchema = z.object({
   pharmacy_name: z.string().optional(),
@@ -79,12 +80,6 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) throw new Error("Not authenticated");
       
-      console.log('[PharmacyDialog] Auth check:', {
-        authUserId: authUser.id,
-        patientAccountId,
-        mode,
-      });
-      
       const recordData = {
         pharmacy_name: data.pharmacy_name || null,
         address: data.address,
@@ -124,10 +119,9 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
           .eq("id", pharmacy.id);
         
         if (error) {
-          console.error('[PharmacyDialog] UPDATE failed:', error.message);
+          logger.error("Pharmacy UPDATE failed", error, { pharmacyId: pharmacy.id });
           throw error;
         }
-        console.log('[PharmacyDialog] UPDATE success');
       } else {
         const recordData: PharmacyRecordData = {
           pharmacy_name: data.pharmacy_name || undefined,
@@ -153,14 +147,9 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         });
         
         if (error) {
-          console.error('[PharmacyDialog] INSERT failed:', {
-            error: error.message,
-            authUserId: authUser.id,
-            patientAccountId,
-          });
+          logger.error("Pharmacy INSERT failed", error, { patientAccountId });
           throw error;
         }
-        console.log('[PharmacyDialog] INSERT success');
       }
     },
     {

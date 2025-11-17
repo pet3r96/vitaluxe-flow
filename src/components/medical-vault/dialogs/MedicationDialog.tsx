@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { toast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { searchMedications } from "@/lib/medical-api-service";
@@ -130,13 +131,6 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) throw new Error("Not authenticated");
       
-      console.log('[MedicationDialog] Auth check:', {
-        authUserId: authUser.id,
-        authEmail: authUser.email,
-        patientAccountId,
-        mode,
-      });
-      
       // Convert YYYY-MM to YYYY-MM-01 for database storage
       const fullStartDate = data.start_date + "-01";
       
@@ -159,14 +153,9 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
           .eq("id", medication.id);
         
         if (error) {
-          console.error('[MedicationDialog] UPDATE failed:', {
-            error: error.message,
-            code: error.code,
-            medicationId: medication.id,
-          });
+          logger.error("Medication UPDATE failed", error, { medicationId: medication.id });
           throw error;
         }
-        console.log('[MedicationDialog] UPDATE success');
       } else {
         const recordData: MedicationRecordData = {
           medication_name: data.medication_name,
@@ -193,17 +182,9 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         });
         
         if (error) {
-          console.error('[MedicationDialog] INSERT failed:', {
-            error: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-            authUserId: authUser.id,
-            patientAccountId,
-          });
+          logger.error("Medication INSERT failed", error, { patientAccountId });
           throw error;
         }
-        console.log('[MedicationDialog] INSERT success');
       }
     },
     {
