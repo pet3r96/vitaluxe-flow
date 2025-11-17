@@ -12,7 +12,8 @@ import { PatientMessageThread } from "@/components/internal-chat/PatientMessageT
 import { PatientMessageDetails } from "@/components/internal-chat/PatientMessageDetails";
 import { CreatePatientMessageDialog } from "@/components/internal-chat/CreatePatientMessageDialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import type { InternalMessageReply, InternalMessageReplyInsert } from "@/types/manual-schema";
+import type { InternalMessageReply, InternalMessageReplyInsert, TeamMember } from "@/types/manual-schema";
+import type { PatientMessage, PatientMessageWithJoins } from "@/types/domain/messages";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle } from "lucide-react";
@@ -84,7 +85,7 @@ const InternalChat = () => {
   // Create a map of userId -> team member for quick lookups
   const teamMap = useMemo(() => {
     return Object.fromEntries(
-      teamMembers.map((m: any) => [m.user_id, m])
+      teamMembers.map((m: TeamMember) => [m.user_id, m])
     );
   }, [teamMembers]);
 
@@ -473,7 +474,8 @@ const InternalChat = () => {
     queryFn: async () => {
       if (!practiceId) return [];
 
-      let query = supabase
+      // JUSTIFIED: Query builder typed as any to prevent deep type instantiation errors with complex Supabase joins
+      let query: any = supabase
         .from('patient_messages')
         .select(`
           *,
@@ -486,11 +488,11 @@ const InternalChat = () => {
 
       // Apply filters
       if (patientFilterTab === 'active') {
-        query = (query as any).eq('resolved', false);
+        query = query.eq('resolved', false);
       } else if (patientFilterTab === 'urgent') {
-        query = (query as any).eq('urgency', 'urgent').eq('resolved', false);
+        query = query.eq('urgency', 'urgent').eq('resolved', false);
       } else if (patientFilterTab === 'resolved') {
-        query = (query as any).eq('resolved', true);
+        query = query.eq('resolved', true);
       }
 
       // Apply search
@@ -547,16 +549,19 @@ const InternalChat = () => {
                             data.sender_type === 'staff' || 
                             data.sender_type === 'practice';
       
+      const typedData = data as PatientMessageWithJoins;
+      const patientName = `${typedData.patient?.first_name || ''} ${typedData.patient?.last_name || ''}`.trim();
+      
       return {
-        ...data,
+        ...typedData,
         patient: {
-          ...(data as any).patient,
-          name: `${(data as any).patient?.first_name || ''} ${(data as any).patient?.last_name || ''}`.trim()
+          ...typedData.patient,
+          name: patientName
         },
         sender: isFromPractice
-          ? { id: (data as any).sender_id, name: teamMap[(data as any).sender_id]?.name || 'Practice' }
-          : { id: (data as any).patient_id, name: `${(data as any).patient?.first_name || ''} ${(data as any).patient?.last_name || ''}`.trim() || 'Patient' }
-      };
+          ? { id: typedData.practice_id, name: teamMap[typedData.practice_id]?.name || 'Practice' }
+          : { id: data.patient_id, name: patientName || 'Patient' }
+      } as PatientMessageWithJoins;
     },
     enabled: !!selectedPatientMessageId && Object.keys(teamMap).length > 0
   });
@@ -626,7 +631,7 @@ const InternalChat = () => {
       if (!selectedPatientMessage) throw new Error('No message selected');
       
       // Determine the root thread_id
-      const rootThreadId = (selectedPatientMessage as any).thread_id || selectedPatientMessage.id;
+      const rootThreadId = selectedPatientMessage.thread_id || selectedPatientMessage.id;
       
       const { error } = await supabase
         .from('patient_messages')
@@ -774,11 +779,11 @@ const InternalChat = () => {
   }, [practiceId, queryClient, effectiveUserId]);
 
   const unreadCount = badgeCounts?.unreadCount || 0;
-  const activeCount = (messagesData as any).filter((m: any) => !m.completed).length;
-  const urgentCount = (messagesData as any).filter((m: any) => m.priority === 'urgent' && !m.completed).length;
+  const activeCount = (messagesData || []).filter((m) => !m.completed).length;
+  const urgentCount = (messagesData || []).filter((m) => m.priority === 'urgent' && !m.completed).length;
 
   // Compute patient message counts safely
-  const patientUrgentCount = (patientMessagesData as any)?.filter((m: any) => m.priority === 'urgent' && !m.resolved).length || 0;
+  const patientUrgentCount = (patientMessagesData || []).filter((m) => m.urgency === 'urgent' && !m.resolved).length;
 
   // Combined totals (internal + patient)
   const combinedUnreadCount = unreadCount + (patientUnreadCount || 0);

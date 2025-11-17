@@ -150,22 +150,28 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       });
 
       // Start with real video_sessions
-      const merged = [...(sessionsData || [])];
+      // Type as any[] to allow mixing real DB sessions with synthetic minimal sessions
+      const merged: any[] = [...(sessionsData || [])];
 
       // Add appointments that don't have sessions yet
       (appointmentsData || []).forEach((apt) => {
         if (!sessionsByAppointmentId.has(apt.id)) {
           console.log("[ProviderVirtualWaitingRoom] Creating synthetic session for appointment:", apt.id);
-          // JUSTIFIED: Synthetic session creation with partial type - real sessions have full structure
-          merged.push({
+          // Synthetic session - minimal required fields, rest filled by query enrichment
+          const now = new Date().toISOString();
+          const syntheticSession: Partial<VideoSession> = {
             id: `apt-${apt.id}`,
             appointment_id: apt.id,
             patient_id: apt.patient_id,
             provider_id: apt.provider_id,
+            practice_id: practiceId,
             scheduled_start_time: apt.start_time,
             status: apt.status === "checked_in" ? "waiting" : "scheduled",
-            patient_accounts: null, // Will be filled from patients query
-          } as any);
+            created_at: now,
+            updated_at: now,
+          };
+          // JUSTIFIED: Synthetic session with minimal fields for UI display - actual DB sessions have full structure
+          merged.push(syntheticSession);
         } else {
           console.log("[ProviderVirtualWaitingRoom] Real session exists for appointment:", apt.id);
         }
