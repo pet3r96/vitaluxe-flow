@@ -504,8 +504,9 @@ Deno.serve(async (req) => {
     let uploadMethod = 'supabase';
 
     try {
-      const { data: s3Data, error: s3Error } = await supabase.functions.invoke('upload-to-s3', {
+      const { data: uploadData, error: uploadError } = await supabase.functions.invoke('manage-documents', {
         body: {
+          action: 'upload',
           fileBuffer: Array.from(pdfBytes),
           fileName,
           contentType: 'application/pdf',
@@ -519,12 +520,12 @@ Deno.serve(async (req) => {
         }
       });
 
-      if (!s3Error && s3Data?.success && s3Data.s3_key) {
-        uploadMethod = 's3';
-        console.log('Terms PDF uploaded to S3:', s3Data.s3_key);
+      if (!uploadError && uploadData?.success && uploadData.storage_path) {
+        uploadMethod = uploadData.storage_provider || 's3';
+        console.log('Terms PDF uploaded:', uploadData.storage_path);
       }
-    } catch (s3Error) {
-      console.warn('S3 upload failed, falling back to Supabase Storage:', s3Error);
+    } catch (uploadError) {
+      console.warn('Document upload failed, falling back to Supabase Storage:', uploadError);
     }
 
     // Fallback to Supabase Storage if S3 upload failed
@@ -612,14 +613,16 @@ Deno.serve(async (req) => {
     }
 
     // Get signed URL for download
-    if (uploadMethod === 's3') {
-      const { data: urlData } = await supabase.functions.invoke('get-s3-signed-url', {
+    if (uploadMethod === 's3' || uploadMethod === 'supabase') {
+      const { data: urlData } = await supabase.functions.invoke('manage-documents', {
         body: {
-          s3_key: fileName,
-          expires_in: 3600
+          action: 'get-signed-url',
+          path: fileName,
+          storage_provider: uploadMethod,
+          expiresIn: 3600
         }
       });
-      termsUrl = urlData?.signed_url || '';
+      termsUrl = urlData?.url || '';
     } else {
       const { data: signedUrl } = await supabase.storage
         .from('terms-signed')

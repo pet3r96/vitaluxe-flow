@@ -460,8 +460,9 @@ serve(async (req) => {
     let uploadMethod = 'supabase';
 
     try {
-      const { data: s3Data, error: s3Error } = await supabase.functions.invoke('upload-to-s3', {
+      const { data: uploadData, error: uploadError } = await supabase.functions.invoke('manage-documents', {
         body: {
+          action: 'upload',
           fileBuffer: Array.from(pdfData),
           fileName: filePath,
           contentType: 'application/pdf',
@@ -474,19 +475,21 @@ serve(async (req) => {
         }
       });
 
-      if (!s3Error && s3Data?.success && s3Data.s3_key) {
-        // Get signed URL from S3
-        const { data: urlData } = await supabase.functions.invoke('get-s3-signed-url', {
+      if (!uploadError && uploadData?.success && uploadData.storage_path) {
+        // Get signed URL
+        const { data: urlData } = await supabase.functions.invoke('manage-documents', {
           body: {
-            s3_key: s3Data.s3_key,
-            expires_in: 3600 // 1 hour
+            action: 'get-signed-url',
+            path: uploadData.storage_path,
+            storage_provider: uploadData.storage_provider,
+            expiresIn: 3600 // 1 hour
           }
         });
 
-        if (urlData?.signed_url) {
-          receiptUrl = urlData.signed_url;
-          uploadMethod = 's3';
-          console.log('Receipt uploaded to S3:', s3Data.s3_key);
+        if (urlData?.url) {
+          receiptUrl = urlData.url;
+          uploadMethod = uploadData.storage_provider || 's3';
+          console.log('Receipt uploaded:', uploadData.storage_path);
         }
       }
     } catch (s3Error) {
