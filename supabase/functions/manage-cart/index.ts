@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +15,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('[manage-cart] Missing Authorization header');
+      edgeLogger.error('manage-cart missing auth header');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -29,7 +30,7 @@ serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('[manage-cart] Auth error:', authError);
+      edgeLogger.error('manage-cart auth error', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -39,7 +40,7 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    console.log('[manage-cart] Action:', action);
+    edgeLogger.info('manage-cart action received', { action });
 
     switch (action) {
       case 'add': {
@@ -60,7 +61,7 @@ serve(async (req) => {
           );
         }
 
-        console.log('[manage-cart] Adding item:', { cartOwnerId, productId, quantity, patientName });
+        edgeLogger.info('manage-cart adding item', { productId, quantity });
 
         // Validate product exists and is active
         const { data: product, error: productError } = await supabase
@@ -135,7 +136,7 @@ serve(async (req) => {
 
         if (insertError) throw insertError;
 
-        console.log('[manage-cart] Success - added line:', newLine.id);
+        edgeLogger.info('manage-cart item added successfully', { lineId: newLine.id });
 
         return new Response(
           JSON.stringify({ success: true, lineId: newLine.id }),
@@ -146,7 +147,7 @@ serve(async (req) => {
       case 'update': {
         const { lineId, quantity } = body;
 
-        console.log('[manage-cart] Updating line:', lineId, 'to quantity:', quantity);
+        edgeLogger.info('manage-cart updating line quantity', { lineId, quantity });
 
         if (!lineId || quantity === undefined) {
           return new Response(
@@ -162,7 +163,7 @@ serve(async (req) => {
 
         if (updateError) throw updateError;
 
-        console.log('[manage-cart] Success - updated quantity');
+        edgeLogger.info('manage-cart quantity updated successfully');
 
         return new Response(
           JSON.stringify({ success: true }),
@@ -173,7 +174,7 @@ serve(async (req) => {
       case 'remove': {
         const { lineId } = body;
 
-        console.log('[manage-cart] Removing line:', lineId);
+        edgeLogger.info('manage-cart removing line', { lineId });
 
         if (!lineId) {
           return new Response(
@@ -189,7 +190,7 @@ serve(async (req) => {
 
         if (deleteError) throw deleteError;
 
-        console.log('[manage-cart] Success - removed line');
+        edgeLogger.info('manage-cart line removed successfully');
 
         return new Response(
           JSON.stringify({ success: true }),
@@ -200,7 +201,7 @@ serve(async (req) => {
       case 'clear': {
         const { cartOwnerId } = body;
 
-        console.log('[manage-cart] Clearing cart for owner:', cartOwnerId);
+        edgeLogger.info('manage-cart clearing cart');
 
         if (!cartOwnerId) {
           return new Response(
@@ -223,9 +224,9 @@ serve(async (req) => {
 
           if (deleteError) throw deleteError;
 
-          console.log('[manage-cart] Success - cleared cart', cart.id);
+          edgeLogger.info('manage-cart cart cleared successfully', { cartId: cart.id });
         } else {
-          console.log('[manage-cart] No cart found for owner', cartOwnerId);
+          edgeLogger.info('manage-cart no cart found to clear');
         }
 
         return new Response(
@@ -237,7 +238,7 @@ serve(async (req) => {
       case 'update-address': {
         const { lineIds, address, assignedPharmacyId } = body;
 
-        console.log('[manage-cart] Updating address for lines:', lineIds);
+        edgeLogger.info('manage-cart updating address for lines', { lineCount: lineIds.length });
 
         if (!lineIds || !Array.isArray(lineIds) || lineIds.length === 0) {
           return new Response(
@@ -276,7 +277,7 @@ serve(async (req) => {
 
         if (updateError) throw updateError;
 
-        console.log('[manage-cart] Success - updated address');
+        edgeLogger.info('manage-cart address updated successfully');
 
         return new Response(
           JSON.stringify({ success: true }),
@@ -287,7 +288,7 @@ serve(async (req) => {
       case 'update-prescription': {
         const { lineId, prescriptionUrl, prescriptionMethod, customSig, customDosage } = body;
 
-        console.log('[manage-cart] Updating prescription for line:', lineId);
+        edgeLogger.info('manage-cart updating prescription for line', { lineId });
 
         if (!lineId) {
           return new Response(
@@ -309,7 +310,7 @@ serve(async (req) => {
 
         if (updateError) throw updateError;
 
-        console.log('[manage-cart] Success - updated prescription');
+        edgeLogger.info('manage-cart prescription updated successfully');
 
         return new Response(
           JSON.stringify({ success: true }),
@@ -325,7 +326,7 @@ serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error('[manage-cart] Error:', error);
+    edgeLogger.error('manage-cart error', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

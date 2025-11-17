@@ -20,11 +20,12 @@ import { useMultiplePharmacyRates } from "@/hooks/useMultiplePharmacyRates";
 import React from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { count, mark, time, timeEnd } from "@/diag";
+import { logger } from "@/lib/logger";
 
 const Cart = React.memo(function Cart() {
   count('Cart:render');
   console.time('Cart-Render');
-  console.log('[Cart] Render start');
+  logger.info('Cart component render started');
   
   // ===== ALL HOOKS FIRST - NO EXCEPTIONS =====
   const authContext = useAuth();
@@ -54,7 +55,7 @@ const Cart = React.memo(function Cart() {
   const effectivePracticeId = authContext?.effectivePracticeId || null;
   const user = authContext?.user || null;
 
-  console.log('[Cart] Auth state:', { effectiveUserId, effectiveRole });
+  logger.info('Cart auth state', { hasUserId: !!effectiveUserId, role: effectiveRole });
 
   // Staff access flags
   const showStaffLoading = checkingPrivileges && isStaffAccount;
@@ -68,7 +69,7 @@ const Cart = React.memo(function Cart() {
       const ownerId = await resolveCartOwnerUserId(effectiveUserId, effectiveRole, effectivePracticeId);
       
       if (!ownerId) {
-        console.error('[Cart] Failed to resolve cart owner', { effectiveUserId, effectiveRole, effectivePracticeId });
+        logger.error('Failed to resolve cart owner', null, { hasUserId: !!effectiveUserId, role: effectiveRole, hasPracticeId: !!effectivePracticeId });
         throw new Error('Unable to determine cart owner. Please contact support.');
       }
       
@@ -82,7 +83,11 @@ const Cart = React.memo(function Cart() {
     retry: 2,
   });
 
-  console.log('[Cart] Cart owner resolved:', cartOwnerId, 'error:', cartOwnerError);
+  if (cartOwnerError) {
+    logger.error('Cart owner resolution failed', cartOwnerError);
+  } else if (cartOwnerId) {
+    logger.info('Cart owner resolved successfully');
+  }
 
   // Cart data query with stable options
   const cartOptions = useMemo(() => ({
@@ -177,7 +182,7 @@ const Cart = React.memo(function Cart() {
   }, [pharmacyRatesMap]);
 
   const handleDiscountApplied = useCallback((code: string, percentage: number) => {
-    console.log('[Cart] Discount applied:', { code, percentage });
+    logger.info('Discount code applied', { percentage });
     setDiscountCode(code);
     setDiscountPercentage(percentage);
     toast({
@@ -187,13 +192,13 @@ const Cart = React.memo(function Cart() {
   }, [toast]);
 
   const handleRemoveDiscount = useCallback(() => {
-    console.log('[Cart] Removing discount');
+    logger.info('Discount code removed');
     setDiscountCode(null);
     setDiscountPercentage(0);
   }, []);
 
   const handleCheckout = useCallback(() => {
-    console.log('[Cart] Navigating to delivery confirmation');
+    logger.info('Navigating to delivery confirmation');
     navigate("/delivery-confirmation", {
       state: {
         discountCode,
@@ -237,14 +242,14 @@ const Cart = React.memo(function Cart() {
           return key === 'cart' || key === 'cart-count';
         }
       });
-      console.log('[Cart] Shipping speed updated successfully');
+      logger.info('Shipping speed updated successfully');
     },
   });
 
   // Auto-normalize shipping speeds - RUNS ONLY ONCE per cart version
   useEffect(() => {
-    console.log('[Cart] Effect triggered - deps:', { 
-      cartId: cart?.id, 
+    logger.info('Cart normalization effect triggered', { 
+      hasCart: !!cart?.id,
       isEmpty, 
       ratesLoading,
       linesCount: cart?.lines?.length,
@@ -254,13 +259,13 @@ const Cart = React.memo(function Cart() {
 
     // CRITICAL: Guard against empty cart or loading states
     if (!cart?.id || !cart.lines || cartLines.length === 0) {
-      console.log('[Cart] Skipping normalization - cart empty or loading');
+      logger.info('Skipping cart normalization - empty or loading');
       return;
     }
 
     // Check if rates are loaded and available
     if (ratesLoading || !pharmacyRatesMap || Object.keys(pharmacyRatesMap).length === 0) {
-      console.log('[Cart] Skipping normalization - rates not loaded yet', {
+      logger.info('Skipping cart normalization - rates not loaded', {
         ratesLoading,
         hasRatesMap: !!pharmacyRatesMap,
         ratesCount: Object.keys(pharmacyRatesMap || {}).length
@@ -279,7 +284,7 @@ const Cart = React.memo(function Cart() {
         normalizeOnceRef.current.done && 
         normalizeOnceRef.current.version === cartVersion) {
       mark('Cart:normalization-skip', { reason: 'same version', version: cartVersion });
-      console.log('[Cart] Normalization already completed for this cart version');
+      logger.info('Cart normalization already completed for version');
       return;
     }
 
@@ -287,12 +292,12 @@ const Cart = React.memo(function Cart() {
     if (!cart.id || normalizeOnceRef.current.cartId !== cart.id || 
         normalizeOnceRef.current.version !== cartVersion) {
       mark('Cart:normalization-reset', { oldVersion: normalizeOnceRef.current.version, newVersion: cartVersion });
-      console.log('[Cart] Cart version changed, resetting normalization state');
+      logger.info('Cart version changed, resetting normalization');
       normalizeOnceRef.current = { cartId: cart.id, done: false, version: cartVersion };
       normalizedGroupsRef.current.clear();
     }
 
-    console.log('[Cart] Auto-normalization check starting for cart:', cart.id);
+    logger.info('Cart auto-normalization check starting');
 
     // Calculate patient groups inline to avoid stale closures
     const groups = new Map();
@@ -317,13 +322,13 @@ const Cart = React.memo(function Cart() {
     groups.forEach((group: any, key: string) => {
       // Skip if already normalized
       if (normalizedGroupsRef.current.has(key)) {
-        console.log('[Cart] Skipping already normalized group:', key);
+        logger.info('Skipping already normalized cart group');
         return;
       }
 
       const rates = pharmacyRatesMap?.[group.pharmacy_id];
       if (!rates || Object.keys(rates).length === 0) {
-        console.log('[Cart] No rates available for pharmacy:', group.pharmacy_id);
+        logger.warn('No shipping rates available for pharmacy in cart');
         return; // Skip this group
       }
 
@@ -333,17 +338,17 @@ const Cart = React.memo(function Cart() {
         const targetSpeed = enabledSpeeds[0];
         const lineIds = group.lines.map((l: any) => l.id);
         normalizationPlan.push({ lineIds, targetSpeed, groupKey: key });
-        console.log('[Cart] Will normalize group:', { key, from: group.shipping_speed, to: targetSpeed, lineCount: lineIds.length });
+        logger.info('Cart group will be normalized', { lineCount: lineIds.length });
       }
     });
 
     if (normalizationPlan.length === 0) {
-      console.log('[Cart] No normalization needed');
+      logger.info('Cart normalization not needed');
       normalizeOnceRef.current.done = true;
       return;
     }
 
-    console.log('[Cart] Executing normalization plan for', normalizationPlan.length, 'groups');
+    logger.info('Executing cart normalization plan', { groupCount: normalizationPlan.length });
     mark('Cart:normalization-execute', { planSize: normalizationPlan.length });
 
     // Mark done IMMEDIATELY to prevent re-entrancy
@@ -354,15 +359,15 @@ const Cart = React.memo(function Cart() {
       normalizationInFlightRef.current = true;
       try {
         for (const { lineIds, targetSpeed, groupKey } of normalizationPlan) {
-          console.log('[Cart] Normalizing group:', groupKey);
+          logger.info('Normalizing cart group');
           normalizedGroupsRef.current.add(groupKey);
           await updateShippingSpeedMutation.mutateAsync({ lineIds, shipping_speed: targetSpeed });
         }
         mark('Cart:normalization-complete', { cartId: cart.id });
-        console.log('[Cart] Normalization complete for cart:', cart.id);
+        logger.info('Cart normalization completed successfully');
       } catch (error) {
         mark('Cart:normalization-error', { error: String(error) });
-        console.error('[Cart] Normalization failed:', error);
+        logger.error('Cart normalization failed', error);
         toast({
           title: "Shipping speed adjustment",
           description: "Some shipping speeds couldn't be updated. Your cart is still valid.",

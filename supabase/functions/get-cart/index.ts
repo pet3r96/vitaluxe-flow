@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +15,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('[get-cart] Missing Authorization header');
+      edgeLogger.error('get-cart missing auth header');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -29,7 +30,7 @@ serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('[get-cart] Auth error:', authError);
+      edgeLogger.error('get-cart auth error', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -38,7 +39,7 @@ serve(async (req) => {
 
     const { cartOwnerId, productFields, includePharmacy, includeProvider, hydratePatients } = await req.json();
 
-    console.log('[get-cart] Fetching cart for owner:', cartOwnerId);
+    edgeLogger.info('Fetching cart');
 
     if (!cartOwnerId) {
       return new Response(
@@ -55,7 +56,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (cartError) {
-      console.error('[get-cart] Cart error:', cartError);
+      edgeLogger.error('get-cart fetch error', cartError);
       throw cartError;
     }
 
@@ -86,7 +87,7 @@ serve(async (req) => {
       .gte("expires_at", new Date().toISOString());
 
     if (linesError) {
-      console.error('[get-cart] Lines error:', linesError);
+      edgeLogger.error('get-cart lines error', linesError);
       throw linesError;
     }
 
@@ -117,7 +118,7 @@ serve(async (req) => {
       }
     }
 
-    console.log('[get-cart] Success - returning', lines.length, 'lines');
+    edgeLogger.info('get-cart success', { lineCount: lines.length });
 
     return new Response(
       JSON.stringify({ id: cartData.id, lines }),
@@ -125,7 +126,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[get-cart] Error:', error);
+    edgeLogger.error('get-cart error', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,17 +16,17 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Starting cleanup of expired cart lines...');
+    edgeLogger.info('Starting cleanup of expired cart lines');
 
     // Call the cleanup function
     const { data, error } = await supabase.rpc('cleanup_expired_cart_lines');
 
     if (error) {
-      console.error('Error cleaning up expired cart lines:', error);
+      edgeLogger.error('Error cleaning up expired cart lines', error);
       throw error;
     }
 
-    console.log(`Successfully cleaned up ${data} expired cart lines`);
+    edgeLogger.info('Successfully cleaned up expired cart lines', { count: data });
 
     return new Response(
       JSON.stringify({
@@ -39,7 +40,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Cleanup failed:', error);
+    edgeLogger.error('Cart line cleanup failed', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({

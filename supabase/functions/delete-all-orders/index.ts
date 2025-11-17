@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,7 +39,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
-      console.error("Authentication failed:", authError);
+      edgeLogger.error('Delete all orders authentication failed', authError);
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -54,7 +55,7 @@ serve(async (req) => {
       .single();
 
     if (roleError || !roleCheck) {
-      console.error("Non-admin user attempted deletion:", user.email);
+      edgeLogger.warn('Non-admin attempted delete all orders');
       return new Response(
         JSON.stringify({ error: "Access denied: admin role required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -70,7 +71,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Admin confirmed deletion of all orders");
+    edgeLogger.info('Admin confirmed deletion of all orders');
 
     const deletedCounts: Record<string, number> = {};
     const errors: Record<string, string> = {};
@@ -84,7 +85,7 @@ serve(async (req) => {
           .select("*", { count: "exact", head: true });
 
         if (countError) {
-          console.error(`Error counting ${tableName}:`, countError);
+          edgeLogger.error('Error counting records for deletion', countError, { tableName });
           errors[tableName] = countError.message;
           return 0;
         }
@@ -92,7 +93,7 @@ serve(async (req) => {
         const recordsToDelete = beforeCount || 0;
         
         if (recordsToDelete === 0) {
-          console.log(`${tableName}: No records to delete`);
+          edgeLogger.info('No records to delete from table', { tableName });
           return 0;
         }
 
@@ -103,7 +104,7 @@ serve(async (req) => {
           .not("id", "is", null);
 
         if (deleteError) {
-          console.error(`Error deleting from ${tableName}:`, deleteError);
+          edgeLogger.error('Error deleting from table', deleteError, { tableName });
           errors[tableName] = deleteError.message;
           return 0;
         }
@@ -114,17 +115,17 @@ serve(async (req) => {
           .select("*", { count: "exact", head: true });
 
         const deleted = recordsToDelete - (afterCount || 0);
-        console.log(`${tableName}: Deleted ${deleted} records`);
+        edgeLogger.info('Records deleted from table', { tableName, deleted });
         return deleted;
       } catch (error) {
-        console.error(`Exception deleting from ${tableName}:`, error);
+        edgeLogger.error('Exception deleting from table', error, { tableName });
         errors[tableName] = error instanceof Error ? error.message : String(error);
         return 0;
       }
     }
 
     // Delete in order (respecting foreign key constraints)
-    console.log("Starting deletion sequence...");
+    edgeLogger.info('Starting deletion sequence');
 
     deletedCounts.order_status_history = await deleteFromTable("order_status_history");
     deletedCounts.shipping_audit_logs = await deleteFromTable("shipping_audit_logs");
@@ -138,7 +139,7 @@ serve(async (req) => {
     const totalDeleted = Object.values(deletedCounts).reduce((sum, count) => sum + count, 0);
     const executionTimeSeconds = (Date.now() - startTime) / 1000;
 
-    console.log(`Deletion complete. Total deleted: ${totalDeleted} records in ${executionTimeSeconds}s`);
+    edgeLogger.info('Deletion completed', { totalDeleted, executionSeconds: executionTimeSeconds });
 
     // Prepare response data
     const responseData = {
@@ -168,7 +169,7 @@ serve(async (req) => {
         user_agent: req.headers.get("user-agent"),
       });
     } catch (auditError) {
-      console.error("Failed to log audit entry (non-fatal):", auditError);
+      edgeLogger.error('Failed to log audit entry (non-fatal)', auditError);
     }
 
     return new Response(
@@ -179,7 +180,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Fatal error in delete-all-orders:", error);
+    edgeLogger.error('Fatal error in delete-all-orders', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ error: errorMessage }),

@@ -2,6 +2,7 @@ import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { validateCancelOrderRequest } from "../_shared/requestValidators.ts";
 import { validateCSRFToken } from "../_shared/csrfValidator.ts";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,7 +25,7 @@ Deno.serve(async (req) => {
     try {
       requestData = await req.json();
     } catch (error) {
-      console.error('Invalid JSON in request body:', error);
+      edgeLogger.error('Invalid JSON in cancel order request', error);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -34,7 +35,7 @@ Deno.serve(async (req) => {
     // Validate input
     const validation = validateCancelOrderRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      edgeLogger.warn('Cancel order validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request data', 
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('Authentication error:', authError);
+      edgeLogger.error('Cancel order authentication error', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -59,14 +60,14 @@ Deno.serve(async (req) => {
     const { csrf_token, orderId, reason } = requestData as CancelOrderRequest & { csrf_token?: string };
     const csrfValidation = await validateCSRFToken(supabase, user.id, csrf_token);
     if (!csrfValidation.valid) {
-      console.warn(`CSRF validation failed for user ${user.email}:`, csrfValidation.error);
+      edgeLogger.warn('CSRF validation failed for cancel order', { error: csrfValidation.error });
       return new Response(
         JSON.stringify({ error: 'Security validation failed' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Cancel request from ${user.id} for order ${orderId}`);
+    edgeLogger.info('Cancel order request received', { orderId });
 
     // Check if user can cancel this order
     const { data: canCancel, error: checkError } = await supabase
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
       });
 
     if (checkError) {
-      console.error('Error checking cancellation eligibility:', checkError);
+      edgeLogger.error('Error checking order cancellation eligibility', checkError, { orderId });
       return new Response(
         JSON.stringify({ error: 'Failed to verify cancellation eligibility' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
     }
 
     if (!canCancel) {
-      console.log(`User ${user.id} not authorized to cancel order ${orderId}`);
+      edgeLogger.warn('Order cancellation not authorized', { orderId });
       return new Response(
         JSON.stringify({ error: 'You are not authorized to cancel this order or the cancellation window has expired' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -105,18 +106,18 @@ Deno.serve(async (req) => {
       .single();
 
     if (updateError) {
-      console.error('Error cancelling order:', updateError);
+      edgeLogger.error('Error cancelling order', updateError, { orderId });
       return new Response(
         JSON.stringify({ error: 'Failed to cancel order' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Order ${orderId} successfully cancelled by ${user.id}`);
+    edgeLogger.info('Order cancelled successfully', { orderId });
 
     // Trigger automatic refund if order was paid
     if (order && order.authorizenet_transaction_id && order.payment_status === 'paid') {
-      console.log(`Triggering automatic refund for cancelled order ${orderId}`);
+      edgeLogger.info('Triggering automatic refund for cancelled order', { orderId });
       
       try {
         const refundResponse = await supabase.functions.invoke('authorizenet-refund-transaction', {
@@ -128,12 +129,12 @@ Deno.serve(async (req) => {
         });
         
         if (refundResponse.error) {
-          console.error('Automatic refund failed:', refundResponse.error);
+          edgeLogger.error('Automatic refund failed', refundResponse.error, { orderId });
         } else {
-          console.log(`Automatic refund initiated: ${refundResponse.data?.refund?.id}`);
+          edgeLogger.info('Automatic refund initiated', { refundId: refundResponse.data?.refund?.id, orderId });
         }
       } catch (error) {
-        console.error('Automatic refund exception:', error);
+        edgeLogger.error('Automatic refund exception', error, { orderId });
       }
     }
 
@@ -147,7 +148,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (orderLines?.assigned_pharmacy_id) {
-        console.log(`Sending cancellation to pharmacy ${orderLines.assigned_pharmacy_id}`);
+        edgeLogger.info('Sending cancellation notification to pharmacy');
         await supabase.functions.invoke('send-cancellation-to-pharmacy', {
           body: {
             order_id: orderId,
@@ -157,7 +158,7 @@ Deno.serve(async (req) => {
         });
       }
     } catch (error) {
-      console.error('Failed to send pharmacy cancellation:', error);
+      edgeLogger.error('Failed to send pharmacy cancellation notification', error);
       // Non-fatal, continue with cancellation
     }
 
@@ -171,7 +172,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    edgeLogger.error('Unexpected error in cancel-order', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
