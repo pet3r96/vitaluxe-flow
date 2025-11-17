@@ -6,6 +6,7 @@ import { validatePhone, validateNPI, validateDEA, generateSecurePassword } from 
 import { validateCreateAccountRequest } from '../_shared/requestValidators.ts';
 import { RateLimiter, RATE_LIMITS, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -72,24 +73,24 @@ interface SignupRequest {
 }
 
 serve(async (req) => {
-  console.log('🚀 [assign-user-role] Function START - Request received');
+  edgeLogger.info('[assign-user-role] Function START - Request received');
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('[assign-user-role] CORS preflight request');
+    edgeLogger.info('[assign-user-role] CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('[assign-user-role] Creating admin client...');
+    edgeLogger.info('[assign-user-role] Creating admin client');
     const supabaseAdmin = createAdminClient();
-    console.log('[assign-user-role] Admin client created successfully');
+    edgeLogger.info('[assign-user-role] Admin client created successfully');
 
     // Rate limiting to prevent abuse
-    console.log('[assign-user-role] Checking rate limit...');
+    edgeLogger.info('[assign-user-role] Checking rate limit');
     const limiter = new RateLimiter();
     const clientIP = getClientIP(req);
-    console.log('[assign-user-role] Client IP:', clientIP);
+    edgeLogger.info('[assign-user-role] Client IP', { clientIP });
     
     const { allowed } = await limiter.checkLimit(
       supabaseAdmin,
@@ -99,20 +100,20 @@ serve(async (req) => {
     );
 
     if (!allowed) {
-      console.warn('[assign-user-role] Rate limit exceeded for IP:', clientIP);
+      edgeLogger.warn('[assign-user-role] Rate limit exceeded', { clientIP });
       return new Response(
         JSON.stringify({ error: 'Too many signup attempts. Please try again later.' }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    console.log('[assign-user-role] Rate limit check passed');
+    edgeLogger.info('[assign-user-role] Rate limit check passed');
 
     // Parse and validate JSON
-    console.log('[assign-user-role] Parsing request body...');
+    edgeLogger.info('[assign-user-role] Parsing request body');
     let signupData: SignupRequest;
     try {
       signupData = await req.json();
-      console.log('[assign-user-role] Request parsed:', {
+      edgeLogger.info('[assign-user-role] Request parsed', {
         email: signupData.email,
         role: signupData.role,
         isSelfSignup: signupData.isSelfSignup,
