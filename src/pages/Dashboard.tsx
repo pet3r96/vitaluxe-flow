@@ -199,7 +199,7 @@ const Dashboard = () => {
       title: "Total Orders",
       value: ordersLoading ? "..." : ordersCount?.toString() || "0",
       icon: ShoppingCart,
-      description: effectiveRole === "doctor" ? "Your practice orders" : (effectiveRole as any) === "provider" ? "Your orders" : "All orders",
+      description: effectiveRole === "doctor" ? "Your practice orders" : effectiveRole === "provider" ? "Your orders" : "All orders",
       isLoading: ordersLoading,
     },
     {
@@ -229,7 +229,7 @@ const Dashboard = () => {
       title: effectiveRole === "doctor" ? "Total Paid" : "Pending Revenue",
       value: pendingRevenueLoading ? "..." : `$${pendingRevenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: effectiveRole === "doctor" ? "Total amount paid by practice" : (effectiveRole as any) === "provider" ? "Your pending revenue" : "Pending orders revenue",
+      description: effectiveRole === "doctor" ? "Total amount paid by practice" : effectiveRole === "provider" ? "Your pending revenue" : "Pending orders revenue",
       isLoading: pendingRevenueLoading,
       hidden: true, // Hidden for ALL practices per user request
     },
@@ -237,7 +237,7 @@ const Dashboard = () => {
       title: "Collected Revenue",
       value: collectedRevenueLoading ? "..." : `$${collectedRevenue?.toFixed(2) || "0.00"}`,
       icon: DollarSign,
-      description: effectiveRole === "doctor" ? "Practice collected revenue" : (effectiveRole as any) === "provider" ? "Your collected revenue" : "Paid orders revenue",
+      description: effectiveRole === "doctor" ? "Practice collected revenue" : effectiveRole === "provider" ? "Your collected revenue" : "Paid orders revenue",
       isLoading: collectedRevenueLoading,
       hidden: effectiveRole === "pharmacy" || effectiveRole === "provider" || effectiveRole === "doctor" || effectiveRole === "staff",
     },
@@ -301,7 +301,7 @@ const Dashboard = () => {
       )}
 
       {/* Dashboard Layout for Practice Users - Providers don't need subscription */}
-      {((effectiveRole as any) === 'provider' || (isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff'))) && (
+      {(effectiveRole === 'provider' || (isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff'))) && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
           {/* Main Content Area - 3/4 width */}
           <div className="lg:col-span-3 space-y-4 lg:space-y-6">
@@ -311,7 +311,7 @@ const Dashboard = () => {
                 title="Total Orders"
                 metricKey="orders"
                 icon={ShoppingCart}
-                description={effectiveRole === "doctor" ? "Your practice orders" : (effectiveRole as any) === "provider" ? "Your orders" : "All orders"}
+                description={effectiveRole === "doctor" ? "Your practice orders" : effectiveRole === "provider" ? "Your orders" : "All orders"}
                 currentValue={(ordersLoading || ordersCount === undefined) ? "..." : ordersCount.toString()}
                 role={effectiveRole}
                 userId={effectiveUserId}
@@ -328,7 +328,7 @@ const Dashboard = () => {
             </div>
 
             {/* Widgets Grid - Show for subscribed doctors/staff AND providers */}
-            {(isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff')) || (effectiveRole as any) === 'provider' ? (
+            {(isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff')) || effectiveRole === 'provider' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                 <TabbedAppointmentsWidget />
                 <WaitingRoomWidget />
@@ -339,7 +339,7 @@ const Dashboard = () => {
           </div>
 
           {/* Right Sidebar - Search & Quick Actions - Show for subscribed doctors/staff AND providers */}
-          {((isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff')) || (effectiveRole as any) === 'provider') && (
+          {((isSubscribed && (effectiveRole === 'doctor' || effectiveRole === 'staff')) || effectiveRole === 'provider') && (
             <div className="lg:col-span-1 flex flex-col gap-4 lg:gap-6 h-full min-h-0">
               <div className="shrink-0">
                 <PatientQuickSearch />
@@ -469,7 +469,7 @@ const Dashboard = () => {
         </>
       )}
 
-      {!isSubscribed && effectiveRole !== 'pharmacy' && effectiveRole !== 'admin' && (effectiveRole as any) !== 'provider' && (
+      {!isSubscribed && effectiveRole !== 'pharmacy' && effectiveRole !== 'admin' && effectiveRole !== 'provider' && (
         <>
           {/* Stats cards with charts for non-subscribed doctors/staff - Full width */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-6">
