@@ -86,10 +86,10 @@ export const PriceOverrideManager = () => {
     queryFn: async () => {
       if (!selectedRepId) return [];
       
-      // Using (as any) on table name due to manual schema table not in generated types
-      const result = await (supabase as any)
-        .from('rep_product_price_overrides')
-        .select('id, product_id, override_topline_price, override_downline_price, override_retail_price, created_at, updated_at')
+      // Query custom table with explicit typing
+      const overrideTable: any = supabase.from('rep_product_price_overrides');
+      const result = await overrideTable
+        .select('id, product_id, override_topline_price, override_downline_price, override_retail_price, created_at, updated_at, rep_id')
         .eq('rep_id', selectedRepId);
       
       if (result.error) throw result.error;
@@ -235,8 +235,8 @@ export const PriceOverrideManager = () => {
   // Clear override mutation
   const clearMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const { error } = await (supabase as any)
-        .from('rep_product_price_overrides')
+      const overrideTable: any = supabase.from('rep_product_price_overrides');
+      const { error } = await overrideTable
         .delete()
         .eq('rep_id', selectedRepId)
         .eq('product_id', productId);
@@ -267,8 +267,8 @@ export const PriceOverrideManager = () => {
   // Clear all overrides for rep
   const clearAllMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase as any)
-        .from('rep_product_price_overrides')
+      const overrideTable: any = supabase.from('rep_product_price_overrides');
+      const { error } = await overrideTable
         .delete()
         .eq('rep_id', selectedRepId);
       

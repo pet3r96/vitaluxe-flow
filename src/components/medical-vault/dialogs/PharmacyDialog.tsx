@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asPharmacy } from "@/lib/vault";
+import { insertVaultRecord, type PharmacyRecordData } from "@/lib/medicalVaultInsert";
 
 const pharmacySchema = z.object({
   pharmacy_name: z.string().optional(),
@@ -128,17 +129,28 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         }
         console.log('[PharmacyDialog] UPDATE success');
       } else {
-        const insertData = {
-          record_type: "pharmacy",
-          record_data: recordData as any,
-          patient_account_id: patientAccountId,
-          created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
+        const recordData: PharmacyRecordData = {
+          pharmacy_name: data.pharmacy_name || undefined,
+          npi: undefined,
+          phone: data.phone,
+          fax: undefined,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          zip_code: data.zip_code,
+          is_preferred: data.is_preferred || false,
+          notes: undefined,
         };
         
-        const { error } = await (supabase as any)
-          .from("patient_medical_vault")
-          .insert(insertData);
+        const { error } = await insertVaultRecord(supabase, {
+          record_type: "pharmacy",
+          record_data: recordData,
+          patient_account_id: patientAccountId,
+          patient_id: patientAccountId,
+          title: data.pharmacy_name || "Pharmacy",
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+        });
         
         if (error) {
           console.error('[PharmacyDialog] INSERT failed:', {

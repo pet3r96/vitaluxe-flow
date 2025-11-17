@@ -14,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asImmunization } from "@/lib/vault";
+import { insertVaultRecord, type ImmunizationRecordData } from "@/lib/medicalVaultInsert";
 
 const immunizationSchema = z.object({
   vaccine_name: z.string().min(1, "Vaccine name is required"),
@@ -76,17 +77,20 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
         }
         console.log('[ImmunizationDialog] UPDATE success');
       } else {
-        const insertData = {
-          record_type: "immunization",
-          record_data: formattedData as any,
-          patient_account_id: patientAccountId,
-          created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
+        const formattedData: ImmunizationRecordData = {
+          vaccine_name: data.vaccine_name,
+          date_administered: data.date_administered,
         };
         
-        const { error } = await (supabase as any)
-          .from("patient_medical_vault")
-          .insert(insertData);
+        const { error } = await insertVaultRecord(supabase, {
+          record_type: "immunization",
+          record_data: formattedData,
+          patient_account_id: patientAccountId,
+          patient_id: patientAccountId,
+          title: data.vaccine_name,
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+        });
         
         if (error) {
           console.error('[ImmunizationDialog] INSERT failed:', {

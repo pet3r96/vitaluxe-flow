@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asMedication } from "@/lib/vault";
+import { insertVaultRecord, type MedicationRecordData } from "@/lib/medicalVaultInsert";
 
 const medicationSchema = z.object({
   medication_name: z.string().min(1, "Medication name is required"),
@@ -167,18 +168,29 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         }
         console.log('[MedicationDialog] UPDATE success');
       } else {
-        const insertData = {
-          record_type: "medication",
-          record_data: recordData as any,
-          patient_account_id: patientAccountId,
+        const recordData: MedicationRecordData = {
+          medication_name: data.medication_name,
+          dosage: data.dosage || undefined,
+          frequency: data.frequency || undefined,
+          start_date: data.start_date,
+          stop_date: data.stop_date || undefined,
+          notes: data.notes || undefined,
+          instructions: data.instructions || undefined,
+          alert_enabled: data.alert_enabled,
+          prescribing_provider: data.prescribing_provider || undefined,
           is_active: true,
-          created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
         };
         
-        const { error } = await (supabase as any)
-          .from("patient_medical_vault")
-          .insert(insertData);
+        const { error } = await insertVaultRecord(supabase, {
+          record_type: "medication",
+          record_data: recordData,
+          patient_account_id: patientAccountId,
+          patient_id: patientAccountId,
+          title: data.medication_name,
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+          is_active: true,
+        });
         
         if (error) {
           console.error('[MedicationDialog] INSERT failed:', {
