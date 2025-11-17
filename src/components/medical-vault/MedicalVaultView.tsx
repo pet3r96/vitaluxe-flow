@@ -275,14 +275,14 @@ export function MedicalVaultView({
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patientAccount,
-        flattenForPdf(medications || [], 'medication'),
-        flattenForPdf(conditions || [], 'condition'),
-        flattenForPdf(allergies || [], 'allergy'),
-        flattenForPdf(vitals || [], 'vital'),
-        flattenForPdf(immunizations || [], 'immunization'),
-        flattenForPdf(surgeries || [], 'surgery'),
-        flattenForPdf(pharmacies || [], 'pharmacy'),
-        flattenForPdf(emergencyContacts || [], 'emergency_contact')
+        flattenForPdf(medications as any || [], 'medication') as any,
+        flattenForPdf(conditions as any || [], 'condition') as any,
+        flattenForPdf(allergies as any || [], 'allergy') as any,
+        flattenForPdf(vitals as any || [], 'vital') as any,
+        flattenForPdf(immunizations as any || [], 'immunization') as any,
+        flattenForPdf(surgeries as any || [], 'surgery') as any,
+        flattenForPdf(pharmacies as any || [], 'pharmacy') as any,
+        flattenForPdf(emergencyContacts as any || [], 'emergency_contact') as any
       );
       
       const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -338,14 +338,14 @@ export function MedicalVaultView({
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patientAccount,
-        flattenForPdf(medications || [], 'medication'),
-        flattenForPdf(conditions || [], 'condition'),
-        flattenForPdf(allergies || [], 'allergy'),
-        flattenForPdf(vitals || [], 'vital'),
-        flattenForPdf(immunizations || [], 'immunization'),
-        flattenForPdf(surgeries || [], 'surgery'),
-        flattenForPdf(pharmacies || [], 'pharmacy'),
-        flattenForPdf(emergencyContacts || [], 'emergency_contact')
+        flattenForPdf(medications as any || [], 'medication') as any,
+        flattenForPdf(conditions as any || [], 'condition') as any,
+        flattenForPdf(allergies as any || [], 'allergy') as any,
+        flattenForPdf(vitals as any || [], 'vital') as any,
+        flattenForPdf(immunizations as any || [], 'immunization') as any,
+        flattenForPdf(surgeries as any || [], 'surgery') as any,
+        flattenForPdf(pharmacies as any || [], 'pharmacy') as any,
+        flattenForPdf(emergencyContacts as any || [], 'emergency_contact') as any
       );
       const pdfUrl = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');

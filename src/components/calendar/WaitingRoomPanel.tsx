@@ -175,13 +175,17 @@ export function WaitingRoomPanel({
     if (!sessionsByAppointment.has(apt.id)) {
       const provider = providers.find((p: any) => p.id === apt.provider_id);
       
+      const now = new Date().toISOString();
       mergedVideoAppointments.push({
         id: `apt-${apt.id}`,
+        practice_id: apt.practice_id,
         appointment_id: apt.id,
-        patient_id: apt.patient_id,
-        provider_id: apt.provider_id,
+        session_id: `synthetic-${apt.id}`, // Add session_id for type safety
+        channel_name: `apt-${apt.id}`,
         scheduled_start_time: apt.start_time,
         status: apt.status === 'checked_in' ? 'waiting' : 'scheduled',
+        created_at: now,
+        updated_at: now,
         isSynthetic: true,
         patient_appointments: {
           id: apt.id,
@@ -196,7 +200,7 @@ export function WaitingRoomPanel({
               full_name: provider.profiles?.prescriber_name || provider.profiles?.full_name || 'Unassigned'
             }
           } : null
-        }
+        } as any
       });
     }
   });

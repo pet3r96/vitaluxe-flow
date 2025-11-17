@@ -12,6 +12,7 @@ export interface ProviderDocument {
   practice_id?: string;
   share_with_practice?: boolean;
   source?: string;
+  source_type?: 'practice' | 'patient_shared'; // For filtering documents by origin
   uploaded_at?: string;
   uploaded_by?: string;
   url?: string;

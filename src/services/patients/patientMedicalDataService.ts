@@ -36,13 +36,13 @@ export async function fetchPatientMedicalData(patientId: string): Promise<Patien
 
   return {
     account,
-    medications,
-    conditions,
-    allergies,
-    vitals,
-    immunizations,
-    surgeries,
-    pharmacies,
-    emergencyContacts,
+    medications: medications as any,
+    conditions: conditions as any,
+    allergies: allergies as any,
+    vitals: vitals as any,
+    immunizations: immunizations as any,
+    surgeries: surgeries as any,
+    pharmacies: pharmacies as any,
+    emergencyContacts: emergencyContacts as any,
   };
 }

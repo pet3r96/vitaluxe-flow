@@ -215,7 +215,7 @@ export function DocumentsTab() {
           <div>Practice ID: {effectivePracticeId || 'None'}</div>
           <div>All Documents: {allDocuments?.length || 0}</div>
           <div>Filtered Documents: {documents?.length || 0}</div>
-          <div>Patient-shared Documents: {allDocuments?.filter(d => d.source_type === 'patient_shared').length || 0}</div>
+          <div>Patient-shared Documents: {allDocuments?.filter((d: any) => d.source_type === 'patient_shared').length || 0}</div>
           <div>Current Filter Source: {filters.source}</div>
           {queryError && <div className="text-destructive">Error: {queryError.message}</div>}
         </div>
@@ -238,7 +238,7 @@ export function DocumentsTab() {
         <DocumentFilters filters={filters} onFiltersChange={setFilters} />
       )}
 
-      <DocumentsDataTable documents={documents || []} isLoading={isLoading} />
+      <DocumentsDataTable documents={documents as any || []} isLoading={isLoading} />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-4">
