@@ -87,7 +87,9 @@ export function RoomsManagerTable({ practiceId }: RoomsManagerTableProps) {
       toast.success("Room deleted successfully");
       refetch();
     } catch (error: any) {
-      console.error("Error deleting room:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error deleting room", error);
+      });
       toast.error(error.message || "Failed to delete room");
     } finally {
       setDeleteDialogOpen(false);

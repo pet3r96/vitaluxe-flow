@@ -157,7 +157,7 @@ export const OrdersDataTable = () => {
           
           // Log detailed error for debugging
           if (edgeError.message?.includes('Unauthorized') || edgeError.message?.includes('401')) {
-            console.error('[OrdersDataTable] 401 Unauthorized - token issue or RLS policy problem');
+            logger.error('Unauthorized error - token issue or RLS policy problem', edgeError);
             toast({
               title: "Authorization Error",
               description: "Unable to authenticate request. Please refresh and try again.",
@@ -175,7 +175,7 @@ export const OrdersDataTable = () => {
         }
         
         if (!edgeData || !Array.isArray(edgeData.orders)) {
-          console.error('[OrdersDataTable] Invalid edge function response:', edgeData);
+          logger.error('Invalid edge function response', undefined, { hasOrders: !!edgeData?.orders });
           toast({
             title: "Invalid Response",
             description: "Received invalid data from orders service.",
@@ -418,7 +418,7 @@ export const OrdersDataTable = () => {
 
       // If URL is expired, refresh it
       if (isExpired) {
-        console.log('[OrdersDataTable] Prescription URL expired, refreshing...');
+        logger.info('Prescription URL expired, refreshing');
         
         // Extract path from URL
         const match = prescriptionUrl.match(/\/prescriptions\/(.+?)(\?|$)/);
@@ -436,7 +436,7 @@ export const OrdersDataTable = () => {
         }
 
         downloadUrl = data.signedUrl;
-        console.log('[OrdersDataTable] Prescription URL refreshed successfully');
+        logger.info('Prescription URL refreshed successfully');
       }
 
       const response = await fetch(downloadUrl);

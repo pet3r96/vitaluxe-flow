@@ -48,7 +48,9 @@ export function CalendarSyncManager({ practiceId, userId }: CalendarSyncManagerP
       toast.success("Calendar sync URL generated successfully");
     },
     onError: (error) => {
-      console.error("Error generating sync token:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error generating sync token", error);
+      });
       toast.error("Failed to generate sync URL");
     },
   });
@@ -68,7 +70,9 @@ export function CalendarSyncManager({ practiceId, userId }: CalendarSyncManagerP
       toast.success(syncToken?.is_active ? "Calendar sync disabled" : "Calendar sync enabled");
     },
     onError: (error) => {
-      console.error("Error toggling sync:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error toggling sync", error);
+      });
       toast.error("Failed to update sync status");
     },
   });
@@ -98,7 +102,9 @@ export function CalendarSyncManager({ practiceId, userId }: CalendarSyncManagerP
       toast.success("Calendar exported successfully");
     },
     onError: (error) => {
-      console.error("Error exporting calendar:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error exporting calendar", error);
+      });
       toast.error("Failed to export calendar");
     },
   });

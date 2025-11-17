@@ -188,7 +188,9 @@ export const AccountDetailsDialog = ({
       toast.success('Welcome email resent successfully');
       setShowResendEmailConfirm(false);
     } catch (error: any) {
-      console.error('Error resending welcome email:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error resending welcome email', error);
+      });
       toast.error(error.message || 'Failed to resend welcome email');
     } finally {
       setIsResendingEmail(false);

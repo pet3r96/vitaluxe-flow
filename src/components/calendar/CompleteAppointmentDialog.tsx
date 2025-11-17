@@ -189,7 +189,9 @@ export function CompleteAppointmentDialog({
       onSuccess();
     },
     onError: (error: any) => {
-      console.error('[CompleteAppointmentDialog] Error:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('CompleteAppointmentDialog error', error);
+      });
       
       const isTimeout = error.message?.includes('timeout') || 
                         error.message?.includes('timed out') ||

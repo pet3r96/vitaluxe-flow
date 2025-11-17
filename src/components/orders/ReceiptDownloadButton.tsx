@@ -34,11 +34,8 @@ export const ReceiptDownloadButton = ({
       // Get current session to pass Authorization header
       const { data: { session } } = await supabase.auth.getSession();
       
-      console.log('[ReceiptDownloadButton] Invoking function with:', {
-        orderId,
-        orderDate,
-        practiceName,
-        effectiveUserId
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Invoking generate-order-receipt');
       });
       
       const { data, error } = await supabase.functions.invoke('generate-order-receipt', {
@@ -51,10 +48,8 @@ export const ReceiptDownloadButton = ({
         }
       });
 
-      console.log('[ReceiptDownloadButton] Function response:', {
-        data,
-        error,
-        hasUrl: !!data?.url
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Receipt function response', { hasUrl: !!data?.url, hasError: !!error });
       });
 
       if (error) {
@@ -79,7 +74,9 @@ export const ReceiptDownloadButton = ({
 
       // Handle direct URL download
       if (data?.url) {
-        console.log('[ReceiptDownloadButton] Using direct URL download');
+        import('@/lib/logger').then(({ logger }) => {
+          logger.info('Using direct URL download for receipt');
+        });
         const response = await fetch(data.url);
         if (!response.ok) {
           throw new Error('Failed to download receipt file');
@@ -102,7 +99,9 @@ export const ReceiptDownloadButton = ({
       } 
       // Handle base64 fallback
       else if (data?.base64) {
-        console.log('[ReceiptDownloadButton] Using base64 fallback');
+        import('@/lib/logger').then(({ logger }) => {
+          logger.info('Using base64 fallback for receipt');
+        });
         const { downloadPdfFromBase64 } = await import('@/lib/pdfGenerator');
         downloadPdfFromBase64(
           data.base64, 

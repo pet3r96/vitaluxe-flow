@@ -48,12 +48,8 @@ export function WaitingRoomPanel({
       const endOfDay = new Date(currentDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      console.log('[WaitingRoomPanel] Fetching video sessions:', {
-        practiceId,
-        dateRange: {
-          start: startOfDay.toISOString(),
-          end: endOfDay.toISOString()
-        }
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Fetching video sessions', { practiceId });
       });
 
       const { data, error } = await supabase
@@ -74,14 +70,8 @@ export function WaitingRoomPanel({
 
       if (error) throw error;
       
-      console.log('[WaitingRoomPanel] ✅ Video sessions loaded:', {
-        count: data?.length || 0,
-        sessions: data?.map(s => ({
-          id: s.id,
-          status: s.status,
-          scheduled: s.scheduled_start_time,
-          patient: s.patient_appointments?.patient?.first_name
-        }))
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Video sessions loaded', { count: data?.length || 0 });
       });
       
       return data || [];
@@ -101,12 +91,8 @@ export function WaitingRoomPanel({
       const endOfDay = new Date(currentDate);
       endOfDay.setHours(23, 59, 59, 999);
       
-      console.log('[WaitingRoomPanel] Fetching video appointments (base):', {
-        practiceId,
-        dateRange: {
-          start: startOfDay.toISOString(),
-          end: endOfDay.toISOString()
-        }
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Fetching video appointments (base)', { practiceId });
       });
 
       const { data, error } = await supabase
@@ -124,14 +110,8 @@ export function WaitingRoomPanel({
         
       if (error) throw error;
       
-      console.log('[WaitingRoomPanel] ✅ Video appointments (base) loaded:', {
-        count: data?.length || 0,
-        appointments: data?.map(a => ({
-          id: a.id,
-          status: a.status,
-          start: a.start_time,
-          patient: a.patient?.first_name
-        }))
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Video appointments (base) loaded', { count: data?.length || 0 });
       });
       
       return data || [];
@@ -212,16 +192,13 @@ export function WaitingRoomPanel({
   
   const videoAppointments = mergedVideoAppointments;
 
-  console.log('[WaitingRoomPanel] 🔄 Merged video data:', {
-    realSessions: rawVideoSessions.length,
-    appointments: rawVideoAppointments.length,
-    synthetic: mergedVideoAppointments.filter(s => s.isSynthetic).length,
-    total: mergedVideoAppointments.length,
-    firstTwo: mergedVideoAppointments.slice(0, 2).map(s => ({
-      id: s.id,
-      isSynthetic: s.isSynthetic,
-      provider: s.patient_appointments?.provider?.user?.full_name
-    }))
+  import('@/lib/logger').then(({ logger }) => {
+    logger.info('Merged video data', {
+      realSessions: rawVideoSessions.length,
+      appointments: rawVideoAppointments.length,
+      synthetic: mergedVideoAppointments.filter(s => s.isSynthetic).length,
+      total: mergedVideoAppointments.length
+    });
   });
 
   // Fetch overdue appointments (>15 minutes past scheduled time)

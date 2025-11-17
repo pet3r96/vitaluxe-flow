@@ -105,14 +105,18 @@ export const BlockTimeDialog = ({
       });
 
       if (error) {
-        console.error('Error checking conflicts:', error);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('Error checking conflicts', error);
+        });
         throw error;
       }
 
       setConflicts(data || []);
       return data || [];
     } catch (error: any) {
-      console.error('Conflict check failed:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Conflict check failed', error);
+      });
       toast.error('Failed to check for conflicts: ' + (error.message || 'Unknown error'));
       throw error;
     }
