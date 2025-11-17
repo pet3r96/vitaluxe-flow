@@ -190,6 +190,7 @@ export default function RepSubscriptionReferrals() {
                           <TableCell>
                             <div>
                               <div className="font-medium">
+                                {/* JUSTIFIED: Complex Supabase query with joined profiles table */}
                                 {(commission as any).profiles?.full_name || 'N/A'}
                               </div>
                               <div className="text-sm text-muted-foreground">

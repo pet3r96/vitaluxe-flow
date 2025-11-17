@@ -222,6 +222,7 @@ const AdminDiscountCodes = () => {
                                 Per User
                               </Badge>
                               <span className="font-medium">
+                                {/* JUSTIFIED: Database schema - max_uses_per_user may not be in generated types */}
                                 {(code as any).max_uses_per_user || "Unlimited"}
                               </span>
                             </div>

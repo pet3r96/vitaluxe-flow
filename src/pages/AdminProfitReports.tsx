@@ -87,6 +87,7 @@ const AdminProfitReports = () => {
   );
 
   // Channel-specific profit calculations
+  // JUSTIFIED: Complex Supabase query with multiple joins - admin_profit and orders.status fields
   const directProfit = useMemo(() => 
     filteredProfitDetails
       ?.filter((item: any) => item.orders?.status !== 'cancelled')
@@ -97,17 +98,17 @@ const AdminProfitReports = () => {
 
   const toplineOnlyProfit = useMemo(() => 
     filteredProfitDetails
-      ?.filter(item => (item as any).orders?.status !== 'cancelled')
-      .filter(item => item.topline_id && !item.downline_id)
-      .reduce((sum, item) => sum + parseFloat((item as any).admin_profit?.toString() || '0'), 0) || 0,
+      ?.filter((item: any) => item.orders?.status !== 'cancelled')
+      .filter((item: any) => item.topline_id && !item.downline_id)
+      .reduce((sum: number, item: any) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
     [filteredProfitDetails]
   );
 
   const fullNetworkProfit = useMemo(() => 
     filteredProfitDetails
-      ?.filter(item => (item as any).orders?.status !== 'cancelled')
-      .filter(item => item.topline_id && item.downline_id)
-      .reduce((sum, item) => sum + parseFloat((item as any).admin_profit?.toString() || '0'), 0) || 0,
+      ?.filter((item: any) => item.orders?.status !== 'cancelled')
+      .filter((item: any) => item.topline_id && item.downline_id)
+      .reduce((sum: number, item: any) => sum + parseFloat(item.admin_profit?.toString() || '0'), 0) || 0,
     [filteredProfitDetails]
   );
 

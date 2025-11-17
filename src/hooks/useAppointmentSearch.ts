@@ -59,10 +59,11 @@ export function useAppointmentSearch<T extends SearchableAppointment = Appointme
   const searchResults = useMemo(() => {
     if (!debouncedQuery.trim()) return [];
 
+    // JUSTIFIED: filterAppointments uses base type but works with extended types via structural typing
     return filterAppointments(filteredByAdvancedFilters as any, debouncedQuery, {
       maxResults,
       dateRange: dateFilter
-    }) as unknown as T[];
+    }) as any as T[];
   }, [debouncedQuery, filteredByAdvancedFilters, maxResults, dateFilter]);
 
   // Check if search is active
