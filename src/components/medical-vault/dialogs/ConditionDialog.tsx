@@ -97,12 +97,12 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) throw new Error("Not authenticated");
       
-      console.log('[ConditionDialog] Auth check:', {
+      logger.info('[ConditionDialog] Auth check', logger.sanitize({
         authUserId: authUser.id,
         authEmail: authUser.email,
         patientAccountId,
         mode,
-      });
+      }));
       
       // Convert YYYY-MM to YYYY-MM-01 for database storage
       const fullDate = data.date_diagnosed + "-01";

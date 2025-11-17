@@ -76,7 +76,7 @@ export function MedicalVaultView({
       });
       
       return () => {
-        console.log('[MedicalVault] Component unmounting');
+        logger.info('[MedicalVault] Component unmounting');
         // RealtimeManager handles cleanup automatically
       };
     }
@@ -282,7 +282,7 @@ export function MedicalVaultView({
       
       toast({ title: "Success", description: "PDF preview loaded" });
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
+      logger.error('Failed to generate PDF', error);
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
     } finally {
       setIsGeneratingPdf(false);
@@ -349,7 +349,7 @@ export function MedicalVaultView({
       URL.revokeObjectURL(pdfUrl);
       toast({ title: "Success", description: "PDF downloaded successfully" });
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
+      logger.error('Failed to download PDF', error);
       toast({ title: "Error", description: "Failed to download PDF", variant: "destructive" });
     } finally {
       setIsGeneratingPdf(false);
@@ -389,7 +389,7 @@ export function MedicalVaultView({
         });
 
       if (insertError) {
-        console.error('Error creating share link:', insertError);
+        logger.error('Error creating share link', insertError);
         toast({ title: "Error", description: "Failed to create share link", variant: "destructive" });
         return;
       }
@@ -403,7 +403,7 @@ export function MedicalVaultView({
 
       toast({ title: "Success", description: "Share link created successfully" });
     } catch (error) {
-      console.error('Error creating share link:', error);
+      logger.error('Error creating share link', error);
       toast({ title: "Error", description: "Failed to create share link", variant: "destructive" });
     } finally {
       setIsGeneratingPdf(false);
@@ -434,7 +434,7 @@ export function MedicalVaultView({
         onOpenChange={(open) => {
           if (open) {
             // Force refetch audit logs when opening dialog
-            console.log('[MedicalVault] Opening audit dialog, invalidating queries');
+            logger.info('[MedicalVault] Opening audit dialog, invalidating queries');
             queryClient.invalidateQueries({ queryKey: ["medical-vault-audit-logs", patientAccountId] });
           }
           setAuditDialogOpen(open);
@@ -523,7 +523,7 @@ export function MedicalVaultView({
                   variant="vault" 
                   size="sm"
                   onClick={() => {
-                    console.log('[MedicalVault] Opening audit dialog, refetching logs');
+                    logger.info('[MedicalVault] Opening audit dialog, refetching logs');
                     refetchAuditLogs();
                     setAuditDialogOpen(true);
                   }}

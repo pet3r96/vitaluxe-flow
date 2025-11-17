@@ -101,10 +101,10 @@ const { data: documents = [], isLoading } = useQuery({
           };
         }) as PatientDocument[];
 
-        console.log('[DocumentsSection] Unified docs for practice (patient uploads + provider docs):', mapped.length);
+        logger.info('[DocumentsSection] Unified docs for practice (patient uploads + provider docs)', { count: mapped.length });
         return mapped;
       } catch (err) {
-        console.warn('[DocumentsSection] Unified RPC failed, falling back to direct table with share filter', err);
+        logger.warn('[DocumentsSection] Unified RPC failed, falling back to direct table with share filter', { error: err });
         // Fall through to filtered table query
       }
     }
@@ -118,11 +118,11 @@ const { data: documents = [], isLoading } = useQuery({
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error('[DocumentsSection] Error fetching documents:', error);
+      logger.error('[DocumentsSection] Error fetching documents', error);
       throw error;
     }
 
-    console.log('[DocumentsSection] Found documents:', {
+    logger.info('[DocumentsSection] Found documents', {
       count: data?.length || 0,
       patientAccountId,
       mode,
@@ -159,8 +159,8 @@ const { data: documents = [], isLoading } = useQuery({
       const isProviderDoc = doc.storage_path.includes('/documents/');
       const bucket = isProviderDoc ? 'provider-documents' : 'patient-documents';
       
-      console.log('[DocumentsSection] Downloading:', {
-        name: doc.document_name,
+      logger.info('[DocumentsSection] Downloading document', {
+        documentId: doc.id,
         path: doc.storage_path,
         bucket,
         isProviderDoc
@@ -193,7 +193,7 @@ const { data: documents = [], isLoading } = useQuery({
         description: `Downloading ${doc.document_name}`,
       });
     } catch (error: any) {
-      console.error('[DocumentsSection] Download error:', error);
+      logger.error('[DocumentsSection] Download error', error);
       toast({
         title: "Download failed",
         description: error.message || "Could not download document",

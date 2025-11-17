@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Loader2, Building2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getErrorName, getErrorMessage } from '@/types/errors';
+import { logger } from '@/lib/logger';
 
 interface NewMessageDialogProps {
   open: boolean;
@@ -29,7 +30,7 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
-  console.log("🔍 NewMessageDialog rendered, open:", open);
+  logger.info('[NewMessageDialog] Rendered', { open });
 
   // Get patient's practice info using edge function to handle impersonation correctly
   const { data: practiceData, isLoading: isLoadingPractice, error: practiceError, refetch } = useQuery<{
@@ -44,11 +45,11 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
     queryKey: ["patient-practice-info", open],
     queryFn: async () => {
       const reqId = crypto.randomUUID();
-      console.log(`🔄 [${reqId}] Invoking get-patient-practice edge function...`);
+      logger.info('[NewMessageDialog] Invoking get-patient-practice', { reqId });
       
       const token = session?.access_token;
       if (!token) {
-        console.error(`❌ [${reqId}] No access token available`);
+        logger.error('[NewMessageDialog] No access token available', undefined, { reqId });
         throw new Error("Authentication required");
       }
       
@@ -59,10 +60,10 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
           }
         });
         
-        console.log(`📦 [${reqId}] Edge function raw response:`, { data, error });
+        logger.info('[NewMessageDialog] Edge function response', { reqId, hasData: !!data, hasError: !!error });
         
         if (error) {
-          console.error(`❌ [${reqId}] Edge function error:`, error);
+          logger.error('[NewMessageDialog] Edge function error', error, { reqId });
           
           // Detect error type for better user feedback
           const errorName = getErrorName(error);
@@ -72,11 +73,11 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
         }
         
         if (!data) {
-          console.error(`❌ [${reqId}] No data returned from edge function`);
+          logger.error('[NewMessageDialog] No data returned', undefined, { reqId });
           throw new Error("No data returned from practice lookup");
         }
         
-        console.log(`✅ [${reqId}] Practice data retrieved successfully:`, data);
+        logger.info('[NewMessageDialog] Practice data retrieved successfully', { reqId, hasPractice: !!data.practiceId });
         
         return data as {
           patientAccountId: string;
@@ -88,7 +89,7 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
           } | null;
         };
       } catch (err) {
-        console.error(`💥 [${reqId}] Exception in queryFn:`, err);
+        logger.error('[NewMessageDialog] Exception in queryFn', err, { reqId });
         throw err;
       }
     },
@@ -98,11 +99,10 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  console.log("📊 Query state:", { 
-    isLoading: isLoadingPractice, 
+  logger.info('[NewMessageDialog] Query state', { 
+    isLoading: isLoadingPractice,
     hasError: !!practiceError, 
-    hasData: !!practiceData,
-    data: practiceData 
+    hasData: !!practiceData
   });
 
   const sendMutation = useMutation({
@@ -131,7 +131,7 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
       onSuccess();
     },
     onError: (error: any) => {
-      console.error("Send message error:", error);
+      logger.error('Send message error', error);
       
       // Map server errors to user-friendly messages
       const errorMsg = error?.message || "Failed to send message";

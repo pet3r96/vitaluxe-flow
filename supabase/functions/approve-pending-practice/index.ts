@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { validatePhone, validateNPI, validateDEA, generateSecurePassword } from '../_shared/validators.ts';
 import { validateApprovePendingPracticeRequest } from '../_shared/requestValidators.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,7 +37,7 @@ serve(async (req) => {
 
     const validation = validateApprovePendingPracticeRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -69,7 +70,7 @@ serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const csrfValidation = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
     if (!csrfValidation.valid) {
-      console.error('CSRF validation failed:', csrfValidation.error);
+      edgeLogger.error('CSRF validation failed', new Error(csrfValidation.error || 'Invalid CSRF'), { userId: user.id });
       return new Response(
         JSON.stringify({ error: csrfValidation.error || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
