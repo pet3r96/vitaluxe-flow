@@ -96,10 +96,19 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in log-error function:", error);
     
-    // Ensure proper JSON response - never return [object Object]
-    const errorDetails = error instanceof Error 
-      ? { message: error.message, name: error.name, stack: error.stack }
-      : { raw: String(error) };
+    // Properly serialize error - handle all types
+    let errorDetails;
+    if (error instanceof Error) {
+      errorDetails = { message: error.message, name: error.name, stack: error.stack };
+    } else if (typeof error === 'object' && error !== null) {
+      try {
+        errorDetails = { message: JSON.stringify(error, Object.getOwnPropertyNames(error)) };
+      } catch {
+        errorDetails = { message: 'Unable to serialize error object' };
+      }
+    } else {
+      errorDetails = { message: String(error) };
+    }
     
     return new Response(
       JSON.stringify({ 
