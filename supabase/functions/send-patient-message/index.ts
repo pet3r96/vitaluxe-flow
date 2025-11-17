@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
 
     // Check for active impersonation session with detailed logging
     const currentTimestamp = new Date().toISOString();
-    console.log('[send-patient-message] Checking impersonation for admin user:', user.id, 'at', currentTimestamp);
+    edgeLogger.info('Checking impersonation for admin user', { userId: user.id, timestamp: currentTimestamp });
     
     const { data: impersonationSession, error: impersonationError } = await supabaseAdmin
       .from('active_impersonation_sessions')
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     
     const hasActiveImpersonation = !!impersonationSession && !impersonationError;
     
-    console.log('[send-patient-message] Impersonation query result:', { 
+    edgeLogger.info('Impersonation query result', { 
       found: hasActiveImpersonation,
       role: impersonationSession?.impersonated_role,
       impersonated_user_id: impersonationSession?.impersonated_user_id,
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     });
 
     if (impersonationError) {
-      console.error('[send-patient-message] Impersonation check error:', impersonationError);
+      edgeLogger.error('Impersonation check error', impersonationError);
     }
 
     if (!message?.trim()) {
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
 
     // === PROVIDER MODE: Provider replying to patient ===
     if (isProviderMode) {
-      console.log('[send-patient-message] PROVIDER MODE - Resolving practice context');
+      edgeLogger.info('PROVIDER MODE - Resolving practice context');
       
       let effectivePracticeId: string | null = null;
 
@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
       if (impersonationSession?.impersonated_user_id) {
         const role = impersonationSession.impersonated_role;
         const impersonatedId = impersonationSession.impersonated_user_id as string;
-        console.log('[send-patient-message] Impersonation active:', { role, impersonatedId });
+        edgeLogger.info('Impersonation active', { role, impersonatedId });
 
         if (role === 'patient') {
           // Resolve practice via patient account
@@ -119,9 +119,9 @@ Deno.serve(async (req) => {
             .select('practice_id')
             .eq('user_id', impersonatedId)
             .maybeSingle();
-          if (paErr) console.error('[send-patient-message] Patient account lookup error:', paErr);
+          if (paErr) edgeLogger.error('Patient account lookup error', paErr);
           effectivePracticeId = patientAccount?.practice_id ?? null;
-          console.log('[send-patient-message] Resolved practice from patient impersonation:', effectivePracticeId);
+          edgeLogger.info('Resolved practice from patient impersonation', { effectivePracticeId });
         } else {
           // Check if impersonated user is a staff member
           const { data: staffRecord } = await supabaseAdmin
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
           
           if (staffRecord?.practice_id) {
             effectivePracticeId = staffRecord.practice_id;
-            console.log('[send-patient-message] Resolved practice from staff impersonation:', effectivePracticeId);
+            edgeLogger.info('Resolved practice from staff impersonation', { effectivePracticeId });
           } else {
             // Check if impersonated user is a provider
             const { data: providerRecord } = await supabaseAdmin
@@ -143,11 +143,11 @@ Deno.serve(async (req) => {
             
             if (providerRecord?.practice_id) {
               effectivePracticeId = providerRecord.practice_id;
-              console.log('[send-patient-message] Resolved practice from provider impersonation:', effectivePracticeId);
+              edgeLogger.info('Resolved practice from provider impersonation', { effectivePracticeId });
             } else {
               // Treat impersonated user as practice owner
               effectivePracticeId = impersonatedId;
-              console.log('[send-patient-message] Using impersonated user as practice owner:', effectivePracticeId);
+              edgeLogger.info('Using impersonated user as practice owner', { effectivePracticeId });
             }
           }
         }
@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
 
         if (doctorRole) {
           effectivePracticeId = user.id;
-          console.log('[send-patient-message] Resolved practice as doctor:', effectivePracticeId);
+          edgeLogger.info('Resolved practice as doctor', { effectivePracticeId });
         } else {
           // Check provider linkage
           const { data: providerRow } = await supabaseAdmin
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
 
           if (providerRow?.practice_id) {
             effectivePracticeId = providerRow.practice_id as string;
-            console.log('[send-patient-message] Resolved practice via providers:', effectivePracticeId);
+            edgeLogger.info('Resolved practice via providers', { effectivePracticeId });
           } else {
             // Check practice staff linkage
             const { data: staffRow } = await supabaseAdmin
@@ -186,14 +186,14 @@ Deno.serve(async (req) => {
               .maybeSingle();
             if (staffRow?.practice_id) {
               effectivePracticeId = staffRow.practice_id as string;
-              console.log('[send-patient-message] Resolved practice via staff:', effectivePracticeId);
+              edgeLogger.info('Resolved practice via staff', { effectivePracticeId });
             }
           }
         }
       }
 
       if (!effectivePracticeId) {
-        console.error('[send-patient-message] No practice context for provider mode');
+        edgeLogger.error('No practice context for provider mode');
         return new Response(
           JSON.stringify({ error: 'No practice context', code: 'no_practice_context' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -207,10 +207,10 @@ Deno.serve(async (req) => {
         .eq('id', patient_id)
         .maybeSingle();
 
-      console.log('[send-patient-message] Patient validation:', { patientValidation, error: pvErr });
+      edgeLogger.info('Patient validation', { patientValidation, error: pvErr });
 
       if (pvErr || !patientValidation || patientValidation.practice_id !== effectivePracticeId) {
-        console.error('[send-patient-message] Patient access denied');
+        edgeLogger.error('Patient access denied');
         return new Response(
           JSON.stringify({ error: 'Patient not found or access denied', code: 'patient_access_denied' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       
       effectiveThreadId = parentMsg?.thread_id || parentMsg?.id;
-      console.log('[send-patient-message] Resolved thread_id from parent:', effectiveThreadId);
+      edgeLogger.info('Resolved thread_id from parent', { effectiveThreadId });
     }
     
     const isReply = !!parent_message_id;
@@ -246,7 +246,7 @@ Deno.serve(async (req) => {
       ...(parent_message_id && { parent_message_id: parent_message_id })
     };
 
-      console.log('[send-patient-message] Inserting provider message:', providerPayload);
+      edgeLogger.info('Inserting provider message', providerPayload);
 
       const { data: insertedMessage, error: insertError } = await supabaseAdmin
         .from('patient_messages')
@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (insertError) {
-        console.error('[send-patient-message] Insert error:', insertError);
+        edgeLogger.error('Insert error', insertError);
         return new Response(
           JSON.stringify({ error: `Failed to send message: ${insertError.message}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
           .eq('id', insertedMessage.id);
           
         if (updateError) {
-          console.error('[send-patient-message] Failed to set thread_id:', updateError);
+          edgeLogger.error('Failed to set thread_id', updateError);
         }
       }
 
@@ -312,13 +312,13 @@ Deno.serve(async (req) => {
         });
 
         if (notificationError) {
-          console.error('[send-patient-message] Failed to create patient notification:', notificationError);
+          edgeLogger.error('Failed to create patient notification', notificationError);
         } else {
-          console.log('[send-patient-message] Patient notification created successfully');
+          edgeLogger.info('Patient notification created successfully');
         }
       } else {
         // Patient has no portal account - send email/SMS directly via fallback
-        console.log('[send-patient-message] Fallback: Patient has no user_id, sending direct email/SMS');
+        edgeLogger.info('Fallback: Patient has no user_id, sending direct email/SMS');
         
         if (patientData?.email) {
           const recipientName = `${patientData.first_name || ''} ${patientData.last_name || ''}`.trim() || 'Valued Patient';
@@ -347,7 +347,7 @@ Deno.serve(async (req) => {
             }
           });
           
-          console.log('[send-patient-message] Fallback email result:', emailResult);
+          edgeLogger.info('Fallback email result', { emailResult });
         }
         
         if (patientData?.phone) {
@@ -360,22 +360,22 @@ Deno.serve(async (req) => {
             metadata: { patient_id, practice_id: effectivePracticeId }
           });
           
-          console.log('[send-patient-message] Fallback SMS result:', smsResult);
+          edgeLogger.info('Fallback SMS result', { smsResult });
         }
         
         if (!patientData?.email && !patientData?.phone) {
-          console.warn('[send-patient-message] No email or phone for patient without user_id - no notification sent');
+          edgeLogger.warn('No email or phone for patient without user_id - no notification sent');
         }
       }
 
-      console.log('[send-patient-message] Provider message sent successfully');
+      edgeLogger.info('Provider message sent successfully');
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // === PATIENT MODE: Patient sending message ===
-    console.log('[send-patient-message] PATIENT MODE - Resolving patient context');
+    edgeLogger.info('PATIENT MODE - Resolving patient context');
     
     let effectiveUserId = user.id;
     let isImpersonating = false;
@@ -384,12 +384,12 @@ Deno.serve(async (req) => {
     if (hasActiveImpersonation && impersonationSession?.impersonated_user_id) {
       effectiveUserId = impersonationSession.impersonated_user_id as string;
       isImpersonating = true;
-      console.log('[send-patient-message] Admin', user.id, 'impersonating patient user:', effectiveUserId);
+      edgeLogger.info('Admin impersonating patient user', { adminId: user.id, effectiveUserId });
     } else {
-      console.log('[send-patient-message] No impersonation - using direct user:', effectiveUserId);
+      edgeLogger.info('No impersonation - using direct user', { effectiveUserId });
     }
 
-    console.log('[send-patient-message] Effective user ID:', effectiveUserId, 'Impersonating:', isImpersonating);
+    edgeLogger.info('Effective user ID', { effectiveUserId, isImpersonating });
 
     // Get patient account
     const { data: patientAccount, error: patientError } = await supabaseAdmin
@@ -398,10 +398,10 @@ Deno.serve(async (req) => {
       .eq('user_id', effectiveUserId)
       .maybeSingle();
 
-    console.log('[send-patient-message] Patient account lookup:', { patientAccount, error: patientError });
+    edgeLogger.info('Patient account lookup', { patientAccount, error: patientError });
 
     if (patientError || !patientAccount) {
-      console.error('[send-patient-message] Patient account not found');
+      edgeLogger.error('Patient account not found');
       return new Response(JSON.stringify({ error: 'Patient account not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -409,7 +409,7 @@ Deno.serve(async (req) => {
     }
 
     if (!patientAccount.practice_id) {
-      console.error('[send-patient-message] No practice assigned');
+      edgeLogger.error('No practice assigned');
       return new Response(JSON.stringify({ error: 'No practice assigned to your account' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -428,7 +428,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       
       effectiveThreadId = parentMsg?.thread_id || parentMsg?.id;
-      console.log('[send-patient-message] Resolved thread_id from parent:', effectiveThreadId);
+      edgeLogger.info('Resolved thread_id from parent', { effectiveThreadId });
     }
     
     const isReply = !!parent_message_id;
@@ -445,7 +445,7 @@ Deno.serve(async (req) => {
       ...(parent_message_id && { parent_message_id: parent_message_id })
     };
 
-    console.log('[send-patient-message] Inserting patient message:', patientPayload);
+    edgeLogger.info('Inserting patient message', patientPayload);
 
     const { data: insertedMessage, error: insertError } = await supabaseAdmin
       .from('patient_messages')
@@ -454,7 +454,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      console.error('[send-patient-message] Insert error:', insertError);
+      edgeLogger.error('Insert error', insertError);
       return new Response(
         JSON.stringify({ error: `Failed to send message: ${insertError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -469,7 +469,7 @@ Deno.serve(async (req) => {
         .eq('id', insertedMessage.id);
         
       if (updateError) {
-        console.error('[send-patient-message] Failed to set thread_id:', updateError);
+        edgeLogger.error('Failed to set thread_id', updateError);
       }
     }
 
@@ -525,19 +525,19 @@ Deno.serve(async (req) => {
         });
 
         if (notificationError) {
-          console.error('[send-patient-message] Failed to create team notification:', notificationError);
+          edgeLogger.error('Failed to create team notification', notificationError);
         }
       }
       
-      console.log('[send-patient-message] Created notifications for', teamMemberIds.length, 'team members');
+      edgeLogger.info('Created notifications for team members', { count: teamMemberIds.length });
     }
 
-    console.log('[send-patient-message] Patient message sent successfully');
+    edgeLogger.info('Patient message sent successfully');
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('[send-patient-message] Unexpected error:', error);
+    edgeLogger.error('Unexpected error', error);
     return new Response(JSON.stringify({ error: error.message || 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
