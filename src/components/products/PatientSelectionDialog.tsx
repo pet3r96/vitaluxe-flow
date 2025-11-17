@@ -165,49 +165,56 @@ export const PatientSelectionDialog = ({
   // Fetch active providers for practice using new hook
   const { data: providers } = usePracticeProviders(finalPracticeId);
 
-  console.log('[PatientSelectionDialog] Providers from hook:', providers?.length, providers);
+  logger.info('[PatientSelectionDialog] Providers from hook:', { count: providers?.length, providers });
+
+  // Derive selected provider data from selectedProviderId
+  const selectedProviderData = providers?.find(p => p.id === selectedProviderId) || null;
 
   // Auto-select provider based on role and available providers
   useEffect(() => {
     if (!open || !providers || providers.length === 0) return;
     
-    console.log('[PatientSelectionDialog] 🎯 Auto-select logic:', {
-      role: effectiveRole,
-      userId: effectiveUserId,
-      providersCount: providers.length,
-      providers: providers
+    logger.info('[PatientSelectionDialog] 🎯 Auto-select logic:', {
+      selectedProviderId,
+      hasSelectedProvider: !!selectedProviderId,
+      hasProviders: !!providers?.length,
+      noProviderSelected: !selectedProviderId,
+      effectiveUserId,
+      shouldAutoSelect: !selectedProviderId && providers?.length
     });
     
     // For providers: find their own provider record
     if (effectiveRole === "provider" && effectiveUserId) {
       const matchingProvider = providers.find((p: any) => p.user_id === effectiveUserId);
-      console.log('[PatientSelectionDialog] 🔎 Provider role matching:', {
-        matchingProvider,
-        selectedId: matchingProvider?.id
+      logger.info('[PatientSelectionDialog] 🔎 Provider role matching:', {
+        matchingProviders: matchingProvider ? 1 : 0,
+        providers,
+        effectiveUserId,
+        matchingProvider: matchingProvider ? {
+          id: matchingProvider.id,
+          name: matchingProvider.name,
+          email: matchingProvider.email,
+          match_field: 'user_id'
+        } : null
       });
+      
       if (matchingProvider) {
         setSelectedProviderId(matchingProvider.id);
+        return;
       }
     }
-    // For doctors and staff: auto-select if only one provider
-    else if ((effectiveRole === "doctor" || effectiveRole === "staff") && providers.length === 1) {
+    
+    // For practice/doctor role OR if no provider match: default to first provider
+    if (!selectedProviderId && providers.length > 0) {
+      logger.info('[PatientSelectionDialog] Auto-selecting first provider');
       setSelectedProviderId(providers[0].id);
     }
-    // For doctors and staff: if multiple providers, preselect first to reduce friction (user can change)
-    else if ((effectiveRole === "doctor" || effectiveRole === "staff") && providers.length > 0 && !selectedProviderId) {
-      setSelectedProviderId(providers[0].id);
-    }
-  }, [open, providers, effectiveRole, effectiveUserId]);
+  }, [open, providers, effectiveUserId, effectiveRole, selectedProviderId]);
 
-  // Compute provider data locally from existing providers list (no RPC needed)
-  const selectedProviderData = selectedProviderId 
-    ? providers?.find((p: any) => p.id === selectedProviderId)
-    : null;
-  
-  console.log('[PatientSelectionDialog] 📊 Selected provider data:', {
+  logger.info('[PatientSelectionDialog] 📊 Selected provider data:', {
     selectedProviderId,
-    selectedProviderData,
-    providersAvailable: providers?.length
+    userId: selectedProviderData?.user_id,
+    effectivePracticeId
   });
 
   // Fetch practice details for prescription writer
@@ -215,11 +222,11 @@ export const PatientSelectionDialog = ({
     queryKey: ["practice-details", finalPracticeId],
     queryFn: async () => {
       if (!finalPracticeId) {
-        console.log('[PatientSelectionDialog] ⚠️ No practice ID for practice data fetch');
+        logger.warn('[PatientSelectionDialog] ⚠️ No practice ID for practice data fetch');
         return null;
       }
       
-      console.log('[PatientSelectionDialog] 🔄 Fetching practice data for:', finalPracticeId);
+      logger.info('[PatientSelectionDialog] 🔄 Fetching practice data for:', { finalPracticeId });
       const { data, error } = await supabase
         .from("profiles")
         .select(`
@@ -239,11 +246,11 @@ export const PatientSelectionDialog = ({
         .single();
       
       if (error) {
-        console.error('[PatientSelectionDialog] ❌ Error fetching practice data:', error);
+        logger.error('[PatientSelectionDialog] ❌ Error fetching practice data', error);
         throw error;
       }
       
-      console.log('[PatientSelectionDialog] ✅ Practice data fetched:', data);
+      logger.info('[PatientSelectionDialog] ✅ Practice data fetched:', { data });
       return data;
     },
     enabled: !!finalPracticeId && open,
@@ -614,7 +621,7 @@ export const PatientSelectionDialog = ({
                                     key={provider.id}
                                     value={`${provider.prescriber_name}-${provider.id}`}
                                     onSelect={() => {
-                                      console.log('[PatientSelectionDialog] Provider selected:', provider.id);
+                                      logger.info('[PatientSelectionDialog] Provider selected:', { providerId: provider.id });
                                       setSelectedProviderId(provider.id);
                                       setProviderComboboxOpen(false);
                                     }}
@@ -923,12 +930,9 @@ export const PatientSelectionDialog = ({
                               <Button 
                                 variant="outline" 
                                 onClick={() => {
-                                  console.log('[PatientSelectionDialog] 🔍 Prescription Writer Button State:', {
-                                    selectedProviderData: !!selectedProviderData,
-                                    practiceData: !!practiceData,
-                                    isPracticeLoading,
-                                    selectedProviderId,
-                                    finalPracticeId
+                                  logger.info('[PatientSelectionDialog] 🔍 Prescription Writer Button State:', {
+                                    selectedProviderId: selectedProviderData?.id,
+                                    selectedProviderName: selectedProviderData?.name
                                   });
                                   setShowPrescriptionWriter(true);
                                 }}
