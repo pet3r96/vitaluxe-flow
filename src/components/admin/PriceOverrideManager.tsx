@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { usePagination } from "@/hooks/usePagination";
-import type { RepProductPriceOverride, PendingOverride } from "@/types/dashboard";
+import type { RepProductPriceOverride as DashboardOverride, PendingOverride } from "@/types/dashboard";
+import type { RepProductPriceOverride } from '@/types/manual-schema';
 import {
   Card,
   CardContent,
@@ -85,17 +86,14 @@ export const PriceOverrideManager = () => {
     queryFn: async () => {
       if (!selectedRepId) return [];
       
-import type { RepProductPriceOverride } from '@/types/manual-schema';
-
-// ... existing code
-
-      const { data, error } = await supabase
+      // Using (as any) on table name due to manual schema table not in generated types
+      const result = await (supabase as any)
         .from('rep_product_price_overrides')
         .select('id, product_id, override_topline_price, override_downline_price, override_retail_price, created_at, updated_at')
         .eq('rep_id', selectedRepId);
       
-      if (error) throw error;
-      return (data || []) as RepProductPriceOverride[];
+      if (result.error) throw result.error;
+      return (result.data || []) as RepProductPriceOverride[];
     },
     enabled: !!selectedRepId,
   });

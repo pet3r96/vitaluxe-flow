@@ -322,7 +322,7 @@ import type { MedicalVaultRecord, MedicationRecordData } from '@/types/domain/me
               <RadioGroup
                 value={stopDateOption || "ongoing"}
                 onValueChange={(value) => {
-                  setValue("stop_date_option", value as "ongoing" | "30_days" | "90_days" | "custom");
+                  setValue("stop_date_option", value as "ongoing" | "1-10-days" | "3-months");
                   
                   // Calculate stop_date based on option and start_date
                   if (startDate && value !== "ongoing") {

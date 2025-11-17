@@ -10,6 +10,7 @@ import { PatientDocumentPreview } from "@/components/documents/PatientDocumentPr
 import { realtimeManager } from "@/lib/realtimeManager";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import type { SharedDocument } from '@/types/manual-schema';
 
 interface SharedDocumentsGridProps {
   patientAccountId: string;
@@ -87,10 +88,6 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
           notes: recordData.notes as string | undefined,
         };
       });
-
-import type { SharedDocument } from '@/types/manual-schema';
-
-// ... existing code
 
       // For practice view, only show shared documents
       if (mode === 'practice') {

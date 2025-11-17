@@ -83,25 +83,20 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
         }
       }
 
+      const insertData: Omit<PendingRepRequest, 'id' | 'created_at' | 'updated_at' | 'status'> = {
+        created_by_user_id: user.id,
+        created_by_role: effectiveRole as Database["public"]["Enums"]["app_role"],
+        full_name: formData.full_name,
+        email: formData.email,
+        phone: formData.phone || null,
+        company: formData.company || null,
+        role: formData.role as 'topline_rep' | 'downline_rep',
+        assigned_topline_user_id: assigned_topline_user_id,
+      };
+      
       const { error } = await supabase
-import type { RepProductPriceOverride, PendingRepRequest } from '@/types/manual-schema';
-
-// ... existing code
-
-        const insertData: Omit<PendingRepRequest, 'id' | 'created_at' | 'updated_at' | 'status'> = {
-          created_by_user_id: user.id,
-          created_by_role: effectiveRole as Database["public"]["Enums"]["app_role"],
-          full_name: formData.full_name,
-          email: formData.email,
-          phone: formData.phone || null,
-          company: formData.company || null,
-          role: formData.role as 'topline_rep' | 'downline_rep',
-          assigned_topline_user_id: assigned_topline_user_id,
-        };
-        
-        const { error } = await supabase
-          .from("pending_reps")
-          .insert([insertData]);
+        .from("pending_reps")
+        .insert([insertData]);
 
       if (error) throw error;
 

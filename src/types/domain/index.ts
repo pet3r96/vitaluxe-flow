@@ -18,4 +18,6 @@ export * from './admin';
 export * from './cart';
 export * from './messages';
 export * from './calendar';
-export * from './medical-vault';
+
+// Medical vault types exported separately to avoid conflicts with patients.ts
+export type { DocumentRecordData, InsuranceRecordData, MedicalVaultAuditLog } from './medical-vault';
