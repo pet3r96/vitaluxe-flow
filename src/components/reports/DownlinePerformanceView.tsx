@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { RepProductivityView } from "@/integrations/supabase/view-helpers";
+import type { DownlinePerformanceData } from "@/types/domain/reports";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +33,7 @@ const DownlinePerformanceView = () => {
   });
 
   // Fetch downlines productivity data
-  const { data: downlinesData, isLoading } = useQuery({
+  const { data: downlinesData, isLoading } = useQuery<DownlinePerformanceData[]>({
     queryKey: ["downlines-productivity", currentRep?.id],
     queryFn: async () => {
       if (!currentRep?.id) return [];
@@ -39,14 +41,13 @@ const DownlinePerformanceView = () => {
       // Refresh materialized view first
       await supabase.rpc('refresh_rep_productivity_summary');
       
-      const { data, error} = await (supabase as any)
-        .from("rep_productivity_view")
+      const { data, error} = await RepProductivityView()
         .select("*")
         .eq("assigned_topline_id", currentRep.id)
         .order("total_commissions", { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data as DownlinePerformanceData[];
     },
     enabled: !!currentRep?.id,
   });

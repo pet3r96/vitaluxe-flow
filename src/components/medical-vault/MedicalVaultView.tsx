@@ -273,16 +273,17 @@ export function MedicalVaultView({
 
     setIsGeneratingPdf(true);
     try {
+      // Justified casts: JSONB record_data boundary - flattenForPdf accepts typed vault records
       const pdfBlob = await generateMedicalVaultPDF(
         patientAccount,
-        flattenForPdf(medications as any || [], 'medication') as any,
-        flattenForPdf(conditions as any || [], 'condition') as any,
-        flattenForPdf(allergies as any || [], 'allergy') as any,
-        flattenForPdf(vitals as any || [], 'vital') as any,
-        flattenForPdf(immunizations as any || [], 'immunization') as any,
-        flattenForPdf(surgeries as any || [], 'surgery') as any,
-        flattenForPdf(pharmacies as any || [], 'pharmacy') as any,
-        flattenForPdf(emergencyContacts as any || [], 'emergency_contact') as any
+        flattenForPdf(medications || [], 'medication') as any,
+        flattenForPdf(conditions || [], 'condition') as any,
+        flattenForPdf(allergies || [], 'allergy') as any,
+        flattenForPdf(vitals || [], 'vital') as any,
+        flattenForPdf(immunizations || [], 'immunization') as any,
+        flattenForPdf(surgeries || [], 'surgery') as any,
+        flattenForPdf(pharmacies || [], 'pharmacy') as any,
+        flattenForPdf(emergencyContacts || [], 'emergency_contact') as any
       );
       
       const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -336,16 +337,17 @@ export function MedicalVaultView({
 
     setIsGeneratingPdf(true);
     try {
+      // Justified casts: JSONB record_data boundary - flattenForPdf accepts typed vault records
       const pdfBlob = await generateMedicalVaultPDF(
         patientAccount,
-        flattenForPdf(medications as any || [], 'medication') as any,
-        flattenForPdf(conditions as any || [], 'condition') as any,
-        flattenForPdf(allergies as any || [], 'allergy') as any,
-        flattenForPdf(vitals as any || [], 'vital') as any,
-        flattenForPdf(immunizations as any || [], 'immunization') as any,
-        flattenForPdf(surgeries as any || [], 'surgery') as any,
-        flattenForPdf(pharmacies as any || [], 'pharmacy') as any,
-        flattenForPdf(emergencyContacts as any || [], 'emergency_contact') as any
+        flattenForPdf(medications || [], 'medication') as any,
+        flattenForPdf(conditions || [], 'condition') as any,
+        flattenForPdf(allergies || [], 'allergy') as any,
+        flattenForPdf(vitals || [], 'vital') as any,
+        flattenForPdf(immunizations || [], 'immunization') as any,
+        flattenForPdf(surgeries || [], 'surgery') as any,
+        flattenForPdf(pharmacies || [], 'pharmacy') as any,
+        flattenForPdf(emergencyContacts || [], 'emergency_contact') as any
       );
       const pdfUrl = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');

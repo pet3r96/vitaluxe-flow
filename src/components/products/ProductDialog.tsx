@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ProductRepAssign } from "@/integrations/supabase/table-helpers";
 import {
   Dialog,
   DialogContent,
@@ -124,8 +125,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         }
         
         // Fetch rep assignments
-        const { data: repData } = await (supabase as any)
-          .from("product_rep_assignments")
+        const { data: repData } = await ProductRepAssign()
           .select("topline_rep_id")
           .eq("product_id", product.id);
         
@@ -327,8 +327,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       
       // Handle product rep assignments
       // Delete existing assignments
-      await (supabase as any)
-        .from("product_rep_assignments")
+      await ProductRepAssign()
         .delete()
         .eq("product_id", productId);
       
@@ -339,8 +338,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
           topline_rep_id: rep_id
         }));
         
-        const { error: repAssignError } = await (supabase as any)
-          .from("product_rep_assignments")
+        const { error: repAssignError } = await ProductRepAssign()
           .insert(repAssignments);
         
         if (repAssignError) throw repAssignError;

@@ -8,10 +8,19 @@ import { Key, Shield, AlertTriangle, CheckCircle2, Loader2, Info, AlertCircle } 
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
+interface EncryptionKey {
+  id: string;
+  key_name: string;
+  active: boolean;
+  created_at: string;
+  rotated_at?: string | null;
+}
+
 export const EncryptionStatusManager = () => {
-  const { data: encryptionKeys, isLoading: keysLoading } = useQuery({
+  const { data: encryptionKeys, isLoading: keysLoading } = useQuery<EncryptionKey[]>({
     queryKey: ["encryption-keys"],
     queryFn: async () => {
+      // Type cast at boundary - encryption_keys table not in generated schema
       const { data, error } = await (supabase as any)
         .from("encryption_keys")
         .select("*")
@@ -27,7 +36,14 @@ export const EncryptionStatusManager = () => {
   const { data: coverageData, isLoading: coverageLoading } = useQuery({
     queryKey: ["encryption-coverage"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_encryption_coverage") as { data: any; error: any };
+      interface EncryptionCoverageRow {
+        data_type: string;
+        total_records: number;
+        encrypted_records: number;
+        coverage_percentage: number;
+      }
+      
+      const { data, error } = await supabase.rpc("get_encryption_coverage");
       
       if (error) throw error;
       
@@ -35,7 +51,7 @@ export const EncryptionStatusManager = () => {
       const coverage: Record<string, { total: number; encrypted: number; percentage: number }> = {};
       
       if (Array.isArray(data)) {
-        data.forEach((row: any) => {
+        (data as EncryptionCoverageRow[]).forEach((row) => {
           coverage[row.data_type] = {
             total: row.total_records,
             encrypted: row.encrypted_records,
@@ -51,7 +67,7 @@ export const EncryptionStatusManager = () => {
 
   const isLoading = keysLoading || coverageLoading;
 
-  const getKeyStatus = (key: any) => {
+  const getKeyStatus = (key: EncryptionKey | undefined) => {
     if (!key) return { status: "unknown", message: "No key found", variant: "secondary" as const };
 
     const daysSinceRotation = key.rotated_at
