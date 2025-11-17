@@ -105,13 +105,13 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         
         for (const p of allPharmacies || []) {
           if (p.id !== pharmacy?.id) {
-            const updatedData: PharmacyRecordData = { 
-              ...(p.record_data as PharmacyRecordData), 
+            const updatedData = { 
+              ...(p.record_data as any), 
               is_preferred: false 
             };
             await supabase
               .from("patient_medical_vault")
-              .update({ record_data: updatedData })
+              .update({ record_data: updatedData as any })
               .eq("id", p.id);
           }
         }

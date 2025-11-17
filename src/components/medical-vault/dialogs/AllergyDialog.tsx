@@ -116,7 +116,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
 
       const existingAllergies = existingResult.data?.map(r => ({ 
         id: r.id, 
-        nka: (r.record_data as AllergyRecordData)?.nka || false 
+        nka: (r.record_data as any)?.nka || false 
       })) || [];
 
       // If adding NKA, check for existing specific allergies
