@@ -104,7 +104,10 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         
         for (const p of allPharmacies || []) {
           if (p.id !== pharmacy?.id) {
-            const updatedData = { ...(p.record_data as any), is_preferred: false };
+            const updatedData: PharmacyRecordData = { 
+              ...(p.record_data as PharmacyRecordData), 
+              is_preferred: false 
+            };
             await supabase
               .from("patient_medical_vault")
               .update({ record_data: updatedData })
@@ -125,15 +128,17 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         }
         console.log('[PharmacyDialog] UPDATE success');
       } else {
+        const insertData: Partial<MedicalVaultRecord> = {
+          record_type: "pharmacy",
+          record_data: recordData as PharmacyRecordData,
+          patient_account_id: patientAccountId,
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+        };
+        
         const { error } = await supabase
           .from("patient_medical_vault")
-          .insert({
-            record_type: "pharmacy",
-            record_data: recordData,
-            patient_account_id: patientAccountId,
-            created_by_user_id: authUser.id,
-            created_by_role: mapRoleToAuditRole(effectiveRole),
-          } as any);
+          .insert(insertData);
         
         if (error) {
           console.error('[PharmacyDialog] INSERT failed:', {

@@ -229,7 +229,7 @@ export function InvoiceTemplateDialog({
           notes,
           subtotal,
           total_due: totalDue
-        } as any
+        } as InvoiceTemplateData
       };
 
       if (existingInvoice) {
@@ -302,7 +302,7 @@ export function InvoiceTemplateDialog({
           notes,
           subtotal,
           total_due: totalDue
-        } as any
+        } as InvoiceTemplateData
       };
 
 

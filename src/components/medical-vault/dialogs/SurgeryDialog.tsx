@@ -76,15 +76,17 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
         }
         console.log('[SurgeryDialog] UPDATE success');
       } else {
+        const insertData: Partial<MedicalVaultRecord> = {
+          record_type: "surgery",
+          record_data: recordData as SurgeryRecordData,
+          patient_account_id: patientAccountId,
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+        };
+        
         const { error } = await supabase
           .from("patient_medical_vault")
-          .insert({
-            record_type: "surgery",
-            record_data: recordData,
-            patient_account_id: patientAccountId,
-            created_by_user_id: authUser.id,
-            created_by_role: mapRoleToAuditRole(effectiveRole),
-          } as any);
+          .insert(insertData);
         
         if (error) {
           console.error('[SurgeryDialog] INSERT failed:', {

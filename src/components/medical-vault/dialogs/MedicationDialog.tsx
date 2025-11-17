@@ -167,16 +167,22 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         }
         console.log('[MedicationDialog] UPDATE success');
       } else {
+import type { MedicalVaultRecord, MedicationRecordData } from '@/types/domain/medical-vault';
+
+// ... existing code
+
+        const insertData: Partial<MedicalVaultRecord> = {
+          record_type: "medication",
+          record_data: recordData as MedicationRecordData,
+          patient_account_id: patientAccountId,
+          is_active: true,
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+        };
+        
         const { error } = await supabase
           .from("patient_medical_vault")
-          .insert({
-            record_type: "medication",
-            record_data: recordData,
-            patient_account_id: patientAccountId,
-            is_active: true,
-            created_by_user_id: authUser.id,
-            created_by_role: mapRoleToAuditRole(effectiveRole),
-          } as any);
+          .insert(insertData);
         
         if (error) {
           console.error('[MedicationDialog] INSERT failed:', {
@@ -316,7 +322,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
               <RadioGroup
                 value={stopDateOption || "ongoing"}
                 onValueChange={(value) => {
-                  setValue("stop_date_option", value as any);
+                  setValue("stop_date_option", value as "ongoing" | "30_days" | "90_days" | "custom");
                   
                   // Calculate stop_date based on option and start_date
                   if (startDate && value !== "ongoing") {

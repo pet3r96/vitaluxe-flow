@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
+import type { MedicalVaultRecord, VitalsRecordData } from '@/types/domain/medical-vault';
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -208,15 +209,17 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
         });
         
         // Insert new record
+        const insertData: Partial<MedicalVaultRecord> = {
+          record_type: "vitals",
+          record_data: formattedData as VitalsRecordData,
+          patient_account_id: patientAccountId,
+          created_by_user_id: authUser.id,
+          created_by_role: mapRoleToAuditRole(effectiveRole),
+        };
+        
         const { error } = await supabase
           .from("patient_medical_vault")
-          .insert({
-            record_type: "vital",
-            record_data: formattedData,
-            patient_account_id: patientAccountId,
-            created_by_user_id: authUser.id,
-            created_by_role: mapRoleToAuditRole(effectiveRole),
-          } as any);
+          .insert(insertData);
         
         if (error) {
           console.error('[VitalsDialog] Insert error:', {

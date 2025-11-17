@@ -86,9 +86,13 @@ export function SmsDebugPanel() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {smsCodesData?.map((code) => {
+import type { SmsVerificationCodeWithProfile } from '@/types/manual-schema';
+
+// ... existing code
+
+                {smsCodesData?.map((code: SmsVerificationCodeWithProfile) => {
                   const isExpired = new Date(code.expires_at) < new Date();
-                  const profile = code.profiles as any;
+                  const profile = code.profiles;
                   
                   return (
                     <TableRow key={code.id}>
