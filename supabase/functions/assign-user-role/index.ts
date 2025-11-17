@@ -232,7 +232,7 @@ serve(async (req) => {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
       
       if (error) {
-        console.error('❌ Failed to get user from token:', error.message);
+        edgeLogger.error('Failed to get user from token', error);
       }
       
       if (user) {
@@ -247,16 +247,15 @@ serve(async (req) => {
         // Diagnostics: log header names and body keys (no values)
         try {
           const headerNames = Array.from(req.headers.keys());
-          console.log('Headers received:', headerNames);
-          console.log('Body keys:', Object.keys(signupData || {}));
+          edgeLogger.info('Request inspection', { headerNames, bodyKeys: Object.keys(signupData || {}) });
         } catch (_) {}
         
-        console.log(`CSRF token source: ${headerToken ? 'header' : bodyToken ? 'body' : 'none'}`);
+        edgeLogger.info('CSRF token source', { source: headerToken ? 'header' : bodyToken ? 'body' : 'none' });
         
         if (effectiveToken) {
           const csrfValidation = await validateCSRFToken(supabaseAdmin, user.id, effectiveToken);
           if (!csrfValidation.valid) {
-            console.error('CSRF validation failed:', csrfValidation.error);
+            edgeLogger.error('CSRF validation failed', undefined, { error: csrfValidation.error });
             return new Response(
               JSON.stringify({ error: csrfValidation.error || 'Invalid CSRF token' }),
               { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -267,9 +266,9 @@ serve(async (req) => {
           const refererHeader = req.headers.get('referer') || '';
           const trusted = isTrustedOrigin(originHeader || refererHeader);
           if (trusted) {
-            console.warn('No CSRF token; proceeding due to trusted origin and bearer auth', { origin: originHeader, referer: refererHeader });
+            edgeLogger.warn('No CSRF token; proceeding due to trusted origin', { origin: originHeader, referer: refererHeader });
           } else {
-            console.error('CSRF validation failed: CSRF token is required');
+            edgeLogger.error('CSRF validation failed: CSRF token required');
             return new Response(
               JSON.stringify({ error: 'CSRF token is required' }),
               { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -318,7 +317,7 @@ serve(async (req) => {
     
     // Generate password if not provided
     const initialPassword = signupData.password || generateSecurePassword();
-    console.log(`Password ${signupData.password ? 'provided' : 'generated'} for user creation`);
+    edgeLogger.info('Password status', { provided: !!signupData.password });
 
     // Validate role-specific fields
     if (signupData.role === 'doctor') {

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,7 +31,7 @@ serve(async (req) => {
     }
 
     // Find active payment method for practice
-    console.log("[process-subscription-payment] Resolving payment method for practice:", subscription.practice_id);
+    edgeLogger.info('[process-subscription-payment] Resolving payment method for practice', { practiceId: subscription.practice_id });
     const { data: paymentMethods, error: paymentMethodError } = await supabaseClient
       .from("practice_payment_methods")
       .select("*")
@@ -41,12 +42,12 @@ serve(async (req) => {
       .limit(1);
 
     if (paymentMethodError) {
-      console.error("[process-subscription-payment] Error fetching payment methods:", paymentMethodError);
+      edgeLogger.error('[process-subscription-payment] Error fetching payment methods', paymentMethodError);
       throw new Error("Failed to fetch payment methods");
     }
 
     if (!paymentMethods || paymentMethods.length === 0) {
-      console.warn("[process-subscription-payment] No active payment method found for practice:", subscription.practice_id);
+      edgeLogger.warn('[process-subscription-payment] No active payment method found for practice', { practiceId: subscription.practice_id });
       return new Response(
         JSON.stringify({
           success: false,
@@ -57,7 +58,7 @@ serve(async (req) => {
     }
 
     const method = paymentMethods[0] as any;
-    console.log("[process-subscription-payment] Using payment method:", method.id);
+    edgeLogger.info('[process-subscription-payment] Using payment method', { paymentMethodId: method.id });
     const last4: string = (method.last4 || method.card_last_four || "").toString();
 
     // Simulate charge outcome based on test card digits
@@ -81,7 +82,7 @@ serve(async (req) => {
       });
 
     if (paymentError) {
-      console.error("[process-subscription-payment] Failed to record payment:", paymentError);
+      edgeLogger.error('[process-subscription-payment] Failed to record payment', paymentError);
       throw paymentError;
     }
 
@@ -99,7 +100,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("Subscription payment error:", error);
+    edgeLogger.error('[process-subscription-payment] Error', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
