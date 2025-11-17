@@ -1,6 +1,7 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -21,11 +22,11 @@ Deno.serve(async (req) => {
     // Verify user is authenticated using the raw JWT token
     const { data: { user }, error: userError } = await db.auth.getUser(token);
     if (userError || !user) {
-      console.error('[end-impersonation] Authentication failed:', userError);
+      edgeLogger.error('[end-impersonation] Authentication failed', userError);
       return errorResponse('Unauthorized', 401);
     }
 
-    console.log('[end-impersonation] Request from admin:', user.id);
+    edgeLogger.info('[end-impersonation] Request from admin', { adminId: user.id });
 
     // Get active session
     const { data: session, error: sessionError } = await db
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (sessionError) {
-      console.error('[end-impersonation] Error fetching session:', sessionError);
+      edgeLogger.error('[end-impersonation] Error fetching session', sessionError);
     }
 
     if (session?.impersonation_log_id) {
@@ -46,7 +47,7 @@ Deno.serve(async (req) => {
         .eq('id', session.impersonation_log_id);
 
       if (logError) {
-        console.error('[end-impersonation] Failed to update log:', logError);
+        edgeLogger.error('[end-impersonation] Failed to update log', logError);
         // Check for RLS violation
         if (logError.code === '42501') {
           return new Response(
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
       .eq('admin_user_id', user.id);
 
     if (deleteError) {
-      console.error('[end-impersonation] Failed to delete session:', deleteError);
+      edgeLogger.error('[end-impersonation] Failed to delete session', deleteError);
       // Check for RLS violation
       if (deleteError.code === '42501') {
         return new Response(
@@ -78,12 +79,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[end-impersonation] Success');
+    edgeLogger.info('[end-impersonation] Success');
 
     return successResponse({});
 
   } catch (error) {
-    console.error('[end-impersonation] Unexpected error:', error);
+    edgeLogger.error('[end-impersonation] Unexpected error', error);
     return errorResponse('Internal server error', 500);
   }
 });

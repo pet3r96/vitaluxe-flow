@@ -1,5 +1,6 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -30,7 +31,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('[ensure-video-session] Processing appointment:', appointmentId);
+    edgeLogger.info('[ensure-video-session] Processing appointment', { appointmentId });
 
     // Check if video session already exists
     const { data: existingSession } = await supabase
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existingSession) {
-      console.log('[ensure-video-session] ✅ Session already exists:', existingSession.id);
+      edgeLogger.info('[ensure-video-session] ✅ Session already exists', { sessionId: existingSession.id });
       return new Response(JSON.stringify({ sessionId: existingSession.id }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -54,7 +55,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (appointmentError || !appointment) {
-      console.error('[ensure-video-session] Appointment not found:', appointmentError?.message);
+      edgeLogger.error('[ensure-video-session] Appointment not found', appointmentError);
       return new Response(JSON.stringify({ error: 'Appointment not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -106,7 +107,7 @@ Deno.serve(async (req) => {
     }
 
     if (!authorized) {
-      console.error('[ensure-video-session] Not authorized:', { effectiveUserId, appointment });
+      edgeLogger.error('[ensure-video-session] Not authorized', { effectiveUserId, appointmentId: appointment.id });
       return new Response(JSON.stringify({ error: 'Not authorized to create session for this appointment' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -131,11 +132,11 @@ Deno.serve(async (req) => {
       .single();
 
     if (createError) {
-      console.error('[ensure-video-session] Failed to create session:', createError);
+      edgeLogger.error('[ensure-video-session] Failed to create session', createError);
       throw createError;
     }
 
-    console.log('[ensure-video-session] ✅ Created new session:', newSession.id);
+    edgeLogger.info('[ensure-video-session] ✅ Created new session', { sessionId: newSession.id });
 
     // Log session creation
     await supabase.from('video_session_logs').insert({
@@ -151,7 +152,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[ensure-video-session] Error:', error);
+    edgeLogger.error('[ensure-video-session] Error', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
