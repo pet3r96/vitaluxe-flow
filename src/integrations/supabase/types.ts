@@ -2367,6 +2367,85 @@ export type Database = {
           },
         ]
       }
+      patient_medical_vault_history: {
+        Row: {
+          change_type: string | null
+          changed_at: string | null
+          changed_by: string | null
+          created_at: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          patient_account_id: string
+          vault_record_id: string
+        }
+        Insert: {
+          change_type?: string | null
+          changed_at?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          patient_account_id: string
+          vault_record_id: string
+        }
+        Update: {
+          change_type?: string | null
+          changed_at?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          patient_account_id?: string
+          vault_record_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_medical_vault_history_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_account_health"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_history_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_history_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_history_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_history_patient_account_id_fkey"
+            columns: ["patient_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "patient_medical_vault_history_vault_record_id_fkey"
+            columns: ["vault_record_id"]
+            isOneToOne: false
+            referencedRelation: "patient_medical_vault"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_messages: {
         Row: {
           body: string
