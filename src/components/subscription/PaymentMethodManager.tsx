@@ -17,8 +17,23 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface PaymentMethod {
+  id: string;
+  card?: {
+    brand: string;
+    last4: string;
+    exp_month: number;
+    exp_year: number;
+  };
+  card_type?: string;
+  last_four?: string;
+  expiration_month?: number;
+  expiration_year?: number;
+  is_default?: boolean;
+}
+
 interface PaymentMethodManagerProps {
-  paymentMethods: any[];
+  paymentMethods: PaymentMethod[];
 }
 
 export function PaymentMethodManager({ paymentMethods: initialMethods }: PaymentMethodManagerProps) {

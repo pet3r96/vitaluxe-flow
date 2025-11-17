@@ -7,7 +7,7 @@ import { useResponsive } from "@/hooks/use-mobile";
 import { MobileMenuNav } from "@/components/responsive/MobileMenuNav";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { FlyoutMenu } from "@/components/layout/FlyoutMenu";
-import { menus } from "@/config/menus";
+import { menus, MenuItem, MenuSection } from "@/config/menus";
 import { Lock, LogOut, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -49,7 +49,7 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
 
   // Filter menu items based on role
-  const filterMenuItems = (items: any[]) => {
+  const filterMenuItems = (items: MenuItem[]) => {
     return items.filter(item => {
       if (isStaffAccount && item.hideForStaff) return false;
       if (isProviderAccount && item.hideForProvider) return false;

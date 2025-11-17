@@ -16,16 +16,21 @@ export type {
   TypedVaultRecord,
 } from "@/types/vault/records";
 
+import type { TypedVaultRecord } from "@/types/vault/records";
+
+// Extract specific typed records from the discriminated union
+type ExtractVaultRecord<T extends TypedVaultRecord['record_type']> = Extract<TypedVaultRecord, { record_type: T }>;
+
 export interface PatientMedicalData {
-  account: any;
-  medications: any[];
-  conditions: any[];
-  allergies: any[];
-  vitals: any[];
-  immunizations: any[];
-  surgeries: any[];
-  pharmacies: any[];
-  emergencyContacts: any[];
+  account: any; // Database row type
+  medications: Array<ExtractVaultRecord<'medication'>>;
+  conditions: Array<ExtractVaultRecord<'condition'>>;
+  allergies: Array<ExtractVaultRecord<'allergy'>>;
+  vitals: Array<ExtractVaultRecord<'vital'>>;
+  immunizations: Array<ExtractVaultRecord<'immunization'>>;
+  surgeries: Array<ExtractVaultRecord<'surgery'>>;
+  pharmacies: Array<ExtractVaultRecord<'pharmacy'>>;
+  emergencyContacts: Array<ExtractVaultRecord<'emergency_contact'>>;
 }
 
 export interface PatientQueryParams {

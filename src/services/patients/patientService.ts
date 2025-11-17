@@ -14,7 +14,7 @@ export async function fetchPatients(params: PatientQueryParams) {
   
   const columns = "id, name, first_name, last_name, email, phone, gender_at_birth, address, address_street, address_city, address_state, address_zip, address_formatted, city, state, zip_code, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at, user_id, last_login_at, status";
 
-  let patientsData: any[] = [];
+  let patientsData: Array<Record<string, unknown>> = [];
 
   if ((effectiveRole === "doctor" || effectiveRole === "provider" || effectiveRole === "staff") && effectivePracticeId) {
     // 1) Patients explicitly assigned to this practice

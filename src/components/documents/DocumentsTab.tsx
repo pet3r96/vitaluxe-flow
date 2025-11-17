@@ -50,7 +50,7 @@ export function DocumentsTab() {
       ]);
 
       // Process practice documents
-      let practiceDocuments: any[] = [];
+      let practiceDocuments: Array<Document> = [];
       if (practiceResult.status === 'fulfilled') {
         const { data, error } = practiceResult.value;
         if (error) {

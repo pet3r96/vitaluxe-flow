@@ -98,7 +98,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (!effectiveUserId) return;
 
-    const channels: any[] = [];
+    const channels: Array<ReturnType<typeof supabase.channel>> = [];
 
     // Subscribe to orders changes
     const ordersChannel = supabase

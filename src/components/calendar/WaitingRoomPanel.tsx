@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-import type { CalendarProvider, CalendarAppointment } from '@/types/domain/calendar';
+import type { CalendarProvider, CalendarAppointment, VideoSession } from '@/types/domain/calendar';
 
 interface WaitingRoomPanelProps {
   practiceId: string;
@@ -149,7 +149,7 @@ export function WaitingRoomPanel({
   );
   
   // Merge: real sessions + synthetic appointments
-  const mergedVideoAppointments: any[] = [];
+  const mergedVideoAppointments: VideoSession[] = [];
   
   // Add all real sessions with provider data
   rawVideoSessions.forEach(session => {
