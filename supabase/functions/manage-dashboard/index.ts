@@ -2,6 +2,221 @@ import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts
 import { corsHeaders } from '../_shared/cors.ts';
 
 /**
+ * Fetch timeseries data for a given metric type
+ */
+async function fetchTimeseriesData(
+  supabase: any,
+  metricType: string,
+  startDate: string,
+  endDate: string,
+  effectiveRole: string,
+  effectiveUserId: string
+): Promise<Array<{ created_at: string; value: number }>> {
+  switch (metricType) {
+    case 'orders':
+      return fetchOrdersTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId);
+    case 'products':
+      return fetchProductsTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId);
+    case 'revenue':
+      return fetchRevenueTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId, 'paid');
+    case 'pending_revenue':
+      return fetchRevenueTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId, 'pending');
+    case 'users':
+      return fetchUsersTimeseries(supabase, startDate, endDate);
+    case 'pending_orders':
+      return fetchPendingOrdersTimeseries(supabase, startDate, endDate, effectiveUserId);
+    default:
+      return [];
+  }
+}
+
+async function fetchOrdersTimeseries(
+  supabase: any,
+  startDate: string,
+  endDate: string,
+  effectiveRole: string,
+  effectiveUserId: string
+): Promise<Array<{ created_at: string; value: number }>> {
+  if (effectiveRole === 'doctor') {
+    const { data } = await supabase
+      .from('orders')
+      .select('created_at')
+      .eq('doctor_id', effectiveUserId)
+      .neq('status', 'cancelled')
+      .neq('payment_status', 'payment_failed')
+      .gte('created_at', startDate)
+      .lte('created_at', endDate);
+    return data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+  } else if (effectiveRole === 'provider') {
+    const { data: providerData } = await supabase
+      .from('providers')
+      .select('id')
+      .eq('user_id', effectiveUserId)
+      .single();
+    if (!providerData) return [];
+    const { data: orderLines } = await supabase
+      .from('order_lines')
+      .select('orders!inner(created_at, payment_status, status)')
+      .eq('provider_id', providerData.id)
+      .neq('orders.payment_status', 'payment_failed')
+      .neq('orders.status', 'cancelled')
+      .gte('orders.created_at', startDate)
+      .lte('orders.created_at', endDate);
+    return orderLines?.map((ol: any) => ({ created_at: ol.orders.created_at, value: 1 })) || [];
+  } else if (effectiveRole === 'pharmacy') {
+    const { data: pharmacyData } = await supabase
+      .from('pharmacies')
+      .select('id')
+      .eq('user_id', effectiveUserId)
+      .maybeSingle();
+    if (!pharmacyData) return [];
+    const { data: orderLines } = await supabase
+      .from('order_lines')
+      .select('orders!inner(created_at, payment_status, status)')
+      .eq('assigned_pharmacy_id', pharmacyData.id)
+      .neq('orders.payment_status', 'payment_failed')
+      .neq('orders.status', 'cancelled')
+      .gte('orders.created_at', startDate)
+      .lte('orders.created_at', endDate);
+    return orderLines?.map((ol: any) => ({ created_at: ol.orders.created_at, value: 1 })) || [];
+  }
+  const { data } = await supabase
+    .from('orders')
+    .select('created_at')
+    .neq('status', 'cancelled')
+    .neq('payment_status', 'payment_failed')
+    .gte('created_at', startDate)
+    .lte('created_at', endDate);
+  return data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+}
+
+async function fetchProductsTimeseries(
+  supabase: any,
+  startDate: string,
+  endDate: string,
+  effectiveRole: string,
+  effectiveUserId: string
+): Promise<Array<{ created_at: string; value: number }>> {
+  if (effectiveRole === 'pharmacy') {
+    const { data: pharmacyData } = await supabase
+      .from('pharmacies')
+      .select('id')
+      .eq('user_id', effectiveUserId)
+      .maybeSingle();
+    if (!pharmacyData) return [];
+    const { data } = await supabase
+      .from('product_pharmacies')
+      .select('created_at')
+      .eq('pharmacy_id', pharmacyData.id)
+      .gte('created_at', startDate)
+      .lte('created_at', endDate);
+    return data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+  } else if (effectiveRole === 'admin' || effectiveRole === 'staff') {
+    const { data } = await supabase
+      .from('products')
+      .select('created_at')
+      .eq('active', true)
+      .gte('created_at', startDate)
+      .lte('created_at', endDate);
+    return data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+  }
+  return [];
+}
+
+async function fetchRevenueTimeseries(
+  supabase: any,
+  startDate: string,
+  endDate: string,
+  effectiveRole: string,
+  effectiveUserId: string,
+  status: 'paid' | 'pending'
+): Promise<Array<{ created_at: string; value: number }>> {
+  const statusFilter = status === 'paid' ? ['paid', 'partially_refunded'] : ['pending', 'processing'];
+  
+  if (effectiveRole === 'doctor') {
+    const { data } = await supabase
+      .from('orders')
+      .select('created_at, total_amount')
+      .eq('doctor_id', effectiveUserId)
+      .in('payment_status', statusFilter)
+      .neq('status', 'cancelled')
+      .gte('created_at', startDate)
+      .lte('created_at', endDate);
+    return data?.map((d: any) => ({ created_at: d.created_at, value: d.total_amount || 0 })) || [];
+  } else if (effectiveRole === 'provider') {
+    const { data: providerData } = await supabase
+      .from('providers')
+      .select('id')
+      .eq('user_id', effectiveUserId)
+      .single();
+    if (!providerData) return [];
+    const { data: orderLines } = await supabase
+      .from('order_lines')
+      .select('orders!inner(created_at, payment_status, status), price')
+      .eq('provider_id', providerData.id)
+      .in('orders.payment_status', statusFilter)
+      .neq('orders.status', 'cancelled')
+      .gte('orders.created_at', startDate)
+      .lte('orders.created_at', endDate);
+    return orderLines?.map((ol: any) => ({ created_at: ol.orders.created_at, value: ol.price || 0 })) || [];
+  } else if (effectiveRole === 'pharmacy') {
+    const { data: pharmacyData } = await supabase
+      .from('pharmacies')
+      .select('id')
+      .eq('user_id', effectiveUserId)
+      .maybeSingle();
+    if (!pharmacyData) return [];
+    const { data: orderLines } = await supabase
+      .from('order_lines')
+      .select('orders!inner(created_at, payment_status, status), price')
+      .eq('assigned_pharmacy_id', pharmacyData.id)
+      .in('orders.payment_status', statusFilter)
+      .neq('orders.status', 'cancelled')
+      .gte('orders.created_at', startDate)
+      .lte('orders.created_at', endDate);
+    return orderLines?.map((ol: any) => ({ created_at: ol.orders.created_at, value: ol.price || 0 })) || [];
+  }
+  const { data } = await supabase
+    .from('orders')
+    .select('created_at, total_amount')
+    .in('payment_status', statusFilter)
+    .neq('status', 'cancelled')
+    .gte('created_at', startDate)
+    .lte('created_at', endDate);
+  return data?.map((d: any) => ({ created_at: d.created_at, value: d.total_amount || 0 })) || [];
+}
+
+async function fetchUsersTimeseries(
+  supabase: any,
+  startDate: string,
+  endDate: string
+): Promise<Array<{ created_at: string; value: number }>> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('created_at')
+    .gte('created_at', startDate)
+    .lte('created_at', endDate);
+  return data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+}
+
+async function fetchPendingOrdersTimeseries(
+  supabase: any,
+  startDate: string,
+  endDate: string,
+  effectiveUserId: string
+): Promise<Array<{ created_at: string; value: number }>> {
+  const { data } = await supabase
+    .from('orders')
+    .select('created_at')
+    .eq('doctor_id', effectiveUserId)
+    .in('status', ['pending', 'processing'])
+    .neq('payment_status', 'payment_failed')
+    .gte('created_at', startDate)
+    .lte('created_at', endDate);
+  return data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+}
+
+/**
  * Consolidated Dashboard Management Endpoint
  * Actions: summary, usage, timeseries
  */
@@ -201,7 +416,6 @@ Deno.serve(async (req) => {
       }
 
       case 'timeseries': {
-        // From get-metric-timeseries (simplified version)
         const authHeader = req.headers.get('Authorization');
         const supabase = createAuthClient(authHeader);
 
@@ -215,11 +429,37 @@ Deno.serve(async (req) => {
 
         const { metricType, period, startDate, endDate, effectiveRole, effectiveUserId } = body;
 
-        // Return basic timeseries data structure
+        // Calculate previous period dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const duration = end.getTime() - start.getTime();
+        const prevStart = new Date(start.getTime() - duration);
+        const prevEnd = start;
+
+        // Fetch current period data
+        const currentData = await fetchTimeseriesData(
+          supabase,
+          metricType,
+          startDate,
+          endDate,
+          effectiveRole,
+          effectiveUserId
+        );
+
+        // Fetch previous period data
+        const previousData = await fetchTimeseriesData(
+          supabase,
+          metricType,
+          prevStart.toISOString(),
+          prevEnd.toISOString(),
+          effectiveRole,
+          effectiveUserId
+        );
+
         return new Response(
           JSON.stringify({ 
-            current: [],
-            previous: []
+            current: currentData,
+            previous: previousData
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
