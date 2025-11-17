@@ -501,7 +501,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                           }
                         }
                       } catch (error) {
-                        console.error('[AuthContext] Auto-enrollment error:', error);
+                        logger.error('Auto-enrollment error', error);
                       }
                     }
                   }
@@ -519,7 +519,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           logger.info('USER_UPDATED: user data refreshed silently');
           
         } else if (event === 'SIGNED_OUT') {
-          console.log('[AuthContext] ⚠️ SIGNED_OUT event received');
+          logger.info('SIGNED_OUT event received', { userId: user?.id });
           
           // CRITICAL: Capture user ID before clearing
           const userIdToClean = user?.id;
@@ -1535,7 +1535,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clearImpersonation = async () => {
-    console.log('[AuthContext] Clearing impersonation');
+    logger.info('Clearing impersonation', { userId: user?.id });
     
     // Update the log before clearing
     if (currentLogId) {

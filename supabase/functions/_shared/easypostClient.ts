@@ -58,7 +58,6 @@ export class EasyPostClient {
 
       return await response.json();
     } catch (error) {
-      console.error('EasyPost API request failed:', error);
       throw error;
     }
   }
@@ -79,35 +78,21 @@ export class EasyPostClient {
     error_details?: string[];
   }> {
     try {
-      console.log('🔍 EasyPost: Verifying address:', JSON.stringify(address, null, 2));
-      
       const response = await this.makeRequest('/addresses', 'POST', {
         address: address,
         verify: ["delivery"]
       });
-
-      console.log('📦 EasyPost: Raw API response:', JSON.stringify(response, null, 2));
 
       // EasyPost returns address data directly at root level, not nested under .address
       const verified = response;
 
       // Validate response structure
       if (!verified) {
-        console.error('❌ EasyPost returned empty response');
         throw new Error('EasyPost API returned empty response. Check API key permissions.');
       }
 
       // Check if verifications object exists
       if (!verified.verifications) {
-        console.error('❌ EasyPost response missing verifications:', {
-          has_address: !!verified,
-          address_id: verified.id,
-          street1: verified.street1,
-          city: verified.city,
-          state: verified.state,
-          zip: verified.zip
-        });
-        
         throw new Error(
           'EasyPost API key may be invalid or lacks verification permissions. ' +
           'Verifications object missing from response. ' +
@@ -118,15 +103,8 @@ export class EasyPostClient {
       const deliveryVerification = verified.verifications.delivery;
       
       if (!deliveryVerification) {
-        console.error('❌ EasyPost response missing delivery verification:', verified.verifications);
         throw new Error('EasyPost response missing delivery verification data');
       }
-
-      console.log('✅ EasyPost: Verification successful', {
-        success: deliveryVerification.success,
-        confidence: deliveryVerification.confidence,
-        errors: deliveryVerification.errors
-      });
 
       const confidence = deliveryVerification.confidence || 0;
       const isDeliverable = deliveryVerification.success || false;
@@ -169,8 +147,6 @@ export class EasyPostClient {
         error_details: errorDetails.length > 0 ? errorDetails : undefined
       };
     } catch (error) {
-      console.error('❌ Address verification failed:', error);
-      
       // Return invalid status on error with helpful message
       return {
         is_valid: false,
