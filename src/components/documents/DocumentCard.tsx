@@ -38,8 +38,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
       if (storageError) throw storageError;
 
       // Direct table access - provider_documents not in generated types
-      const docTable: any = supabase.from("provider_documents");
-      const { error } = await docTable.delete().eq("id", document.id);
+      const { error } = await (supabase as any).from("provider_documents").delete().eq("id", document.id);
 
       if (error) throw error;
     },

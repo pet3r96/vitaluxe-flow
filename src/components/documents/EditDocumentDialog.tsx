@@ -89,8 +89,7 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
       }
 
       // Direct table access - provider_documents not in generated types
-      const docTable: any = supabase.from("provider_documents");
-      const { error } = await docTable.update(updates).eq("id", document.id);
+      const { error } = await (supabase as any).from("provider_documents").update(updates).eq("id", document.id);
 
       if (error) throw error;
     },
