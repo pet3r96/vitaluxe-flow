@@ -386,8 +386,9 @@ export const ProductsDataTable = () => {
 
         console.log(`✅ Pharmacy routed: ${routingResult.reason}`);
 
-        const { error } = await supabase.functions.invoke('add-to-cart', {
+        const { error } = await supabase.functions.invoke('manage-cart', {
           body: {
+            action: 'add',
             cartOwnerId: cartOwnerForDb,
             productId: productForCart.id,
             patientId: null,
@@ -488,8 +489,9 @@ export const ProductsDataTable = () => {
           patientRecord.address_zip
         );
 
-        const { error } = await supabase.functions.invoke('add-to-cart', {
+        const { error } = await supabase.functions.invoke('manage-cart', {
           body: {
+            action: 'add',
             cartOwnerId: cartOwnerForDb,
             productId: productForCart.id,
             patientId: patientRecord.id,

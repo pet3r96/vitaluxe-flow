@@ -197,8 +197,8 @@ export const StaffDetailsDialog = ({
                     checked={staff.can_order}
                     onChange={async (e) => {
                       try {
-                        const { error } = await supabase.functions.invoke('manage-staff-status', {
-                          body: { staffId: staff.user_id, canOrder: e.target.checked }
+                        const { error } = await supabase.functions.invoke('manage-entity-status', {
+                          body: { action: 'staff-status', staffId: staff.user_id, canOrder: e.target.checked }
                         });
                         if (error) throw error;
                         toast.success('Ordering privileges updated');

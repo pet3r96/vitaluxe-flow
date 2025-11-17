@@ -79,8 +79,8 @@ export const StaffDataTable = () => {
   });
 
   const toggleStatus = async (staffUserId: string, currentStatus: boolean) => {
-    const { data, error } = await supabase.functions.invoke('manage-staff-status', {
-      body: { staffId: staffUserId, active: !currentStatus }
+    const { data, error } = await supabase.functions.invoke('manage-entity-status', {
+      body: { action: 'staff-status', staffId: staffUserId, active: !currentStatus }
     });
 
     const serverMessage = error?.message || (isEdgeFunctionError(data) ? data.error : undefined);

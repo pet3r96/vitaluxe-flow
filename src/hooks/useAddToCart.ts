@@ -18,8 +18,8 @@ export const useAddToCart = () => {
     mutationFn: async (params: AddToCartParams) => {
       console.log('[useAddToCart] Adding to cart:', params);
 
-      const { data, error } = await supabase.functions.invoke('add-to-cart', {
-        body: params
+      const { data, error } = await supabase.functions.invoke('manage-cart', {
+        body: { action: 'add', ...params }
       });
 
       if (error) {

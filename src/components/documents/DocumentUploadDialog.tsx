@@ -62,8 +62,9 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         if (uploadError) throw uploadError;
 
         // Create document record via edge function (bypasses RLS)
-        const { data: result, error: createError } = await supabase.functions.invoke("create-provider-document", {
+        const { data: result, error: createError } = await supabase.functions.invoke("manage-documents", {
           body: {
+            action: 'create',
             document_name: customDocumentName,
             document_type: documentType,
             storage_path: filePath,

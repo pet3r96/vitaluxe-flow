@@ -73,9 +73,10 @@ export function RoomsManagerTable({ practiceId }: RoomsManagerTableProps) {
     if (!roomToDelete) return;
 
     try {
-      const { error } = await supabase.functions.invoke("manage-practice-room", {
+      const { error } = await supabase.functions.invoke("manage-entity-status", {
         body: {
-          action: "delete",
+          action: "practice-room",
+          operation: "delete",
           practiceId,
           roomId: roomToDelete,
         },

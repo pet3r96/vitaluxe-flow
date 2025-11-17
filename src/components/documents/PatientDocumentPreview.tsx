@@ -46,8 +46,9 @@ export function PatientDocumentPreview({
         documentName
       });
 
-      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+      const { data, error } = await supabase.functions.invoke('manage-documents', {
         body: {
+          action: 'get-signed-url',
           bucketName,
           filePath: storagePath,
           expiresIn: 300 // 5 min expiry for preview
@@ -93,8 +94,9 @@ export function PatientDocumentPreview({
 
   const handleDownload = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+      const { data, error } = await supabase.functions.invoke('manage-documents', {
         body: {
+          action: 'get-signed-url',
           bucketName,
           filePath: storagePath,
           expiresIn: 60

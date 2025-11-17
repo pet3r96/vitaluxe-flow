@@ -206,8 +206,8 @@ const Cart = React.memo(function Cart() {
   // All mutations
   const removeMutation = useMutation({
     mutationFn: async (lineId: string) => {
-      const { error } = await supabase.functions.invoke('remove-cart-line', {
-        body: { lineId }
+      const { error } = await supabase.functions.invoke('manage-cart', {
+        body: { action: 'remove', lineId }
       });
       if (error) throw error;
     },

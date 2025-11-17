@@ -104,8 +104,8 @@ export const ProvidersDataTable = () => {
   // No longer need decryption - credentials stored in profiles table
 
   const toggleStatus = async (providerId: string, currentStatus: boolean) => {
-    const { data, error } = await supabase.functions.invoke('manage-provider-status', {
-      body: { providerId, active: !currentStatus }
+    const { data, error } = await supabase.functions.invoke('manage-entity-status', {
+      body: { action: 'provider-status', providerId, active: !currentStatus }
     });
 
     const serverMessage = error?.message || (isEdgeFunctionError(data) ? data.error : undefined);

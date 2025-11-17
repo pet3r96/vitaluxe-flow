@@ -165,8 +165,9 @@ export function SharedDocumentsGrid({ patientAccountId, mode }: SharedDocumentsG
         documentName: doc.document_name 
       });
 
-      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+      const { data, error } = await supabase.functions.invoke('manage-documents', {
         body: {
+          action: 'get-signed-url',
           bucketName,
           filePath: doc.storage_path,
           expiresIn: 60 // 1 min expiry
