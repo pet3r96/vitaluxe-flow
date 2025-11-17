@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,7 +41,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[validate-rx-order] Validating RX order:', { practice_id, product_id, user_id: user.id });
+    edgeLogger.info('[validate-rx-order] Validating RX order', { practiceId: practice_id, productId: product_id, userId: user.id });
 
     // Check if product requires prescription
     const { data: product, error: productError } = await supabase
@@ -50,13 +51,13 @@ serve(async (req) => {
       .single();
 
     if (productError) {
-      console.error('[validate-rx-order] Error fetching product:', productError);
+      edgeLogger.error('[validate-rx-order] Error fetching product', productError);
       throw new Error('Product not found');
     }
 
     // If product doesn't require prescription, allow order
     if (!product.requires_prescription) {
-      console.log('[validate-rx-order] ✅ Non-RX product, allowing order');
+      edgeLogger.info('[validate-rx-order] Non-RX product, allowing order');
       return new Response(
         JSON.stringify({ allowed: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -71,7 +72,7 @@ serve(async (req) => {
       .eq('active', true);
 
     if (providersError) {
-      console.error('[validate-rx-order] Error fetching providers:', providersError);
+      edgeLogger.error('[validate-rx-order] Error fetching providers', providersError);
       throw new Error('Error checking provider credentials');
     }
 
@@ -80,14 +81,14 @@ serve(async (req) => {
       return profile?.npi;
     }) || [];
 
-    console.log('[validate-rx-order] Provider check:', {
-      practice_id,
-      total_providers: providers?.length || 0,
-      providers_with_npi: providersWithNpi.length
+    edgeLogger.info('[validate-rx-order] Provider check', {
+      practiceId: practice_id,
+      totalProviders: providers?.length || 0,
+      providersWithNpi: providersWithNpi.length
     });
 
     if (providersWithNpi.length === 0) {
-      console.log('[validate-rx-order] ❌ No providers with NPI found, blocking RX order');
+      edgeLogger.info('[validate-rx-order] No providers with NPI found, blocking RX order');
       return new Response(
         JSON.stringify({ 
           allowed: false, 
@@ -101,7 +102,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[validate-rx-order] ✅ RX order validated successfully');
+    edgeLogger.info('[validate-rx-order] RX order validated successfully');
     return new Response(
       JSON.stringify({ allowed: true }),
       { headers: { 
@@ -112,7 +113,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[validate-rx-order] Error:', error);
+    edgeLogger.error('[validate-rx-order] Error', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ 

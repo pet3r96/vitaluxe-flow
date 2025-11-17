@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Lock, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PRO_MONTHLY_PRICE_STR, TRIAL_DESCRIPTION } from "@/lib/pricing";
+import { logger } from "@/lib/logger";
 
 interface ProGateProps {
   children: ReactNode;
@@ -16,7 +17,7 @@ export function ProGate({ children }: ProGateProps) {
   const { effectiveRole } = useAuth();
   const navigate = useNavigate();
 
-  console.log('[ProGate] Access check', { effectiveRole, isSubscribed, status });
+  logger.info('[ProGate] Access check', { effectiveRole, isSubscribed, status });
 
   // Allow access during trial, active, or grace period
   const hasAccess = isSubscribed || ['trial', 'active'].includes(status || '');

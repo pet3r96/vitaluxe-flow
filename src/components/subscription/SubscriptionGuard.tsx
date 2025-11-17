@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Lock, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logger";
 
 interface SubscriptionGuardProps {
   children: ReactNode;
@@ -22,7 +23,7 @@ export const SubscriptionGuard = ({
   const { effectiveRole } = useAuth();
   const navigate = useNavigate();
 
-  console.log('[SubscriptionGuard] Guard check', { effectiveRole, isSubscribed, loading });
+  logger.info('[SubscriptionGuard] Guard check', { effectiveRole, isSubscribed, loading });
 
   if (loading) {
     return <Skeleton className="h-32 w-full" />;

@@ -9,6 +9,7 @@ import { CreditCard, Building2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 
 interface PaymentMethod {
   id: string;
@@ -41,7 +42,7 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
   const loadPaymentMethods = async () => {
     try {
       if (!effectiveUserId) {
-        console.error('[PaymentMethodSelector] No authenticated user found');
+        logger.error('[PaymentMethodSelector] No authenticated user found');
         toast({
           title: "Authentication Required",
           description: "Please log in to continue",
@@ -50,7 +51,7 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
         return;
       }
 
-      console.log('[PaymentMethodSelector] Loading payment methods for user:', effectiveUserId);
+      logger.info('[PaymentMethodSelector] Loading payment methods for user', { effectiveUserId });
 
       const { data, error } = await supabase
         .from('practice_payment_methods')
@@ -59,14 +60,14 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
         .neq('status', 'removed')
         .order('is_default', { ascending: false });
 
-      console.log('[PaymentMethodSelector] Query result:', { 
+      logger.info('[PaymentMethodSelector] Query result', { 
         foundCount: data?.length || 0, 
         error: error?.message || null,
         userId: effectiveUserId 
       });
 
       if (error) {
-        console.error('[PaymentMethodSelector] Database error:', error);
+        logger.error('[PaymentMethodSelector] Database error', error);
         toast({
           title: "Database Error",
           description: `Failed to load payment methods: ${error.message}`,
@@ -80,14 +81,14 @@ export const PaymentMethodSelector = ({ onMethodSelected, selectedMethodId }: Pa
       // Auto-select default payment method
       const defaultMethod = data?.find(m => m.is_default);
       if (defaultMethod && !selectedMethodId) {
-        console.log('[PaymentMethodSelector] Auto-selecting default method:', defaultMethod.id);
+        logger.info('[PaymentMethodSelector] Auto-selecting default method', { methodId: defaultMethod.id });
         onMethodSelected(defaultMethod.id);
       } else if (data && data.length > 0 && !selectedMethodId) {
-        console.log('[PaymentMethodSelector] Auto-selecting first method:', data[0].id);
+        logger.info('[PaymentMethodSelector] Auto-selecting first method', { methodId: data[0].id });
         onMethodSelected(data[0].id);
       }
     } catch (error: any) {
-      console.error('[PaymentMethodSelector] Error loading payment methods:', error);
+      logger.error('[PaymentMethodSelector] Error loading payment methods', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast({
         title: "Error Loading Payment Methods",

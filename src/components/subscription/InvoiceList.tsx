@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { logger } from "@/lib/logger";
 
 interface Invoice {
   id: string;
@@ -43,7 +44,7 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
 
   const handleDownload = (invoiceId: string) => {
     // TODO: Implement PDF download
-    console.log("Download invoice:", invoiceId);
+    logger.info("Download invoice", { invoiceId });
   };
 
   if (invoices.length === 0) {

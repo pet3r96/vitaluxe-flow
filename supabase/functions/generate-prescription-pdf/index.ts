@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from '../_shared/responses.ts';
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGeneratePrescriptionRequest } from '../_shared/requestValidators.ts';
 import { handleError, createErrorResponse } from '../_shared/errorHandler.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -190,9 +191,9 @@ serve(async (req) => {
       .single();
 
     edgeLogger.info('Provider credentials response', {
-      providerDataLength: JSON.stringify(providerData).length,
-      hasLicense: !!providerData?.medical_license_number,
-      hasDea: !!providerData?.dea_number
+      profileDataLength: JSON.stringify(profileData).length,
+      hasLicense: !!profileData?.license_number,
+      hasDea: !!profileData?.dea
     });
 
     if (profileError || !profileData) {
@@ -202,8 +203,8 @@ serve(async (req) => {
 
     // Log raw values before normalization
     edgeLogger.info('Provider credentials (raw)', {
-      licenseNumber: providerData.medical_license_number?.substring(0, 5) + '...',
-      deaNumber: providerData.dea_number?.substring(0, 3) + '...'
+      licenseNumber: profileData.license_number?.substring(0, 5) + '...',
+      deaNumber: profileData.dea?.substring(0, 3) + '...'
     });
 
     // Use provider credentials directly
@@ -212,15 +213,14 @@ serve(async (req) => {
     const provider_license = profileData.license_number || '';
 
     edgeLogger.info('Normalized provider credentials', {
-      hasLicenseNumber: !!licenseNumber,
-      hasDeaNumber: !!deaNumber,
-      licenseLength: licenseNumber?.length || 0,
-      deaLength: deaNumber?.length || 0
+      hasLicenseNumber: !!provider_license,
+      hasDeaNumber: !!provider_dea,
+      licenseLength: provider_license?.length || 0,
+      deaLength: provider_dea?.length || 0
     });
-    }
 
     // Compute prescriber display name (prescriber_name not in schema)
-    const prescriberDisplayName = profileData.full_name || 
+    const prescriberDisplayName = profileData.full_name ||
                                   provider_name || 
                                   'Provider';
 
@@ -237,9 +237,8 @@ serve(async (req) => {
 
     edgeLogger.info('Generating prescription PDF', { productName: product_name, dispensingOption: dispensing_option });
 
-    try {
-      // Create PDF document
-      const doc = new jsPDF({
+    // Create PDF document
+    const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'in',
         format: 'letter'
@@ -512,7 +511,7 @@ serve(async (req) => {
     const fileName = is_office_dispensing 
       ? `prescription_OFFICE_DISPENSING_${Date.now()}.pdf`
       : `prescription_${patient_name.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
-    const prescriptionData = new Uint8Array(pdfOutput);
+    const pdfBinaryData = new Uint8Array(pdfOutput);
 
       // Try uploading to S3 first, fallback to Supabase Storage
       let prescriptionUrl = '';
@@ -522,7 +521,7 @@ serve(async (req) => {
         const { data: uploadData, error: uploadError } = await supabase.functions.invoke('manage-documents', {
           body: {
             action: 'upload',
-            fileBuffer: Array.from(prescriptionData),
+            fileBuffer: Array.from(pdfBinaryData),
             fileName,
             contentType: 'application/pdf',
             metadata: {
@@ -553,14 +552,14 @@ serve(async (req) => {
           }
         }
       } catch (s3Error) {
-        edgeLogger.warn('S3 upload failed, falling back to Supabase Storage', s3Error);
+        edgeLogger.warn('S3 upload failed, falling back to Supabase Storage', { error: String(s3Error) });
       }
 
       // Fallback to Supabase Storage if S3 upload failed
       if (!prescriptionUrl) {
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('prescriptions')
-          .upload(fileName, prescriptionData, {
+          .upload(fileName, pdfBinaryData, {
             contentType: 'application/pdf',
             upsert: false
           });
@@ -592,11 +591,6 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
-
-    } catch (pdfError) {
-      edgeLogger.error('PDF generation error', pdfError);
-      throw new Error(`PDF generation failed: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}`);
-    }
 
   } catch (error) {
     edgeLogger.error('Prescription PDF generation error', error);

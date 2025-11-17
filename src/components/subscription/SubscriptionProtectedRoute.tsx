@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logger";
 
 interface SubscriptionProtectedRouteProps {
   children: ReactNode;
@@ -16,7 +17,7 @@ export const SubscriptionProtectedRoute = ({ children }: SubscriptionProtectedRo
   const location = useLocation();
 
   useEffect(() => {
-    console.log('[SubscriptionProtectedRoute] Check', { effectiveRole, isSubscribed, loading, path: location.pathname });
+    logger.info('[SubscriptionProtectedRoute] Check', { effectiveRole, isSubscribed, loading, path: location.pathname });
     
     // Only redirect PRACTICE OWNERS (doctors) who are not subscribed
     // Staff, providers, patients, pharmacy should never hit this route due to menu visibility

@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
+import { logger } from "@/lib/logger";
 
 interface CancelSubscriptionDialogProps {
   open: boolean;
@@ -75,7 +76,7 @@ export function CancelSubscriptionDialog({
       }, 1500);
       
     } catch (error: any) {
-      console.error("Error canceling subscription:", error);
+      logger.error("Error canceling subscription", error);
       toast({
         title: "Error",
         description: error.message || "Failed to cancel subscription. Please try again.",

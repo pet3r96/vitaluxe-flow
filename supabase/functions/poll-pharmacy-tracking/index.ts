@@ -29,7 +29,7 @@ serve(async (req) => {
     }
 
     if (!pharmacies || pharmacies.length === 0) {
-      console.log("No pharmacies with API/webhook configured");
+      edgeLogger.info("No pharmacies with API/webhook configured");
       return new Response(
         JSON.stringify({ success: true, message: "No pharmacies to poll" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -41,7 +41,7 @@ serve(async (req) => {
     // Poll each pharmacy
     for (const pharmacy of pharmacies) {
       try {
-        console.log(`Polling pharmacy: ${pharmacy.name} (${pharmacy.id})`);
+        edgeLogger.info('Polling pharmacy', { pharmacyName: pharmacy.name, pharmacyId: pharmacy.id });
 
         // Fetch active orders for this pharmacy
         const { data: orderLines } = await supabaseAdmin
@@ -52,7 +52,7 @@ serve(async (req) => {
           .limit(100) as { data: Array<{ id: string; order_id: string; orders: Array<{ order_number: string }> }> | null };
 
         if (!orderLines || orderLines.length === 0) {
-          console.log(`No active orders for pharmacy ${pharmacy.name}`);
+          edgeLogger.info('No active orders for pharmacy', { pharmacyName: pharmacy.name });
           results.push({
             pharmacy_id: pharmacy.id,
             pharmacy_name: pharmacy.name,
