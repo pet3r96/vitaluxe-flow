@@ -5,7 +5,7 @@ import { X, ExternalLink, AlertCircle, CheckCircle, Info, AlertTriangle } from "
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { isFollowUpMetadata } from "@/types/notificationMetadata";
+import { isFollowUpMetadata } from "@/types/domain/notifications";
 
 interface NotificationItemProps {
   notification: Notification;

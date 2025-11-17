@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { PaymentMethod } from "@/types/payment";
+import { PaymentMethod } from "@/types/domain/payments";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { getCSRFToken, validateCSRFToken } from "@/lib/csrf";

@@ -13,14 +13,6 @@ export interface SignUpRoleData {
   [key: string]: string | string[] | undefined;
 }
 
-export interface ImpersonationSessionData {
-  role: string;
-  userId: string | null;
-  userName: string | null;
-  targetEmail: string | null;
-  logId?: string;
-}
-
 export interface PasswordCheckResult {
   mustChangePassword: boolean;
   termsAccepted: boolean;

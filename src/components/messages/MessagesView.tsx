@@ -18,7 +18,7 @@ import { logger } from "@/lib/logger";
 import { useMessageAlerts } from "@/hooks/useMessageAlerts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import type { ThreadWithRelations } from "@/types/threadExtensions";
+import type { ThreadWithRelations } from "@/types/domain/messages";
 
 export const MessagesView = () => {
   const { user, effectiveUserId, effectiveRole, effectivePracticeId, isImpersonating } = useAuth();

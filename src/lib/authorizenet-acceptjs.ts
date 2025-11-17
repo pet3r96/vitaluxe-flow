@@ -3,24 +3,9 @@
  * When API keys are added, this will tokenize cards client-side
  */
 
-export interface CardData {
-  cardNumber: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cvv: string;
-}
+import type { CardData, AcceptJsResponse } from "@/types/domain/payments";
 
-export interface AcceptJsResponse {
-  success: boolean;
-  opaqueData?: {
-    dataDescriptor: string;
-    dataValue: string;
-  };
-  messages?: {
-    resultCode: string;
-    message: Array<{ code: string; text: string }>;
-  };
-}
+export type { CardData, AcceptJsResponse };
 
 /**
  * Placeholder tokenization (simulates Accept.js)

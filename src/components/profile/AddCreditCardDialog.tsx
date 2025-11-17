@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tokenizeCard, detectCardType } from "@/lib/authorizenet-acceptjs";
-import { BillingAddress } from "@/types/payment";
+import { BillingAddress } from "@/types/domain/payments";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 
 interface AddCreditCardDialogProps {
