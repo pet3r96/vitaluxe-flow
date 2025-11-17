@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 import {
   Table,
   TableBody,
@@ -73,7 +74,7 @@ export function RepPendingRepsTable() {
   useEffect(() => {
     if (!effectiveUserId) return;
 
-    console.debug('[RepPendingRepsTable] Setting up realtime subscription');
+    logger.info('[RepPendingRepsTable] Setting up realtime subscription');
     
     const channel = supabase
       .channel('pending-reps-changes')
@@ -86,12 +87,12 @@ export function RepPendingRepsTable() {
           filter: `created_by_user_id=eq.${effectiveUserId}`
         },
         (payload) => {
-          console.debug('[RepPendingRepsTable] Received update:', payload);
+          logger.info('[RepPendingRepsTable] Received update', { payload });
           
           const newRecord = getPayloadNew(payload);
           // If a rep was approved, refresh all related queries
           if (newRecord && newRecord.status === 'approved') {
-            console.debug('[RepPendingRepsTable] Rep approved, invalidating queries');
+            logger.info('[RepPendingRepsTable] Rep approved, invalidating queries');
             queryClient.invalidateQueries({ queryKey: ['rep-pending-reps', effectiveUserId] });
             queryClient.invalidateQueries({ queryKey: ['downlines-table', effectiveUserId] });
             queryClient.invalidateQueries({ queryKey: ['downline-count'] });
@@ -104,7 +105,7 @@ export function RepPendingRepsTable() {
       .subscribe();
 
     return () => {
-      console.debug('[RepPendingRepsTable] Cleaning up realtime subscription');
+      logger.info('[RepPendingRepsTable] Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
   }, [effectiveUserId, queryClient]);

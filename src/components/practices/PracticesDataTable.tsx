@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { logger } from "@/lib/logger";
 import {
   Table,
   TableBody,
@@ -90,7 +91,7 @@ export const PracticesDataTable = () => {
         if (roles) {
           for (const nonPracticeRole of NON_PRACTICE_ROLES) {
             if (roles.has(nonPracticeRole)) {
-              console.warn(`[Practices] Excluding ${doc.name} - has ${nonPracticeRole} role in addition to doctor`);
+              logger.warn('[Practices] Excluding user with mixed roles', { userId: doc.id, role: nonPracticeRole });
               return false;
             }
           }

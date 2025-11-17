@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 import {
   Table,
   TableBody,
@@ -79,7 +80,7 @@ export function RepPendingPracticesTable() {
   useEffect(() => {
     if (!effectiveUserId) return;
 
-    console.debug('[RepPendingPracticesTable] Setting up realtime subscription');
+    logger.info('[RepPendingPracticesTable] Setting up realtime subscription');
     
     const channel = supabase
       .channel('pending-practices-changes')
@@ -92,12 +93,12 @@ export function RepPendingPracticesTable() {
           filter: `created_by_user_id=eq.${effectiveUserId}`
         },
         (payload) => {
-          console.debug('[RepPendingPracticesTable] Received update:', payload);
+          logger.info('[RepPendingPracticesTable] Received update', { payload });
           
           const newRecord = getPayloadNew(payload);
           // If a practice was approved, refresh all related queries
           if (newRecord && newRecord.status === 'approved') {
-            console.debug('[RepPendingPracticesTable] Practice approved, invalidating queries');
+            logger.info('[RepPendingPracticesTable] Practice approved, invalidating queries');
             queryClient.invalidateQueries({ queryKey: ['rep-pending-practices', effectiveUserId] });
             queryClient.invalidateQueries({ queryKey: ['rep-practices', effectiveUserId] });
             queryClient.invalidateQueries({ queryKey: ['rep-practice-stats', effectiveUserId] });
@@ -111,7 +112,7 @@ export function RepPendingPracticesTable() {
       .subscribe();
 
     return () => {
-      console.debug('[RepPendingPracticesTable] Cleaning up realtime subscription');
+      logger.info('[RepPendingPracticesTable] Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
   }, [effectiveUserId, queryClient]);

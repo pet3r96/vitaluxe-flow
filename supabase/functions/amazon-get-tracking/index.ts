@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
 
     // If rate limit exceeded, return cached data
     if (callsToday >= maxCallsPerDay) {
-      console.log(`Rate limit exceeded for order_line ${orderLineId}: ${callsToday}/${maxCallsPerDay}`);
+      edgeLogger.info('Rate limit exceeded, returning cached data', { orderLineId, callsToday, maxCallsPerDay });
 
       // Get the most recent cached tracking data
       const { data: latestCall } = await supabase
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Making Amazon tracking API call (${callsToday + 1}/${maxCallsPerDay})`);
+    edgeLogger.info('Making Amazon tracking API call', { callNumber: callsToday + 1, maxCallsPerDay });
 
     // Make actual API call to Amazon Shipping API
     // Note: This is a placeholder - actual implementation will need Amazon credentials
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     });
 
     if (logError) {
-      console.error('Error logging API call:', logError);
+      edgeLogger.error('Error logging API call', logError);
     }
 
     return new Response(
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Error in amazon-get-tracking:', error);
+    edgeLogger.error('Error in amazon-get-tracking', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -169,7 +169,8 @@ Deno.serve(async (req) => {
 async function fetchAmazonTracking(trackingNumber: string) {
   // TODO: Implement actual Amazon Shipping API v2 call when credentials are available
   // For now, return mock data
-  console.log('Fetching tracking for:', trackingNumber);
+  const { edgeLogger } = await import('../_shared/logger.ts');
+  edgeLogger.info('Fetching tracking (mock)', { trackingNumber });
   
   return {
     tracking_number: trackingNumber,

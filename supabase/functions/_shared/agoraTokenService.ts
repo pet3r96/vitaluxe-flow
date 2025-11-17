@@ -77,14 +77,12 @@ export async function createAgoraTokens(
     );
 
     // Log token generation (prefix only for security)
-    console.log('[AgoraTokenService] Tokens generated:', {
-      channel,
-      uid: String(uid),
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.info('Agora tokens generated', { 
+      channel, 
+      uid: String(uid), 
       role,
-      rtcTokenPrefix: rtcToken.substring(0, 12) + '...',
-      rtmTokenPrefix: rtmToken.substring(0, 12) + '...',
-      expiresAt,
-      expiresIn: expiresAt - now
+      expiresIn: expiresAt - now 
     });
 
     return {
@@ -93,12 +91,8 @@ export async function createAgoraTokens(
       expiresAt
     };
   } catch (error) {
-    console.error('[AgoraTokenService] Token generation failed:', {
-      error: error instanceof Error ? error.message : String(error),
-      channel,
-      uid: String(uid),
-      role
-    });
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.error('Agora token generation failed', error, { channel, uid: String(uid), role });
     throw new Error(`Failed to generate Agora tokens: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

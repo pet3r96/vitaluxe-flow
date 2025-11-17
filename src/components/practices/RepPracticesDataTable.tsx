@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { logger } from "@/lib/logger";
 import {
   Table,
   TableBody,
@@ -266,7 +267,7 @@ export const RepPracticesDataTable = () => {
 
     if (expected > currentLinks && !autoHealAttempted.current && !isRepairing) {
       autoHealAttempted.current = true;
-      console.log(`Auto-healing: Expected ${expected} practices but found ${currentLinks} links. Running backfill...`);
+      logger.info('[RepPractices] Auto-healing practice links', { expected, currentLinks });
       
       // Show user-friendly message instead of error
       toast.info(`Syncing your practices (${expected} expected, ${currentLinks} found)...`, {
@@ -278,10 +279,10 @@ export const RepPracticesDataTable = () => {
       supabase.functions.invoke('backfill-rep-links')
         .then(({ data, error }) => {
           if (error) {
-            console.error('Auto-heal backfill failed:', error);
+            logger.error('[RepPractices] Auto-heal backfill failed', error);
             toast.error('Failed to sync practices. Please try refreshing.');
           } else {
-            console.log('Auto-heal backfill succeeded:', data);
+            logger.info('[RepPractices] Auto-heal backfill succeeded', { data });
             toast.success('Practices synced successfully');
             queryClient.invalidateQueries({ queryKey: ['rep-practices'] });
             queryClient.invalidateQueries({ queryKey: ['rep-practice-stats'] });
@@ -316,7 +317,7 @@ export const RepPracticesDataTable = () => {
       queryClient.invalidateQueries({ queryKey: ['downlines-table', effectiveUserId] });
       queryClient.invalidateQueries({ queryKey: ['downline-count'] });
     } catch (error: any) {
-      console.error('Error repairing practice links:', error);
+      logger.error('[RepPractices] Error repairing practice links', error);
       toast.error(error.message || 'Failed to repair practice links');
     } finally {
       setIsRepairing(false);
