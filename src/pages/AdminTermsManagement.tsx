@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PortalTerms, CheckoutAttest } from '@/integrations/supabase/table-helpers';
-import { parseCheckoutAttestation } from "@/types/jsonb";
+import { CheckoutAttest } from '@/integrations/supabase/table-helpers';
 import type { UserTermsAcceptance } from "@/types/subscriptions";
-import type { PatientPortalTerms, PatientPortalTermsInsert, PatientPortalTermsUpdate, CheckoutAttestation, CheckoutAttestationUpdate } from "@/types/manual-schema";
+import type { CheckoutAttestation } from "@/types/manual-schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -101,25 +100,17 @@ export default function AdminTermsManagement() {
     let data: TermsData | null = null;
     let error: Error | null = null;
 
-      if (activeRole === 'patient') {
-        const res = await PortalTerms()
-          .select('*')
-          .order('version', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-      data = res.data;
-      error = res.error;
-    } else {
-      const res = await supabase
-        .from('terms_and_conditions')
-        .select('*')
-        .eq('role', activeRole)
-        .order('version', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      data = res.data;
-      error = res.error;
-    }
+    // All roles (including patient) now use terms_and_conditions table
+    const res = await supabase
+      .from('terms_and_conditions')
+      .select('*')
+      .eq('role', activeRole)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    data = res.data;
+    error = res.error;
 
     if (error) {
       import('@/lib/logger').then(({ logger }) => {
@@ -233,65 +224,36 @@ export default function AdminTermsManagement() {
     try {
       const currentUser = (await supabase.auth.getUser()).data.user?.id;
 
-      if (activeRole === 'patient') {
-        if (terms?.id) {
-          // Update existing patient portal terms
-          const { error } = await PortalTerms()
-            .update({
-              title,
-              content,
-              version: (terms?.version || 0) + 1,
-              updated_at: new Date().toISOString(),
-              updated_by: currentUser
-            })
-            .eq('id', terms.id);
+      // All roles use terms_and_conditions table
+      if (terms?.id) {
+        // Update existing terms
+        const { error } = await supabase
+          .from('terms_and_conditions')
+          .update({
+            title,
+            content,
+            version: (terms?.version || 0) + 1,
+            updated_at: new Date().toISOString(),
+            updated_by: currentUser
+          })
+          .eq('id', terms.id);
 
-          if (error) throw error;
-        } else {
-          // Insert new patient portal terms
-          const { error } = await PortalTerms()
-            .insert({
-              title,
-              content,
-              version: 1,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              updated_by: currentUser
-            });
-
-          if (error) throw error;
-        }
+        if (error) throw error;
       } else {
-        if (terms?.id) {
-          // Update existing terms
-          const { error } = await supabase
-            .from('terms_and_conditions')
-            .update({
-              title,
-              content,
-              version: (terms?.version || 0) + 1,
-              updated_at: new Date().toISOString(),
-              updated_by: currentUser
-            })
-            .eq('id', terms.id);
+        // Insert new terms
+        const { error } = await supabase
+          .from('terms_and_conditions')
+          .insert({
+            role: activeRole,
+            title,
+            content,
+            version: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            updated_by: currentUser
+          });
 
-          if (error) throw error;
-        } else {
-          // Insert new terms
-          const { error } = await supabase
-            .from('terms_and_conditions')
-            .insert({
-              role: activeRole as any,
-              title,
-              content,
-              version: 1,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              updated_by: currentUser
-            });
-
-          if (error) throw error;
-        }
+        if (error) throw error;
       }
 
       toast.success("Terms saved successfully");
@@ -309,32 +271,35 @@ export default function AdminTermsManagement() {
   const loadAttestation = async () => {
     setLoadingAttestation(true);
     
-    const { data, error } = await CheckoutAttest()
-      .select('*')
-      .eq('is_active', true)
-      .maybeSingle();
+    try {
+      const { data, error } = await CheckoutAttest()
+        .select('*')
+        .eq('is_active', true)
+        .maybeSingle();
 
-    if (error) {
+      if (error) {
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('Error loading attestation', error);
+        });
+        toast.error("Failed to load checkout attestation");
+        return;
+      }
+
+      if (data) {
+        setAttestation(data);
+        setAttestationTitle(data.title || "");
+        setAttestationSubtitle(data.subtitle || "");
+        setAttestationContent(data.content || "");
+        setAttestationCheckboxText(data.checkbox_text || "");
+      }
+    } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
-        logger.error('Error loading attestation', error);
+        logger.error('Unexpected error loading attestation', error);
       });
       toast.error("Failed to load checkout attestation");
+    } finally {
       setLoadingAttestation(false);
-      return;
     }
-
-    if (data) {
-      const attestationData = parseCheckoutAttestation(data);
-      if (attestationData) {
-        setAttestation(data);
-        setAttestationTitle(attestationData.title);
-        setAttestationSubtitle(attestationData.subtitle || "");
-        setAttestationContent(attestationData.content);
-        setAttestationCheckboxText(attestationData.checkbox_text);
-      }
-    }
-    
-    setLoadingAttestation(false);
   };
 
   const handleSaveAttestation = async () => {
