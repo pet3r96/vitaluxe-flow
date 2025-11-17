@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PortalTerms, CheckoutAttest } from '@/integrations/supabase/table-helpers';
 import { parseCheckoutAttestation } from "@/types/jsonb";
 import type { UserTermsAcceptance } from "@/types/subscriptions";
 import type { PatientPortalTerms, PatientPortalTermsInsert, PatientPortalTermsUpdate, CheckoutAttestation, CheckoutAttestationUpdate } from "@/types/manual-schema";

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { CheckoutAttest } from '@/integrations/supabase/table-helpers';
 import { parseCheckoutAttestation, type CheckoutAttestationData } from "@/types/jsonb";
 import { useCart } from "@/hooks/useCart";
 import { resolveCartOwnerUserId } from "@/lib/cartOwnerResolver";
