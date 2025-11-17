@@ -59,7 +59,9 @@ export const UsageBillingDashboard = () => {
         if (error) throw error;
         setStats(data);
       } catch (error: any) {
-        console.error('Error fetching usage stats:', error);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error('Error fetching usage stats', error);
+        });
         toast({
           title: "Error",
           description: "Failed to load usage statistics",

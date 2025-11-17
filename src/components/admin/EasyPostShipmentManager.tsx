@@ -98,7 +98,9 @@ export const EasyPostShipmentManager = ({ showHeader = true }: { showHeader?: bo
       setTrackingResult(data);
       toast.success("Tracking information retrieved successfully!");
     } catch (error: any) {
-      console.error('Tracking test error:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Tracking test error', error);
+      });
       toast.error(`Tracking test failed: ${error.message}`);
       setTrackingResult({ error: error.message });
     } finally {

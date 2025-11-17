@@ -36,13 +36,15 @@ Deno.serve(async (req) => {
       throw new Error('Authentication failed');
     }
 
-    console.log('Authenticated user:', user.id);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('Authenticated user', { userId: user.id });
 
     // Validate CSRF token
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -61,16 +63,15 @@ Deno.serve(async (req) => {
       throw new Error('Insufficient permissions');
     }
 
-    const { orderLineId, trackingNumber } = await req.json();
-
-    console.log('Amazon tracking API called with:', { orderLineId, trackingNumber });
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('Amazon tracking API called');
 
     if (!orderLineId || !trackingNumber) {
-      console.error('Missing required parameters:', { orderLineId, trackingNumber });
+      edgeLogger.error('Missing required parameters', { hasOrderLineId: !!orderLineId, hasTrackingNumber: !!trackingNumber });
       throw new Error('orderLineId and trackingNumber are required');
     }
 
-    console.log('Checking rate limit for order_line:', orderLineId);
+    edgeLogger.info('Checking rate limit', { orderLineId });
 
     // Get today's date in UTC
     const today = new Date();
@@ -95,7 +96,7 @@ Deno.serve(async (req) => {
       .lt('called_at', endOfToday);
 
     if (callsError) {
-      console.error('Error checking rate limit:', callsError);
+      edgeLogger.error('Error checking rate limit', callsError);
       throw callsError;
     }
 

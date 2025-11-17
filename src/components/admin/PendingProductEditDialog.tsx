@@ -227,7 +227,9 @@ export const PendingProductEditDialog = ({
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Error approving request:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error approving request", error);
+      });
       
       // Handle session errors specifically
       if (error?.message?.includes('session') || error?.message?.includes('Unauthorized') || error?.message?.includes('JWT')) {

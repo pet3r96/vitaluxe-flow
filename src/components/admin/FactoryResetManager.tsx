@@ -129,7 +129,9 @@ export const FactoryResetManager = () => {
         description: `Ready to delete ${data.total_records_to_delete.toLocaleString()} records`,
       });
     } catch (error: any) {
-      console.error('Dry run error:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Dry run error', error);
+      });
       toast({
         title: "Error",
         description: error.message || 'Failed to preview deletion',
@@ -166,7 +168,9 @@ export const FactoryResetManager = () => {
         description: `Factory reset complete! Deleted ${data.total_deleted} records in ${data.execution_time_seconds}s`,
       });
     } catch (error: any) {
-      console.error("Execution error:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Execution error", error);
+      });
       toast({
         title: "Error",
         description: error.message || "Failed to execute factory reset",
@@ -220,7 +224,9 @@ export const FactoryResetManager = () => {
         description: `Deleted ${resultData.total_deleted} order records in ${resultData.execution_time_seconds}s`,
       });
     } catch (error: any) {
-      console.error("Delete orders error:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Delete orders error", error);
+      });
       toast({
         title: "Error",
         description: error.message || "Failed to delete orders",
@@ -264,7 +270,9 @@ export const FactoryResetManager = () => {
         description: `Cleared ${resultData.total_files_deleted} files from storage in ${resultData.execution_time_seconds}s`,
       });
     } catch (error: any) {
-      console.error("Clear storage error:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Clear storage error", error);
+      });
       toast({
         title: "Error",
         description: error.message || "Failed to clear storage files",
@@ -317,7 +325,9 @@ export const FactoryResetManager = () => {
         });
       }
     } catch (error: any) {
-      console.error('Error deleting users:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error deleting users', error);
+      });
       toast({
         title: "Error",
         description: error.message || "Failed to delete users",

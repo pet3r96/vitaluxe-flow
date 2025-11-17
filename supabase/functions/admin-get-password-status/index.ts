@@ -8,6 +8,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    
     const authHeader = req.headers.get('Authorization');
 
     if (!authHeader) {
@@ -17,7 +19,7 @@ Deno.serve(async (req) => {
     const supabaseClient = createAuthClient(authHeader);
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
-      console.error('Auth error:', userError);
+      edgeLogger.error('Auth error', userError);
       return errorResponse('Unauthorized', 401);
     }
 
@@ -30,7 +32,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (roleError || !roles) {
-      console.error('Admin check failed:', roleError);
+      edgeLogger.error('Admin check failed', roleError);
       return errorResponse('Forbidden: admin role required', 403);
     }
 
@@ -39,7 +41,7 @@ Deno.serve(async (req) => {
       return errorResponse('target_user_id is required', 400);
     }
 
-    console.log(`Admin ${user.id} requesting password status for user ${target_user_id}`);
+    edgeLogger.info('Admin requesting password status', { targetUserId: target_user_id });
 
     // Use service role to read both user_password_status and profiles (bypasses RLS)
     const supabaseService = createAdminClient();
@@ -58,7 +60,8 @@ Deno.serve(async (req) => {
     ]);
 
     if (statusResult.error) {
-      console.error('Error reading user_password_status:', statusResult.error);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Error reading user_password_status', statusResult.error);
       return new Response(
         JSON.stringify({ error: 'Failed to read password status' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -66,7 +69,8 @@ Deno.serve(async (req) => {
     }
 
     if (profileResult.error) {
-      console.error('Error reading profiles temp_password:', profileResult.error);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Error reading profiles temp_password', profileResult.error);
       return new Response(
         JSON.stringify({ error: 'Failed to read profile status' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -87,14 +91,16 @@ Deno.serve(async (req) => {
       terms_accepted: termsAccept,
     };
 
-    console.log(`Returning status for ${target_user_id}:`, result);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('Returning password status', { targetUserId: target_user_id });
 
     return new Response(
       JSON.stringify(result),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Unexpected error:', error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('Unexpected error', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),

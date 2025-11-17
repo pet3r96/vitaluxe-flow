@@ -253,7 +253,9 @@ export function InvoiceTemplateDialog({
       queryClient.invalidateQueries({ queryKey: ["practice-development-invoices"] });
       onOpenChange(false);
     } catch (error) {
-      console.error("Error saving draft:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error saving draft", error);
+      });
       toast.error("Failed to save invoice draft");
     }
   };
@@ -339,7 +341,9 @@ export function InvoiceTemplateDialog({
       queryClient.invalidateQueries({ queryKey: ["practice-development-invoices"] });
       onOpenChange(false);
     } catch (error) {
-      console.error("Error generating invoice:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error generating invoice", error);
+      });
       toast.error("Failed to generate invoice");
     } finally {
       setIsGenerating(false);

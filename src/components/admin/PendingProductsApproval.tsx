@@ -126,7 +126,9 @@ export const PendingProductsApproval = () => {
       setSelectedRequest(null);
       refetch();
     } catch (error: any) {
-      console.error("Error rejecting request:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error rejecting request", error);
+      });
       toast({
         title: "Error",
         description: error.message || "Failed to reject request",
