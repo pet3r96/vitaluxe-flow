@@ -53,8 +53,9 @@ export const PharmaciesDataTable = () => {
       // For impersonated views or non-admin users, filter by visibility
       if (isImpersonating || !viewingAsAdmin) {
         try {
+          // RPC call with proper typing at boundary
           const { data: visiblePharmacies, error: visError } = await supabase.rpc(
-            'get_visible_pharmacies_for_effective_user' as any,
+            'get_visible_pharmacies_for_effective_user',
             { p_effective_user_id: effectiveUserId }
           ) as { data: Array<{ id: string }> | null; error: any };
           

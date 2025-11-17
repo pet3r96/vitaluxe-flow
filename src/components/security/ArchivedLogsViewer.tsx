@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { AuditLogsArchive } from "@/integrations/supabase/table-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -21,8 +21,7 @@ export const ArchivedLogsViewer = () => {
   const { data: archivedLogs, isLoading } = useQuery({
     queryKey: ["archived-logs", searchTerm],
     queryFn: async () => {
-      let query = (supabase as any)
-        .from("audit_logs_archive" as any)
+      let query = AuditLogsArchive()
         .select("*")
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -33,10 +32,10 @@ export const ArchivedLogsViewer = () => {
       
       const { data, error } = await query;
       if (error) throw error;
-      return (data as any) || [];
+      return data || [];
     },
     enabled: isSearching,
-  }) as any;
+  });
 
   const {
     currentPage,

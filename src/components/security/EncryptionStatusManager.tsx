@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { EncryptionKeys } from "@/integrations/supabase/table-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -20,9 +21,7 @@ export const EncryptionStatusManager = () => {
   const { data: encryptionKeys, isLoading: keysLoading } = useQuery<EncryptionKey[]>({
     queryKey: ["encryption-keys"],
     queryFn: async () => {
-      // Type cast at boundary - encryption_keys table not in generated schema
-      const { data, error } = await (supabase as any)
-        .from("encryption_keys")
+      const { data, error } = await EncryptionKeys()
         .select("*")
         .eq("active", true)
         .order("created_at", { ascending: false });

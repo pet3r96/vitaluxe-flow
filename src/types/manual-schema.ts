@@ -274,6 +274,26 @@ export interface AlertRule {
   updated_at: string;
 }
 
+// Terms and conditions table
+export interface TermsAndConditions {
+  id: string;
+  role: string;
+  content: string;
+  version: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Encryption keys table
+export interface EncryptionKey {
+  id: string;
+  key_name: string;
+  active: boolean;
+  created_at: string;
+  rotated_at?: string | null;
+}
+
 // ==================== EXISTING TYPES ====================
 
 // Rep product price overrides table

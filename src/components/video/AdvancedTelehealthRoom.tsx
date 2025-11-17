@@ -83,7 +83,7 @@ export default function TelehealthRoom({ appId, channel, token, uid, isProvider,
           filter: `session_id=eq.${sessionId}`,
         },
         (payload) => {
-          const { event_type, user_uid } = payload.new as any;
+          const { event_type, user_uid } = payload.new as { event_type: string; user_uid: string };
 
           if (isProvider && event_type === "patient_waiting") {
             setWaitingPatients((prev) => (prev.find((p) => p.uid === user_uid) ? prev : [...prev, { uid: user_uid }]));

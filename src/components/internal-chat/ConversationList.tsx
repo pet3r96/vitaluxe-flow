@@ -52,7 +52,7 @@ export function ConversationList({
       </div>
 
       {/* Tabs */}
-      <Tabs value={filterTab} onValueChange={(v) => onFilterTabChange(v as any)} className="px-4 pt-4">
+      <Tabs value={filterTab} onValueChange={onFilterTabChange} className="px-4 pt-4">
         <TabsList className="w-full">
           <TabsTrigger value="active" className="flex-1">
             Active

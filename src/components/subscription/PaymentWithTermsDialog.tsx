@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
+import { TermsAndConds } from "@/integrations/supabase/table-helpers";
 import { Loader2 } from "lucide-react";
 
 interface PaymentWithTermsDialogProps {
@@ -34,8 +34,7 @@ export const PaymentWithTermsDialog = ({
     const fetchTerms = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('terms_and_conditions' as any)
+        const { data, error } = await TermsAndConds()
           .select('content, version')
           .eq('role', 'subscription')
           .eq('is_active', true)
@@ -45,10 +44,9 @@ export const PaymentWithTermsDialog = ({
 
         if (error) throw error;
         
-        if (data && typeof data === 'object') {
-          const terms = data as any;
-          setTermsContent(terms.content || '');
-          setTermsVersion(terms.version || 'v1.0');
+        if (data) {
+          setTermsContent(data.content || '');
+          setTermsVersion(data.version || 'v1.0');
         }
       } catch (error) {
         console.error('Error fetching terms:', error);

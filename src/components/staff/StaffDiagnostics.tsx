@@ -12,7 +12,7 @@ export const StaffDiagnostics = () => {
     queryFn: async () => {
       const checks = {
         hasPracticeId: !!effectivePracticeId,
-        practiceStaff: null as any,
+        practiceStaff: null,
         canOrder: false,
         providerCount: 0,
         supportTicketCount: 0,

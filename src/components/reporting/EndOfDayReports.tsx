@@ -69,7 +69,7 @@ export function EndOfDayReports({ dateRange }: EndOfDayReportsProps) {
         const { data: patientsRes } = await supabase
           .from("patient_accounts")
           .select("id, first_name, last_name")
-          .in("id", patientIds as any);
+          .in("id", patientIds);
         patientMap = Object.fromEntries((patientsRes || []).map((p: any) => [p.id, p]));
       }
 

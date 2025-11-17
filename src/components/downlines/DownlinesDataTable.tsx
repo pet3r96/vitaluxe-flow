@@ -90,7 +90,7 @@ export function DownlinesDataTable() {
       const downlineRepIds = downlineReps.map(rep => rep.id);
 
       // Get practice counts for each downline using profiles table
-      // Using (as any) on supabase client due to TypeScript limitation with .in() array queries
+      // Complex .in() query - type inference limitation requires boundary cast
       const profilesResult = await (supabase as any)
         .from("profiles")
         .select("id, linked_topline_id")

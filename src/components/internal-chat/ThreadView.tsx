@@ -17,7 +17,8 @@ export function ThreadView({ selectedMessage, replyText, setReplyText, sendReply
   const threadId = selectedMessage.thread_id || selectedMessage.id;
 
   // Fetch all messages in this thread
-  const { data: threadMessages, isLoading } = useQuery<any[]>({
+  // Complex nested query - type inference limitation requires boundary cast
+  const { data: threadMessages, isLoading } = useQuery({
     queryKey: ["thread-messages", threadId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)

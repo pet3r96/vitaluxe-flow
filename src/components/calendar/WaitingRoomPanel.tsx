@@ -200,7 +200,7 @@ export function WaitingRoomPanel({
               full_name: provider.profiles?.prescriber_name || provider.profiles?.full_name || 'Unassigned'
             }
           } : null
-        } as any
+        } // Merged event structure from appointments & sessions
       });
     }
   });

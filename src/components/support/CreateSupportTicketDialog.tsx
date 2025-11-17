@@ -76,14 +76,14 @@ export function CreateSupportTicketDialog() {
         sender_id: effectiveUserId!,
         sender_type: "admin",
         subject: data.subject,
-        message_body: data.message,
+        body: data.message,
         thread_id: threadId,
         resolved: false,
-      } as const;
+      };
       
       console.log('[CreateSupportTicket] Attempting insert:', insertData);
 
-      const { data: insertResult, error } = await (supabase as any)
+      const { data: insertResult, error } = await supabase
         .from("patient_messages")
         .insert(insertData)
         .select()
