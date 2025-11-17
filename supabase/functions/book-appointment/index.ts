@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
                 eventType: 'appointment_confirmation'
               }
             });
-            edgeLogger.info('Email sent to patient', { email: patientWithUser.email });
+            edgeLogger.info('Email sent to patient', { emailDomain: patientWithUser.email?.split('@')[1] });
           } catch (emailError) {
             edgeLogger.error('Error sending email', emailError);
           }
@@ -290,7 +290,7 @@ Deno.serve(async (req) => {
               message: smsMessage,
               metadata: { appointmentId: data.id }
             });
-            edgeLogger.info('[book-appointment] SMS sent', { phone: normalizedPhone });
+            edgeLogger.info('[book-appointment] SMS sent', { phonePrefix: normalizedPhone.substring(0, 5) });
           } catch (smsError) {
             edgeLogger.error('[book-appointment] Error sending SMS', smsError);
           }

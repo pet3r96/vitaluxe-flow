@@ -40,14 +40,20 @@ const handler = async (req: Request): Promise<Response> => {
     const { userId, email, name, role, practiceId }: WelcomeEmailRequest = await req.json();
 
     edgeLogger.info('[send-welcome-email] Request params', { 
-      userId, 
-      emailDomain: email.split('@')[1], 
+      hasUserId: !!userId, 
+      emailDomain: email?.split('@')[1], 
+      hasName: !!name,
       role, 
-      practiceId 
+      hasPracticeId: !!practiceId 
     });
 
     if (!userId || !email || !name || !role) {
-      edgeLogger.error('[send-welcome-email] Missing required fields', { userId, email, name, role });
+      edgeLogger.error('[send-welcome-email] Missing required fields', { 
+        hasUserId: !!userId, 
+        hasEmail: !!email, 
+        hasName: !!name, 
+        hasRole: !!role 
+      });
       return new Response(
         JSON.stringify({ error: "Missing required fields: userId, email, name, role" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

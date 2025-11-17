@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error stopping video recording:', error);
+    edgeLogger.error('Error stopping video recording', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

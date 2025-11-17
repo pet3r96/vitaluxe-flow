@@ -45,7 +45,7 @@ serve(async (req) => {
       });
     }
 
-    edgeLogger.info('Status change request', { orderId, newStatus });
+    edgeLogger.info('Status change request', { hasOrderId: !!orderId, newStatus });
 
     // Get user's role
     const { data: roleData } = await supabaseClient
@@ -124,7 +124,7 @@ serve(async (req) => {
       .eq('id', orderId);
 
     if (updateError) {
-      console.error('Failed to update order status:', updateError);
+      edgeLogger.error('Failed to update order status', updateError);
       return new Response(JSON.stringify({ error: 'Failed to update status' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

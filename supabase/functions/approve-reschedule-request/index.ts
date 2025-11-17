@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
                 message: `Appointment rescheduled to ${appointmentDateFormatted} at ${appointmentTimeFormatted}.`,
                 metadata: { appointmentId: updated.id }
               });
-              edgeLogger.info('[approve-reschedule] SMS sent', { to: normalizedPhone });
+              edgeLogger.info('[approve-reschedule] SMS sent', { phonePrefix: normalizedPhone.substring(0, 5) });
             } catch (smsError) {
               edgeLogger.error('[approve-reschedule] Error sending SMS', smsError);
             }
