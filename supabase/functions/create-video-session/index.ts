@@ -29,7 +29,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('[create-video-session] Request received');
+    // Import logger once
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('Create video session request received');
 
     // Get Supabase client
     const supabase = createAuthClient(req.headers.get('Authorization'));
@@ -37,7 +39,7 @@ Deno.serve(async (req) => {
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('[create-video-session] Auth error:', authError);
+      edgeLogger.error('Auth error', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -48,7 +50,7 @@ Deno.serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
-      console.error('[create-video-session] CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -66,23 +68,14 @@ Deno.serve(async (req) => {
 
     if (impersonationSession) {
       effectiveUserId = impersonationSession.impersonated_user_id;
-      console.log('[create-video-session] Impersonation detected:', {
-        adminUserId: user.id,
-        effectiveUserId
-      });
+      edgeLogger.info('Impersonation detected', { adminUserId: user.id, effectiveUserId });
     }
 
     // Parse request body
     const body: CreateSessionRequest = await req.json();
     const { practiceId, providerId, patientId, sessionType, scheduledStart, scheduledEnd } = body;
 
-    console.log('[create-video-session] Creating session:', {
-      practiceId,
-      providerId,
-      patientId,
-      sessionType,
-      scheduledStart,
-    });
+    edgeLogger.info('Creating video session', { practiceId, sessionType });
 
     // Verify user has access to this practice
     // Check if effective user is the practice owner (doctor role)
@@ -106,25 +99,14 @@ Deno.serve(async (req) => {
 
     // Allow if user is practice owner, provider, or staff
     if (!isPracticeOwner && !provider && !staff) {
-      console.error('[create-video-session] Authorization failed:', {
-        effectiveUserId,
-        practiceId,
-        isPracticeOwner,
-        hasProvider: !!provider,
-        hasStaff: !!staff
-      });
+      edgeLogger.error('Authorization failed', undefined, { effectiveUserId, practiceId });
       return new Response(
         JSON.stringify({ error: 'Not authorized for this practice' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[create-video-session] Authorization successful:', {
-      effectiveUserId,
-      isPracticeOwner,
-      isProvider: !!provider,
-      isStaff: !!staff
-    });
+    edgeLogger.info('Authorization successful', { effectiveUserId, isPracticeOwner });
 
     // Generate unique channel name
     const channelName = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -153,14 +135,14 @@ Deno.serve(async (req) => {
       .single();
 
     if (sessionError) {
-      console.error('[create-video-session] Session creation failed:', sessionError);
+      edgeLogger.error('Session creation failed', sessionError);
       return new Response(
         JSON.stringify({ error: 'Failed to create session', details: sessionError }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[create-video-session] Session created:', session.id);
+    edgeLogger.info('Video session created', { sessionId: session.id });
 
     // Generate Agora tokens
     const appId = Deno.env.get('VITE_AGORA_APP_ID')!;
@@ -183,7 +165,7 @@ Deno.serve(async (req) => {
     const rtmUid = `${uid}`;
     const rtmToken = rtcToken; // Using same token for RTM
 
-    console.log('[create-video-session] Tokens generated successfully');
+    edgeLogger.info('Tokens generated successfully');
 
     return new Response(
       JSON.stringify({
@@ -205,7 +187,8 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[create-video-session] Unexpected error:', error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('Unexpected error in create-video-session', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: errorMessage }),

@@ -50,7 +50,10 @@ const MAX_FILE_SIZES: Record<string, number> = {
 export function verifyMagicBytes(buffer: Uint8Array, declaredMimeType: string): boolean {
   const signatures = MAGIC_BYTES[declaredMimeType];
   if (!signatures) {
-    console.warn(`No magic byte signature for MIME type: ${declaredMimeType}`);
+    // Dynamically import logger
+    import('./logger.ts').then(({ edgeLogger }) => {
+      edgeLogger.warn('No magic byte signature for MIME type', { mimeType: declaredMimeType });
+    });
     return false;
   }
 

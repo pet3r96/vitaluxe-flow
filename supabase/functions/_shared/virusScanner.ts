@@ -25,17 +25,19 @@ export async function scanFileForViruses(
     // Check if ClamAV endpoint is configured
     const clamavEndpoint = Deno.env.get('CLAMAV_ENDPOINT');
     
+    const { edgeLogger } = await import('./logger.ts');
     if (!clamavEndpoint) {
-      console.warn('⚠️ ClamAV not configured, using basic pattern detection');
+      edgeLogger.warn('ClamAV not configured, using basic pattern detection');
       return performBasicScan(fileBuffer, filename);
     }
 
     // For now, use basic scan (ClamAV integration can be added later)
     // Production: Send fileBuffer to ClamAV service
-    console.log('📡 Using basic virus detection for', filename);
+    edgeLogger.info('Using basic virus detection', { filename });
     return performBasicScan(fileBuffer, filename);
   } catch (error) {
-    console.error('Virus scan error:', error);
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.error('Virus scan error', error);
     return performBasicScan(fileBuffer, filename);
   }
 }
@@ -125,6 +127,7 @@ export async function quarantineFile(
   originalBucket: string,
   threatName: string
 ): Promise<void> {
+  const { edgeLogger } = await import('./logger.ts');
   try {
     // Log quarantine event
     await supabase.from('audit_logs').insert({
@@ -138,9 +141,9 @@ export async function quarantineFile(
       },
     });
     
-    console.warn(`⚠️ File quarantined: ${originalPath} (${threatName})`);
+    edgeLogger.warn('File quarantined', { originalPath, threatName });
   } catch (error) {
-    console.error('Failed to log quarantine event:', error);
+    edgeLogger.error('Failed to log quarantine event', error);
     throw error;
   }
 }

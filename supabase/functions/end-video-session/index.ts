@@ -7,10 +7,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const { edgeLogger } = await import('../_shared/logger.ts');
     const authHeader = req.headers.get('Authorization');
     
     if (!authHeader) {
-      console.error('❌ [end-video-session] No auth header');
+      edgeLogger.error('No auth header');
       return new Response(JSON.stringify({ error: 'Unauthorized: missing auth header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -21,14 +22,14 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     
     if (authError || !user) {
-      console.error('❌ [end-video-session] Auth failed:', authError);
+      edgeLogger.error('Auth failed', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    console.log('✅ [end-video-session] Authenticated user:', user.id);
+    edgeLogger.info('Authenticated user', { userId: user.id });
 
     const supabase = createAdminClient();
 
@@ -44,17 +45,12 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (impersonationError) {
-      console.warn('⚠️ [end-video-session] Impersonation check failed:', impersonationError.message);
+      edgeLogger.warn('Impersonation check failed', { error: impersonationError.message });
     }
 
     const effectiveUserId = impersonationData?.impersonated_user_id || user.id;
 
-    console.log('👤 [end-video-session] User check:', {
-      authUserId: user.id,
-      effectiveUserId,
-      isImpersonating: !!impersonationData,
-      impersonatedUserId: impersonationData?.impersonated_user_id,
-    });
+    edgeLogger.info('User check', { authUserId: user.id, effectiveUserId, isImpersonating: !!impersonationData });
 
     // Get video session details
     const { data: session, error: sessionError } = await supabase
@@ -64,7 +60,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (sessionError || !session) {
-      console.error('❌ [end-video-session] Session not found:', sessionError);
+      edgeLogger.error('Session not found', sessionError);
       return new Response(
         JSON.stringify({ error: 'Video session not found' }),
         {
@@ -102,14 +98,7 @@ Deno.serve(async (req) => {
 
     isAuthorized = isProvider || isPracticeOwner || isStaff;
 
-    console.log('🔐 [end-video-session] Authorization:', {
-      isProvider,
-      isPracticeOwner,
-      isStaff,
-      isAuthorized,
-      sessionPracticeId: session.practice_id,
-      effectiveUserId,
-    });
+    edgeLogger.info('Authorization check', { isAuthorized, effectiveUserId });
 
     if (!isAuthorized) {
       return new Response(
@@ -129,7 +118,7 @@ Deno.serve(async (req) => {
           headers: { Authorization: authHeader }
         });
       } catch (error) {
-        console.error('⚠️ [end-video-session] Failed to stop recording:', error);
+        edgeLogger.error('Failed to stop recording', error);
         // Continue ending session even if recording stop fails
       }
     }
@@ -205,7 +194,7 @@ Deno.serve(async (req) => {
         }
       });
     } catch (error) {
-      console.error('Failed to send video completion notification:', error);
+      edgeLogger.error('Failed to send video completion notification', error);
     }
 
     return new Response(JSON.stringify({
@@ -218,7 +207,8 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error ending video session:', error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('Error ending video session', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

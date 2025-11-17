@@ -31,7 +31,10 @@ serve(async (req) => {
   }
 
   const correlationId = crypto.randomUUID();
-  console.log(`[unified-email-sender] ${correlationId} - Request received`);
+  
+  // Import logger at top of function
+  const { edgeLogger } = await import('../_shared/logger.ts');
+  edgeLogger.info('Request received', { correlationId });
 
   try {
     const supabaseAdmin = createClient(
@@ -43,7 +46,7 @@ serve(async (req) => {
     const payload: EmailPayload = await req.json();
     payload.correlationId = payload.correlationId || correlationId;
 
-    console.log(`[unified-email-sender] ${payload.correlationId} - Type: ${payload.type}, To: ${payload.to}`);
+    edgeLogger.info('Processing email', { correlationId: payload.correlationId, type: payload.type });
 
     // Check idempotency - prevent duplicate sends
     if (payload.eventType && payload.entityId) {
@@ -56,7 +59,7 @@ serve(async (req) => {
         .maybeSingle();
 
       if (existingSend) {
-        console.log(`[unified-email-sender] ${payload.correlationId} - Duplicate prevented for ${payload.eventType}/${payload.entityId}`);
+        edgeLogger.info('Duplicate email prevented', { correlationId: payload.correlationId, eventType: payload.eventType, entityId: payload.entityId });
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -71,7 +74,7 @@ serve(async (req) => {
 
     // Validate placeholder email
     if (isPlaceholderEmail(payload.to)) {
-      console.error(`[unified-email-sender] ${payload.correlationId} - Blocked placeholder email: ${payload.to}`);
+      edgeLogger.error('Blocked placeholder email', undefined, { correlationId: payload.correlationId });
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -85,7 +88,7 @@ serve(async (req) => {
     // For notifications, check user preferences
     if (payload.type === 'notification') {
       if (!payload.userId || !payload.eventType) {
-        console.error(`[unified-email-sender] ${payload.correlationId} - Missing userId or eventType for notification`);
+        edgeLogger.error('Missing required notification fields', undefined, { correlationId: payload.correlationId });
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -105,14 +108,14 @@ serve(async (req) => {
         .maybeSingle();
 
       if (prefError) {
-        console.error(`[unified-email-sender] ${payload.correlationId} - Error fetching preferences:`, prefError);
+        edgeLogger.error('Error fetching preferences', prefError, { correlationId: payload.correlationId });
       }
 
       // Default to enabled if no preference exists
       const emailEnabled = preference?.email_enabled ?? true;
 
       if (!emailEnabled) {
-        console.log(`[unified-email-sender] ${payload.correlationId} - User disabled email for ${payload.eventType}`);
+        edgeLogger.info('User disabled email notifications', { correlationId: payload.correlationId, eventType: payload.eventType });
         
         // Log as skipped
         await logNotification(supabaseAdmin, {
@@ -143,7 +146,7 @@ serve(async (req) => {
 
     while (attempt < maxAttempts && !success) {
       attempt++;
-      console.log(`[unified-email-sender] ${payload.correlationId} - Attempt ${attempt}/${maxAttempts}`);
+      edgeLogger.info('Email send attempt', { correlationId: payload.correlationId, attempt, maxAttempts });
 
       try {
         const result = await sendViaPostmark({
@@ -155,15 +158,15 @@ serve(async (req) => {
 
         messageId = result.MessageID;
         success = true;
-        console.log(`[unified-email-sender] ✅ Success - correlationId: ${payload.correlationId}, messageId: ${messageId}, attempt: ${attempt}`);
+        edgeLogger.info('Email sent successfully', { correlationId: payload.correlationId, messageId, attempt });
         
       } catch (error: any) {
         lastError = error;
-        console.error(`[unified-email-sender] ❌ Failed - correlationId: ${payload.correlationId}, attempt: ${attempt}, error:`, error.message);
+        edgeLogger.error('Email send attempt failed', error, { correlationId: payload.correlationId, attempt });
         
         if (attempt < maxAttempts) {
           const backoffMs = Math.pow(2, attempt) * 1000;
-          console.log(`[unified-email-sender] ${payload.correlationId} - Retrying in ${backoffMs}ms`);
+          edgeLogger.info('Retrying email send', { correlationId: payload.correlationId, backoffMs });
           await new Promise(resolve => setTimeout(resolve, backoffMs));
         }
       }
@@ -231,7 +234,8 @@ serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error(`[unified-email-sender] ${correlationId} - Fatal error:`, error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('Fatal error in unified-email-sender', error, { correlationId });
     return new Response(
       JSON.stringify({ 
         success: false, 
@@ -310,9 +314,11 @@ async function logNotification(supabaseClient: any, params: {
       });
     
     if (error) {
-      console.error(`[unified-email-sender] Failed to log ${params.channel} delivery:`, error);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Failed to log delivery', error, { channel: params.channel });
     }
   } catch (error) {
-    console.error(`[unified-email-sender] Exception logging delivery:`, error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('Exception logging delivery', error);
   }
 }
