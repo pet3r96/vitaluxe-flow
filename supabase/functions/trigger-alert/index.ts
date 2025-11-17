@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validateTriggerAlertRequest } from "../_shared/requestValidators.ts";
+import { edgeLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +19,7 @@ serve(async (req) => {
     try {
       requestData = await req.json();
     } catch (error) {
-      console.error('Invalid JSON in request body:', error);
+      edgeLogger.error('Invalid JSON in request body', error);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -28,7 +29,7 @@ serve(async (req) => {
     // Validate input
     const validation = validateTriggerAlertRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request data', 
@@ -45,7 +46,7 @@ serve(async (req) => {
 
     const { event_type, severity, message, details } = requestData;
 
-    console.log(`Triggering alert for event: ${event_type}, severity: ${severity}`);
+    edgeLogger.info('Triggering alert', { eventType: event_type, severity });
 
     // Find matching alert rules
     const { data: rules } = await supabaseClient
@@ -55,14 +56,14 @@ serve(async (req) => {
       .eq("enabled", true);
 
     if (!rules || rules.length === 0) {
-      console.log("No matching alert rules found");
+      edgeLogger.info("No matching alert rules found");
       return new Response(
         JSON.stringify({ success: true, message: "No matching rules" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Found ${rules.length} matching alert rules`);
+    edgeLogger.info('Found matching alert rules', { count: rules.length });
 
     // Create alert records
     for (const rule of rules) {
@@ -78,7 +79,7 @@ serve(async (req) => {
         .select()
         .single();
 
-      console.log(`Alert created: ${rule.name} - ${message}`);
+      edgeLogger.info('Alert created', { ruleName: rule.name, message });
       
       // Here you would integrate with notification services (email, Slack, etc.)
       // For now, we just log the alert
@@ -89,7 +90,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error triggering alert:", error);
+    edgeLogger.error("Error triggering alert", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

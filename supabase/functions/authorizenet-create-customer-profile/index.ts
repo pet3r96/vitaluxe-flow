@@ -116,14 +116,14 @@ interface CreateProfileRequest {
       .single();
 
     if (insertError) {
-      console.error('Error inserting payment method:', insertError);
+      edgeLogger.error('Error inserting payment method', insertError);
       return new Response(
         JSON.stringify({ error: 'Failed to save payment method', details: insertError }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Payment profile created successfully: ${paymentMethod.id}`);
+    edgeLogger.info('Payment profile created successfully', { paymentMethodId: paymentMethod.id });
 
     return new Response(
       JSON.stringify({

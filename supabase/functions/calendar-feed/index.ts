@@ -196,7 +196,10 @@ END:VEVENT
 
     icalContent += 'END:VCALENDAR';
 
-    console.log(`Calendar feed generated for user ${tokenData.user_id}, ${appointments?.length || 0} appointments`);
+    edgeLogger.info('Calendar feed generated', { 
+      userId: tokenData.user_id, 
+      count: appointments?.length || 0 
+    });
 
     return new Response(icalContent, {
       headers: {

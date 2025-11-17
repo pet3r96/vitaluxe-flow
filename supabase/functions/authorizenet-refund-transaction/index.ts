@@ -140,14 +140,14 @@ Deno.serve(async (req) => {
       .single();
 
     if (refundError) {
-      console.error('Error creating refund record:', refundError);
+      edgeLogger.error('Error creating refund record', refundError);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to create refund record' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Refund processed successfully: ${refund.id}, type: ${refundType}`);
+    edgeLogger.info('Refund processed successfully', { refundId: refund.id, refundType });
 
     return new Response(
       JSON.stringify({
