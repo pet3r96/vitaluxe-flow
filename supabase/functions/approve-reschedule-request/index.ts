@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const normalizePhoneToE164 = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
@@ -24,7 +25,7 @@ Deno.serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabaseClient, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       throw new Error(csrfError || 'Invalid CSRF token');
     }
 
@@ -38,7 +39,7 @@ Deno.serve(async (req) => {
       throw new Error('action must be "move" or "duplicate"');
     }
 
-    console.log('Approve reschedule request:', { appointmentId, action, ignoreConflicts, cancelOriginal, userId: user.id });
+    edgeLogger.info('Approve reschedule request', { appointmentId, action, ignoreConflicts, cancelOriginal });
 
     // Get user role and verify authorization
     const { data: userRole } = await supabaseClient
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
     const duration = new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime();
     const newEndTime = new Date(new Date(newStartTime).getTime() + duration).toISOString();
 
-    console.log('Calculated times:', { newStartTime, newEndTime, duration, requestedDateTimeIso });
+    edgeLogger.info('Calculated times', { newStartTime, newEndTime, duration });
 
     // Check for conflicts if not ignoring
     if (!ignoreConflicts) {
@@ -136,10 +137,10 @@ Deno.serve(async (req) => {
 
       if (updateError) throw updateError;
 
-      console.log('Appointment moved successfully:', updated.id);
+      edgeLogger.info('Appointment moved successfully', { appointmentId: updated.id });
 
       // Send rescheduled notification to patient
-      console.log('[approve-reschedule] Sending reschedule notification');
+      edgeLogger.info('Sending reschedule notification');
       const { data: patientWithUser, error: patientUserError } = await supabaseClient
         .from('patient_accounts')
         .select('user_id, first_name, last_name, email, phone')
@@ -147,7 +148,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (patientUserError) {
-        console.error('[approve-reschedule] Error fetching patient user data:', patientUserError);
+        edgeLogger.error('Error fetching patient user data', patientUserError);
       } else if (patientWithUser) {
         const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
         const appointmentDateFormatted = new Date(updated.start_time).toLocaleDateString();
@@ -168,9 +169,9 @@ Deno.serve(async (req) => {
                 }
               }
             });
-            console.log('[approve-reschedule] Notification sent via handleNotifications');
+            edgeLogger.info('Notification sent via handleNotifications');
           } catch (notifError) {
-            console.error('[approve-reschedule] Error calling handleNotifications:', notifError);
+            edgeLogger.error('Error calling handleNotifications', notifError);
           }
         } else {
           if (patientWithUser.email) {

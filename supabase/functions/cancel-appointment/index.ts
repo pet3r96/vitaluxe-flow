@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const normalizePhoneToE164 = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
@@ -28,12 +29,12 @@ Deno.serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return errorResponse(csrfError || 'Invalid CSRF token', 403);
     }
 
     const { appointmentId } = await req.json();
-    console.log('🔍 [cancel-appointment] Starting cancellation:', { appointmentId, authUserId: user.id });
+    edgeLogger.info('Starting cancellation', { appointmentId });
 
     // Check for active impersonation session
     let effectiveUserId = user.id;
@@ -46,16 +47,13 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (impersonationError) {
-      console.warn('⚠️ [cancel-appointment] Impersonation check failed (continuing as normal user):', impersonationError.message);
+      edgeLogger.warn('Impersonation check failed', { error: impersonationError.message });
     } else if (impersonationSession?.impersonated_user_id) {
       effectiveUserId = impersonationSession.impersonated_user_id;
-      console.log('👥 [cancel-appointment] Impersonation detected:', { 
-        adminUserId: user.id, 
-        effectiveUserId 
-      });
+      edgeLogger.info('Impersonation detected', { adminUserId: user.id, effectiveUserId });
     }
 
-    console.log('✅ [cancel-appointment] Using effective user ID:', effectiveUserId);
+    edgeLogger.info('Using effective user ID', { effectiveUserId });
 
     // Check if user is a patient (use admin client to bypass RLS)
     const { data: patientAccount } = await supabaseAdmin
@@ -78,7 +76,7 @@ Deno.serve(async (req) => {
       .eq('user_id', effectiveUserId)
       .maybeSingle();
 
-    console.log('👤 [cancel-appointment] User role lookup:', { 
+    edgeLogger.info('User role lookup', { 
       effectiveUserId,
       isPatient: !!patientAccount,
       isProvider: !!providerAccount,
@@ -126,29 +124,27 @@ Deno.serve(async (req) => {
       fetchError = result.error;
 
       if (!appointment) {
-        console.error('❌ [cancel-appointment] User has no valid role and is not the practice owner');
+        edgeLogger.error('User has no valid role and is not the practice owner');
         throw new Error('Unauthorized: User does not have permission to cancel appointments');
       }
 
-      console.log('✅ [cancel-appointment] Practice admin cancelling appointment');
+      edgeLogger.info('Practice admin cancelling appointment');
     }
 
-    console.log('📅 [cancel-appointment] Appointment verification:', { 
+    edgeLogger.info('Appointment verification', { 
       appointmentId,
       found: !!appointment,
-      currentStatus: appointment?.status,
-      belongsToPatient: patientAccount ? appointment?.patient_id === patientAccount.id : false,
-      fetchError: fetchError?.message 
+      currentStatus: appointment?.status
     });
 
     // Handle idempotent cases
     if (fetchError) {
-      console.error('❌ [cancel-appointment] Appointment fetch error:', fetchError);
+      edgeLogger.error('Appointment fetch error', fetchError);
       throw new Error('Appointment fetch failed: ' + fetchError.message);
     }
 
     if (!appointment) {
-      console.log('ℹ️ [cancel-appointment] Appointment not found (may already be cancelled or deleted)');
+      edgeLogger.info('Appointment not found (may already be cancelled or deleted)');
       return new Response(JSON.stringify({ 
         success: true, 
         message: 'Appointment already cancelled or not found',
@@ -164,10 +160,10 @@ Deno.serve(async (req) => {
     // Update appointment status if not already cancelled
     if (appointment.status === 'cancelled') {
       appointmentWasAlreadyCancelled = true;
-      console.log('ℹ️ [cancel-appointment] Appointment already cancelled, will check video session');
+      edgeLogger.info('Appointment already cancelled, will check video session');
     } else {
       // Perform the cancellation (use admin client to bypass RLS)
-      console.log('✅ [cancel-appointment] Updating appointment status to cancelled');
+      edgeLogger.info('Updating appointment status to cancelled');
       const { error } = await supabaseAdmin
         .from('patient_appointments')
         .update({ 
@@ -178,11 +174,11 @@ Deno.serve(async (req) => {
         .eq('id', appointmentId);
 
       if (error) {
-        console.error('❌ [cancel-appointment] Update error:', error);
+        edgeLogger.error('Update error', error);
         throw error;
       }
 
-      console.log('✅ [cancel-appointment] Appointment cancelled successfully');
+      edgeLogger.info('Appointment cancelled successfully');
     }
 
     // ALWAYS check and update video session status (even if appointment was already cancelled)
@@ -196,7 +192,7 @@ Deno.serve(async (req) => {
 
     let videoSessionUpdated = false;
     if (videoSession && videoSession.status !== 'ended') {
-      console.log('🎥 [cancel-appointment] Updating video session to ended:', videoSession.id);
+      edgeLogger.info('Updating video session to ended', { videoSessionId: videoSession.id });
       const { error: vsError } = await supabaseAdmin
         .from('video_sessions')
         .update({

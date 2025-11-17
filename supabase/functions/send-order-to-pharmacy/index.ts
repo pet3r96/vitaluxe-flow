@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,7 +23,7 @@ serve(async (req) => {
 
     const { order_id, order_line_ids, pharmacy_id }: SendOrderRequest = await req.json();
 
-    console.log(`Sending order ${order_id} with ${order_line_ids.length} line(s) to pharmacy ${pharmacy_id}`);
+    edgeLogger.info("Sending order to pharmacy", { order_id, lineCount: order_line_ids.length, pharmacy_id });
 
     // Fetch pharmacy API configuration
     const { data: pharmacy, error: pharmacyError } = await supabaseAdmin
@@ -36,7 +37,7 @@ serve(async (req) => {
     }
 
     if (!pharmacy.api_enabled) {
-      console.log(`Pharmacy ${pharmacy_id} does not have API enabled - skipping transmission`);
+      edgeLogger.info("Pharmacy API not enabled, skipping transmission", { pharmacy_id });
       return new Response(
         JSON.stringify({ success: true, message: "Pharmacy API not enabled" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -90,7 +91,7 @@ serve(async (req) => {
     const unsent_lines = orderLines.filter(line => !line.pharmacy_order_id);
     
     if (unsent_lines.length === 0) {
-      console.log(`All order lines already sent to pharmacy`);
+      edgeLogger.info("All order lines already sent to pharmacy");
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -100,7 +101,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing ${unsent_lines.length} unsent order line(s)`);
+    edgeLogger.info("Processing unsent order lines", { count: unsent_lines.length });
 
     // Fetch API credentials
     const { data: credentials } = await supabaseAdmin
@@ -179,7 +180,7 @@ serve(async (req) => {
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        console.log(`Attempt ${attempt + 1}/${maxRetries} to send order to ${pharmacy.api_endpoint_url}`);
+        edgeLogger.info("Attempting to send order to pharmacy", { attempt: attempt + 1, maxRetries, endpoint: pharmacy.api_endpoint_url });
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -203,7 +204,7 @@ serve(async (req) => {
         }
 
         if (response.ok) {
-          console.log(`Successfully sent batched order to pharmacy (attempt ${attempt + 1})`);
+          edgeLogger.info("Successfully sent batched order to pharmacy", { attempt: attempt + 1 });
           
           // Extract pharmacy order ID from response (could be single or array)
           const pharmacyOrderId =
@@ -223,7 +224,7 @@ serve(async (req) => {
               })
               .in("id", unsent_lines.map(l => l.id));
             
-            console.log(`Stored pharmacy order ID: ${pharmacyOrderId} for ${unsent_lines.length} order line(s)`);
+            edgeLogger.info("Stored pharmacy order ID", { pharmacyOrderId, lineCount: unsent_lines.length });
           }
           
           // Log successful transmission for each line
@@ -257,7 +258,7 @@ serve(async (req) => {
               })
             });
           } catch (alertError) {
-            console.error('Error checking alerts:', alertError);
+            edgeLogger.error('Error checking alerts', alertError);
           }
 
           return new Response(

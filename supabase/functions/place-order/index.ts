@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +22,7 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
-  console.log("[place-order] Starting order placement");
+  edgeLogger.info("Starting order placement");
 
   try {
     // Client for auth verification (with user JWT)
@@ -37,7 +38,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
-      console.error("[place-order] Authentication failed:", authError);
+      edgeLogger.error("Authentication failed", authError);
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -55,11 +56,11 @@ serve(async (req) => {
       csrf_token,
     } = body;
 
-    console.log("[place-order] Request params:", { cart_id, payment_method_id, user_id: user.id });
+    edgeLogger.info("Place order request", { cart_id, payment_method_id });
 
     // Validate CSRF token using shared validator
     if (!csrf_token) {
-      console.error("[place-order] CSRF token missing");
+      edgeLogger.error("CSRF token missing");
       return new Response(
         JSON.stringify({ error: "CSRF token is required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -75,7 +76,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (csrfError || !csrfData) {
-      console.error("[place-order] CSRF validation failed:", csrfError);
+      edgeLogger.error("CSRF validation failed", csrfError);
       return new Response(
         JSON.stringify({ error: "Invalid or expired CSRF token" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -93,10 +94,7 @@ serve(async (req) => {
 
     if (impersonationSession) {
       effectiveUserId = impersonationSession.impersonated_user_id;
-      console.log('[place-order] Impersonation detected:', {
-        adminUserId: user.id,
-        effectiveUserId
-      });
+      edgeLogger.info('Impersonation detected', { adminUserId: user.id, effectiveUserId });
     }
 
     // Fetch cart with all lines using admin client (bypasses RLS for efficiency)
@@ -130,7 +128,7 @@ serve(async (req) => {
       .single();
 
     if (cartError || !cart || cart.lines.length === 0) {
-      console.error("[place-order] Cart error:", cartError);
+      edgeLogger.error("Cart error", cartError);
       return new Response(
         JSON.stringify({ error: "Cart not found or empty" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -139,7 +137,7 @@ serve(async (req) => {
 
     // Verify cart belongs to effective user (accounts for impersonation)
     if (cart.doctor_id !== effectiveUserId) {
-      console.error("[place-order] Cart ownership mismatch", {
+      edgeLogger.error("Cart ownership mismatch", undefined, {
         cartDoctorId: cart.doctor_id,
         effectiveUserId,
         isImpersonating: !!impersonationSession
@@ -186,7 +184,7 @@ serve(async (req) => {
     const practiceLines = cart.lines.filter(line => !line.patient_id);
     const patientLines = cart.lines.filter(line => line.patient_id);
 
-    console.log(`[place-order] Processing ${practiceLines.length} practice lines, ${patientLines.length} patient lines`);
+    edgeLogger.info("Processing cart lines", { practiceLines: practiceLines.length, patientLines: patientLines.length });
 
     // Helper function to create shipping groups
     const createShippingGroups = (lines: any[]) => {

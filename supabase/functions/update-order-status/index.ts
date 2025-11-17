@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,7 +29,7 @@ serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabaseClient, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -44,7 +45,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Status change request: order ${orderId} → ${newStatus} by user ${user.id}`);
+    edgeLogger.info('Status change request', { orderId, newStatus });
 
     // Get user's role
     const { data: roleData } = await supabaseClient
@@ -148,10 +149,10 @@ serve(async (req) => {
       });
 
     if (historyError) {
-      console.error('Failed to log status history:', historyError);
+      edgeLogger.error('Failed to log status history', historyError);
     }
 
-    console.log(`Order ${orderId} status updated: ${oldStatus} → ${newStatus}`);
+    edgeLogger.info('Order status updated', { orderId, oldStatus, newStatus });
 
     return new Response(
       JSON.stringify({ 
@@ -167,7 +168,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in update-order-status:', error);
+    edgeLogger.error('Error in update-order-status', error);
     return new Response(
       JSON.stringify({ error: (error as Error).message }),
       {
