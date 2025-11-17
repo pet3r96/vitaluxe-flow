@@ -409,7 +409,7 @@ export default function PatientAppointments() {
   const upcoming = appointments?.filter((a: any) => new Date(a.start_time) >= new Date() && a.status !== 'cancelled') || [];
   const past = appointments?.filter((a: any) => new Date(a.start_time) < new Date()) || [];
   
-  console.log('[PatientAppointments] 📊 Past/Upcoming counts:', { past: past.length, upcoming: upcoming.length });
+  logger.info('[PatientAppointments] 📊 Past/Upcoming counts', { pastCount: past.length, upcomingCount: upcoming.length });
 
   return (
     <div className="patient-container">

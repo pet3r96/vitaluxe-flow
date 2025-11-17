@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
     const { data: providersRows, error: providersError } = await providersQuery;
 
     if (providersError) {
-      console.error('[list-providers] Query error:', providersError);
+      edgeLogger.error('[list-providers] Query error', providersError);
       return new Response(JSON.stringify({ error: providersError.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

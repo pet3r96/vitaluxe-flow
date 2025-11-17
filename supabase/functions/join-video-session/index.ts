@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
     // Check if effectiveUserId is a practice that owns this session
     const isPracticeAdmin = effectiveUserId === session.practice_id;
     
-    console.log('👤 [join-video-session] User role check:', { 
+    edgeLogger.info('👤 [join-video-session] User role check', {
       effectiveUserId,
       isProvider,
       isPatient,
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
     });
 
     if (!isProvider && !isPatient && !isSystemAdmin && !isPracticeAdmin) {
-      console.error('❌ [join-video-session] Not authorized:', { 
+      edgeLogger.error('❌ [join-video-session] Not authorized', {
         effectiveUserId, 
         sessionId,
         isProvider,
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('✅ [join-video-session] Authorization successful');
+    edgeLogger.info('✅ [join-video-session] Authorization successful');
 
     // Check session status
     if (!['waiting', 'active'].includes(session.status)) {
@@ -194,14 +194,14 @@ Deno.serve(async (req) => {
       }
     });
 
-    console.log('✅ [join-video-session] Session joined successfully:', { 
+    edgeLogger.info('✅ [join-video-session] Session joined successfully', {
       sessionId, 
       role: (isProvider || isSystemAdmin || isPracticeAdmin) ? 'provider' : 'patient',
       impersonated: effectiveUserId !== user.id
     });
 
     // Generate Agora token for this user
-    console.log('🎫 [join-video-session] Generating Agora token...');
+    edgeLogger.info('🎫 [join-video-session] Generating Agora token...');
     const { data: tokenData, error: tokenError } = await supabase.functions.invoke('generate-agora-token', {
       body: {
         sessionId,
@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
     });
 
     if (tokenError) {
-      console.error('❌ [join-video-session] Token generation failed:', tokenError);
+      edgeLogger.error('❌ [join-video-session] Token generation failed', tokenError);
       const errorDetails = tokenError.context || tokenError.details || tokenError.message;
       return new Response(JSON.stringify({ 
         error: 'Failed to generate video token',
@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
     }
 
     if (!tokenData) {
-      console.error('❌ [join-video-session] No token data received');
+      edgeLogger.error('❌ [join-video-session] No token data received');
       return new Response(JSON.stringify({ 
         error: 'Failed to generate video token',
         details: 'No data received from token generation service',
@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('❌ [join-video-session] Unexpected error:', error);
+    edgeLogger.error('❌ [join-video-session] Unexpected error', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to join video session';
     return new Response(JSON.stringify({ 
       error: errorMessage,
