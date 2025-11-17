@@ -5,6 +5,7 @@ import { MedicalVaultView } from "@/components/medical-vault/MedicalVaultView";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logger";
 
 export default function PracticePatientMedicalVault() {
   const { patientId } = useParams();
@@ -15,7 +16,7 @@ export default function PracticePatientMedicalVault() {
     queryFn: async () => {
       if (!patientId) throw new Error("Patient ID is required");
       
-      console.log('[PracticePatientMedicalVault] Fetching patient account for:', patientId);
+      logger.info('Fetching patient account for medical vault', logger.sanitize({ patientId }));
       
       const { data, error } = await supabase
         .from("patient_accounts")
@@ -24,11 +25,11 @@ export default function PracticePatientMedicalVault() {
         .single();
       
       if (error) {
-        console.error('[PracticePatientMedicalVault] Query error:', error);
+        logger.error('Patient account query error', error);
         throw error;
       }
       
-      console.log('[PracticePatientMedicalVault] Patient account data:', data);
+      logger.info('Patient account data loaded', logger.sanitize({ patientId }));
       return data;
     },
     enabled: !!patientId,

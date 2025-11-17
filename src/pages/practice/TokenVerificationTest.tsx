@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 export default function TokenVerificationTest() {
   const { toast } = useToast();
@@ -29,8 +30,7 @@ export default function TokenVerificationTest() {
   const fetchBackendToken = async () => {
     setLoading(true);
     try {
-      console.log("🔧 [TOKEN-TEST] Fetching token from backend...");
-      console.log("Parameters:", { channelName, uid, role, expiresInSeconds: 3600 });
+      logger.info('Fetching token from backend for test', { channelName, uid, role });
       
       const { data, error } = await supabase.functions.invoke('test-agora-token', {
         body: {
@@ -42,22 +42,18 @@ export default function TokenVerificationTest() {
       });
 
       if (error) {
-        console.error("❌ [TOKEN-TEST] Failed to fetch token:", error);
+        logger.error('Failed to fetch token', error);
         throw error;
       }
 
-      console.log("✅ [TOKEN-TEST] Backend token received");
-      console.log("=== BACKEND TOKEN DATA ===");
-      console.log("[BE] appId:", data.appId);
-      console.log("[BE] channelName:", data.channelName);
-      console.log("[BE] uid:", data.uid);
-      console.log("[BE] rtcToken.length:", data.rtcToken.length);
-      console.log("[BE] rtcToken.prefix:", data.rtcToken.slice(0, 20));
-      console.log("[BE] rtcToken starts with 007:", data.rtcToken.startsWith("007"));
-      console.log("[BE] rtmToken.length:", data.rtmToken.length);
-      console.log("[BE] rtmToken.prefix:", data.rtmToken.slice(0, 20));
-      console.log("[BE] rtmToken starts with 007:", data.rtmToken.startsWith("007"));
-      console.log("========================");
+      logger.info('Backend token received', {
+        appId: data.appId,
+        channelName: data.channelName,
+        uid: data.uid,
+        rtcTokenLength: data.rtcToken.length,
+        rtcTokenPrefix: data.rtcToken.slice(0, 20),
+        startsWithCorrectVersion: data.rtcToken.startsWith("007")
+      });
 
       setTokenData(data);
       
@@ -66,7 +62,7 @@ export default function TokenVerificationTest() {
         description: "Backend token retrieved successfully. Check console for details.",
       });
     } catch (error: any) {
-      console.error("❌ [TOKEN-TEST] Error:", error);
+      logger.error('Token test error', error);
       toast({
         title: "Error",
         description: error.message || "Failed to fetch token",

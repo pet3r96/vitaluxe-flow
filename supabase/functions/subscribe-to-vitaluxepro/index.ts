@@ -68,7 +68,8 @@ serve(async (req) => {
       .maybeSingle();
 
     if (impErr) {
-      console.warn('[subscribe-to-vitaluxepro] Impersonation lookup error', impErr);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.warn('Impersonation lookup error');
     }
 
     let practiceId: string | null = null;
@@ -82,7 +83,8 @@ serve(async (req) => {
         impersonatedRole = impSession.impersonated_role;
         if (impSession.impersonated_role === 'doctor') {
           practiceId = impSession.impersonated_user_id;
-          console.log('[subscribe-to-vitaluxepro] Using impersonated doctor as practice', { practiceId });
+          const { edgeLogger } = await import('../_shared/logger.ts');
+          edgeLogger.info('Using impersonated doctor as practice');
         } else if (impSession.impersonated_role === 'provider') {
           const { data: provider, error: provErr } = await supabaseAdmin
             .from('providers')
@@ -90,14 +92,17 @@ serve(async (req) => {
             .eq('user_id', impSession.impersonated_user_id)
             .single();
           if (provErr) {
-            console.warn('[subscribe-to-vitaluxepro] Provider lookup failed for impersonated provider', provErr);
+            const { edgeLogger } = await import('../_shared/logger.ts');
+            edgeLogger.warn('Provider lookup failed for impersonated provider');
           } else if (provider?.practice_id) {
             practiceId = provider.practice_id as string;
-            console.log('[subscribe-to-vitaluxepro] Using provider.practice_id from impersonation', { practiceId });
+            const { edgeLogger } = await import('../_shared/logger.ts');
+            edgeLogger.info('Using provider practice_id from impersonation');
           }
         }
       } else {
-        console.log('[subscribe-to-vitaluxepro] Ignoring expired impersonation session');
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.info('Ignoring expired impersonation session');
       }
     }
 
@@ -113,7 +118,8 @@ serve(async (req) => {
       const roles = (userRoles || []).map((r: any) => r.role);
       if (roles.includes('doctor')) {
         practiceId = actorUserId;
-        console.log('[subscribe-to-vitaluxepro] Using self (doctor) as practice', { practiceId });
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.info('Using self (doctor) as practice');
       }
     }
 
@@ -126,7 +132,8 @@ serve(async (req) => {
         .single();
       if (!selfProvErr && selfProvider?.practice_id) {
         // Provider trying to subscribe directly - BLOCK THIS
-        console.warn('[subscribe-to-vitaluxepro] Provider attempted direct subscription - blocked', { actorUserId });
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.warn('Provider attempted direct subscription - blocked');
         return new Response(
           JSON.stringify({
             error: 'Providers cannot subscribe directly',
@@ -138,7 +145,8 @@ serve(async (req) => {
     }
 
     if (!practiceId) {
-      console.warn('[subscribe-to-vitaluxepro] No valid practice context resolved');
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.warn('No valid practice context resolved');
       return new Response(
         JSON.stringify({
           error: 'Forbidden',
@@ -156,14 +164,16 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
-      console.error('[subscribe-to-vitaluxepro] Practice profile not found', profileError);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Practice profile not found', profileError);
       return new Response(
         JSON.stringify({ error: 'Practice profile not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[subscribe-to-vitaluxepro] Effective practice resolved', { practiceId, actorUserId, impersonatedRole });
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('Effective practice resolved for subscription');
 
     // Check if subscription already exists (use service role)
     const { data: existingSub } = await supabaseAdmin
@@ -172,14 +182,15 @@ serve(async (req) => {
       .eq('practice_id', practiceId)
       .maybeSingle();
 
-    console.log('[subscribe-to-vitaluxepro] Existing subscription check:', existingSub);
+    edgeLogger.info('Existing subscription check complete', { hasExisting: !!existingSub });
 
     let subscription;
 
     if (existingSub) {
       // Subscription exists - reactivate ONLY if cancelled or expired (NO new trial)
       if (existingSub.status === 'cancelled' || existingSub.status === 'expired') {
-        console.log('[subscribe-to-vitaluxepro] Reactivating subscription WITHOUT new trial', existingSub.id);
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.info('Reactivating subscription without new trial');
 
         // DO NOT give another trial - just reactivate as active (requires payment)
         const { data: updated, error: updateError } = await supabaseAdmin
@@ -195,7 +206,7 @@ serve(async (req) => {
           .single();
 
         if (updateError) {
-          console.error('[subscribe-to-vitaluxepro] Error reactivating subscription', updateError);
+          edgeLogger.error('Error reactivating subscription', updateError);
           return new Response(
             JSON.stringify({ error: 'Failed to reactivate subscription', details: updateError.message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

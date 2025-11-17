@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { sendMessageSchema, validateInput } from '../_shared/zodSchemas.ts';
 import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 // Helper to normalize phone to E.164
 function normalizePhoneToE164(phone: string): string {
@@ -17,13 +18,13 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    console.log('[send-patient-message] Invoked');
+    edgeLogger.info('send-patient-message invoked');
     
     const authHeader = req.headers.get('Authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
     
     if (!token) {
-      console.error('[send-patient-message] Missing authorization token');
+      edgeLogger.error('Missing authorization token');
       return new Response(JSON.stringify({ error: 'Missing authorization token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -39,14 +40,15 @@ Deno.serve(async (req) => {
     // Verify user authentication
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !user) {
-      console.error('[send-patient-message] Authentication failed:', userError);
+      edgeLogger.error('Authentication failed', userError);
       return new Response(JSON.stringify({ error: 'Not authenticated' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('[send-patient-message] User authenticated:', user.id);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('User authenticated for send message');
 
     // Parse and validate request body with Zod schema
     const body = await req.json();
@@ -61,7 +63,7 @@ Deno.serve(async (req) => {
 
     // Detect mode: provider reply or patient message
     const isProviderMode = sender_type === 'provider' && patient_id;
-    console.log('[send-patient-message] Mode:', isProviderMode ? 'provider' : 'patient');
+    edgeLogger.info('Message mode detected', { mode: isProviderMode ? 'provider' : 'patient' });
 
     // Check for active impersonation session with detailed logging
     const currentTimestamp = new Date().toISOString();
@@ -92,7 +94,7 @@ Deno.serve(async (req) => {
     }
 
     if (!message?.trim()) {
-      console.error('[send-patient-message] Message body is required');
+      edgeLogger.error('Message body is required');
       return new Response(JSON.stringify({ error: 'Message body is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

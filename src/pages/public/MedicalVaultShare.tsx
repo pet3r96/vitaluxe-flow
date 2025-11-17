@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
 import { Loader2, AlertCircle, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 type ErrorType = 'invalid_token' | 'already_used' | 'expired' | 'revoked' | 'internal_error' | null;
 
@@ -25,16 +26,15 @@ export default function MedicalVaultShare() {
 
   const validateAndLoadPDF = async () => {
     try {
-      console.log('[MedicalVaultShare] Starting validation for token:', token);
+      logger.info('Validating medical vault share link');
       setLoading(true);
       
       // Call edge function to validate token and get data
-      console.log('[MedicalVaultShare] Calling edge function...');
       const { data, error: functionError } = await supabase.functions.invoke('validate-share-link', {
         body: { token }
       });
 
-      console.log('[MedicalVaultShare] Edge function response:', { data, functionError });
+      logger.info('Share link validation response received', { success: !!data?.success });
 
       // Handle edge function errors (410, 404, etc.)
       if (functionError) {
