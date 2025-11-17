@@ -8,6 +8,7 @@ import { StatCardWithChart } from "@/components/dashboard/StatCardWithChart";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RealtimePayload } from "@/types/realtime";
 import type { Database } from "@/integrations/supabase/types";
+import type { RepDashboardStats } from "@/types/edge-functions";
 
 const RepDashboard = () => {
   const { user, effectiveRole, effectiveUserId } = useAuth();
@@ -31,7 +32,7 @@ const RepDashboard = () => {
   });
 
   // Batched dashboard stats query - combines all 4 queries into one edge function call
-  const { data: dashboardStats, isLoading } = useQuery({
+  const { data: dashboardStats, isLoading } = useQuery<RepDashboardStats, Error>({
     queryKey: ["rep-dashboard-stats-batched", repData?.id, effectiveRole],
     staleTime: 30000, // 30 seconds
     placeholderData: (previousData) => previousData,
@@ -50,7 +51,7 @@ const RepDashboard = () => {
       console.log('[Rep Dashboard] Fetching batched stats via edge function');
       const startTime = performance.now();
 
-      const { data, error } = await supabase.functions.invoke('get-rep-dashboard-stats', {
+      const { data, error } = await supabase.functions.invoke<RepDashboardStats>('get-rep-dashboard-stats', {
         body: { repId: repData.id, role: effectiveRole }
       });
 
