@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Camera, Mic, Volume2, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface DeviceTestScreenProps {
   onComplete: () => void;
@@ -18,7 +19,7 @@ interface MediaDevice {
 }
 
 export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) => {
-  console.log("[DeviceTestScreen] appId:", appId);
+  logger.info("[DeviceTestScreen] App ID configured", { appId });
   const [cameraStatus, setCameraStatus] = useState<"testing" | "success" | "error">("testing");
   const [micStatus, setMicStatus] = useState<"testing" | "success" | "error">("testing");
   const [speakerStatus, setSpeakerStatus] = useState<"testing" | "success" | "error">("testing");
@@ -48,7 +49,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
 
     // Listen for device changes (plugging/unplugging headsets)
     const handleDeviceChange = () => {
-      console.log("🔄 Device change detected");
+      logger.info("🔄 Device change detected");
       enumerateDevices();
     };
 
@@ -91,7 +92,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
 
   // Helper to pick the preferred microphone intelligently
   const pickPreferredMic = (mics: MediaDevice[], defaultId: string) => {
-    console.log("🎤 pickPreferredMic input:", {
+    logger.info("🎤 pickPreferredMic input", {
       micCount: mics.length,
       defaultId,
       allMics: mics.map((m) => m.label),
@@ -99,19 +100,19 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
 
     const hasDefaultId = defaultId && mics.find((d) => d.deviceId === defaultId)?.deviceId;
     if (hasDefaultId) {
-      console.log("✅ Using browser default device:", mics.find((d) => d.deviceId === defaultId)?.label);
+      logger.info("✅ Using browser default device", { label: mics.find((d) => d.deviceId === defaultId)?.label });
       return defaultId;
     }
 
     const preferDefaultLabel = mics.find((d) => d.label?.toLowerCase().startsWith("default -"));
     if (preferDefaultLabel) {
-      console.log("✅ Using 'Default -' labeled device:", preferDefaultLabel.label);
+      logger.info("✅ Using 'Default -' labeled device", { label: preferDefaultLabel.label });
       return preferDefaultLabel.deviceId;
     }
 
     const preferBuiltIn = mics.find((d) => /built[- ]?in|macbook|internal/i.test(d.label));
     if (preferBuiltIn) {
-      console.log("✅ Using built-in device:", preferBuiltIn.label);
+      logger.info("✅ Using built-in device", { label: preferBuiltIn.label });
       return preferBuiltIn.deviceId;
     }
 
@@ -120,7 +121,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
     const nonContinuity = mics.find((d) => !deprioritized.some((x) => d.label.toLowerCase().includes(x)));
 
     const chosen = nonContinuity || mics[0];
-    console.log("⚠️ Fallback to device:", chosen.label);
+    logger.warn("⚠️ Fallback to device", { label: chosen.label });
     return chosen.deviceId;
   };
 
@@ -138,7 +139,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
   };
 
   const cleanup = useCallback(async () => {
-    console.log("🧹 Cleaning up device test resources...");
+    logger.info("🧹 Cleaning up device test resources");
 
     try {
       if (localVideoTrackRef.current) {
@@ -163,14 +164,14 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       }
 
       setAudioLevel(0);
-      console.log("✅ Cleanup complete");
+      logger.info("✅ Cleanup complete");
     } catch (error) {
-      console.error("Error during cleanup:", error);
+      logger.error("Error during cleanup", error);
     }
   }, []);
 
   const enumerateDevices = useCallback(async () => {
-    console.log("🔍 Enumerating devices...");
+    logger.info("🔍 Enumerating devices");
     setIsRefreshing(true);
 
     // Cleanup existing tracks first
@@ -184,7 +185,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
 
     try {
       const devices = await AgoraRTC.getDevices();
-      console.log("📱 Found devices:", devices.length);
+      logger.info("📱 Found devices", { count: devices.length });
 
       const cameraDevices = devices
         .filter((device) => device.kind === "videoinput")
@@ -210,7 +211,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
           kind: device.kind,
         }));
 
-      console.log(
+      logger.info(
         `📹 Cameras: ${cameraDevices.length}, 🎤 Mics: ${micDevices.length}, 🔊 Speakers: ${speakerDevices.length}`,
       );
 
@@ -230,7 +231,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
         setSelectedCamera(chosenCamId);
         persistPrefs(chosenCamId, undefined, undefined);
         // Fire and forget - don't block UI
-        testCamera(chosenCamId).catch((err) => console.error("Camera test error:", err));
+        testCamera(chosenCamId).catch((err) => logger.error("Camera test error", err));
       } else {
         setCameraStatus("error");
         toast.error("No camera found");
@@ -239,17 +240,17 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       if (micDevices.length > 0) {
         const defaultMicId = await getDefaultDeviceId("audioinput");
         const chosenMicId = pickPreferredMic(micDevices, defaultMicId) || micDevices[0].deviceId;
-        console.log(
+        logger.info(
           "🎤 All microphones:",
           micDevices.map((m) => ({ id: m.deviceId, label: m.label })),
         );
-        console.log("🎤 Default mic ID from browser:", defaultMicId);
-        console.log("🎤 Chosen mic ID:", chosenMicId);
-        console.log("🎤 Selected microphone label:", micDevices.find((m) => m.deviceId === chosenMicId)?.label);
+        logger.info("🎤 Default mic ID from browser", { defaultMicId });
+        logger.info("🎤 Chosen mic ID", { chosenMicId });
+        logger.info("🎤 Selected microphone label", { label: micDevices.find((m) => m.deviceId === chosenMicId)?.label });
         setSelectedMicrophone(chosenMicId);
         persistPrefs(undefined, chosenMicId, undefined);
         // Fire and forget - don't block UI
-        testMicrophone(chosenMicId).catch((err) => console.error("Microphone test error:", err));
+        testMicrophone(chosenMicId).catch((err) => logger.error("Microphone test error", err));
       } else {
         setMicStatus("error");
         toast.error("No microphone found");
@@ -261,7 +262,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
         setSpeakerStatus("success");
       }
     } catch (error) {
-      console.error("❌ Error enumerating devices:", error);
+      logger.error("❌ Error enumerating devices", error);
       toast.error("Failed to enumerate devices. Please check permissions.");
       setIsRefreshing(false);
     }
@@ -270,20 +271,20 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
   const testCamera = async (deviceId?: string, isRetry = false) => {
     const timeoutId = setTimeout(() => {
       if (cameraStatus === "testing") {
-        console.warn("⏱️ Camera test timeout after 5s");
+        logger.warn("⏱️ Camera test timeout after 5s");
         setCameraStatus("error");
         toast.error("Camera test timed out. You can change device or continue.");
       }
     }, 5000);
 
     try {
-      console.log(`📹 Testing camera${deviceId ? ` (${deviceId})` : ""}...`);
+      logger.info(`📹 Testing camera${deviceId ? ` (${deviceId})` : ""}`);
       setCameraStatus("testing");
 
       const videoTrack = await AgoraRTC.createCameraVideoTrack(deviceId ? { cameraId: deviceId } : undefined);
 
       localVideoTrackRef.current = videoTrack;
-      console.log("✅ Video track created");
+      logger.info("✅ Video track created");
 
       // Wait for DOM to be ready and add retry logic
       if (videoRef.current) {
@@ -291,7 +292,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
 
         try {
           videoTrack.play(videoRef.current);
-          console.log("✅ Video playing in DOM");
+          logger.info("✅ Video playing in DOM");
 
           // Verify video is actually rendering
           await new Promise((resolve) => setTimeout(resolve, 200));
@@ -300,7 +301,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
           retryCountRef.current.camera = 0;
           toast.success("Camera ready", { duration: 1000 });
         } catch (playError) {
-          console.warn("⚠️ First play attempt failed, retrying...", playError);
+          logger.warn("⚠️ First play attempt failed, retrying", playError);
 
           // Retry once
           if (!isRetry && retryCountRef.current.camera < 1) {
@@ -309,7 +310,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
             videoTrack.play(videoRef.current);
             clearTimeout(timeoutId);
             setCameraStatus("success");
-            console.log("✅ Video playing after retry");
+            logger.info("✅ Video playing after retry");
           } else {
             throw playError;
           }
@@ -319,12 +320,12 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       }
     } catch (error) {
       clearTimeout(timeoutId);
-      console.error("❌ Camera test failed:", error);
+      logger.error("❌ Camera test failed", error);
       setCameraStatus("error");
 
       if (retryCountRef.current.camera < 1 && !isRetry) {
         retryCountRef.current.camera++;
-        console.log("🔄 Retrying camera test...");
+        logger.info("🔄 Retrying camera test");
         setTimeout(() => testCamera(deviceId, true), 1000);
       } else {
         toast.error("Camera access denied. Please allow camera permissions.");
@@ -335,21 +336,21 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
   const testMicrophone = async (deviceId?: string, isRetry = false) => {
     const timeoutId = setTimeout(() => {
       if (micStatus === "testing") {
-        console.warn("⏱️ Microphone test timeout after 5s");
+        logger.warn("⏱️ Microphone test timeout after 5s");
         setMicStatus("error");
         toast.error("Microphone test timed out. You can change device or continue.");
       }
     }, 5000);
 
     try {
-      console.log(`🎤 Testing microphone${deviceId ? ` (${deviceId})` : ""}...`);
+      logger.info(`🎤 Testing microphone${deviceId ? ` (${deviceId})` : ""}`);
       setMicStatus("testing");
 
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack(deviceId ? { microphoneId: deviceId } : undefined);
 
       clearTimeout(timeoutId);
       localAudioTrackRef.current = audioTrack;
-      console.log("✅ Audio track created");
+      logger.info("✅ Audio track created");
       setMicStatus("success");
       retryCountRef.current.mic = 0;
       toast.success("Microphone ready", { duration: 1000 });
@@ -367,12 +368,12 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       }, 100);
     } catch (error) {
       clearTimeout(timeoutId);
-      console.error("❌ Microphone test failed:", error);
+      logger.error("❌ Microphone test failed", error);
       setMicStatus("error");
 
       if (retryCountRef.current.mic < 1 && !isRetry) {
         retryCountRef.current.mic++;
-        console.log("🔄 Retrying microphone test...");
+        logger.info("🔄 Retrying microphone test");
         setTimeout(() => testMicrophone(deviceId, true), 1000);
       } else {
         toast.error("Microphone access denied. Please allow microphone permissions.");
@@ -386,7 +387,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
     }
 
     deviceSwitchTimeoutRef.current = setTimeout(async () => {
-      console.log("🔄 Switching camera...");
+      logger.info("🔄 Switching camera");
       setIsSwitchingDevice(true);
 
       try {
@@ -410,7 +411,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
     }
 
     deviceSwitchTimeoutRef.current = setTimeout(async () => {
-      console.log("🔄 Switching microphone...");
+      logger.info("🔄 Switching microphone");
       setIsSwitchingDevice(true);
 
       try {
@@ -434,7 +435,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
 
   const testSpeakers = useCallback(async () => {
     try {
-      console.log("🔊 Testing speakers...");
+      logger.info("🔊 Testing speakers");
       setIsTestingAudio(true);
 
       // Create fresh AudioContext each time for reliability
@@ -465,9 +466,9 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
       setIsTestingAudio(false);
       setSpeakerStatus("success");
       toast.success("Speaker test complete - did you hear it?", { duration: 2000 });
-      console.log("✅ Speaker test complete");
+      logger.info("✅ Speaker test complete");
     } catch (error) {
-      console.error("❌ Error testing speakers:", error);
+      logger.error("❌ Error testing speakers", error);
       setSpeakerStatus("error");
       setIsTestingAudio(false);
       toast.error("Failed to test speakers. Check browser permissions.");
@@ -499,12 +500,12 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
 
   const retryAccess = async () => {
     try {
-      console.log("🔄 Retrying device access...");
+      logger.info("🔄 Retrying device access");
       await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
       toast.info("Permissions granted, re-scanning devices...");
       enumerateDevices();
     } catch (error) {
-      console.error("❌ Retry access failed:", error);
+      logger.error("❌ Retry access failed", error);
       toast.error("Please allow camera and microphone access in your browser settings.");
     }
   };
@@ -650,7 +651,7 @@ export const DeviceTestScreen = ({ onComplete, appId }: DeviceTestScreenProps) =
             onClick={() => {
               // Persist current selections before continuing
               persistPrefs(selectedCamera, selectedMicrophone, selectedSpeaker);
-              console.log("✅ Final device preferences saved:", {
+              logger.info("✅ Final device preferences saved", {
                 camera: cameras.find((c) => c.deviceId === selectedCamera)?.label,
                 microphone: microphones.find((m) => m.deviceId === selectedMicrophone)?.label,
                 speaker: speakers.find((s) => s.deviceId === selectedSpeaker)?.label,
