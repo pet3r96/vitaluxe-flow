@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +15,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     
     if (!authHeader) {
-      console.error('❌ [generate-video-guest-link] No auth header');
+      edgeLogger.error('❌ [generate-video-guest-link] No auth header');
       return new Response(
         JSON.stringify({ error: 'Unauthorized: missing auth header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -32,14 +33,14 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
-      console.error('❌ [generate-video-guest-link] Auth failed:', authError);
+      edgeLogger.error('❌ [generate-video-guest-link] Auth failed', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('✅ [generate-video-guest-link] Authenticated user:', user.id);
+    edgeLogger.info('✅ [generate-video-guest-link] Authenticated user', { userId: user.id });
 
     const { sessionId, expirationHours = 1, guestName } = await req.json(); // Default 1 hour
 
@@ -60,7 +61,7 @@ Deno.serve(async (req) => {
 
     const effectiveUserId = impersonationData?.impersonated_user_id || user.id;
 
-    console.log('Generating guest link for session:', sessionId, 'by user:', effectiveUserId);
+    edgeLogger.info('Generating guest link for session', { sessionId, effectiveUserId });
 
     // Verify user has access to this session
     const { data: session, error: sessionError } = await supabase
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
       .eq('practice_id', session.practice_id)
       .maybeSingle();
 
-    console.log('Authorization check:', {
+    edgeLogger.info('Authorization check', {
       effectiveUserId,
       isPracticeOwner,
       isProvider: !!provider,
@@ -116,7 +117,7 @@ Deno.serve(async (req) => {
       .rpc('generate_guest_token');
 
     if (tokenGenError || !tokenData) {
-      console.error('[generate-video-guest-link] Failed to generate token:', tokenGenError);
+      edgeLogger.error('[generate-video-guest-link] Failed to generate token', tokenGenError);
       return new Response(
         JSON.stringify({ error: 'Failed to generate guest token' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -136,7 +137,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      console.error('Error creating guest link:', insertError);
+      edgeLogger.error('Error creating guest link', insertError);
       return new Response(
         JSON.stringify({ error: 'Failed to generate guest link' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -149,7 +150,7 @@ Deno.serve(async (req) => {
                    'https://vitaluxeservices-app.lovable.app';
     const guestUrl = `${origin}/video-guest/${guestLink.token}`;
 
-    console.log('✅ Guest link generated:', guestUrl);
+    edgeLogger.info('✅ Guest link generated', { guestUrl });
 
     return new Response(
       JSON.stringify({
@@ -162,7 +163,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in generate-video-guest-link:', error);
+    edgeLogger.error('Error in generate-video-guest-link', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
