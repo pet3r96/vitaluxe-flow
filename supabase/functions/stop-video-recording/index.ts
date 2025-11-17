@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -52,7 +53,7 @@ Deno.serve(async (req) => {
     const rawAppId = Deno.env.get('AGORA_APP_ID');
 
     if (!customerId || !customerSecret || !rawAppId) {
-      console.error('Missing Agora Cloud Recording credentials');
+      edgeLogger.error('Missing Agora Cloud Recording credentials');
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -61,8 +62,8 @@ Deno.serve(async (req) => {
 
     const appId = rawAppId.trim();
     if (!/^[a-f0-9]{32}$/i.test(appId)) {
-      console.error('Invalid Agora App ID format for recording stop', {
-        appIdSample: appId.substring(0, 6) + '...'
+      edgeLogger.error('Invalid Agora App ID format for recording stop', {
+        appIdLength: appId.length
       });
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,

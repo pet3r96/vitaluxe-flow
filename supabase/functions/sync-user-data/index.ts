@@ -320,7 +320,9 @@ serve(async (req) => {
               }
             } else {
               // Default to admin if no role can be determined
-              console.log(`Profile ${profile.name} has no role - skipping`);
+              edgeLogger.info('[sync-user-data] Profile has no role - skipping', {
+                hasProfile: !!profile.name
+              });
             }
           }
         } catch (error: any) {
@@ -354,7 +356,9 @@ serve(async (req) => {
 
           if (!linkError) {
             repLinksAdded++;
-            console.log(`Set linked_topline_id for practice ${practice.id}`);
+            edgeLogger.info('[sync-user-data] Set linked_topline_id for practice', {
+              hasPracticeId: !!practice.id
+            });
           } else {
             errors.push(`Failed to set linked_topline_id for practice ${practice.id}: ${linkError.message}`);
           }
@@ -438,7 +442,12 @@ serve(async (req) => {
         summary
       });
 
-    console.log('Data sync completed', summary);
+    edgeLogger.info('Data sync completed', { 
+      addedProfiles, 
+      addedRoles, 
+      repairedPharmacies,
+      orphanedPharmaciesConverted
+    });
 
     return new Response(
       JSON.stringify({
@@ -449,7 +458,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Unexpected error in sync-user-data:', error);
+    edgeLogger.error('Unexpected error in sync-user-data', error);
     return new Response(
       JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

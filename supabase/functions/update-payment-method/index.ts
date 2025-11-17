@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,7 +30,7 @@ serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -90,7 +91,10 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Payment method ${payment_method_id} updated for user ${user.id}`);
+    edgeLogger.info('Payment method updated', {
+      hasPaymentMethod: !!payment_method_id,
+      hasUserId: !!user.id
+    });
 
     return new Response(
       JSON.stringify({ success: true, message: 'Payment method updated successfully' }),
@@ -98,7 +102,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in update-payment-method:', error);
+    edgeLogger.error('Error in update-payment-method', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
