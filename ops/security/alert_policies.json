@@ -1,0 +1,370 @@
+{
+  "version": "1.0",
+  "created": "2025-11-17",
+  "description": "Production alert policies for VitaLuxePro security and performance monitoring",
+  "notification_channels": {
+    "email": {
+      "enabled": true,
+      "recipients": [
+        "security@vitaluxepro.com",
+        "devops@vitaluxepro.com"
+      ]
+    },
+    "slack": {
+      "enabled": true,
+      "webhook_url": "${SLACK_WEBHOOK_URL}",
+      "channel": "#production-alerts"
+    },
+    "sms": {
+      "enabled": false,
+      "recipients": []
+    }
+  },
+  "alert_rules": [
+    {
+      "id": "rls_policy_violation",
+      "name": "RLS Policy Violation Detected",
+      "description": "Triggered when a user attempts to access data outside their Row Level Security permissions",
+      "severity": "CRITICAL",
+      "enabled": true,
+      "conditions": {
+        "metric": "audit_logs.action_type",
+        "operator": "equals",
+        "value": "rls_violation",
+        "window": "1m",
+        "threshold": 1
+      },
+      "notification_channels": ["email", "slack", "sms"],
+      "actions": [
+        {
+          "type": "audit_log",
+          "details": "Log to security_events table with full context"
+        },
+        {
+          "type": "rate_limit",
+          "details": "Automatically rate-limit offending IP for 30 minutes"
+        },
+        {
+          "type": "notify_admin",
+          "details": "Send immediate notification to security team"
+        }
+      ],
+      "escalation": {
+        "enabled": true,
+        "delay": "5m",
+        "escalate_to": ["cto@vitaluxepro.com"]
+      },
+      "supabase_query": "SELECT * FROM audit_logs WHERE action_type = 'rls_violation' AND created_at > now() - interval '1 minute'"
+    },
+    {
+      "id": "edge_function_error_rate",
+      "name": "Edge Function Error Rate Exceeded",
+      "description": "Triggered when edge function error rate exceeds 2% over 5-minute window",
+      "severity": "HIGH",
+      "enabled": true,
+      "conditions": {
+        "metric": "edge_functions.error_rate",
+        "operator": "greater_than",
+        "value": 2.0,
+        "unit": "percent",
+        "window": "5m",
+        "functions": [
+          "place-order",
+          "manage-cart",
+          "manage-documents",
+          "authorizenet-charge-payment",
+          "send-pharmacy-order"
+        ]
+      },
+      "notification_channels": ["email", "slack"],
+      "actions": [
+        {
+          "type": "audit_log",
+          "details": "Log error spike to admin_alerts table"
+        },
+        {
+          "type": "dashboard_alert",
+          "details": "Display banner in admin dashboard"
+        }
+      ],
+      "escalation": {
+        "enabled": true,
+        "delay": "15m",
+        "escalate_to": ["engineering@vitaluxepro.com"]
+      },
+      "supabase_query": "SELECT function_name, COUNT(*) as errors FROM audit_logs WHERE action_type = 'edge_function_error' AND created_at > now() - interval '5 minutes' GROUP BY function_name HAVING COUNT(*) > (SELECT COUNT(*) * 0.02 FROM audit_logs WHERE action_type = 'edge_function_call' AND created_at > now() - interval '5 minutes')"
+    },
+    {
+      "id": "large_file_upload",
+      "name": "Large File Upload Detected",
+      "description": "Triggered when a file upload exceeds 100MB (potential abuse or misconfiguration)",
+      "severity": "MEDIUM",
+      "enabled": true,
+      "conditions": {
+        "metric": "storage.file_size",
+        "operator": "greater_than",
+        "value": 104857600,
+        "unit": "bytes",
+        "threshold": 1
+      },
+      "notification_channels": ["slack"],
+      "actions": [
+        {
+          "type": "audit_log",
+          "details": "Log large upload with user_id, file_name, file_size"
+        },
+        {
+          "type": "review_required",
+          "details": "Flag for manual review if file_size > 500MB"
+        }
+      ],
+      "escalation": {
+        "enabled": false
+      },
+      "supabase_query": "SELECT * FROM storage.objects WHERE created_at > now() - interval '1 hour' AND metadata->>'size'::bigint > 104857600"
+    },
+    {
+      "id": "video_session_timeout",
+      "name": "Video Session Recording Timeout",
+      "description": "Triggered when a video session with active recording exceeds 60 minutes",
+      "severity": "MEDIUM",
+      "enabled": true,
+      "conditions": {
+        "metric": "video_sessions.duration",
+        "operator": "greater_than",
+        "value": 60,
+        "unit": "minutes",
+        "filter": "recording_status = 'active'"
+      },
+      "notification_channels": ["slack"],
+      "actions": [
+        {
+          "type": "audit_log",
+          "details": "Log long-running session to admin_alerts"
+        },
+        {
+          "type": "auto_stop_recording",
+          "details": "Automatically stop recording at 90 minutes"
+        }
+      ],
+      "escalation": {
+        "enabled": false
+      },
+      "supabase_query": "SELECT * FROM video_sessions WHERE recording_status = 'active' AND started_at < now() - interval '60 minutes'"
+    },
+    {
+      "id": "manage_documents_fallback",
+      "name": "Document Management Fallback Triggered",
+      "description": "Triggered when S3 fails and system falls back to Supabase Storage",
+      "severity": "WARNING",
+      "enabled": true,
+      "conditions": {
+        "metric": "audit_logs.action_type",
+        "operator": "equals",
+        "value": "s3_fallback_triggered",
+        "window": "10m",
+        "threshold": 3
+      },
+      "notification_channels": ["slack"],
+      "actions": [
+        {
+          "type": "audit_log",
+          "details": "Log S3 failure with error details"
+        },
+        {
+          "type": "health_check",
+          "details": "Trigger S3 connectivity health check"
+        }
+      ],
+      "escalation": {
+        "enabled": true,
+        "delay": "30m",
+        "escalate_to": ["devops@vitaluxepro.com"]
+      },
+      "supabase_query": "SELECT COUNT(*) as fallback_count FROM audit_logs WHERE action_type = 's3_fallback_triggered' AND created_at > now() - interval '10 minutes'"
+    },
+    {
+      "id": "cart_checkout_error",
+      "name": "Cart Checkout Error Rate",
+      "description": "Triggered when checkout errors exceed 5% of attempts in 15-minute window",
+      "severity": "WARNING",
+      "enabled": true,
+      "conditions": {
+        "metric": "audit_logs.action_type",
+        "operator": "equals",
+        "value": "checkout_error",
+        "window": "15m",
+        "threshold_percent": 5.0
+      },
+      "notification_channels": ["slack"],
+      "actions": [
+        {
+          "type": "audit_log",
+          "details": "Log checkout error patterns"
+        },
+        {
+          "type": "dashboard_metric",
+          "details": "Update checkout health dashboard"
+        }
+      ],
+      "escalation": {
+        "enabled": true,
+        "delay": "1h",
+        "escalate_to": ["product@vitaluxepro.com"]
+      },
+      "supabase_query": "SELECT (SELECT COUNT(*) FROM audit_logs WHERE action_type = 'checkout_error' AND created_at > now() - interval '15 minutes') * 100.0 / NULLIF((SELECT COUNT(*) FROM audit_logs WHERE action_type IN ('checkout_started', 'checkout_error') AND created_at > now() - interval '15 minutes'), 0) as error_rate"
+    },
+    {
+      "id": "authentication_failure_spike",
+      "name": "Authentication Failure Spike",
+      "description": "Potential brute-force attack or credential stuffing",
+      "severity": "HIGH",
+      "enabled": true,
+      "conditions": {
+        "metric": "audit_logs.action_type",
+        "operator": "equals",
+        "value": "failed_login",
+        "window": "5m",
+        "threshold": 10,
+        "group_by": "ip_address"
+      },
+      "notification_channels": ["email", "slack"],
+      "actions": [
+        {
+          "type": "auto_ban_ip",
+          "details": "Automatically ban IP for 24 hours after 20 failed attempts"
+        },
+        {
+          "type": "audit_log",
+          "details": "Log potential brute-force attack"
+        }
+      ],
+      "escalation": {
+        "enabled": true,
+        "delay": "10m",
+        "escalate_to": ["security@vitaluxepro.com"]
+      },
+      "supabase_query": "SELECT ip_address, COUNT(*) as attempts FROM audit_logs WHERE action_type = 'failed_login' AND created_at > now() - interval '5 minutes' GROUP BY ip_address HAVING COUNT(*) >= 10"
+    },
+    {
+      "id": "phi_access_anomaly",
+      "name": "PHI Access Anomaly Detected",
+      "description": "Unusual pattern of PHI access (e.g., bulk patient record access)",
+      "severity": "CRITICAL",
+      "enabled": true,
+      "conditions": {
+        "metric": "audit_logs.action_type",
+        "operator": "equals",
+        "value": "patient_phi_accessed",
+        "window": "5m",
+        "threshold": 50,
+        "group_by": "user_id"
+      },
+      "notification_channels": ["email", "slack", "sms"],
+      "actions": [
+        {
+          "type": "audit_log",
+          "details": "Log PHI access anomaly with full user context"
+        },
+        {
+          "type": "session_terminate",
+          "details": "Optionally terminate user session pending review"
+        },
+        {
+          "type": "compliance_alert",
+          "details": "Flag for HIPAA compliance review"
+        }
+      ],
+      "escalation": {
+        "enabled": true,
+        "delay": "immediate",
+        "escalate_to": ["security@vitaluxepro.com", "compliance@vitaluxepro.com"]
+      },
+      "supabase_query": "SELECT user_id, user_email, COUNT(*) as access_count FROM audit_logs WHERE action_type = 'patient_phi_accessed' AND created_at > now() - interval '5 minutes' GROUP BY user_id, user_email HAVING COUNT(*) >= 50"
+    },
+    {
+      "id": "database_slow_query",
+      "name": "Database Slow Query Detected",
+      "description": "Query execution time exceeds 5 seconds (performance degradation)",
+      "severity": "MEDIUM",
+      "enabled": true,
+      "conditions": {
+        "metric": "pg_stat_statements.mean_exec_time",
+        "operator": "greater_than",
+        "value": 5000,
+        "unit": "milliseconds",
+        "threshold": 1
+      },
+      "notification_channels": ["slack"],
+      "actions": [
+        {
+          "type": "audit_log",
+          "details": "Log slow query with execution plan"
+        },
+        {
+          "type": "performance_review",
+          "details": "Add to weekly performance optimization backlog"
+        }
+      ],
+      "escalation": {
+        "enabled": false
+      },
+      "supabase_query": "SELECT query, mean_exec_time, calls FROM pg_stat_statements WHERE mean_exec_time > 5000 ORDER BY mean_exec_time DESC LIMIT 10"
+    },
+    {
+      "id": "subscription_payment_failure",
+      "name": "Subscription Payment Failure",
+      "description": "Practice subscription payment failed (renewal issue)",
+      "severity": "HIGH",
+      "enabled": true,
+      "conditions": {
+        "metric": "audit_logs.action_type",
+        "operator": "equals",
+        "value": "subscription_payment_failed",
+        "threshold": 1
+      },
+      "notification_channels": ["email", "slack"],
+      "actions": [
+        {
+          "type": "audit_log",
+          "details": "Log payment failure with practice_id and error code"
+        },
+        {
+          "type": "user_notification",
+          "details": "Send email to practice owner with payment update link"
+        },
+        {
+          "type": "grace_period",
+          "details": "Activate 7-day grace period before service suspension"
+        }
+      ],
+      "escalation": {
+        "enabled": true,
+        "delay": "24h",
+        "escalate_to": ["billing@vitaluxepro.com"]
+      },
+      "supabase_query": "SELECT * FROM audit_logs WHERE action_type = 'subscription_payment_failed' AND created_at > now() - interval '1 hour'"
+    }
+  ],
+  "notification_throttling": {
+    "enabled": true,
+    "rules": [
+      {
+        "alert_id": "*",
+        "max_notifications_per_hour": 10,
+        "deduplication_window": "5m"
+      },
+      {
+        "alert_id": "rls_policy_violation",
+        "max_notifications_per_hour": 100,
+        "deduplication_window": "1m"
+      }
+    ]
+  },
+  "maintenance_mode": {
+    "enabled": false,
+    "suppress_alerts": ["cart_checkout_error", "manage_documents_fallback"],
+    "start_time": null,
+    "end_time": null
+  }
+}
