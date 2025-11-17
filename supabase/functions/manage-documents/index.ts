@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
 
           if (awsAccessKeyId && awsSecretAccessKey && s3BucketName) {
             try {
-              console.log('[manage-documents] Generating S3 signed URL...');
+              edgeLogger.info('[manage-documents] Generating S3 signed URL...');
               const s3Client = new S3Client({
                 region: awsRegion,
                 credentials: {
@@ -308,9 +308,9 @@ Deno.serve(async (req) => {
               });
 
               signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
-              console.log('[manage-documents] ✅ S3 signed URL generated');
+              edgeLogger.info('[manage-documents] ✅ S3 signed URL generated');
             } catch (s3Error: any) {
-              console.error('[manage-documents] ⚠️ S3 signed URL generation failed:', s3Error.message);
+              edgeLogger.error('[manage-documents] ⚠️ S3 signed URL generation failed', s3Error);
               signedUrl = null;
             }
           }

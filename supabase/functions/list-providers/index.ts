@@ -232,9 +232,9 @@ Deno.serve(async (req) => {
       practice: practiceProfilesMap.get(p.practice_id) || null,
     }));
 
-    console.log('[list-providers] Found', providers.length, 'providers for practice', practiceId);
+    edgeLogger.info('[list-providers] Found providers', { count: providers.length, practiceId });
     if (providers.length > 0) {
-      console.log('[list-providers] First provider profile:', providers[0].profiles?.name || providers[0].profiles?.email || 'no-name');
+      edgeLogger.info('[list-providers] First provider profile', { name: providers[0].profiles?.name || providers[0].profiles?.email || 'no-name' });
     }
 
     return new Response(JSON.stringify({ providers }), {

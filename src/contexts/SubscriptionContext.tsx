@@ -120,7 +120,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     if (!practiceIdToWatch) return;
 
     realtimeManager.subscribe('practice_subscriptions', (payload) => {
-      console.log('[SubscriptionContext] Subscription changed:', payload);
+      logger.info('[SubscriptionContext] Subscription changed', { payload });
       refreshSubscription();
     });
 

@@ -20,6 +20,7 @@ import { PatientDocumentFilters, DocumentTypeFilter, SourceFilter } from "@/comp
 import { usePatientPracticeSubscription } from "@/hooks/usePatientPracticeSubscription";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Lock } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface UnifiedDocument {
   id: string;
@@ -73,7 +74,7 @@ export default function PatientDocuments() {
   const { data: patientAccount, isLoading: isLoadingAccount, error: accountError } = useQuery({
     queryKey: ["patient-account", effectiveUserId],
     queryFn: async () => {
-      console.log('[PatientDocuments] Fetching patient account for user:', effectiveUserId);
+      logger.info('[PatientDocuments] Fetching patient account for user', { effectiveUserId });
       
       const { data, error } = await supabase
         .from("patient_accounts")
@@ -82,11 +83,11 @@ export default function PatientDocuments() {
         .maybeSingle();
 
       if (error) {
-        console.error('[PatientDocuments] Error fetching patient account:', error);
+        logger.error('[PatientDocuments] Error fetching patient account', error);
         throw error;
       }
       
-      console.log('[PatientDocuments] Patient account found:', data?.id);
+      logger.info('[PatientDocuments] Patient account found', { patientId: data?.id });
       return data;
     },
     enabled: !!effectiveUserId,
@@ -95,7 +96,7 @@ export default function PatientDocuments() {
   // Show error toast for account lookup failures
   useEffect(() => {
     if (accountError) {
-      console.error('[PatientDocuments] Account error:', accountError);
+      logger.error('[PatientDocuments] Account error', accountError);
       toast({
         title: "Account Error",
         description: `Could not load your patient account: ${accountError.message}`,
@@ -109,22 +110,22 @@ export default function PatientDocuments() {
     queryKey: ["patient-unified-documents", patientAccount?.id],
     queryFn: async () => {
       if (!patientAccount?.id) {
-        console.log('[PatientDocuments] No patient account ID, skipping document fetch');
+        logger.info('[PatientDocuments] No patient account ID, skipping document fetch');
         return [];
       }
 
-      console.log('[PatientDocuments] Fetching unified documents for patient:', patientAccount.id);
+      logger.info('[PatientDocuments] Fetching unified documents for patient', { patientId: patientAccount.id });
       
       const { data, error } = await supabase.rpc('get_patient_unified_documents', {
         p_patient_id: patientAccount.id
       });
 
       if (error) {
-        console.error('[PatientDocuments] RPC error:', error);
+        logger.error('[PatientDocuments] RPC error', error);
         throw error;
       }
       
-      console.log('[PatientDocuments] Fetched documents count:', data?.length || 0);
+      logger.info('[PatientDocuments] Fetched documents count', { count: data?.length || 0 });
       return (data || []) as UnifiedDocument[];
     },
     enabled: !!patientAccount?.id,
@@ -133,7 +134,7 @@ export default function PatientDocuments() {
   // Show error toast for document fetch failures
   useEffect(() => {
     if (documentsError) {
-      console.error('[PatientDocuments] Documents error:', documentsError);
+      logger.error('[PatientDocuments] Documents error', documentsError);
       toast({
         title: "Documents Error",
         description: `Could not load your documents: ${documentsError.message}`,
@@ -178,7 +179,7 @@ export default function PatientDocuments() {
   useEffect(() => {
     if (!patientAccount?.id) return;
 
-    console.log('[PatientDocuments] Setting up realtime subscriptions for patient:', patientAccount.id);
+    logger.info('[PatientDocuments] Setting up realtime subscriptions for patient', { patientId: patientAccount.id });
 
     const patientDocsChannel = supabase
       .channel("patient-documents-changes")
@@ -191,7 +192,7 @@ export default function PatientDocuments() {
           filter: `patient_account_id=eq.${patientAccount.id}`,
         },
         (payload) => {
-          console.log('[PatientDocuments] Realtime: patient_medical_vault changed', payload);
+          logger.info('[PatientDocuments] Realtime: patient_medical_vault changed', { payload });
           queryClient.invalidateQueries({ queryKey: ["patient-unified-documents"] });
         }
       )
@@ -208,14 +209,14 @@ export default function PatientDocuments() {
           filter: `patient_id=eq.${patientAccount.id}`,
         },
         (payload) => {
-          console.log('[PatientDocuments] Realtime: document assigned to patient', payload);
+          logger.info('[PatientDocuments] Realtime: document assigned to patient', { payload });
           queryClient.invalidateQueries({ queryKey: ["patient-unified-documents"] });
         }
       )
       .subscribe();
 
     return () => {
-      console.log('[PatientDocuments] Cleaning up realtime subscriptions');
+      logger.info('[PatientDocuments] Cleaning up realtime subscriptions');
       supabase.removeChannel(patientDocsChannel);
       supabase.removeChannel(providerDocsChannel);
     };
@@ -380,7 +381,7 @@ export default function PatientDocuments() {
       // Determine bucket based on source
       const bucketName = doc.source === "provider_assigned" ? "provider-documents" : "patient-documents";
       
-      console.log('[PatientDocuments] Download request:', {
+      logger.info('[PatientDocuments] Download request', {
         source: doc.source,
         bucketName,
         storagePath: doc.storage_path,
@@ -397,18 +398,18 @@ export default function PatientDocuments() {
       });
 
       if (error) {
-        console.error('[PatientDocuments] Download error:', error);
+        logger.error('[PatientDocuments] Download error', error);
         throw new Error(error.details || error.message || 'Failed to generate download link');
       }
 
       if (!data || (!data.signedUrl && !data.signed_url)) {
-        console.error('[PatientDocuments] No signed URL in response:', data);
+        logger.error('[PatientDocuments] No signed URL in response', { data });
         throw new Error('No signed URL received from server');
       }
 
       const signedUrl = data.signedUrl || data.signed_url;
       
-      console.log('[PatientDocuments] Signed URL received, initiating download');
+      logger.info('[PatientDocuments] Signed URL received, initiating download');
 
       const response = await fetch(signedUrl);
       if (!response.ok) {
@@ -430,7 +431,7 @@ export default function PatientDocuments() {
         description: "Your document is being downloaded.",
       });
     } catch (error: any) {
-      console.error('[PatientDocuments] Download failed:', {
+      logger.error('[PatientDocuments] Download failed', {
         error: error.message,
         source: doc.source,
         storagePath: doc.storage_path

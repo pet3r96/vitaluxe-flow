@@ -342,7 +342,7 @@ serve(async (req) => {
     }
 
     // Step 7: Send SMS if enabled
-    console.log('[handleNotifications] SMS decision:', {
+    edgeLogger.info('[handleNotifications] SMS decision', {
       notificationType: payload.notification_type,
       userPreference: smsEnabled,
       practiceSettings: practiceSmsEnabled,
@@ -356,7 +356,7 @@ serve(async (req) => {
     
     if (shouldSendSms) {
       const normalizedPhone = normalizePhoneToE164(userPhone);
-      console.log(`[handleNotifications] Sending SMS to ${normalizedPhone.substring(0, 5)}***`);
+      edgeLogger.info('[handleNotifications] Sending SMS', { phonePrefix: normalizedPhone.substring(0, 5) });
       
       // Format SMS message with join link for video appointments
       let smsMessage = `${payload.title}\n\n${payload.message}`;
