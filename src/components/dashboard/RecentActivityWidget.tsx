@@ -10,7 +10,7 @@ import type {
   OrderLineActivity,
   MessageThreadActivity
 } from "@/types/dashboard";
-import type { ProviderDocument } from "@/types/subscriptions";
+import type { ProviderDocument } from "@/types/manual-schema";
 
 export function RecentActivityWidget({ className, activities: externalActivities, isPharmacy }: RecentActivityWidgetProps) {
   const { effectivePracticeId, effectiveRole, effectiveUserId } = useAuth();
@@ -181,15 +181,13 @@ export function RecentActivityWidget({ className, activities: externalActivities
       
       const appointments = appointmentsResult.data;
       
-      // Get recent documents (if accessible)
-      const documentsResult = await supabase
-        .from("provider_documents" as any)
-        .select("id, document_name, document_type, uploaded_at")
-        .eq("practice_id", effectivePracticeId)
-        .order("uploaded_at", { ascending: false })
-        .limit(10);
+      // Get recent documents via RPC (provider_documents accessed via functions only)
+      const { data: documentsData } = await supabase.rpc('get_provider_documents', {
+        p_practice_id: effectivePracticeId
+      });
       
-      const documents = documentsResult.data;
+      // Map RPC result to our activity items (limit to 10 most recent)
+      const documents = (documentsData || []).slice(0, 10);
 
       // Combine all activities
       const combined: ActivityItem[] = [];

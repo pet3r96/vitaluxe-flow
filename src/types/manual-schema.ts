@@ -130,6 +130,12 @@ export interface SharedDocument {
   updated_at: string;
 }
 
+// RPC function return types
+export interface OrdersByStatusRow {
+  status: string;
+  count: number;
+}
+
 // Type guard helpers
 export function isProviderDocument(doc: any): doc is ProviderDocument {
   return doc && typeof doc.practice_id === 'string' && typeof doc.document_name === 'string';
@@ -137,4 +143,13 @@ export function isProviderDocument(doc: any): doc is ProviderDocument {
 
 export function isRepProductPriceOverride(override: any): override is RepProductPriceOverride {
   return override && typeof override.rep_id === 'string' && typeof override.product_id === 'string';
+}
+
+// Supabase client extension for custom tables
+export interface SupabaseClientExtensions {
+  provider_documents: {
+    Row: ProviderDocument;
+    Insert: Omit<ProviderDocument, 'id' | 'uploaded_at'>;
+    Update: Partial<Omit<ProviderDocument, 'id' | 'uploaded_at'>>;
+  };
 }
