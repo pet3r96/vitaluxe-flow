@@ -135,13 +135,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Function to check Twilio 2FA status
   const check2FAStatus = async (userId: string) => {
-    console.log('[AuthContext] check2FAStatus - START for userId:', userId);
+    logger.info('Check 2FA status started', logger.sanitize({ userId }));
     
     // Check if 2FA enforcement is enabled system-wide
     const isEnforced = await fetchTwoFAEnforcementSetting();
     
     if (!isEnforced) {
-      console.log('[AuthContext] check2FAStatus - 2FA enforcement DISABLED system-wide');
+      logger.info('2FA enforcement disabled system-wide');
       setRequires2FASetup(false);
       setRequires2FAVerify(false);
       setTwoFAStatusChecked(true);
@@ -157,7 +157,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', userId)
         .maybeSingle();
       
-      console.log('[AuthContext] 2FA status query result:', { data, error });
+      logger.info('2FA status query completed', { hasData: !!data, hasError: !!error });
 
       if (error) throw error;
 
@@ -166,7 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!data || !data.is_enrolled || !anyProviderEnabled) {
         // Not enrolled in any 2FA provider - force setup
-        console.log('[AuthContext] check2FAStatus - No 2FA record or not enrolled, requires setup');
+        logger.info('2FA not enrolled, requires setup');
         setRequires2FASetup(true);
         setRequires2FAVerify(false);
         setUser2FAPhone(null);
@@ -185,19 +185,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isVerified) {
           setIs2FAVerifiedThisSession(true);
           setRequires2FAVerify(false);
-          console.log('[AuthContext] check2FAStatus - Already verified for this session');
+          logger.info('2FA already verified for session');
         } else {
           setRequires2FAVerify(true);
-          console.log('[AuthContext] check2FAStatus - Requires verification');
+          logger.info('2FA requires verification');
         }
       }
       
       // Mark 2FA check as complete
       setTwoFAStatusChecked(true);
-      console.log('[AuthContext] check2FAStatus - END, twoFAStatusChecked=true');
+      logger.info('2FA status check completed');
     } catch (error) {
-      logger.error('Error checking Twilio 2FA status', error);
-      console.log('[AuthContext] check2FAStatus - ERROR, forcing setup');
+      logger.error('Error checking 2FA status, forcing setup', error);
       // On error, force setup to be safe
       setRequires2FASetup(true);
       setRequires2FAVerify(false);
@@ -273,7 +272,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const totalSessionTime = now - sessionStart;
       
       // Debug logging
-      console.log('[Session] Activity detected, checking extension...', {
+      logger.info('Session activity detected, checking extension', {
         timeRemainingMinutes: Math.round(timeRemaining / 60000),
         totalSessionMinutes: Math.round(totalSessionTime / 60000),
         thresholdMinutes: Math.round(REFRESH_THRESHOLD_MS / 60000),
@@ -302,7 +301,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }, timeUntilExpiry);
         
         const minutesAdded = Math.round((cappedExpireAt - sessionExp) / 60000);
-        console.log('[Session] ✅ Session extended due to activity!', {
+        logger.info('Session extended due to activity', {
           newExpiresAt: new Date(cappedExpireAt).toISOString(),
           minutesAdded,
           newTimeRemaining: Math.round((cappedExpireAt - now) / 60000) + 'm'
@@ -315,12 +314,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         // Log why extension didn't happen
         if (timeRemaining >= REFRESH_THRESHOLD_MS) {
-          console.log('[Session] ⏳ No extension - still above threshold', {
+          logger.info('No session extension - above threshold', {
             timeRemaining: Math.round(timeRemaining / 60000) + 'm',
             threshold: Math.round(REFRESH_THRESHOLD_MS / 60000) + 'm'
           });
         } else if (totalSessionTime >= MAX_SESSION_MS) {
-          console.log('[Session] 🛑 No extension - at maximum session time (2 hours)');
+          logger.info('No session extension - at maximum session time');
         }
       }
     };
@@ -333,7 +332,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       activityListenersAttached.current = true;
       
-      console.log('[Session] 🎧 Activity listeners attached:', events);
+      logger.info('Activity listeners attached', { eventsCount: events.length });
       logger.info('Activity listeners attached for intentional user actions only');
     }
 
@@ -405,7 +404,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Check for 30 minutes of inactivity (hard rule)
             const timeSinceActivity = Date.now() - lastActivityRef.current;
             if (timeSinceActivity >= INACTIVITY_TIMEOUT_MS) {
-              console.log('[Session] 🛑 30-minute inactivity detected - forcing logout', {
+              logger.warn('30-minute inactivity detected, forcing logout', {
                 minutesInactive: Math.round(timeSinceActivity / 60000)
               });
               logger.info('30-minute inactivity timeout - forcing logout');
@@ -424,7 +423,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
             // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
             setTimeout(() => {
-              console.log('[AuthContext] Executing deferred backend calls');
+              logger.info('Executing deferred backend calls');
               
               // Fetch role and CSRF token asynchronously (don't block)
               Promise.all([
@@ -442,10 +441,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 
                 // Show dialog if patient exists, hasn't completed intake, and hasn't dismissed reminder
                 if (patientData && !patientData.intake_completed_at && !patientData.intake_reminder_dismissed_at) {
-                  console.log('[AuthContext] Patient needs to complete intake, showing dialog');
+                  logger.info('Patient needs to complete intake');
                   setShowIntakeDialog(true);
                 } else {
-                  console.log('[AuthContext] No intake required', { 
+                  logger.info('No intake required', { 
                     hasPatientAccount: !!patientData, 
                     intakeComplete: patientData?.intake_completed_at,
                     reminderDismissed: patientData?.intake_reminder_dismissed_at
@@ -472,7 +471,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     
                     if (!existingSub) {
                       // Auto-create trial subscription
-                      console.log('[AuthContext] Auto-enrolling new practice in 14-day trial');
+                      logger.info('Auto-enrolling new practice in trial');
                       
                       try {
                         const { data: subData, error: subError } = await supabase.functions.invoke(
@@ -481,9 +480,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         );
                         
                         if (subError) {
-                          console.error('[AuthContext] Auto-enrollment failed:', subError);
+                          logger.error('Auto-enrollment failed', subError);
                         } else {
-                          console.log('[AuthContext] Subscription result:', subData);
+                          logger.info('Subscription result received', { hasData: !!subData });
                           
                           // Only show trial toast if a NEW trial was actually created
                           const isNewTrial = subData && 
@@ -779,7 +778,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (!error && data) {
             setEffectivePracticeId(data.practice_id);
             setIsProviderAccount(true);
-            console.debug('Auth: effectivePracticeId set for provider', data.practice_id);
+            logger.info('Effective practice ID set for provider', logger.sanitize({ practiceId: data.practice_id }));
           } else {
             setEffectivePracticeId(null);
             setIsProviderAccount(false);
@@ -798,7 +797,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setEffectivePracticeId(data.practice_id);
             setIsStaffAccount(true);
             setIsProviderAccount(false);
-            console.debug('Auth: effectivePracticeId set for staff member', data.practice_id);
+            logger.info('Effective practice ID set for staff', logger.sanitize({ practiceId: data.practice_id }));
           } else {
             setEffectivePracticeId(null);
             setIsStaffAccount(false);
@@ -817,7 +816,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setEffectivePracticeId(data.practice_id);
             setIsProviderAccount(false);
             setIsStaffAccount(false);
-            console.debug('Auth: effectivePracticeId set for patient', data.practice_id);
+            logger.info('Effective practice ID set for patient', logger.sanitize({ practiceId: data.practice_id }));
           } else {
             setEffectivePracticeId(null);
             setIsProviderAccount(false);
@@ -892,7 +891,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, navigate]);
 
   const fetchUserRole = async (userId: string) => {
-    console.log('[AuthContext] fetchUserRole - START for userId:', userId);
+    logger.info('Fetching user role', logger.sanitize({ userId }));
     try {
       logger.info('Fetching user role (optimized)', logger.sanitize({ userId }));
       
@@ -1101,10 +1100,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         timestamp: Date.now()
       }));
       
-      console.log('[AuthContext] fetchUserRole - END, role set to:', role);
+      logger.info('User role fetched', { role });
       logger.info('All user data loaded (parallel + cached)');
     } catch (error) {
-      console.log('[AuthContext] fetchUserRole - ERROR, role set to null');
+      logger.error('User role fetch failed', error as Error);
       logger.error("Error fetching user role", error);
       setUserRole(null);
       sessionStorage.removeItem('vitaluxe_auth_cache');
@@ -1653,7 +1652,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const mark2FAVerified = () => {
-    console.log('[AuthContext] ✅ mark2FAVerified called');
+    logger.info('2FA verification marked');
     if (!user?.id) return;
     const expStr = localStorage.getItem(getSessionExpKey(user.id));
     const expireAt = expStr ? parseInt(expStr) : (Date.now() + HARD_SESSION_TIMEOUT_MS);
@@ -1665,7 +1664,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const mark2FAEnrolled = (phone: string) => {
-    console.log('[AuthContext] ✅ mark2FAEnrolled called with phone:', phone.slice(-4));
+    logger.info('2FA enrollment marked', { phoneLast4: phone.slice(-4) });
     setRequires2FASetup(false);
     setUser2FAPhone(phone);
     setTwoFAStatusChecked(true);

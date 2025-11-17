@@ -1,6 +1,8 @@
 // EasyPost API Client for Supabase Edge Functions
 // Provides utilities for address verification, shipment creation, and tracking
 
+import { edgeLogger } from './logger.ts';
+
 interface EasyPostAddress {
   street1: string;
   street2?: string;
@@ -201,7 +203,10 @@ export class EasyPostClient {
         trackerRequest.carrier = normalizedCarrier;
       }
       
-      console.log('Creating EasyPost tracker:', trackerRequest);
+      edgeLogger.info('Creating EasyPost tracker', { 
+        trackingCode: trackingCode.substring(0, 6) + '***',
+        hasCarrier: !!trackerRequest.carrier 
+      });
       
       // Create a tracker (EasyPost requires this for new tracking codes)
       const response = await this.makeRequest('/trackers', 'POST', trackerRequest);
@@ -209,8 +214,12 @@ export class EasyPostClient {
       // Parse tracker from response - EasyPost returns { tracker: {...} }
       const tracker = response?.tracker ?? response;
       
-      // Log raw tracker for debugging
-      console.log('📦 Raw tracker object:', JSON.stringify(tracker, null, 2));
+      // Log tracker metadata without PHI
+      edgeLogger.info('Raw tracker received', { 
+        trackerId: tracker.id?.substring(0, 10) + '***',
+        hasStatus: !!tracker.status,
+        hasCarrier: !!tracker.carrier 
+      });
       
       // Map tracking events from tracking_details
       const events = tracker.tracking_details?.map((event: any) => ({
@@ -225,11 +234,11 @@ export class EasyPostClient {
       // Fallback for empty/unknown status
       const finalStatus = tracker.status || 'pre_transit';
 
-      console.log('✅ Parsed EasyPost tracking:', {
+      edgeLogger.info('Parsed EasyPost tracking', {
         status: finalStatus,
         carrier: tracker.carrier,
-        events_count: events.length,
-        has_url: !!tracker.public_url
+        eventsCount: events.length,
+        hasUrl: !!tracker.public_url
       });
 
       return {
@@ -243,11 +252,11 @@ export class EasyPostClient {
         carrier_detail: tracker.carrier_detail
       };
     } catch (error: any) {
-      console.error('❌ Tracking retrieval failed:', error);
+      edgeLogger.error('Tracking retrieval failed', error);
       
       // Retry without carrier if mismatch error
       if (normalizedCarrier && error?.message?.includes('tracking number does not belong to the carrier')) {
-        console.log('🔄 Carrier mismatch detected, retrying without carrier...');
+        edgeLogger.info('Carrier mismatch detected, retrying without carrier');
         
         try {
           const trackerRequest = { tracking_code: trackingCode };
@@ -265,10 +274,10 @@ export class EasyPostClient {
 
           const finalStatus = tracker.status || 'pre_transit';
 
-          console.log('✅ Retry without carrier successful:', {
+          edgeLogger.info('Retry without carrier successful', {
             status: finalStatus,
             carrier: tracker.carrier,
-            events_count: events.length
+            eventsCount: events.length
           });
 
           return {
@@ -282,14 +291,14 @@ export class EasyPostClient {
             carrier_detail: tracker.carrier_detail
           };
         } catch (retryError) {
-          console.error('❌ Retry without carrier also failed:', retryError);
+          edgeLogger.error('Retry without carrier also failed', retryError);
           // Fall through to duplicate check
         }
       }
       
       // Fallback for "duplicate request is currently in-flight" error
       if (error?.message?.includes('duplicate request is currently in-flight')) {
-        console.log('⏳ Duplicate request detected, waiting and retrying with GET...');
+        edgeLogger.info('Duplicate request detected, retrying with GET');
         
         // Wait 1 second then try GET endpoint
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -312,10 +321,10 @@ export class EasyPostClient {
 
           const finalStatus = tracker.status || 'pre_transit';
 
-          console.log('✅ Fallback GET successful:', {
+          edgeLogger.info('Fallback GET successful', {
             status: finalStatus,
             carrier: tracker.carrier,
-            events_count: events.length
+            eventsCount: events.length
           });
 
           return {
@@ -329,7 +338,7 @@ export class EasyPostClient {
             carrier_detail: tracker.carrier_detail
           };
         } catch (fallbackError) {
-          console.error('❌ Fallback GET also failed:', fallbackError);
+          edgeLogger.error('Fallback GET also failed', fallbackError);
           throw fallbackError;
         }
       }
@@ -358,7 +367,7 @@ export class EasyPostClient {
         tracking_url: response.tracker.public_url || ''
       };
     } catch (error) {
-      console.error('Tracker creation failed:', error);
+      edgeLogger.error('Tracker creation failed', error);
       throw error;
     }
   }
