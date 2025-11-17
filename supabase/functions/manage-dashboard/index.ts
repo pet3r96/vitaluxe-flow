@@ -1,5 +1,6 @@
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 /**
  * Fetch timeseries data for a given metric type
@@ -12,22 +13,46 @@ async function fetchTimeseriesData(
   effectiveRole: string,
   effectiveUserId: string
 ): Promise<Array<{ created_at: string; value: number }>> {
+  edgeLogger.info('Fetching timeseries data', { 
+    metricType, 
+    startDate, 
+    endDate, 
+    effectiveRole 
+  });
+
+  let result: Array<{ created_at: string; value: number }> = [];
+
   switch (metricType) {
     case 'orders':
-      return fetchOrdersTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId);
+      result = await fetchOrdersTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId);
+      break;
     case 'products':
-      return fetchProductsTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId);
+      result = await fetchProductsTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId);
+      break;
     case 'revenue':
-      return fetchRevenueTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId, 'paid');
+      result = await fetchRevenueTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId, 'paid');
+      break;
     case 'pending_revenue':
-      return fetchRevenueTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId, 'pending');
+      result = await fetchRevenueTimeseries(supabase, startDate, endDate, effectiveRole, effectiveUserId, 'pending');
+      break;
     case 'users':
-      return fetchUsersTimeseries(supabase, startDate, endDate);
+      result = await fetchUsersTimeseries(supabase, startDate, endDate);
+      break;
     case 'pending_orders':
-      return fetchPendingOrdersTimeseries(supabase, startDate, endDate, effectiveUserId);
+      result = await fetchPendingOrdersTimeseries(supabase, startDate, endDate, effectiveUserId);
+      break;
     default:
-      return [];
+      edgeLogger.warn('Unknown metric type', { metricType });
+      result = [];
   }
+
+  edgeLogger.info('Timeseries data fetched', { 
+    metricType, 
+    resultCount: result?.length || 0,
+    hasData: result && result.length > 0
+  });
+
+  return result;
 }
 
 async function fetchOrdersTimeseries(
@@ -37,8 +62,10 @@ async function fetchOrdersTimeseries(
   effectiveRole: string,
   effectiveUserId: string
 ): Promise<Array<{ created_at: string; value: number }>> {
+  edgeLogger.info('Fetching orders timeseries', { effectiveRole, startDate, endDate });
+
   if (effectiveRole === 'doctor') {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('orders')
       .select('created_at')
       .eq('doctor_id', effectiveUserId)
@@ -46,15 +73,25 @@ async function fetchOrdersTimeseries(
       .neq('payment_status', 'payment_failed')
       .gte('created_at', startDate)
       .lte('created_at', endDate);
-    return data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+    
+    if (error) edgeLogger.error('Orders query failed for doctor', error);
+    const result = data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+    edgeLogger.info('Orders timeseries result for doctor', { count: result.length });
+    return result;
   } else if (effectiveRole === 'provider') {
-    const { data: providerData } = await supabase
+    const { data: providerData, error: providerError } = await supabase
       .from('providers')
       .select('id')
       .eq('user_id', effectiveUserId)
       .single();
-    if (!providerData) return [];
-    const { data: orderLines } = await supabase
+    
+    if (providerError) edgeLogger.error('Provider lookup failed', providerError);
+    if (!providerData) {
+      edgeLogger.warn('No provider found for user');
+      return [];
+    }
+
+    const { data: orderLines, error } = await supabase
       .from('order_lines')
       .select('orders!inner(created_at, payment_status, status)')
       .eq('provider_id', providerData.id)
@@ -62,15 +99,25 @@ async function fetchOrdersTimeseries(
       .neq('orders.status', 'cancelled')
       .gte('orders.created_at', startDate)
       .lte('orders.created_at', endDate);
-    return orderLines?.map((ol: any) => ({ created_at: ol.orders.created_at, value: 1 })) || [];
+    
+    if (error) edgeLogger.error('Order lines query failed for provider', error);
+    const result = orderLines?.map((ol: any) => ({ created_at: ol.orders.created_at, value: 1 })) || [];
+    edgeLogger.info('Orders timeseries result for provider', { count: result.length });
+    return result;
   } else if (effectiveRole === 'pharmacy') {
-    const { data: pharmacyData } = await supabase
+    const { data: pharmacyData, error: pharmacyError } = await supabase
       .from('pharmacies')
       .select('id')
       .eq('user_id', effectiveUserId)
       .maybeSingle();
-    if (!pharmacyData) return [];
-    const { data: orderLines } = await supabase
+    
+    if (pharmacyError) edgeLogger.error('Pharmacy lookup failed', pharmacyError);
+    if (!pharmacyData) {
+      edgeLogger.warn('No pharmacy found for user');
+      return [];
+    }
+
+    const { data: orderLines, error } = await supabase
       .from('order_lines')
       .select('orders!inner(created_at, payment_status, status)')
       .eq('assigned_pharmacy_id', pharmacyData.id)
@@ -78,16 +125,26 @@ async function fetchOrdersTimeseries(
       .neq('orders.status', 'cancelled')
       .gte('orders.created_at', startDate)
       .lte('orders.created_at', endDate);
-    return orderLines?.map((ol: any) => ({ created_at: ol.orders.created_at, value: 1 })) || [];
+    
+    if (error) edgeLogger.error('Order lines query failed for pharmacy', error);
+    const result = orderLines?.map((ol: any) => ({ created_at: ol.orders.created_at, value: 1 })) || [];
+    edgeLogger.info('Orders timeseries result for pharmacy', { count: result.length });
+    return result;
   }
-  const { data } = await supabase
+  
+  // Admin/staff - all orders
+  const { data, error } = await supabase
     .from('orders')
     .select('created_at')
     .neq('status', 'cancelled')
     .neq('payment_status', 'payment_failed')
     .gte('created_at', startDate)
     .lte('created_at', endDate);
-  return data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+  
+  if (error) edgeLogger.error('Orders query failed for admin', error);
+  const result = data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+  edgeLogger.info('Orders timeseries result for admin', { count: result.length });
+  return result;
 }
 
 async function fetchProductsTimeseries(
@@ -230,7 +287,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    console.log('[manage-dashboard] Action:', action);
+    edgeLogger.info('Dashboard action received', { action });
 
     switch (action) {
       case 'summary': {
@@ -421,6 +478,7 @@ Deno.serve(async (req) => {
 
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
+          edgeLogger.error('Timeseries auth failed', authError);
           return new Response(JSON.stringify({ error: 'Unauthorized' }), {
             status: 401,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -428,6 +486,14 @@ Deno.serve(async (req) => {
         }
 
         const { metricType, period, startDate, endDate, effectiveRole, effectiveUserId } = body;
+
+        edgeLogger.info('Timeseries request', { 
+          metricType, 
+          period, 
+          startDate, 
+          endDate, 
+          effectiveRole 
+        });
 
         // Calculate previous period dates
         const start = new Date(startDate);
@@ -456,6 +522,12 @@ Deno.serve(async (req) => {
           effectiveUserId
         );
 
+        edgeLogger.info('Timeseries response', { 
+          metricType,
+          currentCount: currentData?.length || 0,
+          previousCount: previousData?.length || 0 
+        });
+
         return new Response(
           JSON.stringify({ 
             current: currentData,
@@ -476,7 +548,7 @@ Deno.serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error('[manage-dashboard] Error:', error);
+    edgeLogger.error('Dashboard endpoint error', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
