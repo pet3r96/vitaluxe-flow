@@ -1,5 +1,6 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
     const scheduledTime = new Date(now.getTime() + 60_000);
     const endTime = new Date(scheduledTime.getTime() + 30 * 60_000); // +30 mins default
 
-    console.log('[create-instant-video-session] Creating appointment with payload', {
+    edgeLogger.info('[create-instant-video-session] Creating appointment with payload', {
       patient_id: patientId,
       provider_id: providerId,
       practice_id: practiceId,
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (appointmentError) {
-      console.error('[create-instant-video-session] Insert error:', appointmentError.message);
+      edgeLogger.error('[create-instant-video-session] Insert error', appointmentError);
     }
 
     if (appointmentError || !appointment) {
@@ -81,7 +82,7 @@ Deno.serve(async (req) => {
     while (retries < maxRetries && !videoSession) {
       await new Promise((resolve) => setTimeout(resolve, retries === 0 ? 1500 : 500));
       
-      console.log(`[create-instant-video-session] Attempt ${retries + 1} to fetch video_session for appointment ${appointment.id}`);
+      edgeLogger.info(`[create-instant-video-session] Attempt ${retries + 1} to fetch video_session`, { appointmentId: appointment.id });
       
       const { data, error: sessionError } = await supabase
         .from('video_sessions')
@@ -91,16 +92,16 @@ Deno.serve(async (req) => {
 
       if (data) {
         videoSession = data;
-        console.log('[create-instant-video-session] Video session found:', videoSession.id);
+        edgeLogger.info('[create-instant-video-session] Video session found', { sessionId: videoSession.id });
       } else if (sessionError) {
-        console.log('[create-instant-video-session] Session error:', sessionError.message);
+        edgeLogger.info('[create-instant-video-session] Session error', { error: sessionError.message });
       }
       
       retries++;
     }
 
     if (!videoSession) {
-      console.error('[create-instant-video-session] Failed to create video session after retries');
+      edgeLogger.error('[create-instant-video-session] Failed to create video session after retries');
       return new Response(
         JSON.stringify({ error: 'Video session not created after multiple retries' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -108,7 +109,7 @@ Deno.serve(async (req) => {
     }
 
     // Send instant video notification to patient
-    console.log('[create-instant-video-session] Sending notification for instant video session');
+    edgeLogger.info('[create-instant-video-session] Sending notification for instant video session');
     
     const { data: patientWithUser, error: patientUserError } = await supabase
       .from('patient_accounts')
