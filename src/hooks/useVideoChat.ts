@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import AgoraRTM from "agora-rtm-sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { createRTMClient, decodeMessage } from "@/utils/agoraRTM";
+import { logger } from "@/lib/logger";
 
 export interface ChatMessage {
   id: string;
@@ -45,33 +46,27 @@ export const useVideoChat = ({
         const client = createRTMClient(appId);
         clientRef.current = client;
 
-        console.log("===== FE TOKEN DEBUG (RTM) =====");
-        console.log("FE RTM Token (full):", rtmToken);
-        console.log("RTM Token length:", rtmToken?.length);
-        console.log("RTM Token prefix:", rtmToken?.substring(0, 20));
-        console.log("RTM Login Params:", { appId, rtmUid });
-        console.log("================================");
+        logger.info("RTM token debug", {
+          rtmTokenLength: rtmToken?.length,
+          rtmTokenPrefix: rtmToken?.substring(0, 20),
+          appId,
+          rtmUid
+        });
 
         try {
           await client.login({ uid: rtmUid, token: rtmToken });
-          console.log('✅ [RTM] Successfully logged in');
+          logger.info("RTM logged in successfully");
           // Clear any previous errors on successful login
           setRtmErrorCode(null);
           setRtmErrorMessage(null);
         } catch (err: any) {
-          console.error("=== AGORA RTM LOGIN ERROR ===", err);
-          console.error("Error Code:", err.code);
-          console.error("Error Name:", err.name);
-          console.error("Error Message:", err.message);
-          console.error("Full Error Object:", err);
-          console.error("Error Stack:", err.stack);
-          console.error("Parameters Used:", {
+          logger.error("Agora RTM login failed", err, {
+            errorCode: err.code,
+            errorName: err.name,
             appId,
             rtmUid,
-            rtmTokenPrefix: rtmToken.substring(0, 20),
-            rtmTokenLength: rtmToken.length,
+            rtmTokenLength: rtmToken.length
           });
-          console.error("============================");
           
           // Capture error for parent component
           setRtmErrorCode(err.code || null);
@@ -83,30 +78,28 @@ export const useVideoChat = ({
         const channel = client.createChannel(channelName);
         channelRef.current = channel;
 
-        console.log('🔗 [RTM] Attempting to join channel:', channelName);
+        logger.info("RTM attempting to join channel", { channelName });
         try {
           await channel.join();
-        console.log('✅ [RTM] Successfully joined channel');
+        logger.info("RTM joined channel successfully");
         
         // Monitor RTM connection errors
         client.on('ConnectionStateChanged', (newState, reason) => {
-          console.log(`[RTM] Connection state: ${newState}, reason: ${reason}`);
+          logger.info("RTM connection state changed", { newState, reason });
           
           if (reason === 'TOKEN_EXPIRED') {
-            console.error('❌ [RTM] Token expired detected by SDK');
+            logger.error("RTM token expired");
           }
           
           if (newState === 'ABORTED') {
-            console.error('❌ [RTM] Connection aborted:', reason);
+            logger.error("RTM connection aborted", null, { reason });
           }
         });
       } catch (err: any) {
-          console.error("=== AGORA RTM CHANNEL JOIN ERROR ===");
-          console.error("Error Code:", err.code);
-          console.error("Error Name:", err.name);
-          console.error("Error Message:", err.message);
-          console.error("Full Error Object:", err);
-          console.error("====================================");
+          logger.error("Agora RTM channel join failed", err, {
+            errorCode: err.code,
+            errorName: err.name
+          });
           throw err;
         }
         
@@ -172,7 +165,7 @@ export const useVideoChat = ({
           setMessages((prev) => [...historyMessages, ...prev]);
         }
       } catch (error) {
-        console.error("RTM initialization error:", error);
+        logger.error("RTM initialization failed", error);
       }
     };
 
@@ -250,7 +243,7 @@ export const useVideoChat = ({
         },
       });
     } catch (error) {
-      console.error("Failed to send message:", error);
+      logger.error("Failed to send RTM message", error);
     }
   };
 

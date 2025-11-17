@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 export async function emitEvent(sessionId: string, eventType: string, userUid: string) {
   const { error } = await supabase.from("video_session_events").insert({
@@ -8,6 +9,6 @@ export async function emitEvent(sessionId: string, eventType: string, userUid: s
   });
 
   if (error) {
-    console.error("[emitEvent] Failed to emit event:", error);
+    logger.error("Failed to emit video session event", error, { sessionId, eventType });
   }
 }

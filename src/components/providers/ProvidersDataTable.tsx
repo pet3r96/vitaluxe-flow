@@ -23,6 +23,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { sanitizeEncrypted } from "@/lib/utils";
 import { getProviderDisplayName } from "@/utils/providerNameUtils";
+import { logger } from "@/lib/logger";
 
 export const ProvidersDataTable = () => {
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
