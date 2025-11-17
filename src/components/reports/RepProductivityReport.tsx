@@ -14,6 +14,7 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { RefreshCw, Users, ShoppingCart, DollarSign, Building2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { logger } from "@/lib/logger";
+import { time, timeEnd } from "@/diag";
 
 const RepProductivityReport = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
@@ -23,7 +24,7 @@ const RepProductivityReport = () => {
   const { data: productivityData, isLoading, refetch } = useQuery<RepProductivityData[]>({
     queryKey: ["rep-productivity"],
     queryFn: async () => {
-      if (import.meta.env.DEV) console.time('[RepProductivity] Query');
+      time('RepProductivity Query');
       
       // Fetch ONLY the columns we need for display - no SELECT *
       const { data, error } = await RepProductivityView()
@@ -38,7 +39,7 @@ const RepProductivityReport = () => {
         `)
         .order("total_commissions", { ascending: false });
       
-      if (import.meta.env.DEV) console.timeEnd('[RepProductivity] Query');
+      timeEnd('RepProductivity Query');
       
       if (error) {
         logger.error('[RepProductivity] Error fetching data', error);

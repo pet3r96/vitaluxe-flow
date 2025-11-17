@@ -9,6 +9,7 @@ import { Video, Download, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logger";
 
 interface RecordedSessionsListProps {
   practiceId: string;
@@ -66,7 +67,7 @@ export const RecordedSessionsList = ({ practiceId }: RecordedSessionsListProps) 
         description: "Recording opened in new tab"
       });
     } catch (error) {
-      console.error('Error downloading recording:', error);
+      logger.error('Error downloading recording', error);
       toast({
         title: "Download Failed",
         description: "Failed to download recording",

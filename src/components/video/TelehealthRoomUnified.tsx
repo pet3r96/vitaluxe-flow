@@ -123,7 +123,7 @@ export default function TelehealthRoomUnified({
   };
 
   const handleAdmitPatient = async (patientUid: string) => {
-    console.log("[TelehealthRoom] Admitting patient:", patientUid);
+    logger.info('Admitting patient', { patientUid });
     await events.emitAdmitted(patientUid);
   };
 
@@ -203,7 +203,7 @@ export default function TelehealthRoomUnified({
             />
             <CommunicationControls
               onOpenChat={handleToggleChat}
-              onOpenParticipants={() => console.log("Open participants")}
+              onOpenParticipants={() => logger.info('Open participants clicked')}
             />
             <ActionControls
               onToggleChart={handleToggleChart}
