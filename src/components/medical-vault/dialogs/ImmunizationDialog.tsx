@@ -13,6 +13,7 @@ import { searchVaccines } from "@/lib/medical-api-service";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import type { TypedVaultRecord } from "@/types/vault/records";
 import { VaultRecordBase, asImmunization } from "@/lib/vault";
 
 const immunizationSchema = z.object({
@@ -76,9 +77,9 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
         }
         console.log('[ImmunizationDialog] UPDATE success');
       } else {
-        const insertData: Partial<MedicalVaultRecord> = {
+        const insertData: Partial<TypedVaultRecord> = {
           record_type: "immunization",
-          record_data: formattedData as ImmunizationRecordData,
+          record_data: formattedData,
           patient_account_id: patientAccountId,
           created_by_user_id: authUser.id,
           created_by_role: mapRoleToAuditRole(effectiveRole),

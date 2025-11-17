@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asAllergy } from "@/lib/vault";
+import type { TypedVaultRecord, AllergyRecordData } from "@/types/vault/records";
 
 const allergySchema = z.object({
   nka: z.boolean().optional(),
@@ -155,9 +156,9 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           .eq("id", allergy.id);
         if (error) throw error;
       } else {
-        const insertData: Partial<MedicalVaultRecord> = {
+        const insertData: Partial<TypedVaultRecord> = {
           record_type: "allergy",
-          record_data: recordData as AllergyRecordData,
+          record_data: recordData,
           patient_account_id: patientAccountId,
           is_active: true,
           created_by_user_id: user?.id,

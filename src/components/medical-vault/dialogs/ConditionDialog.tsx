@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asCondition } from "@/lib/vault";
+import type { TypedVaultRecord } from "@/types/vault/records";
 
 const conditionSchema = z.object({
   condition_name: z.string().min(1, "Condition name is required"),

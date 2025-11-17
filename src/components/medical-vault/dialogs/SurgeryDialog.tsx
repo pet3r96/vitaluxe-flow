@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
+import type { TypedVaultRecord } from "@/types/vault/records";
 import { VaultRecordBase, asSurgery } from "@/lib/vault";
 
 const surgerySchema = z.object({
@@ -76,9 +77,9 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
         }
         console.log('[SurgeryDialog] UPDATE success');
       } else {
-        const insertData: Partial<MedicalVaultRecord> = {
+        const insertData: Partial<TypedVaultRecord> = {
           record_type: "surgery",
-          record_data: recordData as SurgeryRecordData,
+          record_data: recordData,
           patient_account_id: patientAccountId,
           created_by_user_id: authUser.id,
           created_by_role: mapRoleToAuditRole(effectiveRole),

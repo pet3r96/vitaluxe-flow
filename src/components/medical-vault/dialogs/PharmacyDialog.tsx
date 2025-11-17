@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asPharmacy } from "@/lib/vault";
+import type { TypedVaultRecord, PharmacyRecordData } from "@/types/vault/records";
 
 const pharmacySchema = z.object({
   pharmacy_name: z.string().optional(),
@@ -128,9 +129,9 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         }
         console.log('[PharmacyDialog] UPDATE success');
       } else {
-        const insertData: Partial<MedicalVaultRecord> = {
+        const insertData: Partial<TypedVaultRecord> = {
           record_type: "pharmacy",
-          record_data: recordData as PharmacyRecordData,
+          record_data: recordData,
           patient_account_id: patientAccountId,
           created_by_user_id: authUser.id,
           created_by_role: mapRoleToAuditRole(effectiveRole),

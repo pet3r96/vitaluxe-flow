@@ -10,6 +10,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { validatePhone } from "@/lib/validators";
 import { useQueryClient } from "@tanstack/react-query";
+import type { PendingRepRequest } from '@/types/manual-schema';
 
 interface AddRepRequestDialogProps {
   open: boolean;

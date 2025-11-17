@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asMedication } from "@/lib/vault";
+import type { TypedVaultRecord } from "@/types/vault/records";
 
 const medicationSchema = z.object({
   medication_name: z.string().min(1, "Medication name is required"),
@@ -167,13 +168,9 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         }
         console.log('[MedicationDialog] UPDATE success');
       } else {
-import type { MedicalVaultRecord, MedicationRecordData } from '@/types/domain/medical-vault';
-
-// ... existing code
-
-        const insertData: Partial<MedicalVaultRecord> = {
+        const insertData: Partial<TypedVaultRecord> = {
           record_type: "medication",
-          record_data: recordData as MedicationRecordData,
+          record_data: recordData,
           patient_account_id: patientAccountId,
           is_active: true,
           created_by_user_id: authUser.id,
