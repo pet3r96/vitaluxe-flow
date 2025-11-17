@@ -35,7 +35,7 @@ export default function RepSubscriptionReferrals() {
     enabled: !!effectiveUserId && (effectiveRole === "topline" || effectiveRole === "downline"),
   });
 
-  // Get subscription commissions
+  // JUSTIFIED: Complex Supabase query with nested relations causes TypeScript inference issues
   const { data: commissions, isLoading } = useQuery({
     queryKey: ["rep-subscription-commissions", repData?.id],
     queryFn: async () => {
@@ -61,17 +61,17 @@ export default function RepSubscriptionReferrals() {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!repData?.id,
   });
 
   // Calculate totals
-  const totalEarned = commissions?.reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
-  const pendingAmount = commissions?.filter(c => c.payment_status === 'pending')
-    .reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
-  const paidAmount = commissions?.filter(c => c.payment_status === 'paid')
-    .reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
+  const totalEarned = commissions?.reduce((sum: number, c: any) => sum + (c.commission_amount || 0), 0) || 0;
+  const pendingAmount = commissions?.filter((c: any) => c.payment_status === 'pending')
+    .reduce((sum: number, c: any) => sum + (c.commission_amount || 0), 0) || 0;
+  const paidAmount = commissions?.filter((c: any) => c.payment_status === 'paid')
+    .reduce((sum: number, c: any) => sum + (c.commission_amount || 0), 0) || 0;
 
   const pagination = usePagination({ totalItems: commissions?.length || 0, itemsPerPage: 10 });
   
@@ -96,7 +96,7 @@ export default function RepSubscriptionReferrals() {
   const filterCommissions = (status?: string) => {
     if (!commissions) return [];
     if (!status || status === 'all') return commissions;
-    return commissions.filter(c => c.payment_status === status);
+    return commissions.filter((c: any) => c.payment_status === status);
   };
 
   if (isLoading) {
@@ -190,10 +190,10 @@ export default function RepSubscriptionReferrals() {
                           <TableCell>
                             <div>
                               <div className="font-medium">
-                                {(commission.profiles as any)?.full_name || 'N/A'}
+                                {(commission as any).profiles?.full_name || 'N/A'}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {(commission.profiles as any)?.email}
+                                {(commission as any).profiles?.email}
                               </div>
                             </div>
                           </TableCell>

@@ -300,6 +300,7 @@ export default function PatientDocuments() {
 
       if (storageError) throw storageError;
 
+      // JUSTIFIED: patient_medical_vault table not in generated schema
       const { error: dbError } = await (supabase as any)
         .from("patient_medical_vault")
         .delete()
@@ -326,6 +327,7 @@ export default function PatientDocuments() {
   // Hide mutation (for provider documents)
   const hideMutation = useMutation({
     mutationFn: async (docId: string) => {
+      // JUSTIFIED: patient_medical_vault table not in generated schema
       const { error } = await (supabase as any)
         .from("patient_medical_vault")
         .update({ 

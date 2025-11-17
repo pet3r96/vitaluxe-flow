@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,13 +40,13 @@ import {
 
 const AdminDiscountCodes = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCode, setSelectedCode] = useState<any>(null);
+  const [selectedCode, setSelectedCode] = useState<Database['public']['Tables']['discount_codes']['Row'] | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [showStatsDialog, setShowStatsDialog] = useState(false);
-  const [deleteConfirmCode, setDeleteConfirmCode] = useState<any>(null);
+  const [deleteConfirmCode, setDeleteConfirmCode] = useState<Database['public']['Tables']['discount_codes']['Row'] | null>(null);
   const { toast } = useToast();
 
-  const { data: discountCodes, refetch } = useQuery({
+  const { data: discountCodes, refetch } = useQuery<Database['public']['Tables']['discount_codes']['Row'][]>({
     queryKey: ["admin-discount-codes"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -54,11 +55,11 @@ const AdminDiscountCodes = () => {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
-  const handleToggleActive = async (code: any) => {
+  const handleToggleActive = async (code: Database['public']['Tables']['discount_codes']['Row']) => {
     const { error } = await supabase
       .from("discount_codes")
       .update({ active: !code.active })
@@ -95,7 +96,7 @@ const AdminDiscountCodes = () => {
     pagination.endIndex
   );
 
-  const handleDelete = async (code: any) => {
+  const handleDelete = async (code: Database['public']['Tables']['discount_codes']['Row']) => {
     const { error } = await supabase
       .from("discount_codes")
       .delete()
@@ -117,7 +118,7 @@ const AdminDiscountCodes = () => {
     setDeleteConfirmCode(null);
   };
 
-  const getStatusBadge = (code: any) => {
+  const getStatusBadge = (code: Database['public']['Tables']['discount_codes']['Row']) => {
     const now = new Date();
     const validUntil = code.valid_until ? new Date(code.valid_until) : null;
     const isExpired = validUntil && validUntil < now;
