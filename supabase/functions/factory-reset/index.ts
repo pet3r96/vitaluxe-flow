@@ -228,7 +228,7 @@ serve(async (req) => {
       const response: DryRunResponse = {
         mode: 'dryRun',
         admin_verified: true,
-        admin_email: user.email ?? 'unknown',
+        admin_email: user.email?.split('@')[1] ?? 'unknown',
         admin_user_id: adminUserId,
         current_counts,
         preserved_tables,
@@ -243,7 +243,7 @@ serve(async (req) => {
     }
 
     // EXECUTE MODE
-    edgeLogger.info('Factory reset EXECUTE initiated', { userEmail: user.email });
+    edgeLogger.info('Factory reset EXECUTE initiated', { emailDomain: user.email?.split('@')[1] });
     const startTime = Date.now();
     const deleted_counts: Record<string, number> = {};
 
@@ -425,7 +425,7 @@ serve(async (req) => {
       execution_time_seconds: Number(((endTime - startTime) / 1000).toFixed(1)),
       admin_preserved: {
         user_id: adminUserId,
-        email: user.email ?? 'unknown',
+        email: user.email?.split('@')[1] ?? 'unknown',
         role: 'admin',
       },
     };

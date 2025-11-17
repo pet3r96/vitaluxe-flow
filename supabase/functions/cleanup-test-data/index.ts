@@ -84,7 +84,7 @@ serve(async (req) => {
       );
     }
 
-    edgeLogger.info('Processing deletion request', { count: emailList.length, adminEmail: user.email });
+    edgeLogger.info('Processing deletion request', { count: emailList.length, adminEmailDomain: user.email?.split('@')[1] });
 
     const results: Array<{ email: string; success: boolean; message: string; details?: any }> = [];
     let deletedCount = 0;

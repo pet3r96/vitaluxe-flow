@@ -88,7 +88,7 @@ serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    edgeLogger.info('Subscription cancelled', { userId: user.id, userEmail: profile?.email });
+    edgeLogger.info('Subscription cancelled', { userId: user.id, emailDomain: profile?.email?.split('@')[1] });
 
     return successResponse({ 
       message: 'Subscription cancelled successfully',

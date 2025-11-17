@@ -94,7 +94,7 @@ serve(async (req) => {
               });
 
               if (authError || !authUser.user) {
-                errors.push(`Failed to create auth user for pharmacy ${pharmacy.name}: ${authError?.message}`);
+                errors.push(`Failed to create auth user for pharmacy: ${authError?.message}`);
                 continue;
               }
 

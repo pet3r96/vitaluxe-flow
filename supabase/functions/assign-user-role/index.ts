@@ -390,7 +390,7 @@ serve(async (req) => {
     const userExists = existingUser?.users?.some(u => u.email?.toLowerCase() === signupData.email.toLowerCase());
     
     if (userExists) {
-      edgeLogger.warn('User already exists with email', { email: signupData.email });
+      edgeLogger.warn('User already exists with email', { emailDomain: signupData.email?.split('@')[1] });
       return new Response(
         JSON.stringify({ error: 'A user with this email already exists. Please use a different email address.' }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -779,7 +779,7 @@ serve(async (req) => {
 
     // Generate token for staff members (will be sent by frontend)
     if (signupData.role === 'staff') {
-      edgeLogger.info('Staff account created: generating activation token', { email: signupData.email });
+      edgeLogger.info('Staff account created: generating activation token', { emailDomain: signupData.email?.split('@')[1] });
       
       // CRITICAL FIX: Ensure practice_staff record exists for staff membership
       const staffPracticeId = signupData.roleData.practiceId;
@@ -832,7 +832,7 @@ serve(async (req) => {
     
     if (isSelfSignup) {
       // Self-signup: Send verification email
-      edgeLogger.info('✉️ [assign-user-role] Self-signup flow: sending verification email', { email: signupData.email });
+      edgeLogger.info('✉️ [assign-user-role] Self-signup flow: sending verification email', { emailDomain: signupData.email?.split('@')[1] });
       edgeLogger.info('[assign-user-role] Invoking send-verification-email function', { userId });
       
       try {
@@ -859,7 +859,7 @@ serve(async (req) => {
       }
     } else if (isAdminCreated && signupData.role !== 'admin' && signupData.role !== 'staff') {
       // Admin-created (but NOT staff): Send temp password email and set password status
-      edgeLogger.info('✉️ [assign-user-role] Admin-created flow: sending welcome email', { email: signupData.email });
+      edgeLogger.info('✉️ [assign-user-role] Admin-created flow: sending welcome email', { emailDomain: signupData.email?.split('@')[1] });
       edgeLogger.info('[assign-user-role] Invoking send-welcome-email function', { userId });
       
       // Insert password status record for forced password change
