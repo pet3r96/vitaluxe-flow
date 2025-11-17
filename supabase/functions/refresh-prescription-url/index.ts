@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +22,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[refresh-prescription-url] Refreshing URL for:', prescriptionPath);
+    edgeLogger.info('[refresh-prescription-url] Refreshing URL for path', { prescriptionPath });
 
     const adminClient = createAdminClient();
 
@@ -31,14 +32,14 @@ serve(async (req) => {
       .createSignedUrl(prescriptionPath, 31536000); // 1 year in seconds
 
     if (urlError || !signedUrlData) {
-      console.error('[refresh-prescription-url] Error:', urlError);
+      edgeLogger.error('[refresh-prescription-url] Failed to generate signed URL', urlError);
       return new Response(
         JSON.stringify({ error: 'Failed to generate signed URL' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[refresh-prescription-url] Success - new URL generated');
+    edgeLogger.info('[refresh-prescription-url] Success - new URL generated');
 
     return new Response(
       JSON.stringify({ 
@@ -49,7 +50,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[refresh-prescription-url] Error:', error);
+    edgeLogger.error('[refresh-prescription-url] Unexpected error', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

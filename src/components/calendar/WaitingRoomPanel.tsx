@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { realtimeManager } from "@/lib/realtimeManager";
+import { time, timeEnd } from "@/diag";
 import { differenceInMinutes, format } from "date-fns";
 import { Clock, User, ChevronDown, ChevronUp, Video, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -362,7 +363,7 @@ export function WaitingRoomPanel({
   };
 
   const handleStartVideoSession = async (sessionId: string) => {
-    if (import.meta.env.DEV) console.time(`[WaitingRoomPanel] start-video-session-${sessionId}`);
+    time(`WaitingRoomPanel start-video-session-${sessionId}`);
     try {
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('timeout')), 12000)
@@ -374,7 +375,7 @@ export function WaitingRoomPanel({
 
       const result = await Promise.race([invokePromise, timeoutPromise]);
       const { data, error } = result as { data: any; error: any };
-      if (import.meta.env.DEV) console.timeEnd(`[WaitingRoomPanel] start-video-session-${sessionId}`);
+      timeEnd(`WaitingRoomPanel start-video-session-${sessionId}`);
 
       if (error) throw error;
 
@@ -384,7 +385,7 @@ export function WaitingRoomPanel({
 
       refetchVideo();
     } catch (error: any) {
-      if (import.meta.env.DEV) console.timeEnd(`[WaitingRoomPanel] start-video-session-${sessionId}`);
+      timeEnd(`WaitingRoomPanel start-video-session-${sessionId}`);
       
       if (error.message === 'timeout') {
         toast.info("Still Processing", {

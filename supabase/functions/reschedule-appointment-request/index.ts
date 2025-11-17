@@ -1,5 +1,6 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -12,7 +13,13 @@ Deno.serve(async (req) => {
 
     const { appointmentId, newDate, newTime, reason, clientDateTimeIso, timezoneOffsetMinutes } = await req.json();
     
-    console.log('Reschedule request:', { appointmentId, newDate, newTime, clientDateTimeIso, timezoneOffsetMinutes });
+    edgeLogger.info('Reschedule request received', { 
+      appointmentId, 
+      newDate, 
+      newTime, 
+      clientDateTimeIso, 
+      timezoneOffsetMinutes 
+    });
 
     // Verify patient owns this appointment
     const { data: appointment, error: fetchError } = await supabaseClient

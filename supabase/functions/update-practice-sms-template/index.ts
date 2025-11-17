@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    console.log('✅ SMS template updated:', { practiceId, templateType });
+    edgeLogger.info('SMS template updated', { practiceId, templateType });
 
     return new Response(JSON.stringify({
       success: true,
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error updating SMS template:', error);
+    edgeLogger.error('Error updating SMS template', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
