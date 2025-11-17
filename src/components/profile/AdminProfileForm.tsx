@@ -12,6 +12,7 @@ import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthInd
 import { validatePasswordStrength } from "@/lib/passwordValidation";
 import { SignedAgreementSection } from "./SignedAgreementSection";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 
 export function AdminProfileForm() {
   const { toast } = useToast();
@@ -40,7 +41,7 @@ export function AdminProfileForm() {
         setEmail(userData.user.email || "");
       }
     } catch (error) {
-      console.error("Error fetching admin profile:", error);
+      logger.error("Error fetching admin profile", error);
     }
   };
 

@@ -9,6 +9,7 @@ import { getSignedUrl } from "@/lib/storageStrategy";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logger";
 
 interface SignedAgreementSectionProps {
   userId: string;
@@ -83,7 +84,7 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
       
       toast.success("Agreement downloaded successfully");
     } catch (error) {
-      console.error('Download error:', error);
+      logger.error('Download error', error);
       toast.error("Failed to download agreement");
     }
   };

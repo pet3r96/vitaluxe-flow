@@ -26,6 +26,7 @@ import { phoneSchema, npiSchema, deaSchema } from "@/lib/validators";
 import { sanitizeEncrypted } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { SignedAgreementSection } from "./SignedAgreementSection";
+import { logger } from "@/lib/logger";
 
 const providerFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required").max(100),
@@ -110,7 +111,7 @@ export const ProviderProfileForm = () => {
       if (!effectiveUserId) return;
       
       try {
-        console.log('[ProviderProfileForm] Loading credentials for user:', effectiveUserId);
+        logger.info('[ProviderProfileForm] Loading credentials for user', { effectiveUserId });
         
         // Try RPC first
         const { data: rpcData, error: rpcError } = await supabase.rpc('get_decrypted_profile_credentials', {
