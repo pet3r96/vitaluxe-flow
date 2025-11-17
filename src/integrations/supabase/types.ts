@@ -2575,6 +2575,39 @@ export type Database = {
           },
         ]
       }
+      patient_portal_terms: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
       patients: {
         Row: {
           created_at: string
@@ -5431,6 +5464,45 @@ export type Database = {
           session_type?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_terms_acceptances: {
+        Row: {
+          accepted_at: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          pdf_url: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          terms_id: string | null
+          user_agent: string | null
+          user_id: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          pdf_url?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          terms_id?: string | null
+          user_agent?: string | null
+          user_id: string
+          version: number
+        }
+        Update: {
+          accepted_at?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          pdf_url?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          terms_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+          version?: number
         }
         Relationships: []
       }

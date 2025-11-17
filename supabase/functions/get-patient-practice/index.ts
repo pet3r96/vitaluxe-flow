@@ -66,7 +66,11 @@ Deno.serve(async (req) => {
     // Get patient account and practice info using service role to bypass RLS during impersonation
     const { data: patientAccount, error: patientError } = await supabaseAdmin
       .from('patient_accounts')
-      .select('id, practice_id, profiles!patient_accounts_practice_id_fkey(name, address_city, address_state)')
+      .select(`
+        id, 
+        practice_id,
+        practice:practice_id(name, address_city, address_state)
+      `)
       .eq('user_id', effectiveUserId)
       .maybeSingle();
 
@@ -88,16 +92,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Profiles is returned as array from foreign key relationship  
-    const profile = Array.isArray(patientAccount.profiles) ? patientAccount.profiles[0] : patientAccount.profiles;
+    // Practice is returned as object from foreign key relationship
+    const practice = patientAccount.practice as any;
     
     const response = {
       patientAccountId: patientAccount.id,
       practiceId: patientAccount.practice_id,
-      practice: patientAccount.practice_id ? {
-        name: profile?.name || null,
-        city: profile?.address_city || null,
-        state: profile?.address_state || null,
+      practice: practice ? {
+        name: practice.name || null,
+        city: practice.address_city || null,
+        state: practice.address_state || null,
       } : null
     };
 
