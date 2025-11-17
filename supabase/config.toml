@@ -1,11 +1,5 @@
 project_id = "qbtsfajshnrwwlfzkeog"
 
-[functions.email-health]
-verify_jwt = false
-
-[functions.test-email-sending]
-verify_jwt = false
-
 [functions.email-dispatcher]
 verify_jwt = false
 
@@ -16,9 +10,6 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.amazon-get-tracking]
-verify_jwt = true
-
-[functions.set-test-password]
 verify_jwt = true
 
 [functions.send-2fa-code]
@@ -95,12 +86,6 @@ verify_jwt = false
 
 [functions.cleanup-cart-lines]
 verify_jwt = false
-
-[functions.fix-orphaned-users]
-verify_jwt = true
-
-[functions.fix-admin-email]
-verify_jwt = true
 
 [functions.delete-all-orders]
 verify_jwt = true
@@ -387,27 +372,6 @@ verify_jwt = false
 [functions.ensure-video-session]
 verify_jwt = true
 
-[functions.agora-healthcheck]
-verify_jwt = false
-
-[functions.edge-ping]
-verify_jwt = false
-
-[functions.verify-agora-config]
-verify_jwt = false
-
-[functions.test-agora-token]
-verify_jwt = false
-
-[functions.agora-echo]
-verify_jwt = false
-
-[functions.agora-debug]
-verify_jwt = false
-
-[functions.agora-token]
-verify_jwt = false
-
 [functions.create-video-session]
 verify_jwt = true
 
@@ -415,9 +379,6 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.resolve-practice-room-join]
-verify_jwt = true
-
-[functions.generate-guest-link]
 verify_jwt = true
 
 [functions.validate-guest-token]
@@ -435,9 +396,6 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.send-pharmacy-order]
-verify_jwt = false
-
-[functions.test-baremeds-auth]
 verify_jwt = false
 
 [functions.get-cart]
