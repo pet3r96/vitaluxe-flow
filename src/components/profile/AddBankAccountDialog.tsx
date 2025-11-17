@@ -8,7 +8,7 @@ import { Loader2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { BillingAddress } from "@/types/payment";
+import { BillingAddress } from "@/types/domain/payments";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 
 interface AddBankAccountDialogProps {

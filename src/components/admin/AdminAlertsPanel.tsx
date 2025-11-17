@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Bell, XCircle, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import type { AdminAlert } from "@/types/dashboard";
+import type { AdminAlert } from "@/types/domain/notifications";
 
 export const AdminAlertsPanel = () => {
   const navigate = useNavigate();

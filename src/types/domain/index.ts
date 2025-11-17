@@ -12,3 +12,6 @@ export * from './video';
 export * from './forms';
 export * from './hooks';
 export * from './api';
+export * from './payments';
+export * from './notifications';
+export * from './admin';

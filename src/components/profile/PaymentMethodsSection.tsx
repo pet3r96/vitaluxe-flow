@@ -8,7 +8,7 @@ import { Loader2, Plus, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentMethodCard } from "./PaymentMethodCard";
 import { AddCreditCardDialog } from "./AddCreditCardDialog";
-import { PaymentMethod } from "@/types/payment";
+import { PaymentMethod } from "@/types/domain/payments";
 
 export const PaymentMethodsSection = () => {
   const { toast } = useToast();

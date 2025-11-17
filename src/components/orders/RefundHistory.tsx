@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, DollarSign } from "lucide-react";
 import { format } from "date-fns";
-import type { OrderRefund } from "@/types/orders";
+import type { OrderRefund } from "@/types/domain/payments";
 
 interface RefundHistoryProps {
   orderId: string;

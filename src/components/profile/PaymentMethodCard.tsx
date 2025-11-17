@@ -1,7 +1,7 @@
 import { CreditCard, Building2, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PaymentMethod } from "@/types/payment";
+import { PaymentMethod } from "@/types/domain/payments";
 
 interface PaymentMethodCardProps {
   paymentMethod: PaymentMethod;

@@ -8,7 +8,8 @@ import { generateCSRFToken, clearCSRFToken, getCSRFToken } from "@/lib/csrf";
 import { logger } from "@/lib/logger";
 // Idle timeout system removed - now using simple 60-minute hard session timeout
 import { authService } from "@/lib/authService";
-import type { SignUpRoleData, PasswordCheckResult, ImpersonationSessionData } from "@/types/domain/auth";
+import type { SignUpRoleData, PasswordCheckResult } from "@/types/domain/auth";
+import type { ImpersonationSessionData } from "@/types/domain/admin";
 
 interface AuthContextType {
   user: User | null;
