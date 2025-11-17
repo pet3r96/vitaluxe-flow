@@ -17,9 +17,19 @@ export interface ActivityItem {
 
 export interface RecentActivityWidgetProps {
   className?: string;
-  activities?: ActivityItem[];
+  activities?: ActivityItem[] | RawPharmacyActivity[];
   isPharmacy?: boolean;
 }
+
+export interface RawPharmacyActivity {
+  id: string;
+  order_id: string;
+  status: string | null;
+  created_at: string;
+  patient_name: string;
+}
+
+export interface PharmacyOrderLineActivity extends RawPharmacyActivity {}
 
 export interface OrderLineActivity {
   order_id: string;
