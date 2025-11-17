@@ -14,12 +14,19 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { getCSRFToken, validateCSRFToken } from "@/lib/csrf";
 
+export interface AuthorizeNetResponse {
+  responseCode?: string;
+  messageCode?: string;
+  description?: string;
+  [key: string]: unknown;
+}
+
 interface PaymentError {
   order_id: string;
   order_number: string;
   success: false;
   error: string;
-  authorizenet_response?: any;
+  authorizenet_response?: AuthorizeNetResponse;
 }
 
 interface PaymentRetryDialogProps {

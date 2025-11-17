@@ -14,9 +14,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Truck, Package, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
+import type { OrderLine, TrackingDetails } from "@/types/orders";
 
 interface ShippingInfoFormProps {
-  orderLine: any;
+  orderLine: OrderLine;
   onSuccess: () => void;
 }
 
@@ -30,12 +31,12 @@ export const ShippingInfoForm = ({ orderLine, onSuccess }: ShippingInfoFormProps
   const initialStatus = orderLine.status || "pending";
   
   const [trackingNumber, setTrackingNumber] = useState(initialTrackingNumber);
-  const [carrier, setCarrier] = useState(initialCarrier);
-  const [status, setStatus] = useState(initialStatus);
+  const [carrier, setCarrier] = useState<string>(initialCarrier);
+  const [status, setStatus] = useState<string>(initialStatus);
   const [isSaving, setIsSaving] = useState(false);
   
   // Tracking refresh state
-  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingData, setTrackingData] = useState<TrackingDetails | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [callsRemaining, setCallsRemaining] = useState<number | null>(null);
   const [isCached, setIsCached] = useState(false);

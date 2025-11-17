@@ -28,11 +28,12 @@ import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { CreditCard, Building2, DollarSign } from "lucide-react";
 import { logger } from "@/lib/logger";
+import type { Order } from "@/types/orders";
 
 interface OrderDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  order: any;
+  order: Order;
   onSuccess: () => void;
 }
 

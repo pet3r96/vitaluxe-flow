@@ -16,11 +16,12 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, DollarSign, AlertCircle } from "lucide-react";
+import type { Order } from "@/types/orders";
 
 interface RefundOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  order: any;
+  order: Order;
   onSuccess: () => void;
 }
 
