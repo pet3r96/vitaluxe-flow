@@ -19,7 +19,8 @@ export async function sendNotificationSms(params: SendNotificationSmsParams): Pr
   const twilioMessagingServiceSid = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
 
   if (!twilioAccountSid || !twilioAuthToken || !twilioMessagingServiceSid) {
-    console.error("[NotificationSmsSender] Twilio not configured");
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.error("Twilio not configured");
     return { success: false, error: "SMS service not configured" };
   }
 
@@ -48,24 +49,28 @@ export async function sendNotificationSms(params: SendNotificationSmsParams): Pr
 
       if (!twilioResponse.ok) {
         const errorText = await twilioResponse.text();
-        console.error("[NotificationSmsSender] Twilio API error:", errorText);
+        const { edgeLogger } = await import('./logger.ts');
+        edgeLogger.error("Twilio API error", undefined, { errorText });
         return { success: false, error: errorText };
       }
 
       const result = await twilioResponse.json();
-      console.log("[NotificationSmsSender] SMS sent successfully:", result.sid);
+      const { edgeLogger } = await import('./logger.ts');
+      edgeLogger.info("SMS sent successfully", { messageId: result.sid });
       return { success: true, messageId: result.sid };
       
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        console.log("[NotificationSmsSender] Twilio timeout after 12s, treating as queued");
+        const { edgeLogger } = await import('./logger.ts');
+        edgeLogger.info("Twilio timeout after 12s, treating as queued");
         return { success: true }; // Treat timeout as queued
       }
       throw fetchError;
     }
   } catch (error) {
-    console.error("[NotificationSmsSender] Failed to send SMS:", error);
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.error("Failed to send SMS", error);
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }

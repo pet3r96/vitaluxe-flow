@@ -31,7 +31,9 @@ export class ErrorBoundary extends Component<Props, State> {
     // Auto-reset error state on route change
     const currentPathname = typeof window !== 'undefined' ? window.location.pathname : undefined;
     if (this.state.hasError && currentPathname !== this.state.lastPathname) {
-      console.log('[ErrorBoundary] Route changed, resetting error state');
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Route changed, resetting error state');
+      });
       this.setState({ hasError: false, error: null, lastPathname: currentPathname });
     }
   }
@@ -47,7 +49,9 @@ export class ErrorBoundary extends Component<Props, State> {
       msg.includes('AuthContext');
 
     if (isAuthContextError) {
-      console.warn('[ErrorBoundary] AuthContext timing error detected - attempting auto-recovery');
+      import('@/lib/logger').then(({ logger }) => {
+        logger.warn('AuthContext timing error detected - attempting auto-recovery');
+      });
       
       // Auto-retry once by refreshing
       const hasRetried = sessionStorage.getItem('auth-error-retry');
@@ -87,7 +91,9 @@ export class ErrorBoundary extends Component<Props, State> {
     // Auto-reload once for chunk/MIME errors to clear stale cache
     if (isChunkLoadError && !sessionStorage.getItem('chunk_reload_attempted')) {
       sessionStorage.setItem('chunk_reload_attempted', 'true');
-      console.log('[ErrorBoundary] Auto-reloading to clear stale cache...');
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Auto-reloading to clear stale cache');
+      });
       setTimeout(() => {
         window.location.href = window.location.pathname + '?v=' + Date.now();
       }, 1000);

@@ -11,7 +11,9 @@ export const Global2FADialogs = () => {
   try {
     authData = useAuth();
   } catch (error) {
-    console.warn('[Global2FADialogs] Auth context not available yet');
+    import('@/lib/logger').then(({ logger }) => {
+      logger.warn('Auth context not available yet in Global2FADialogs');
+    });
     return null;
   }
 
@@ -41,19 +43,22 @@ export const Global2FADialogs = () => {
 
   // Show unified 2FA dialog for both setup and verify
   if ((requires2FASetup || requires2FAVerify) && user?.id) {
-    console.log('[Global2FADialogs] Rendering Sms2FADialog', { 
-      requires2FASetup, 
-      requires2FAVerify, 
-      phone: user2FAPhone,
-      userId: user.id 
+    import('@/lib/logger').then(({ logger }) => {
+      logger.info('Rendering Sms2FADialog', { 
+        requires2FASetup, 
+        requires2FAVerify, 
+        userId: user.id 
+      });
     });
     return <Sms2FADialog open={true} userId={user.id} phone={user2FAPhone ?? undefined} />;
   }
 
-  console.log('[Global2FADialogs] No dialog needed', { 
-    requires2FASetup, 
-    requires2FAVerify, 
-    twoFAStatusChecked 
+  import('@/lib/logger').then(({ logger }) => {
+    logger.info('No 2FA dialog needed', { 
+      requires2FASetup, 
+      requires2FAVerify, 
+      twoFAStatusChecked 
+    });
   });
   return null;
 };

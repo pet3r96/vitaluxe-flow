@@ -23,13 +23,15 @@ export async function validateCSRFToken(
       .single();
 
     if (error || !data) {
-      console.error('CSRF validation failed:', error);
+      const { edgeLogger } = await import('./logger.ts');
+      edgeLogger.error('CSRF validation failed', error);
       return { valid: false, error: 'Invalid or expired CSRF token' };
     }
 
     return { valid: true };
   } catch (err) {
-    console.error('CSRF validation error:', err);
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.error('CSRF validation error', err);
     return { valid: false, error: 'CSRF validation failed' };
   }
 }

@@ -17,8 +17,9 @@ export async function validateAuthorizenetWebhookSignature(
 ): Promise<{ valid: boolean; reason?: string }> {
   // In development mode without signing key, allow webhooks through with warning
   if (!signingKey) {
-    console.warn('⚠️ Webhook signature validation skipped - AUTHORIZENET_WEBHOOK_SIGNING_KEY not configured');
-    console.warn('⚠️ This is acceptable for development but MUST be configured for production');
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.warn('Webhook signature validation skipped - AUTHORIZENET_WEBHOOK_SIGNING_KEY not configured');
+    edgeLogger.warn('This is acceptable for development but MUST be configured for production');
     return { valid: true, reason: 'dev_mode_no_key' };
   }
 
@@ -72,7 +73,8 @@ export async function validateAuthorizenetWebhookSignature(
 
     return { valid: true };
   } catch (error) {
-    console.error('Webhook signature validation error:', error);
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.error('Webhook signature validation error', error);
     return { valid: false, reason: 'validation_error' };
   }
 }
