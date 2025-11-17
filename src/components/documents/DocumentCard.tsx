@@ -9,6 +9,7 @@ import { EditDocumentDialog } from "./EditDocumentDialog";
 import { DocumentViewer } from "./DocumentViewer";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ProviderDocuments } from '@/integrations/supabase/table-helpers';
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -37,8 +38,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
 
       if (storageError) throw storageError;
 
-      // Direct table access - provider_documents not in generated types
-      const { error } = await (supabase as any).from("provider_documents").delete().eq("id", document.id);
+      const { error } = await ProviderDocuments().delete().eq("id", document.id);
 
       if (error) throw error;
     },

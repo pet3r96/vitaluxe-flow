@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ActiveSessions } from '@/integrations/supabase/table-helpers';
 import { Loader2, Monitor, LogOut } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
@@ -73,15 +74,13 @@ export function ActivityLogSection() {
       setLoadingMore(true);
       
       // Get total count
-      const { count } = await (supabase as any)
-        .from('active_sessions')
+      const { count } = await ActiveSessions()
         .select('*', { count: 'exact', head: true });
       
       setTotalCount(count || 0);
 
       // Fetch sessions with limit
-      const { data, error } = await (supabase as any)
-        .from('active_sessions')
+      const { data, error } = await ActiveSessions()
         .select('id, last_activity, ip_address, user_agent')
         .order('last_activity', { ascending: false })
         .limit(limit || displayLimit);

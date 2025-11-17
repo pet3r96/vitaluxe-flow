@@ -16,6 +16,7 @@ import { EditDocumentDialog } from "./EditDocumentDialog";
 import { DocumentViewer } from "./DocumentViewer";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ProviderDocuments } from '@/integrations/supabase/table-helpers';
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -75,8 +76,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
 
       if (storageError) throw storageError;
 
-      // Direct table access - provider_documents not in generated types
-      const { error: dbError } = await (supabase as any).from("provider_documents").delete().eq("id", document.id);
+      const { error: dbError } = await ProviderDocuments().delete().eq("id", document.id);
 
       if (dbError) throw dbError;
     },
