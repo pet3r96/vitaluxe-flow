@@ -65,7 +65,28 @@ export function useMetricTimeSeries(
         return { current: currentData, previous: prevData };
       }
 
-      return data;
+      // If the function returns an empty dataset, gracefully fall back
+      if (!data || !Array.isArray((data as any).current) || !Array.isArray((data as any).previous) ||
+          (((data as any).current?.length || 0) === 0 && ((data as any).previous?.length || 0) === 0)) {
+        const currentData = await fetchMetricData(
+          metricType,
+          format(start, 'yyyy-MM-dd HH:mm:ss'),
+          format(end, 'yyyy-MM-dd HH:mm:ss'),
+          effectiveRole,
+          effectiveUserId
+        );
+        const prevStart = new Date(start.getTime() - (end.getTime() - start.getTime()));
+        const prevData = await fetchMetricData(
+          metricType,
+          format(prevStart, 'yyyy-MM-dd HH:mm:ss'),
+          format(start, 'yyyy-MM-dd HH:mm:ss'),
+          effectiveRole,
+          effectiveUserId
+        );
+        return { current: currentData, previous: prevData };
+      }
+
+      return data as any;
     }
   });
 
