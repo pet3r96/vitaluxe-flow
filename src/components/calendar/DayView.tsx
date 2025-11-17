@@ -3,18 +3,19 @@ import { format, setHours, setMinutes, isSameDay } from "date-fns";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
 import { detectOverlaps } from "@/lib/calendarUtils";
+import type { CalendarProvider, CalendarAppointment, BlockedTimeSlot } from '@/types/domain/calendar';
 
 interface DayViewProps {
   currentDate: Date;
-  appointments: any[];
+  appointments: CalendarAppointment[];
   startHour: number;
   endHour: number;
   slotDuration: number;
-  onAppointmentClick: (appointment: any) => void;
+  onAppointmentClick: (appointment: CalendarAppointment) => void;
   onTimeSlotClick: (date: Date, providerId?: string) => void;
-  providers: any[];
+  providers: CalendarProvider[];
   selectedProviders: string[];
-  blockedTime?: any[];
+  blockedTime?: BlockedTimeSlot[];
   highlightedAppointmentId?: string | null;
 }
 
@@ -91,7 +92,7 @@ export const DayView = memo(function DayView({
     }
   }, [safeStart, safeEnd, appointments.length]);
 
-  const getAppointmentStyle = (appointment: any) => {
+  const getAppointmentStyle = (appointment: CalendarAppointment) => {
     const start = new Date(appointment.start_time);
     const end = new Date(appointment.end_time);
     const startMinutes = start.getHours() * 60 + start.getMinutes();
@@ -123,7 +124,7 @@ export const DayView = memo(function DayView({
     };
   };
 
-  const getAppointmentsForProvider = (providerId: string) => {
+  const getAppointmentsForProvider = (providerId: string): CalendarAppointment[] => {
     const dayProviderAppointments = appointments.filter(appt => {
       const matchesDay = isSameDay(new Date(appt.start_time), currentDate);
       if (providerId === 'unassigned') {

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface AppointmentSearchInputProps {
+export interface AppointmentSearchInputProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit?: () => void;

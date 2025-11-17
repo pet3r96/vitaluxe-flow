@@ -153,7 +153,7 @@ export function TabbedCommunicationsWidget() {
         .limit(10);
 
       if (error) throw error;
-      return data as any[];
+      return data || [];
     },
     staleTime: 2 * 60 * 1000,
   });

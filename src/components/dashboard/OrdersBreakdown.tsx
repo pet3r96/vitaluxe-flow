@@ -26,14 +26,16 @@ export function OrdersBreakdown({ data: externalData }: OrdersBreakdownProps) {
       startDate.setDate(startDate.getDate() - 90);
 
       // Use optimized RPC function for server-side aggregation
-      const { data: statusCounts, error } = await supabase
-        .rpc('get_orders_by_status' as any, {
+      const { data: statusCounts, error } = await (supabase.rpc as any)(
+        'get_orders_by_status',
+        {
           p_user_id: effectiveUserId,
           p_role: effectiveRole,
           p_practice_id: effectivePracticeId || null,
           p_start_date: startDate.toISOString(),
           p_end_date: endDate.toISOString()
-        });
+        }
+      );
 
       if (error) {
         console.error('Error fetching orders breakdown:', error);

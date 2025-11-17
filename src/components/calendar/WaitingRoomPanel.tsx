@@ -21,10 +21,12 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+import type { CalendarProvider, CalendarAppointment } from '@/types/domain/calendar';
+
 interface WaitingRoomPanelProps {
   practiceId: string;
-  providers: any[];
-  onAppointmentClick: (appointment: any) => void;
+  providers: CalendarProvider[];
+  onAppointmentClick: (appointment: CalendarAppointment) => void;
   currentDate: Date;
 }
 
@@ -389,7 +391,8 @@ export function WaitingRoomPanel({
         body: { sessionId }
       });
 
-      const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
+      const result = await Promise.race([invokePromise, timeoutPromise]);
+      const { data, error } = result as { data: any; error: any };
       console.timeEnd(`[WaitingRoomPanel] start-video-session-${sessionId}`);
 
       if (error) throw error;

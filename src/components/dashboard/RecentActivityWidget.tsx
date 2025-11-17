@@ -160,29 +160,36 @@ export function RecentActivityWidget({ className, activities: externalActivities
       }
 
       // For practices, get their orders
-      if (!effectivePracticeId) return [] as any[];
-      const { data: orders } = await supabase
+      if (!effectivePracticeId) return [];
+      
+      const ordersResult = await supabase
         .from("orders")
         .select("id, status, updated_at")
         .eq("doctor_id", effectivePracticeId)
         .order("updated_at", { ascending: false })
-        .limit(5) as any;
+        .limit(5);
+      
+      const orders = ordersResult.data;
       
       // Get recent appointments
-      const { data: appointments } = await supabase
+      const appointmentsResult = await supabase
         .from("patient_appointments")
         .select("id, status, updated_at, practice_id, patient_accounts(id, first_name, last_name)")
         .eq("practice_id", effectivePracticeId)
         .order("updated_at", { ascending: false })
-        .limit(5) as any;
+        .limit(5);
+      
+      const appointments = appointmentsResult.data;
       
       // Get recent documents (if accessible)
-      const { data: documents } = await supabase
+      const documentsResult = await supabase
         .from("provider_documents" as any)
         .select("id, document_name, document_type, uploaded_at")
         .eq("practice_id", effectivePracticeId)
         .order("uploaded_at", { ascending: false })
         .limit(10);
+      
+      const documents = documentsResult.data;
 
       // Combine all activities
       const combined: ActivityItem[] = [];
