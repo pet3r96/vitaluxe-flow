@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Notification {
@@ -42,7 +43,7 @@ export function useNotifications() {
         .eq("user_id", user.id);
 
       if (typeFilter) {
-        query = query.eq("notification_type", typeFilter as any);
+        query = query.eq("notification_type", typeFilter as Database['public']['Enums']['notification_type']);
       }
 
       const { data, error } = await query

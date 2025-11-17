@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { PatientTermsAccept } from "@/integrations/supabase/table-helpers";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -974,8 +975,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle(),
         
         // 5. Check patient terms acceptance
-        supabase
-          .from('patient_terms_acceptances' as any)
+        PatientTermsAccept()
           .select('id')
           .eq('user_id', userId)
           .maybeSingle()
@@ -1193,8 +1193,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .select('temp_password')
           .eq('id', uid)
           .maybeSingle(),
-        supabase
-          .from('patient_terms_acceptances' as any)
+        PatientTermsAccept()
           .select('id')
           .eq('user_id', uid)
           .maybeSingle()
