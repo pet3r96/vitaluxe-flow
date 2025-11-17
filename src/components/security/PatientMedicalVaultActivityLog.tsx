@@ -59,12 +59,11 @@ export const PatientMedicalVaultActivityLog = () => {
   const [selectedRecord, setSelectedRecord] = useState<VaultHistory | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Fetch vault history with patient info (using type assertion for new table)
+  // Fetch vault history with patient info - JSONB table boundary cast
   const { data: historyData, isLoading } = useQuery({
     queryKey: ["patient-vault-history", searchPatient, selectedEntityType, selectedAction],
     queryFn: async () => {
-      const supabaseAny = supabase as any;
-      let queryBuilder = supabaseAny
+      let queryBuilder = (supabase as any)
         .from("patient_medical_vault_history")
         .select(`
           *,

@@ -340,7 +340,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         body: { sessionId: realSessionId },
       });
 
-      const { error } = (await Promise.race([invokePromise, timeoutPromise])) as any;
+      const { error } = (await Promise.race([invokePromise, timeoutPromise])) as { error?: any };
       console.timeEnd(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
 
       if (error) throw error;
@@ -447,7 +447,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         body: { sessionId: realSessionId },
       });
 
-      const { data, error } = (await Promise.race([invokePromise, timeoutPromise])) as any;
+      const { data, error } = (await Promise.race([invokePromise, timeoutPromise])) as { data?: any; error?: any };
       console.timeEnd(`[ProviderVirtualWaitingRoom] generate-guest-link-${sessionId}`);
 
       if (error) throw error;
@@ -570,7 +570,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
 
         // Parse error response for better messaging
         if (typeof error === "object" && error !== null) {
-          const errorObj = error as any;
+          const errorObj = error as import('@/types/video').EdgeFunctionError;
           if (errorObj.message) {
             errorDescription = errorObj.message;
           } else if (errorObj.error) {
@@ -669,7 +669,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
 
         // Parse error response for better messaging
         if (typeof error === "object" && error !== null) {
-          const errorObj = error as any;
+          const errorObj = error as import('@/types/video').EdgeFunctionError;
           if (errorObj.message) {
             errorDescription = errorObj.message;
           } else if (errorObj.error) {
@@ -687,7 +687,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
 
       // Start the session so patient gets notified immediately
       const { error: startError } = await supabase.functions.invoke("start-video-session", {
-        body: { sessionId: (data as any).sessionId },
+        body: { sessionId: (data as { sessionId: string }).sessionId },
       });
 
       if (startError) {
@@ -696,7 +696,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
 
         // Parse error response for better messaging
         if (typeof startError === "object" && startError !== null) {
-          const errorObj = startError as any;
+          const errorObj = startError as import('@/types/video').EdgeFunctionError;
           if (errorObj.message) {
             errorDescription = errorObj.message;
           } else if (errorObj.error) {

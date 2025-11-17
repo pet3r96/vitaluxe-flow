@@ -90,7 +90,8 @@ export function DownlinesDataTable() {
       const downlineRepIds = downlineReps.map(rep => rep.id);
 
       // Get practice counts for each downline using profiles table
-      // Complex .in() query - type inference limitation requires boundary cast
+      // JUSTIFIED: Complex .in() query causes TypeScript type inference depth limit
+      // This is a known limitation with Supabase query builder chaining with arrays
       const profilesResult = await (supabase as any)
         .from("profiles")
         .select("id, linked_topline_id")

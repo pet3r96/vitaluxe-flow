@@ -159,7 +159,7 @@ export const useVideoChat = ({
 
         if (logs && logs.length > 0) {
           const historyMessages: ChatMessage[] = logs.map((log) => {
-            const eventData = log.event_data as any;
+            const eventData = log.event_data as import('@/types/video').VideoEventData;
             return {
               id: log.id,
               text: eventData?.message || "",

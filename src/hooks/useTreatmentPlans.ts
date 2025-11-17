@@ -154,10 +154,9 @@ export function useCreateTreatmentPlan() {
             : data.plan.responsible_provider_name,
       } as Partial<TreatmentPlan>;
 
-      // Justified cast: Supabase Insert type stricter than needed for partial insert
       const { data: planData, error: planError } = await supabase
         .from('treatment_plans')
-        .insert([planToInsert as any])
+        .insert([planToInsert as import('@/types/treatment-plans').TreatmentPlanInsert])
         .select()
         .single();
 
@@ -279,10 +278,9 @@ export function useAddGoal() {
 
   return useMutation({
     mutationFn: async (data: Partial<TreatmentPlanGoal>) => {
-      // Justified cast: Supabase Insert type stricter than needed for partial insert
       const { data: result, error } = await supabase
         .from('treatment_plan_goals')
-        .insert([data as any])
+        .insert([data as import('@/types/treatment-plans').TreatmentPlanGoalInsert])
         .select()
         .single();
 
@@ -333,10 +331,9 @@ export function useAddPlanUpdate() {
 
   return useMutation({
     mutationFn: async (data: Partial<TreatmentPlanUpdate>) => {
-      // Justified cast: Supabase Insert type stricter than needed for partial insert
       const { data: result, error } = await supabase
         .from('treatment_plan_updates')
-        .insert([data as any])
+        .insert([data as import('@/types/treatment-plans').TreatmentPlanUpdateInsert])
         .select()
         .single();
 

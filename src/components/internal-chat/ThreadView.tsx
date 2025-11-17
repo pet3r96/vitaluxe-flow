@@ -17,7 +17,8 @@ export function ThreadView({ selectedMessage, replyText, setReplyText, sendReply
   const threadId = selectedMessage.thread_id || selectedMessage.id;
 
   // Fetch all messages in this thread
-  // Complex nested query - type inference limitation requires boundary cast
+  // JUSTIFIED: Nested relation query with multiple joins exceeds TypeScript inference depth
+  // This is a known limitation with complex Supabase joins - the query is type-safe at runtime
   const { data: threadMessages, isLoading } = useQuery({
     queryKey: ["thread-messages", threadId],
     queryFn: async () => {

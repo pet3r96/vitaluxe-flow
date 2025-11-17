@@ -105,8 +105,8 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
         
         for (const p of allPharmacies || []) {
           if (p.id !== pharmacy?.id) {
-            const updatedData: any = { 
-              ...(p.record_data as any), 
+            const updatedData = { 
+              ...(p.record_data as Record<string, any>), 
               is_preferred: false 
             };
             await supabase
