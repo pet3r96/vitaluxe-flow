@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (patientUserError) {
-      console.error('[create-instant-video-session] Error fetching patient user data:', patientUserError);
+      edgeLogger.error('[create-instant-video-session] Error fetching patient user data', patientUserError);
     } else if (patientWithUser) {
       const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
       const appointmentDateFormatted = new Date(appointment.start_time).toLocaleDateString();
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
       
       if (patientWithUser.user_id) {
         // Patient has portal access - use handleNotifications
-        console.log('[create-instant-video-session] Patient has portal access, calling handleNotifications');
+        edgeLogger.info('[create-instant-video-session] Patient has portal access, calling handleNotifications');
         try {
           await supabase.functions.invoke('handleNotifications', {
             body: {
@@ -142,13 +142,13 @@ Deno.serve(async (req) => {
               }
             }
           });
-          console.log('[create-instant-video-session] Notification sent via handleNotifications');
+          edgeLogger.info('[create-instant-video-session] Notification sent via handleNotifications');
         } catch (notifError) {
-          console.error('[create-instant-video-session] Error calling handleNotifications:', notifError);
+          edgeLogger.error('[create-instant-video-session] Error calling handleNotifications', notifError);
         }
       } else {
         // No portal access - send email/SMS directly
-        console.log('[create-instant-video-session] Patient has no portal access, sending direct email/SMS');
+        edgeLogger.info('[create-instant-video-session] Patient has no portal access, sending direct email/SMS');
         
         const { sendNotificationEmail } = await import('../_shared/notificationEmailSender.ts');
         const { sendNotificationSms } = await import('../_shared/notificationSmsSender.ts');
@@ -164,9 +164,9 @@ Deno.serve(async (req) => {
               actionUrl: undefined,
               senderContext: { fromName: 'Your Healthcare Provider' }
             });
-            console.log('[create-instant-video-session] Email sent to:', patientWithUser.email);
+            edgeLogger.info('[create-instant-video-session] Email sent');
           } catch (emailError) {
-            console.error('[create-instant-video-session] Error sending email:', emailError);
+            edgeLogger.error('[create-instant-video-session] Error sending email', emailError);
           }
         }
         
@@ -184,9 +184,9 @@ Deno.serve(async (req) => {
               message: `Your instant video session is ready to join.`,
               metadata: { appointmentId: appointment.id, sessionId: videoSession.id }
             });
-            console.log('[create-instant-video-session] SMS sent to:', normalizedPhone);
+            edgeLogger.info('[create-instant-video-session] SMS sent');
           } catch (smsError) {
-            console.error('[create-instant-video-session] Error sending SMS:', smsError);
+            edgeLogger.error('[create-instant-video-session] Error sending SMS', smsError);
           }
         }
       }
