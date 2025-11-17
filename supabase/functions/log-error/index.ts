@@ -47,6 +47,12 @@ serve(async (req) => {
       }
     );
 
+    // Admin client (service role) to bypass RLS for inserts
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
     // Extract validated data
     const { action_type, entity_type, details } = requestData;
 
@@ -68,8 +74,8 @@ serve(async (req) => {
       userRole = roleData?.role;
     }
 
-    // Insert error log into audit_logs table
-    const { error: insertError } = await supabaseClient.from("audit_logs").insert({
+    // Insert error log into audit_logs table (bypass RLS with service role)
+    const { error: insertError } = await adminClient.from("audit_logs").insert({
       action_type,
       entity_type,
       entity_id: details.entity_id || null,
