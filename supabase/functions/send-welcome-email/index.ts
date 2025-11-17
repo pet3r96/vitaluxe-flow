@@ -105,7 +105,10 @@ const handler = async (req: Request): Promise<Response> => {
     const practiceDisplayName = practiceInfo?.name || practiceInfo?.company || undefined;
 
     // Call unified email sender
-    console.log('📤 [send-welcome-email] Calling unified-email-sender for:', email, 'Type:', isPatient ? 'patient' : 'staff');
+    edgeLogger.info('[send-welcome-email] Calling unified-email-sender', { 
+      emailDomain: email.split('@')[1], 
+      userType: isPatient ? 'patient' : 'staff' 
+    });
     
     const emailPayload = {
       type: 'transactional',
@@ -132,12 +135,15 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (emailResult.error) {
-      console.error("❌ [send-welcome-email] Unified email sender error:", emailResult.error);
+      edgeLogger.error('[send-welcome-email] Unified email sender error', emailResult.error);
       throw new Error(`Email sending failed: ${emailResult.error.message}`);
     }
 
     const result = emailResult.data;
-    console.log(`[send-welcome-email] ✅ Email sent - messageId: ${result.messageId}, to: ${email}`);
+    edgeLogger.info('[send-welcome-email] Email sent successfully', { 
+      messageId: result.messageId, 
+      emailDomain: email.split('@')[1] 
+    });
 
     // Log to audit_logs
     await supabaseAdmin.from('audit_logs').insert({
@@ -159,7 +165,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error: any) {
-    console.error("❌ [send-welcome-email] Fatal error:", error);
+    edgeLogger.error('[send-welcome-email] Fatal error', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

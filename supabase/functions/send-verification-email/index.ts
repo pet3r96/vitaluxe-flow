@@ -86,13 +86,17 @@ serve(async (req) => {
     });
 
     if (emailResult.error) {
-      console.error("❌ [send-verification-email] Unified email sender error:", emailResult.error);
+      edgeLogger.error('[send-verification-email] Unified email sender error', emailResult.error);
       throw new Error(`Email sending failed: ${emailResult.error.message}`);
     }
 
     const postmarkData = emailResult.data;
 
-    console.log(`[send-verification] ✅ Email sent - correlationId: ${correlationId}, messageId: ${postmarkData.messageId}, to: ${email}`);
+    edgeLogger.info('[send-verification-email] Email sent successfully', { 
+      correlationId, 
+      messageId: postmarkData.messageId,
+      emailDomain: email.split('@')[1]
+    });
 
     // Log success to audit_logs
     await supabaseAdmin.from('audit_logs').insert({
@@ -113,7 +117,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error("❌ [send-verification-email] Error:", error);
+    edgeLogger.error('[send-verification-email] Fatal error', error);
     return new Response(
       JSON.stringify({ error: error.message }), 
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

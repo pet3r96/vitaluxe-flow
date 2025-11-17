@@ -66,7 +66,10 @@ serve(async (req) => {
       .select('attempt_id')
       .gte('created_at', fifteenMinutesAgo);
 
-    if (recentError) throw recentError;
+    if (recentError) {
+      edgeLogger.error('[send-twilio-sms] Error checking rate limits', recentError);
+      throw recentError;
+    }
 
     if (recentAttempts && recentAttempts.length >= 100) {
       return new Response(
@@ -150,7 +153,7 @@ serve(async (req) => {
     const attemptId = attemptData.attempt_id;
 
     // Send SMS via Twilio with 12-second timeout
-    edgeLogger.info('Sending SMS', { attemptId });
+    edgeLogger.info('[send-twilio-sms] Sending SMS via Twilio', { attemptId });
     
     const twilioStartTime = Date.now();
     const controller = new AbortController();
@@ -178,11 +181,11 @@ serve(async (req) => {
       const twilioEndTime = Date.now();
       const responseTime = twilioEndTime - twilioStartTime;
 
-      edgeLogger.info('SMS sent', { attemptId, status: twilioResponse.status, responseTime });
+      edgeLogger.info('[send-twilio-sms] SMS sent', { attemptId, status: twilioResponse.status, responseTime });
 
       if (!twilioResponse.ok) {
         const errorText = await twilioResponse.text();
-        edgeLogger.error('Twilio API failed', null, { attemptId, errorText: errorText.substring(0, 100) });
+        edgeLogger.error('[send-twilio-sms] Twilio API failed', new Error(errorText.substring(0, 100)), { attemptId });
         
         // For transient errors (5xx), treat as queued
         if (twilioResponse.status >= 500 && twilioResponse.status < 600) {
@@ -200,7 +203,7 @@ serve(async (req) => {
           });
 
           const totalTime = Date.now() - startTime;
-          edgeLogger.info('SMS queued (5xx)', { attemptId, totalTime: Date.now() - startTime });
+          edgeLogger.info('[send-twilio-sms] SMS queued due to 5xx', { attemptId, totalTime });
 
           return new Response(
             JSON.stringify({ 

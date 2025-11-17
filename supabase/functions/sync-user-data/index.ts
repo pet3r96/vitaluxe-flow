@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,7 +58,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Starting data sync...');
+    edgeLogger.info('[sync-user-data] Starting data sync');
 
     let addedProfiles = 0;
     let addedRoles = 0;
@@ -78,7 +79,7 @@ serve(async (req) => {
         try {
           // Case A: Pharmacy has no user_id (manually created in database)
           if (!pharmacy.user_id) {
-            console.log(`Found orphaned pharmacy: ${pharmacy.name} - creating complete user account`);
+            edgeLogger.info('[sync-user-data] Found orphaned pharmacy, creating user account');
             
             try {
               // Step 1: Create auth user
@@ -151,9 +152,10 @@ serve(async (req) => {
               } else {
                 orphanedPharmaciesConverted++;
                 repairedPharmacies++;
-                console.log(`Successfully converted orphaned pharmacy: ${pharmacy.name}`);
+                edgeLogger.info('[sync-user-data] Successfully converted orphaned pharmacy');
               }
             } catch (err: any) {
+              edgeLogger.error('[sync-user-data] Error processing orphaned pharmacy', err);
               errors.push(`Error processing orphaned pharmacy ${pharmacy.name}: ${err.message}`);
             }
             
