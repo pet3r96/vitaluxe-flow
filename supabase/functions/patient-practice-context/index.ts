@@ -15,7 +15,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('[patient-practice-context] Missing Authorization header');
+      edgeLogger.error('patient-practice-context Missing Authorization header');
       return new Response(
         JSON.stringify({ error: 'Unauthorized: missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -24,7 +24,7 @@ serve(async (req) => {
 
     const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
     if (!token || token.length < 10) {
-      console.error('[patient-practice-context] Invalid Authorization token');
+      edgeLogger.error('patient-practice-context Invalid Authorization token');
       return new Response(
         JSON.stringify({ error: 'Unauthorized: invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -35,7 +35,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     
     if (!supabaseUrl || !supabaseKey) {
-      console.error('[patient-practice-context] Missing Supabase envs');
+      edgeLogger.error('patient-practice-context Missing Supabase envs');
       return new Response(
         JSON.stringify({ error: 'Server misconfiguration' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -48,7 +48,7 @@ serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
-      console.error('[patient-practice-context] Auth failed:', userError?.message);
+      edgeLogger.error('patient-practice-context Auth failed', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -56,7 +56,7 @@ serve(async (req) => {
     }
 
     const userId = user.id;
-    console.log('[patient-practice-context] Authenticated user:', userId);
+    edgeLogger.info('patient-practice-context Authenticated user', { userId });
 
     // Helper to send consistent responses
     const sendResponse = (body: any, status = 200) => {
@@ -73,7 +73,7 @@ serve(async (req) => {
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     // 1. Get patient account to find practice_id
-    console.log('[patient-practice-context] Fetching patient account for user:', userId);
+    edgeLogger.info('patient-practice-context Fetching patient account for user', { userId });
     const { data: patientAccount, error: patientError } = await supabaseClient
       .from('patient_accounts')
       .select('id, practice_id')
@@ -81,7 +81,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (patientError) {
-      console.error('[patient-practice-context] Error fetching patient account:', patientError);
+      edgeLogger.error('patient-practice-context Error fetching patient account', patientError);
       return sendResponse({ 
         success: false, 
         isSubscribed: false,
@@ -92,7 +92,7 @@ serve(async (req) => {
     }
 
     if (!patientAccount) {
-      console.log('[patient-practice-context] No patient account found');
+      edgeLogger.info('patient-practice-context No patient account found');
       return sendResponse({ 
         success: false, 
         isSubscribed: false,
@@ -104,7 +104,7 @@ serve(async (req) => {
     }
 
     if (!patientAccount.practice_id) {
-      console.log('[patient-practice-context] Patient has no practice assigned');
+      edgeLogger.info('patient-practice-context Patient has no practice assigned');
       return sendResponse({ 
         success: false, 
         isSubscribed: false,
@@ -116,10 +116,10 @@ serve(async (req) => {
     }
 
     const practiceId = patientAccount.practice_id;
-    console.log('[patient-practice-context] Practice ID:', practiceId);
+    edgeLogger.info('patient-practice-context Practice ID', { practiceId });
 
     // 2. Check practice subscription status FIRST (independent of practice profile read)
-    console.log('[patient-practice-context] Fetching subscription for practice:', practiceId);
+    edgeLogger.info('patient-practice-context Fetching subscription for practice', { practiceId });
     const { data: subscription, error: subError } = await supabaseClient
       .from('practice_subscriptions')
       .select('status, subscription_type, trial_ends_at, current_period_end, grace_period_ends_at')
@@ -127,7 +127,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (subError) {
-      console.error('[patient-practice-context] Error fetching subscription:', subError);
+      edgeLogger.error('patient-practice-context Error fetching subscription', subError);
       // Don't fail the whole request - continue with practice read
     }
 
@@ -138,7 +138,7 @@ serve(async (req) => {
     
     if (subscription) {
       subscriptionStatus = subscription.status;
-      console.log('[patient-practice-context] Subscription row:', {
+      edgeLogger.info('patient-practice-context Subscription row', {
         status: subscription.status,
         trial_ends_at: subscription.trial_ends_at,
         current_period_end: subscription.current_period_end,
@@ -150,21 +150,21 @@ serve(async (req) => {
       if (subscription.status === 'active' && subscription.current_period_end) {
         const endTime = new Date(subscription.current_period_end).getTime();
         isSubscribed = endTime > nowTimestamp;
-        console.log('[patient-practice-context] Active check:', { endTime, nowTimestamp, isSubscribed });
+        edgeLogger.info('patient-practice-context Active check', { endTime, nowTimestamp, isSubscribed });
       } else if (subscription.status === 'trial' && subscription.trial_ends_at) {
         const endTime = new Date(subscription.trial_ends_at).getTime();
         isSubscribed = endTime > nowTimestamp;
-        console.log('[patient-practice-context] Trial check:', { endTime, nowTimestamp, isSubscribed });
+        edgeLogger.info('patient-practice-context Trial check', { endTime, nowTimestamp, isSubscribed });
       } else if (subscription.status === 'suspended' && subscription.grace_period_ends_at) {
         const endTime = new Date(subscription.grace_period_ends_at).getTime();
         isSubscribed = endTime > nowTimestamp;
-        console.log('[patient-practice-context] Grace check:', { endTime, nowTimestamp, isSubscribed });
+        edgeLogger.info('patient-practice-context Grace check', { endTime, nowTimestamp, isSubscribed });
       }
     } else {
-      console.log('[patient-practice-context] No subscription found for practice');
+      edgeLogger.info('patient-practice-context No subscription found for practice');
     }
 
-    console.log('[patient-practice-context] Computed isSubscribed:', isSubscribed);
+    edgeLogger.info('patient-practice-context Computed isSubscribed', { isSubscribed });
 
     // 4. Get practice profile details (OPTIONAL - don't fail if missing)
     let practice = null;
@@ -175,7 +175,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (practiceError) {
-      console.error('[patient-practice-context] Error fetching practice profile (non-fatal):', practiceError);
+      edgeLogger.error('patient-practice-context Error fetching practice profile (non-fatal)', practiceError);
       // Don't fail - use practice ID only
       practice = {
         id: practiceId,
@@ -184,7 +184,7 @@ serve(async (req) => {
         state: null
       };
     } else if (practiceProfile) {
-      console.log('[patient-practice-context] Practice profile:', practiceProfile.name);
+      edgeLogger.info('patient-practice-context Practice profile', { practiceName: practiceProfile.name });
       practice = {
         id: practiceProfile.id,
         name: practiceProfile.name,
@@ -192,7 +192,7 @@ serve(async (req) => {
         state: practiceProfile.address_state
       };
     } else {
-      console.warn('[patient-practice-context] No practice profile found (non-fatal)');
+      edgeLogger.warn('patient-practice-context No practice profile found (non-fatal)');
       practice = {
         id: practiceId,
         name: null,
@@ -201,7 +201,7 @@ serve(async (req) => {
       };
     }
 
-    console.log('[patient-practice-context] Final response:', {
+    edgeLogger.info('patient-practice-context Final response', {
       success: true,
       isSubscribed,
       status: subscriptionStatus,
@@ -216,7 +216,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[patient-practice-context] Unexpected error:', error);
+    edgeLogger.error('patient-practice-context Unexpected error', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -313,7 +313,7 @@ serve(async (req) => {
           supabaseClient: supabase
         });
       } catch (error: any) {
-        console.error('[handleNotifications] Email sending error:', error);
+        edgeLogger.error('handleNotifications email sending error', error);
         results.errors.push(`Email failed: ${error.message}`);
         await logNotificationDelivery({
           notificationId,
@@ -330,7 +330,7 @@ serve(async (req) => {
                           respectPracticeSettings && !practiceEmailEnabled ? 
                             'Practice disabled automation emails' : 'Unknown';
       
-      console.log(`[handleNotifications] Email not sent: ${blockReason}`);
+      edgeLogger.info('handleNotifications email not sent', { reason: blockReason });
       
       if (!emailEnabled) {
         results.errors.push('Email disabled by user preference');
@@ -393,7 +393,7 @@ serve(async (req) => {
                           respectPracticeSettings && !practiceSmsEnabled ? 
                             'Practice disabled automation SMS' : 'Unknown';
       
-      console.log(`[handleNotifications] SMS not sent: ${blockReason}`);
+      edgeLogger.info('handleNotifications SMS not sent', { reason: blockReason });
       
       if (!smsEnabled) {
         results.errors.push('SMS disabled by user preference');
@@ -412,7 +412,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[handleNotifications] Error:', error);
+    edgeLogger.error('handleNotifications error', error);
     return new Response(
       JSON.stringify({ 
         success: false, 

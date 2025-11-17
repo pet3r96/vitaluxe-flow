@@ -60,7 +60,7 @@ serve(async (req) => {
       pharmacyUserId = target_user_id;
     }
 
-    console.log(`Pharmacy user ${pharmacyUserId} ${action}ing order ${order_id}`);
+    edgeLogger.info('Pharmacy user action', { pharmacyUserId, action, orderId: order_id });
 
     // Get pharmacy ID using resolved user ID
     const { data: pharmacy, error: pharmacyError } = await supabaseAdmin
@@ -70,7 +70,7 @@ serve(async (req) => {
       .single();
 
     if (pharmacyError) {
-      console.error('Error fetching pharmacy:', pharmacyError);
+      edgeLogger.error('Error fetching pharmacy', pharmacyError);
       throw new Error('Pharmacy not found');
     }
 
@@ -89,7 +89,7 @@ serve(async (req) => {
       .single();
 
     if (orderError) {
-      console.error('Error fetching order:', orderError);
+      edgeLogger.error('Error fetching order', orderError);
       throw orderError;
     }
 
@@ -101,7 +101,7 @@ serve(async (req) => {
       .eq('assigned_pharmacy_id', pharmacy.id);
 
     if (assignedError || !assignedLines || assignedLines.length === 0) {
-      console.error('Pharmacy not assigned to this order');
+      edgeLogger.error('Pharmacy not assigned to this order');
       throw new Error('You are not authorized to perform this action on this order');
     }
 
@@ -393,7 +393,7 @@ serve(async (req) => {
       );
     }
   } catch (error: any) {
-    console.error('Error in pharmacy-order-action:', error);
+    edgeLogger.error('Error in pharmacy-order-action', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
