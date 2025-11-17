@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { PortalTerms } from '@/integrations/supabase/table-helpers';
 import type { Database } from "@/integrations/supabase/types";
 import { parseEdgeFunctionError } from "@/types/jsonb";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,6 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import { logger } from "@/lib/logger";
-import type { PatientPortalTerms } from "@/types/manual-schema";
 
 export default function AcceptTerms() {
   const { user, effectiveRole, effectiveUserId, isImpersonating, impersonatedUserName, checkPasswordStatus } = useAuth();
@@ -49,38 +47,22 @@ export default function AcceptTerms() {
       let data: any = null;
       let error: any = null;
 
-      // Special handling for patients - they use a separate table
-      if (effectiveRole === 'patient') {
-        console.log('[AcceptTerms] Querying patient_portal_terms...');
-        const res = await PortalTerms()
-          .select('*')
-          .order('version', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        data = res.data;
-        error = res.error;
-        console.log('[AcceptTerms] Patient terms query result:', { 
-          found: !!data, 
-          error: error?.message,
-          dataPreview: data ? { id: data.id, version: data.version, title: data.title } : null 
-        });
-      } else {
-        console.log('[AcceptTerms] Querying terms_and_conditions for role:', effectiveRole);
-        const res = await supabase
-          .from('terms_and_conditions')
-          .select('*')
-          .eq('role', effectiveRole as Database["public"]["Enums"]["app_role"])
-          .order('version', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        data = res.data;
-        error = res.error;
-        console.log('[AcceptTerms] Role terms query result:', { 
-          found: !!data, 
-          error: error?.message,
-          dataPreview: data ? { id: data.id, version: data.version, role: data.role } : null 
-        });
-      }
+      // All roles now use unified terms_and_conditions table
+      console.log('[AcceptTerms] Querying terms_and_conditions for role:', effectiveRole);
+      const res = await supabase
+        .from('terms_and_conditions')
+        .select('*')
+        .eq('role', effectiveRole as Database["public"]["Enums"]["app_role"])
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      data = res.data;
+      error = res.error;
+      console.log('[AcceptTerms] Role terms query result:', { 
+        found: !!data, 
+        error: error?.message,
+        dataPreview: data ? { id: data.id, version: data.version, role: data.role } : null 
+      });
 
       if (error) {
         console.error('[AcceptTerms] Error fetching terms:', error);
