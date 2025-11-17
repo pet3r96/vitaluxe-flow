@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('[list-providers] Found providers', { count: providers.length, practiceId });
     if (providers.length > 0) {
-      edgeLogger.info('[list-providers] First provider profile', { name: providers[0].profiles?.name || providers[0].profiles?.email || 'no-name' });
+      edgeLogger.info('[list-providers] First provider profile', { hasName: !!providers[0].profiles?.name, hasEmail: !!providers[0].profiles?.email });
     }
 
     return new Response(JSON.stringify({ providers }), {

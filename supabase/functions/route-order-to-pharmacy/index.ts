@@ -184,7 +184,7 @@ async function routeOrderToPharmacy(
     const selectedPharmacy = eligiblePharmacies[0];
     const priority = getPriority(selectedPharmacy, trimmedState);
     
-    edgeLogger.info('Single pharmacy match', { name: selectedPharmacy.name, priority });
+    edgeLogger.info('Single pharmacy match', { pharmacyId: selectedPharmacy.id, priority });
     
     await supabase.from("order_routing_log").insert({
       product_id,
