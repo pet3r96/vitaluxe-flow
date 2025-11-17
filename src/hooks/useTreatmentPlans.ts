@@ -145,18 +145,19 @@ export function useCreateTreatmentPlan() {
       const planToInsert = {
         ...data.plan,
         responsible_provider_id:
-          (data.plan.responsible_provider_id as any) === ''
+          data.plan.responsible_provider_id === ''
             ? null
             : data.plan.responsible_provider_id,
         responsible_provider_name:
-          (data.plan.responsible_provider_name as any) === ''
+          data.plan.responsible_provider_name === ''
             ? null
             : data.plan.responsible_provider_name,
       } as Partial<TreatmentPlan>;
 
+      // Justified cast: Supabase Insert type stricter than needed for partial insert
       const { data: planData, error: planError } = await supabase
         .from('treatment_plans')
-        .insert([planToInsert] as any)
+        .insert([planToInsert as any])
         .select()
         .single();
 
@@ -217,11 +218,11 @@ export function useUpdateTreatmentPlan() {
       const updates = {
         ...data.updates,
         responsible_provider_id:
-          (data.updates.responsible_provider_id as any) === ''
+          data.updates.responsible_provider_id === ''
             ? null
             : data.updates.responsible_provider_id,
         responsible_provider_name:
-          (data.updates.responsible_provider_name as any) === ''
+          data.updates.responsible_provider_name === ''
             ? null
             : data.updates.responsible_provider_name,
       } as Partial<TreatmentPlan>;
@@ -278,9 +279,10 @@ export function useAddGoal() {
 
   return useMutation({
     mutationFn: async (data: Partial<TreatmentPlanGoal>) => {
+      // Justified cast: Supabase Insert type stricter than needed for partial insert
       const { data: result, error } = await supabase
         .from('treatment_plan_goals')
-        .insert([data] as any)
+        .insert([data as any])
         .select()
         .single();
 
@@ -331,9 +333,10 @@ export function useAddPlanUpdate() {
 
   return useMutation({
     mutationFn: async (data: Partial<TreatmentPlanUpdate>) => {
+      // Justified cast: Supabase Insert type stricter than needed for partial insert
       const { data: result, error } = await supabase
         .from('treatment_plan_updates')
-        .insert([data] as any)
+        .insert([data as any])
         .select()
         .single();
 

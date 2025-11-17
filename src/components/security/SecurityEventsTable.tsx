@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { SecurityEvents } from "@/integrations/supabase/table-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +13,7 @@ export const SecurityEventsTable = () => {
   const { data: events, isLoading } = useQuery({
     queryKey: ["security-events"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("security_events")
+      const { data, error } = await SecurityEvents()
         .select("*")
         .order("created_at", { ascending: false })
         .limit(1000);

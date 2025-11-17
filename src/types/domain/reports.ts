@@ -30,6 +30,8 @@ export interface RepProductivityData {
   total_revenue: number;
   total_commissions?: number;
   avg_order_value: number;
+  user_id?: string; // For filtering by user
+  role?: string; // For role-based filtering
 }
 
 export interface ToplineRepProfile {

@@ -27,3 +27,7 @@ export const VPatientsWithPortalStatus = () =>
 export const CartLinesMasked = () =>
   view<Database['public']['Views']['cart_lines_masked']['Row']>('cart_lines_masked');
 
+// Materialized view for rep productivity (not in generated types)
+export const RepProductivityView = () =>
+  view<any>('rep_productivity_view');
+

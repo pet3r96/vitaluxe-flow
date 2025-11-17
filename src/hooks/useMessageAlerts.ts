@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { getPayloadNew } from '@/types/realtime';
 
 export function useMessageAlerts() {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -76,10 +76,10 @@ export function useMessageAlerts() {
             table: 'messages',
           },
           async (payload) => {
-            const newMessage = payload.new as any;
+            const newMessage = getPayloadNew(payload);
 
             // Only process if message is not from current user
-            if (newMessage.sender_id !== user.id) {
+            if (newMessage && newMessage.sender_id !== user.id) {
               // Check if user created the thread or is mentioned
               const { data: thread } = await supabase
                 .from('message_threads')

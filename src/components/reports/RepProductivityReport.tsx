@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { RepProductivityView } from "@/integrations/supabase/view-helpers";
+import type { RepProductivityData } from "@/types/domain/reports";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -17,14 +19,13 @@ const RepProductivityReport = () => {
   const [selectedTopline, setSelectedTopline] = useState<string>("all");
 
   // Fetch productivity data (NO blocking refresh - background job handles it)
-  const { data: productivityData, isLoading, refetch } = useQuery({
+  const { data: productivityData, isLoading, refetch } = useQuery<RepProductivityData[]>({
     queryKey: ["rep-productivity"],
     queryFn: async () => {
       console.time('[RepProductivity] Query');
       
       // Fetch ONLY the columns we need for display - no SELECT *
-      const { data, error } = await (supabase as any)
-        .from("rep_productivity_view")
+      const { data, error } = await RepProductivityView()
         .select(`
           rep_id,
           user_id,
@@ -44,7 +45,7 @@ const RepProductivityReport = () => {
       }
       
       console.log('[RepProductivity] ✅ Fetched', data?.length || 0, 'records');
-      return data;
+      return data as RepProductivityData[];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - background job refreshes the view
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
