@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { logger } from "@/lib/logger";
 
 const InternalChat = () => {
   const { effectiveUserId, effectiveRole } = useAuth();
@@ -502,7 +503,7 @@ const InternalChat = () => {
 
       const { data, error } = await query;
       if (error) {
-        console.error('Error fetching patient messages:', error);
+        logger.error('Error fetching patient messages', error);
         throw error;
       }
 
@@ -540,7 +541,7 @@ const InternalChat = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching patient message:', error);
+        logger.error('Error fetching patient message', error);
         throw error;
       }
       
@@ -582,7 +583,7 @@ const InternalChat = () => {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('Error fetching patient replies:', error);
+        logger.error('Error fetching patient replies', error);
         throw error;
       }
 
@@ -653,7 +654,7 @@ const InternalChat = () => {
       toast.success('Reply sent');
     },
     onError: (error: any) => {
-      console.error('Error sending patient reply:', error);
+      logger.error('Error sending patient reply', error);
       toast.error('Failed to send reply');
     }
   });

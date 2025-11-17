@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,8 +18,8 @@ serve(async (req) => {
   }
 
   try {
-    console.log('[refresh-rep-productivity] Starting scheduled refresh...');
     const startTime = performance.now();
+    edgeLogger.info('[refresh-rep-productivity] Starting scheduled refresh');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -28,19 +29,19 @@ serve(async (req) => {
     const { error } = await supabase.rpc('refresh_rep_productivity_summary');
 
     if (error) {
-      console.error('[refresh-rep-productivity] ❌ Error:', error);
+      edgeLogger.error('[refresh-rep-productivity] Error', error);
       throw error;
     }
 
     const duration = performance.now() - startTime;
-    console.log(`[refresh-rep-productivity] ✅ Completed in ${duration.toFixed(2)}ms`);
+    edgeLogger.info('[refresh-rep-productivity] Completed', { durationMs: duration.toFixed(2) });
 
     return new Response(
       JSON.stringify({ success: true, duration }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[refresh-rep-productivity] Error:', error);
+    edgeLogger.error('[refresh-rep-productivity] Error', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ error: errorMessage }),

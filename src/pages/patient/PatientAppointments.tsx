@@ -17,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
+import { logger } from "@/lib/logger";
 
 export default function PatientAppointments() {
   const { 
@@ -27,7 +28,7 @@ export default function PatientAppointments() {
     status: subscriptionStatus
   } = usePatientPracticeSubscription();
 
-  console.debug('[PatientAppointments] Subscription state:', {
+  logger.info('[PatientAppointments] Subscription state', {
     practiceHasSubscription,
     subscriptionLoading,
     subscriptionStatus,
@@ -69,7 +70,7 @@ export default function PatientAppointments() {
     queryFn: async () => {
       if (!effectiveUserId) throw new Error('No effective user ID');
 
-      console.log('[PatientAppointments] 👤 Fetching appointments for user ID:', effectiveUserId);
+      logger.info('[PatientAppointments] Fetching appointments for user ID', { userId: effectiveUserId });
 
       // 1) Try RPC first
       let shouldUseFallback = false;
@@ -78,17 +79,17 @@ export default function PatientAppointments() {
           .rpc('get_patient_appointments_with_details', { p_user_id: effectiveUserId });
         
         if (error) {
-          console.warn('[PatientAppointments] ⚠️ RPC error:', error.message);
+          logger.warn('[PatientAppointments] RPC error', { message: error.message });
           shouldUseFallback = true;
         } else {
           // RPC returns appointments array directly
-          console.log('[PatientAppointments] 📊 Raw RPC response:', JSON.stringify(data).substring(0, 200));
+          logger.info('[PatientAppointments] Raw RPC response', { preview: JSON.stringify(data).substring(0, 200) });
           const rows = Array.isArray(data) ? data : [];
-          console.log('[PatientAppointments] 📊 Extracted appointments count:', rows?.length || 0);
+          logger.info('[PatientAppointments] Extracted appointments count', { count: rows?.length || 0 });
           
           // If RPC returns empty or invalid, use fallback
           if (!rows || rows.length === 0) {
-            console.log('[PatientAppointments] 🔄 RPC returned empty, using fallback');
+            logger.info('[PatientAppointments] RPC returned empty, using fallback');
             shouldUseFallback = true;
           } else {
 
@@ -145,13 +146,13 @@ export default function PatientAppointments() {
           }
         }
       } catch (rpcError: any) {
-        console.warn('[PatientAppointments] ❌ RPC failed completely:', rpcError.message);
+        logger.warn('[PatientAppointments] RPC failed completely', { message: rpcError.message });
         shouldUseFallback = true;
       }
 
       // 2) Fallback: direct queries with RLS-safe selects (always run if RPC failed or returned empty)
       if (shouldUseFallback) {
-        console.log('[PatientAppointments] 🔄 Using fallback direct query');
+        logger.info('[PatientAppointments] Using fallback direct query');
         const { data: patientAccount, error: paErr } = await supabase
           .from('patient_accounts')
           .select('id, practice_id')
@@ -159,17 +160,17 @@ export default function PatientAppointments() {
           .maybeSingle();
         
         if (paErr) {
-          console.error('[PatientAppointments] ❌ Patient account lookup error:', paErr);
+          logger.error('[PatientAppointments] Patient account lookup error', paErr);
           throw paErr;
         }
         
         if (!patientAccount) {
-          console.warn('[PatientAppointments] ⚠️ No patient account found for user:', effectiveUserId);
+          logger.warn('[PatientAppointments] No patient account found for user', { userId: effectiveUserId });
           // Return empty array with helpful context
           return [];
         }
         
-        console.log('[PatientAppointments] ✅ Patient account found:', patientAccount.id);
+        logger.info('[PatientAppointments] Patient account found', { patientId: patientAccount.id });
 
         const { data: apptRows, error: apptErr } = await supabase
           .from('patient_appointments')
@@ -179,7 +180,7 @@ export default function PatientAppointments() {
         if (apptErr) throw apptErr;
         const rows = apptRows || [];
         
-        console.log('[PatientAppointments] 📊 Fallback query result count:', rows.length);
+        logger.info('[PatientAppointments] Fallback query result count', { count: rows.length });
 
         // Fetch providers and their profiles for display_name
         const providerIds = Array.from(new Set(rows.map((r: any) => r.provider_id).filter(Boolean)));
@@ -300,7 +301,7 @@ export default function PatientAppointments() {
       // Ensure server state sync
       refetch();
     } catch (error: any) {
-      console.error("Cancel appointment failed:", error);
+      logger.error("Cancel appointment failed", error);
       toast.error(error.message || "Failed to cancel appointment");
     } finally {
       setIsCancelling(false);
@@ -341,7 +342,7 @@ export default function PatientAppointments() {
       // Navigate to unified video room
       navigate('/video/room');
     } catch (error: any) {
-      console.error("Error joining video session:", error);
+      logger.error("Error joining video session", error);
       toast.error(error.message || "Failed to join video session");
     } finally {
       setJoiningSession(null);
@@ -383,7 +384,7 @@ export default function PatientAppointments() {
 
       toast.success("Calendar event downloaded");
     } catch (error: any) {
-      console.error("Error generating calendar event:", error);
+      logger.error("Error generating calendar event", error);
       toast.error(error.message || "Failed to generate calendar event");
     }
   };

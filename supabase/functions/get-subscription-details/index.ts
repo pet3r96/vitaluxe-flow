@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,8 +44,10 @@ serve(async (req) => {
     const impersonationHeader = req.headers.get('x-impersonated-practice-id');
     const practiceIdToQuery = impersonationHeader || user.id;
 
-    console.log('[get-subscription-details] Querying for practice:', practiceIdToQuery, 
-                'impersonated:', !!impersonationHeader);
+    edgeLogger.info('[get-subscription-details] Querying for practice', { 
+      practiceIdToQuery, 
+      impersonated: !!impersonationHeader 
+    });
 
     // Get subscription details
     const { data: subscription, error: subError } = await supabaseAdmin
@@ -54,7 +57,7 @@ serve(async (req) => {
       .single();
 
     if (subError) {
-      console.error('Error fetching subscription:', subError);
+      edgeLogger.error('Error fetching subscription', subError);
     }
 
     // Get payment methods
@@ -65,7 +68,7 @@ serve(async (req) => {
       .order('is_default', { ascending: false });
 
     if (pmError) {
-      console.error('Error fetching payment methods:', pmError);
+      edgeLogger.error('Error fetching payment methods', pmError);
     }
 
     // Get payment history
@@ -77,7 +80,7 @@ serve(async (req) => {
       .limit(12);
 
     if (invError) {
-      console.error('Error fetching invoices:', invError);
+      edgeLogger.error('Error fetching invoices', invError);
     }
 
     return new Response(
@@ -90,7 +93,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in get-subscription-details:', error);
+    edgeLogger.error('Error in get-subscription-details', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
