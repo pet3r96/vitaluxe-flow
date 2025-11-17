@@ -6284,6 +6284,37 @@ export type Database = {
         }
         Relationships: []
       }
+      rls_policy_coverage: {
+        Row: {
+          has_select_policy: boolean | null
+          policy_count: number | null
+          rls_enabled: boolean | null
+          status: string | null
+          tablename: unknown
+        }
+        Relationships: []
+      }
+      rls_policy_export: {
+        Row: {
+          cmd: string | null
+          permissive: string | null
+          policyname: unknown
+          qual: string | null
+          roles: unknown[] | null
+          schemaname: unknown
+          tablename: unknown
+          with_check: string | null
+        }
+        Relationships: []
+      }
+      rls_policy_matrix: {
+        Row: {
+          policies: Json | null
+          policy_count: number | null
+          tablename: unknown
+        }
+        Relationships: []
+      }
       user_2fa_settings_decrypted: {
         Row: {
           created_at: string | null
@@ -6973,6 +7004,7 @@ export type Database = {
         }[]
       }
       refresh_rep_productivity_summary: { Args: never; Returns: undefined }
+      refresh_rls_policy_export: { Args: never; Returns: undefined }
       refresh_security_events_summary: { Args: never; Returns: undefined }
       refresh_video_usage_by_practice: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }
