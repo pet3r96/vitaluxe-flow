@@ -15,6 +15,8 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
+import { logger } from "@/lib/logger";
+import type { PatientPortalTerms } from "@/types/manual-schema";
 
 export default function AcceptTerms() {
   const { user, effectiveRole, effectiveUserId, isImpersonating, impersonatedUserName, checkPasswordStatus } = useAuth();
@@ -49,9 +51,9 @@ export default function AcceptTerms() {
       // Special handling for patients - they use a separate table
       if (effectiveRole === 'patient') {
         console.log('[AcceptTerms] Querying patient_portal_terms...');
-        const res = await (supabase as any)
+        const res = await supabase
           .from('patient_portal_terms' as any)
-          .select('*')
+          .select<'*', PatientPortalTerms>('*')
           .order('version', { ascending: false })
           .limit(1)
           .maybeSingle();

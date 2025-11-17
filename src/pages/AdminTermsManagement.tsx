@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseCheckoutAttestation } from "@/types/jsonb";
-import type { PatientPortalTerms, UserTermsAcceptance } from "@/types/subscriptions";
+import type { UserTermsAcceptance } from "@/types/subscriptions";
+import type { PatientPortalTerms, PatientPortalTermsInsert, PatientPortalTermsUpdate, CheckoutAttestation, CheckoutAttestationUpdate } from "@/types/manual-schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -64,9 +65,9 @@ export default function AdminTermsManagement() {
     let error: any = null;
 
     if (activeRole === 'patient') {
-      const res = await (supabase as any)
+      const res = await supabase
         .from('patient_portal_terms' as any)
-        .select('*')
+        .select<'*', PatientPortalTerms>('*')
         .order('version', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -199,9 +200,9 @@ export default function AdminTermsManagement() {
       if (activeRole === 'patient') {
         if (terms?.id) {
           // Update existing patient portal terms
-          const { error } = await (supabase as any)
+          const { error } = await supabase
             .from('patient_portal_terms' as any)
-            .update({
+            .update<PatientPortalTermsUpdate>({
               title,
               content,
               version: (terms?.version || 0) + 1,
@@ -213,9 +214,9 @@ export default function AdminTermsManagement() {
           if (error) throw error;
         } else {
           // Insert new patient portal terms
-          const { error } = await (supabase as any)
+          const { error } = await supabase
             .from('patient_portal_terms' as any)
-            .insert({
+            .insert<PatientPortalTermsInsert>({
               title,
               content,
               version: 1,
@@ -274,9 +275,9 @@ export default function AdminTermsManagement() {
   const loadAttestation = async () => {
     setLoadingAttestation(true);
     
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('checkout_attestation' as any)
-      .select('*')
+      .select<'*', CheckoutAttestation>('*')
       .eq('is_active', true)
       .maybeSingle();
 
@@ -312,9 +313,9 @@ export default function AdminTermsManagement() {
     setSavingAttestation(true);
 
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('checkout_attestation' as any)
-        .update({
+        .update<CheckoutAttestationUpdate>({
           title: attestationTitle,
           subtitle: attestationSubtitle,
           content: attestationContent,

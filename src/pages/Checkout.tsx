@@ -5,6 +5,7 @@ import { parseCheckoutAttestation, type CheckoutAttestationData } from "@/types/
 import { useCart } from "@/hooks/useCart";
 import { resolveCartOwnerUserId } from "@/lib/cartOwnerResolver";
 import type { CartLine } from "@/types/domain/cart";
+import type { CheckoutAttestation } from "@/types/manual-schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -209,7 +210,7 @@ export default function Checkout() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checkout_attestation" as any)
-        .select("*")
+        .select<'*', CheckoutAttestation>('*')
         .eq("is_active", true)
         .maybeSingle();
 

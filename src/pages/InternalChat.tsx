@@ -11,6 +11,7 @@ import { PatientMessageThread } from "@/components/internal-chat/PatientMessageT
 import { PatientMessageDetails } from "@/components/internal-chat/PatientMessageDetails";
 import { CreatePatientMessageDialog } from "@/components/internal-chat/CreatePatientMessageDialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import type { InternalMessageReply, InternalMessageReplyInsert } from "@/types/manual-schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle } from "lucide-react";
@@ -228,15 +229,15 @@ const InternalChat = () => {
     queryKey: ['internal-message-replies', selectedMessageId],
     queryFn: async () => {
       if (!selectedMessageId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('internal_message_replies' as any)
-        .select('*')
+        .select<'*', InternalMessageReply>('*')
         .eq('message_id', selectedMessageId)
         .order('created_at');
       if (error) throw error;
       
       // Get all unique sender IDs not in teamMap
-      const senderIds = (data as any).map((r: any) => (r as any).sender_id).filter((id: any) => !teamMap[id]);
+      const senderIds = data.map(r => r.sender_id).filter(id => !teamMap[id]);
       const uniqueSenderIds = [...new Set(senderIds)];
 
       // Single batch query for all missing profiles
@@ -244,7 +245,7 @@ const InternalChat = () => {
         ? await supabase
             .from('profiles')
             .select('id, name')
-            .in('id', uniqueSenderIds as any)
+            .in('id', uniqueSenderIds)
         : { data: [] };
 
       const profileMap = Object.fromEntries(
@@ -252,7 +253,7 @@ const InternalChat = () => {
       );
 
       // Enrich with sender names using cached data
-      return data.map((reply: any) => ({
+      return data.map(reply => ({
         ...reply,
         sender: {
           id: reply.sender_id,
@@ -382,9 +383,9 @@ const InternalChat = () => {
   // Send reply mutation
   const sendReplyMutation = useMutation({
     mutationFn: async (body: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('internal_message_replies' as any)
-        .insert({
+        .insert<InternalMessageReplyInsert>({
           message_id: selectedMessageId!,
           sender_id: effectiveUserId,
           body
