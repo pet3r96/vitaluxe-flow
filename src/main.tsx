@@ -7,7 +7,8 @@ import { initializeErrorHandlers } from "./lib/errorLogger";
 initializeErrorHandlers();
 
 // Log build identifier for deployment verification
+import { logger } from "./lib/logger";
 const buildId = import.meta.env.VITE_BUILD_ID || "dev";
-console.log(`🚀 Vitaluxe Build: ${buildId.substring(0, 7)}`);
+logger.info(`Vitaluxe Build: ${buildId.substring(0, 7)}`);
 
 createRoot(document.getElementById("root")!).render(<App />);
