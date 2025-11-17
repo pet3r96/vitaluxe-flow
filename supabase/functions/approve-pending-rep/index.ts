@@ -146,14 +146,14 @@ serve(async (req) => {
           (errorMsg.includes('already registered') || errorMsg.includes('already been registered') || errorMsg.includes('user with this email'));
         
         if (isAlreadyRegistered) {
-          console.log(`User already exists for email: ${pendingRep.email}, fetching ID via SQL helper`);
+          edgeLogger.info('User already exists, fetching ID via SQL helper', { email: pendingRep.email });
           
           // Fetch existing user ID using SQL helper
           const { data: existingUserIdData, error: fetchIdError } = await supabaseAdmin
             .rpc('get_auth_user_id_by_email', { p_email: pendingRep.email });
           
           if (fetchIdError || !existingUserIdData) {
-            console.error('Failed to fetch existing user ID:', fetchIdError);
+            edgeLogger.error('Failed to fetch existing user ID', fetchIdError);
             throw new Error('User already registered but could not resolve account. Please contact administrator.');
           }
           
@@ -161,16 +161,16 @@ serve(async (req) => {
           userAlreadyExisted = true;
           temporaryPassword = null; // Don't expose password for existing users
           
-          console.log(`Resolved existing user ID: ${newUserId}, ensuring records are complete`);
+          edgeLogger.info('Resolved existing user ID, ensuring records complete', { userId: newUserId });
           
         } else {
           // Non-recoverable error
-          console.error('Failed to create user (non-recoverable):', createUserError);
+          edgeLogger.error('Failed to create user (non-recoverable)', createUserError);
           throw new Error(`Failed to create user: ${createUserError.message}`);
         }
       } else if (newUser?.user) {
         newUserId = newUser.user.id;
-        console.log(`Created new user: ${newUserId}`);
+        edgeLogger.info('Created new user', { userId: newUserId });
       } else {
         throw new Error('User creation returned no user object');
       }
@@ -201,7 +201,7 @@ serve(async (req) => {
           });
 
         if (profileError) {
-          console.error('Failed to create profile:', profileError);
+          edgeLogger.error('Failed to create profile', profileError);
           throw new Error(`Failed to create profile: ${profileError.message}`);
         }
       } else if (pendingRep.role === 'downline' && pendingRep.assigned_topline_user_id) {
@@ -215,9 +215,9 @@ serve(async (req) => {
           .eq('id', newUserId);
         
         if (profileUpdateError) {
-          console.error('Failed to update profile topline assignment:', profileUpdateError);
+          edgeLogger.error('Failed to update profile topline assignment', profileUpdateError);
         } else {
-          console.log(`Updated existing profile's topline assignment for user ${newUserId}`);
+          edgeLogger.info('Updated existing profile topline assignment', { userId: newUserId });
         }
       }
 
@@ -238,7 +238,7 @@ serve(async (req) => {
           });
 
         if (roleError) {
-          console.error('Failed to add role:', roleError);
+          edgeLogger.error('Failed to add role', roleError);
           throw new Error(`Failed to add role: ${roleError.message}`);
         }
       }
@@ -262,7 +262,7 @@ serve(async (req) => {
           
           assigned_topline_id = toplineRep?.id || null;
           if (!assigned_topline_id) {
-            console.warn(`Topline rep record not found for user_id: ${pendingRep.assigned_topline_user_id}`);
+            edgeLogger.warn('Topline rep record not found', { toplineUserId: pendingRep.assigned_topline_user_id });
           }
         }
 
@@ -276,7 +276,7 @@ serve(async (req) => {
           });
 
         if (repError) {
-          console.error('Failed to create rep record:', repError);
+          edgeLogger.error('Failed to create rep record', repError);
           throw new Error(`Failed to create rep record: ${repError.message}`);
         }
       } else if (pendingRep.role === 'downline' && pendingRep.assigned_topline_user_id) {
@@ -298,12 +298,12 @@ serve(async (req) => {
             .eq('user_id', newUserId);
           
           if (repUpdateError) {
-            console.error('Failed to update rep topline assignment:', repUpdateError);
+            edgeLogger.error('Failed to update rep topline assignment', repUpdateError);
           } else {
-            console.log(`Updated existing rep's topline assignment to: ${toplineRep.id}`);
+            edgeLogger.info('Updated existing rep topline assignment', { toplineRepId: toplineRep.id });
           }
         } else {
-          console.warn(`Topline rep record not found for user_id: ${pendingRep.assigned_topline_user_id} - cannot update assignment`);
+          edgeLogger.warn('Topline rep record not found - cannot update assignment', { toplineUserId: pendingRep.assigned_topline_user_id });
         }
       }
 
@@ -349,13 +349,12 @@ serve(async (req) => {
           
           if (!emailResponse.ok) {
             const errorText = await emailResponse.text();
-            console.error('Error sending welcome email:', errorText);
+            edgeLogger.error('Error sending welcome email', new Error(errorText));
           } else {
-            console.log('✅ Welcome email sent successfully to:', pendingRep.email);
+            edgeLogger.info('Welcome email sent successfully', { email: pendingRep.email });
           }
         } catch (emailErr) {
-          console.error('Failed to send welcome email:', emailErr);
-          console.error('Email error details:', emailErr);
+          edgeLogger.error('Failed to send welcome email', emailErr);
         }
       }
 
@@ -371,7 +370,7 @@ serve(async (req) => {
         .eq('id', requestId);
 
       if (updateError) {
-        console.error('Failed to update pending request:', updateError);
+        edgeLogger.error('Failed to update pending request', updateError);
         throw new Error(`Failed to update pending request: ${updateError.message}`);
       }
 
@@ -418,7 +417,7 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    console.error('Error in approve-pending-rep:', error);
+    edgeLogger.error('Error in approve-pending-rep', error, { requestId, action });
     
     // Log error to database
     try {
@@ -435,7 +434,7 @@ serve(async (req) => {
         }
       });
     } catch (logError) {
-      console.error('Failed to log error:', logError);
+      edgeLogger.error('Failed to log error', logError);
     }
     
     return new Response(

@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { logger } from '@/lib/logger';
 
 interface NotificationPreferencesDialogProps {
   open: boolean;
@@ -200,7 +201,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
 
       setPreferences(prefsMap);
     } catch (error) {
-      console.error('Error fetching preferences:', error);
+      logger.error('Error fetching preferences', error);
       toast({
         title: 'Error',
         description: 'Failed to load notification preferences',
@@ -239,7 +240,7 @@ export function NotificationPreferencesDialog({ open, onOpenChange }: Notificati
 
       onOpenChange(false);
     } catch (error) {
-      console.error('Error saving preferences:', error);
+      logger.error('Error saving preferences', error);
       toast({
         title: 'Error',
         description: 'Failed to save preferences',
