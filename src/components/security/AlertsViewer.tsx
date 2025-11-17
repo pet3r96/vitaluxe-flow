@@ -129,7 +129,7 @@ export const AlertsViewer = () => {
     },
     onError: (error) => {
       toast.error("Failed to mark all as resolved");
-      console.error("Failed to mark all as resolved:", error);
+      logger.error("Failed to mark all as resolved", error);
     },
   });
 

@@ -1,5 +1,6 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { validateRouteOrderRequest } from '../_shared/requestValidators.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -75,7 +76,7 @@ async function routeOrderToPharmacy(
     };
   }
 
-  console.log(`Routing order for product ${product_id} to state ${trimmedState}, topline: ${user_topline_rep_id || 'N/A'}`);
+  edgeLogger.info('Routing order for product', { productId: product_id, state: trimmedState, toplineRepId: user_topline_rep_id || 'N/A' });
 
   // 1. Get all pharmacies assigned to this product
   const { data: assignments, error } = await supabase
@@ -92,20 +93,20 @@ async function routeOrderToPharmacy(
     .eq("product_id", product_id);
 
   if (error) {
-    console.error("Error fetching product pharmacies:", error);
-    return { 
+    edgeLogger.error('Error fetching product pharmacies', error);
+    return {
       pharmacy_id: null, 
       reason: `Database error: ${error.message}` 
     };
   }
 
-  console.log(`Product pharmacies query result: ${assignments?.length || 0} assignments found`);
-  console.log(`[DIAGNOSTIC] Product: ${product_id}, State: ${trimmedState}, Assignments found: ${assignments?.length || 0}`);
+  edgeLogger.info('Product pharmacies query result', { assignmentCount: assignments?.length || 0 });
+  edgeLogger.info('[DIAGNOSTIC] Product routing', { productId: product_id, state: trimmedState, assignmentsFound: assignments?.length || 0 });
   
   if (!assignments || assignments.length === 0) {
-    console.log("No pharmacies assigned to product");
-    console.log(`[DIAGNOSTIC] Zero assignments - product_id: ${product_id} has no pharmacies in product_pharmacies table`);
-    return { 
+    edgeLogger.info('No pharmacies assigned to product', { productId: product_id });
+    edgeLogger.info('[DIAGNOSTIC] Zero assignments', { productId: product_id, reason: 'no pharmacies in product_pharmacies table' });
+    return {
       pharmacy_id: null, 
       reason: "No pharmacies assigned to product" 
     };

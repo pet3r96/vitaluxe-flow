@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 const ticketSchema = z.object({
   subject: z.string().min(5, "Subject must be at least 5 characters"),
@@ -51,7 +52,7 @@ export function CreateSupportTicketDialog() {
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: TicketFormData) => {
-      console.log('[CreateSupportTicket] Starting mutation with data:', data);
+      logger.info('[CreateSupportTicket] Starting mutation with data', { subject: data.subject, patientEmail: data.patientEmail });
       
       // Find patient by email and get their practice_id
       const { data: patient, error: patientError } = await supabase
@@ -60,7 +61,7 @@ export function CreateSupportTicketDialog() {
         .eq("email", data.patientEmail)
         .single();
 
-      console.log('[CreateSupportTicket] Patient lookup result:', { patient, error: patientError });
+      logger.info('[CreateSupportTicket] Patient lookup result', { patientFound: !!patient, error: patientError?.message });
 
       if (patientError || !patient) {
         throw new Error("Patient not found with that email address");
@@ -81,7 +82,7 @@ export function CreateSupportTicketDialog() {
         resolved: false,
       };
       
-      console.log('[CreateSupportTicket] Attempting insert:', insertData);
+      logger.info('[CreateSupportTicket] Attempting insert', { patientId: patient.id, practiceId: patient.practice_id });
 
       const { data: insertResult, error } = await supabase
         .from("patient_messages")
@@ -89,12 +90,11 @@ export function CreateSupportTicketDialog() {
         .select()
         .single();
 
-      console.log('[CreateSupportTicket] Insert result:', { insertResult, error });
+      logger.info('[CreateSupportTicket] Insert result', { success: !!insertResult, error: error?.message });
 
       if (error) {
-        console.error('[CreateSupportTicket] Insert error details:', {
+        logger.error('[CreateSupportTicket] Insert error details', error, {
           code: error.code,
-          message: error.message,
           details: error.details,
           hint: error.hint
         });

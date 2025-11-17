@@ -15,6 +15,7 @@ import { TermsAndConds } from "@/integrations/supabase/table-helpers";
 import { Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
+import { logger } from "@/lib/logger";
 
 interface PaymentWithTermsDialogProps {
   open: boolean;
@@ -51,7 +52,7 @@ export const PaymentWithTermsDialog = ({
           setTermsVersion(data.version || 'v1.0');
         }
       } catch (error) {
-        console.error('Error fetching terms:', error);
+        logger.error('Error fetching terms', error);
         setTermsContent('Terms and conditions could not be loaded. Please contact support.');
       } finally {
         setLoading(false);

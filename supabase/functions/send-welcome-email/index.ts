@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,6 @@ interface WelcomeEmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  const { edgeLogger } = await import('../_shared/logger.ts');
   edgeLogger.info('[send-welcome-email] Function START');
   
   if (req.method === "OPTIONS") {
@@ -24,7 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log('[send-welcome-email] Creating admin client...');
+    edgeLogger.info('[send-welcome-email] Creating admin client');
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -36,13 +36,13 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    console.log('[send-welcome-email] Parsing request body...');
+    edgeLogger.info('[send-welcome-email] Parsing request body');
     const { userId, email, name, role, practiceId }: WelcomeEmailRequest = await req.json();
 
-    console.log('[send-welcome-email] Request params:', { userId, email, role, practiceId });
+    edgeLogger.info('[send-welcome-email] Request params', { userId, email, role, practiceId });
 
     if (!userId || !email || !name || !role) {
-      console.error('[send-welcome-email] Missing required fields:', { userId, email, name, role });
+      edgeLogger.error('[send-welcome-email] Missing required fields', { userId, email, name, role });
       return new Response(
         JSON.stringify({ error: "Missing required fields: userId, email, name, role" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -53,10 +53,10 @@ const handler = async (req: Request): Promise<Response> => {
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
 
-    console.log('[send-welcome-email] Generated token, expires:', expiresAt);
+    edgeLogger.info('[send-welcome-email] Generated token', { expiresAt });
 
     // Store token in temp_password_tokens
-    console.log('[send-welcome-email] Storing token in database...');
+    edgeLogger.info('[send-welcome-email] Storing token in database');
     const { error: tokenError } = await supabaseAdmin
       .from('temp_password_tokens')
       .insert({
@@ -66,26 +66,26 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (tokenError) {
-      console.error("❌ [send-welcome-email] Error creating token:", tokenError);
+      edgeLogger.error('[send-welcome-email] Error creating token', tokenError);
       throw tokenError;
     }
-    console.log('✅ [send-welcome-email] Token stored successfully');
+    edgeLogger.info('[send-welcome-email] Token stored successfully');
 
     // Get practice information if practiceId provided
     let practiceInfo = null;
     if (practiceId) {
-      console.log('[send-welcome-email] Fetching practice info for:', practiceId);
+      edgeLogger.info('[send-welcome-email] Fetching practice info', { practiceId });
       const { data: practice } = await supabaseAdmin
         .from('profiles')
         .select('name, company, phone')
         .eq('id', practiceId)
         .single();
       practiceInfo = practice;
-      console.log('[send-welcome-email] Practice info:', practice?.name || 'Not found');
+      edgeLogger.info('[send-welcome-email] Practice info', { practiceName: practice?.name || 'Not found' });
     }
 
     // Check if 2FA is enabled for the system
-    console.log('[send-welcome-email] Checking 2FA settings...');
+    edgeLogger.info('[send-welcome-email] Checking 2FA settings');
     const { data: systemSettings } = await supabaseAdmin
       .from('system_settings')
       .select('value')
@@ -93,10 +93,10 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     const twoFactorEnabled = systemSettings?.value === true;
-    console.log('[send-welcome-email] 2FA enabled:', twoFactorEnabled);
+    edgeLogger.info('[send-welcome-email] 2FA enabled', { twoFactorEnabled });
 
     const resetLink = `https://app.vitaluxeservices.com/change-password?token=${token}`;
-    console.log('[send-welcome-email] Password setup link:', resetLink);
+    edgeLogger.info('[send-welcome-email] Password setup link generated');
     
     // Determine if this is a patient or staff/doctor
     const isPatient = role === 'patient';

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { validatePharmacyWebhookSignature, validateWebhookPayload } from "../_shared/pharmacyWebhookValidator.ts";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,7 +36,7 @@ serve(async (req) => {
       .single();
 
     if (pharmacyError || !pharmacy) {
-      console.error("Pharmacy not found:", pharmacyIdHeader);
+      edgeLogger.error('Pharmacy not found', { pharmacyId: pharmacyIdHeader });
       return new Response(
         JSON.stringify({ error: "Invalid pharmacy" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
@@ -57,7 +58,7 @@ serve(async (req) => {
     );
 
     if (!signatureValidation.valid) {
-      console.error("Signature validation failed:", signatureValidation.reason);
+      edgeLogger.error('Signature validation failed', { reason: signatureValidation.reason });
       return new Response(
         JSON.stringify({ error: "Invalid signature" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }

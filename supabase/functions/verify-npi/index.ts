@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,7 +39,7 @@ serve(async (req) => {
   try {
     const { npi } = await req.json();
 
-    console.log(`[verify-npi] Verifying NPI: ${npi}`);
+    edgeLogger.info('[verify-npi] Verifying NPI', { npi });
 
     // Basic validation
     if (!npi || !/^\d{10}$/.test(npi)) {
@@ -66,7 +67,7 @@ serve(async (req) => {
     );
 
     if (!response.ok) {
-      console.error(`[verify-npi] NPPES API error: ${response.status}`);
+      edgeLogger.error('[verify-npi] NPPES API error', { status: response.status });
       return new Response(
         JSON.stringify({ 
           valid: true, // Allow submission on API failure
@@ -82,7 +83,7 @@ serve(async (req) => {
     const data: NPPESResponse = await response.json();
 
     if (data.result_count === 0 || !data.results || data.results.length === 0) {
-      console.log(`[verify-npi] NPI not found: ${npi}`);
+      edgeLogger.info('[verify-npi] NPI not found', { npi });
       return new Response(
         JSON.stringify({ 
           valid: false, 
@@ -130,7 +131,7 @@ serve(async (req) => {
         : undefined,
     };
 
-    console.log(`[verify-npi] Verified: ${providerName} (${provider.enumeration_type})`);
+    edgeLogger.info('[verify-npi] Verified', { providerName, enumerationType: provider.enumeration_type });
 
     return new Response(
       JSON.stringify(result),
@@ -140,7 +141,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('[verify-npi] Error:', error);
+    edgeLogger.error('[verify-npi] Error', error);
     return new Response(
       JSON.stringify({ 
         valid: true, // Allow submission on error
