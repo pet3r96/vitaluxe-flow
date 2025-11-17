@@ -1,4 +1,5 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,7 +24,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('[list-providers] User:', user.id);
+    edgeLogger.info('User authenticated', { userId: user.id });
 
     // Get user's role and practice
     const { data: userRoles } = await supabaseClient
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id);
 
     const roles = userRoles?.map(r => r.role) || [];
-    console.log('[list-providers] User roles:', roles);
+    edgeLogger.info('User roles', { roles });
 
     let practiceId: string | null = null;
     let practiceIdSource = 'none';
@@ -68,14 +69,14 @@ Deno.serve(async (req) => {
         .eq('active', true)
         .maybeSingle();
       
-      console.log('[list-providers] Staff lookup:', {
+      edgeLogger.info('Staff lookup', {
         userId: user.id,
         staffData,
         practiceId: staffData?.practice_id
       });
       
       if (!staffData || !staffData.practice_id) {
-        console.warn('[list-providers] ⚠️ Staff has no active providers record');
+        edgeLogger.warn('Staff has no active providers record', { userId: user.id });
         return new Response(
           JSON.stringify({ providers: [], error: 'Staff membership not found' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -113,28 +114,28 @@ Deno.serve(async (req) => {
         .single();
 
       if (providerData) {
-        console.log('[list-providers] Provider role: returning own record only');
+        edgeLogger.info('Provider role: returning own record only', { userId: user.id });
         return new Response(JSON.stringify({ providers: [providerData] }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } else {
-        console.log('[list-providers] Provider not found for user:', user.id);
+        edgeLogger.info('Provider not found for user', { userId: user.id });
         return new Response(JSON.stringify({ providers: [] }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
     } else {
-      console.error('[list-providers] No valid role for user');
+      edgeLogger.error('No valid role for user', new Error('No valid role'), { userId: user.id });
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('[list-providers] practiceId:', practiceId, 'source:', practiceIdSource);
+    edgeLogger.info('Practice context', { practiceId, source: practiceIdSource });
 
     if (!practiceId && !roles.includes('admin')) {
-      console.error('[list-providers] No practice_id found for user');
+      edgeLogger.error('No practice_id found for user', new Error('Missing practice_id'), { userId: user.id });
       return new Response(JSON.stringify({ providers: [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -170,7 +171,7 @@ Deno.serve(async (req) => {
     }
 
     if (!providersRows || providersRows.length === 0) {
-      console.log('[list-providers] No providers found for practice', practiceId);
+      edgeLogger.info('No providers found for practice', { practiceId });
       return new Response(JSON.stringify({ providers: [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -190,11 +191,11 @@ Deno.serve(async (req) => {
         .maybeSingle();
       
       if (!staffMembership) {
-        console.error(`❌ CRITICAL: Staff user ${user.id} has no practice_staff record for practice ${practiceId}!`);
+        edgeLogger.error('CRITICAL: Staff user has no practice_staff record', new Error('Missing practice_staff record'), { userId: user.id, practiceId });
       } else if (!staffMembership.active) {
-        console.warn(`⚠️ Staff user ${user.id} has inactive practice_staff membership for practice ${practiceId}`);
+        edgeLogger.warn('Staff user has inactive practice_staff membership', { userId: user.id, practiceId });
       } else {
-        console.log(`✅ Staff user ${user.id} has valid practice_staff membership`);
+        edgeLogger.info('Staff user has valid practice_staff membership', { userId: user.id, practiceId });
       }
     }
 
@@ -204,7 +205,7 @@ Deno.serve(async (req) => {
       .in('id', userIds);
 
     if (userProfilesError) {
-      console.error('[list-providers] User profiles query error:', userProfilesError);
+      edgeLogger.error('User profiles query error', userProfilesError);
       return new Response(JSON.stringify({ error: userProfilesError.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -218,7 +219,7 @@ Deno.serve(async (req) => {
       .in('id', practiceIds);
 
     if (practiceProfilesError) {
-      console.error('[list-providers] Practice profiles query error:', practiceProfilesError);
+      edgeLogger.error('Practice profiles query error', practiceProfilesError);
     }
 
     // Merge profiles onto provider rows
@@ -245,7 +246,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[list-providers] Error:', error);
+    edgeLogger.error('Error', error instanceof Error ? error : new Error(String(error)));
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
