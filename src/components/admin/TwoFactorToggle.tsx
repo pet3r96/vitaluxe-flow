@@ -44,7 +44,9 @@ export const TwoFactorToggle = () => {
       );
     },
     onError: (error) => {
-      console.error("Error updating 2FA enforcement:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error updating 2FA enforcement", error);
+      });
       toast.error("Failed to update 2FA enforcement setting");
     },
   });

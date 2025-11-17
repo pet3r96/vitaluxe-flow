@@ -122,7 +122,9 @@ export const AddRepresentativeDialog = ({ open, onOpenChange, onSuccess }: AddRe
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Error adding representative:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error adding representative", error);
+      });
       toast.error(error.message || "Failed to add representative");
     } finally {
       setLoading(false);

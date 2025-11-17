@@ -10,13 +10,15 @@ serve(async (req) => {
   }
 
   try {
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    
     const supabase = createAuthClient(req.headers.get('Authorization'));
     const supabaseClient = createAdminClient();
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      console.error('Auth error:', userError);
+      edgeLogger.error('Auth error', userError);
       throw new Error('Invalid authorization token');
     }
 
@@ -24,7 +26,7 @@ serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -39,7 +41,7 @@ serve(async (req) => {
       .eq('role', 'admin');
 
     if (roleError || !roles || roles.length === 0) {
-      console.error('Role check failed:', roleError);
+      edgeLogger.error('Role check failed', roleError);
       throw new Error('Unauthorized: Admin access required');
     }
 
@@ -49,7 +51,7 @@ serve(async (req) => {
       throw new Error('targetUserId and newPassword are required');
     }
 
-    console.log(`Admin ${user.email} resetting password for user ${targetUserId}`);
+    edgeLogger.info('Admin resetting password', { targetUserId });
 
     // Update target user's password using admin API
     const { error: updateError } = await supabaseClient.auth.admin.updateUserById(
@@ -58,7 +60,8 @@ serve(async (req) => {
     );
 
     if (updateError) {
-      console.error('Error updating password:', updateError);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Error updating password', updateError);
       throw updateError;
     }
 
@@ -74,7 +77,8 @@ serve(async (req) => {
       .eq('user_id', targetUserId);
 
     if (statusError) {
-      console.error('Error updating password status:', statusError);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Error updating password status', statusError);
       // Don't throw - password was set successfully
     }
 
@@ -87,7 +91,8 @@ serve(async (req) => {
       .eq('id', targetUserId);
 
     if (profileError) {
-      console.error('Error clearing temp_password flag:', profileError);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Error clearing temp_password flag', profileError);
       // Don't throw - password was set successfully
     }
 
@@ -115,11 +120,11 @@ serve(async (req) => {
       });
 
     if (auditError) {
-      console.error('Error logging audit event:', auditError);
+      edgeLogger.error('Error logging audit event', auditError);
       // Don't throw - password was set successfully
     }
 
-    console.log(`Password reset successful for user ${targetUserId} by admin ${user.email}`);
+    edgeLogger.info('Password reset successful', { targetUserId });
 
     return new Response(
       JSON.stringify({ 
@@ -130,7 +135,8 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in admin-reset-user-password function:', error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('Error in admin-reset-user-password function', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { 

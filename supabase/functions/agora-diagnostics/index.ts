@@ -126,7 +126,8 @@ serve(async (req) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (error) {
-          console.error('[agora-diagnostics] Token generation error:', error);
+          const { edgeLogger } = await import('./logger.ts');
+          edgeLogger.error('Token generation error', error);
           return new Response(
             JSON.stringify({
               success: false,
@@ -154,7 +155,8 @@ serve(async (req) => {
       }
     }
   } catch (error) {
-    console.error('[agora-diagnostics] Error:', error);
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.error('Agora diagnostics error', error);
     return new Response(
       JSON.stringify({
         success: false,

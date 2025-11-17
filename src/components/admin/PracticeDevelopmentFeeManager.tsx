@@ -164,7 +164,9 @@ export default function PracticeDevelopmentFeeManager() {
       setIsFeeDialogOpen(false);
     },
     onError: (error) => {
-      console.error("Error saving fee:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error saving fee", error);
+      });
       toast.error("Failed to save fee configuration");
     }
   });
@@ -210,7 +212,9 @@ export default function PracticeDevelopmentFeeManager() {
           
           toast.success("Invoice marked as paid and downloaded");
         } catch (error) {
-          console.error("Error downloading invoice:", error);
+          import('@/lib/logger').then(({ logger }) => {
+            logger.error("Error downloading invoice", error);
+          });
           toast.success("Invoice marked as paid (download failed - use Download button)");
         }
       } else {
@@ -218,7 +222,9 @@ export default function PracticeDevelopmentFeeManager() {
       }
     },
     onError: (error) => {
-      console.error("Error marking as paid:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error marking as paid", error);
+      });
       toast.error("Failed to mark invoice as paid");
     }
   });
@@ -246,7 +252,9 @@ export default function PracticeDevelopmentFeeManager() {
       setVoidReason("");
     },
     onError: (error) => {
-      console.error("Error voiding invoice:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error voiding invoice", error);
+      });
       toast.error("Failed to void invoice");
     }
   });
@@ -278,7 +286,9 @@ export default function PracticeDevelopmentFeeManager() {
       
       toast.success("Invoice downloaded");
     } catch (error) {
-      console.error("Error downloading PDF:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error downloading PDF", error);
+      });
       toast.error("Failed to download PDF");
     }
   };
