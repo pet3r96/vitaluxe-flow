@@ -1,5 +1,6 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -111,24 +112,15 @@ Deno.serve(async (req) => {
 
     const practiceHours = hours?.[0];
 
-    console.log('[validate-appointment-time] DEBUG:', JSON.stringify({
+    edgeLogger.info('[validate-appointment-time] Request details', {
       appointmentDate,
-      appointmentTime,
       duration,
       practiceTimezone,
       dayOfWeek,
       dayName,
-      practiceHours: practiceHours ? {
-        start: practiceHours.start_time,
-        end: practiceHours.end_time,
-        isClosed: practiceHours.is_closed
-      } : null,
-      nowInPractice: nowInPracticeTime.toISOString(),
-      todayYMD,
-      nowMinutes,
-      startIso,
-      endIso
-    }));
+      hasPracticeHours: !!practiceHours,
+      isClosed: practiceHours?.is_closed || false
+    });
 
     if (!practiceHours || practiceHours.is_closed) {
       const closedMessage = `Practice is closed on ${dayName}s`;
@@ -220,7 +212,7 @@ Deno.serve(async (req) => {
     }
 
     if (apptEndMin > practiceEndMin) {
-      console.log('[validate-appointment-time] REJECTED: After closing hours');
+      edgeLogger.info('[validate-appointment-time] Rejected: After closing hours');
       return new Response(
         JSON.stringify({
           valid: false,
@@ -256,7 +248,7 @@ Deno.serve(async (req) => {
     if (blockedError) throw blockedError;
 
     if (blocked && blocked.length > 0) {
-      console.log('[validate-appointment-time] REJECTED: Blocked time conflict', { count: blocked.length });
+      edgeLogger.info('[validate-appointment-time] Rejected: Blocked time conflict', { count: blocked.length });
       return new Response(
         JSON.stringify({
           valid: false,
@@ -291,7 +283,7 @@ Deno.serve(async (req) => {
     }
 
     // Time is valid!
-    console.log('[validate-appointment-time] APPROVED: Time slot is valid');
+    edgeLogger.info('[validate-appointment-time] Approved: Time slot is valid');
     return new Response(
       JSON.stringify({
         valid: true,
@@ -314,7 +306,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Error validating appointment time:', error);
+    edgeLogger.error('Error validating appointment time', error);
     return new Response(
       JSON.stringify({ 
         valid: false,

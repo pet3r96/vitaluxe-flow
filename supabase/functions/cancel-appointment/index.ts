@@ -332,7 +332,7 @@ Deno.serve(async (req) => {
                     practiceAddress: practiceAddress
                   }
                 });
-                edgeLogger.info('[cancel-appointment] SMS sent', { phone: normalizedPhone });
+                edgeLogger.info('[cancel-appointment] SMS sent', { phonePrefix: normalizedPhone.substring(0, 5) });
               } catch (smsError) {
                 edgeLogger.error('[cancel-appointment] Error sending SMS', smsError);
               }

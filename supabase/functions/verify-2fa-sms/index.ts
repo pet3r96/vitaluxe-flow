@@ -189,8 +189,8 @@ serve(async (req) => {
     }
 
     // Log success with detailed settings info
-    console.log('[2FA Verify] Settings updated:', {
-      userId: user.id,
+    edgeLogger.info('[2FA Verify] Settings updated', {
+      hasUserId: !!user.id,
       provider,
       isEnrolled: true,
       phoneVerified: true,
@@ -217,20 +217,16 @@ serve(async (req) => {
       metadata: { provider }
     });
 
-    console.log('[2FA Verify] Attempt:', attemptId, '| Success | Provider:', provider, '| Time:', responseTime, 'ms');
+    edgeLogger.info('[2FA Verify] Attempt verified', { 
+      hasAttemptId: !!attemptId,
+      provider, 
+      responseTimeMs: responseTime 
+    });
 
     return successResponse(confirmation);
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        message: 'Phone number verified successfully',
-        provider
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
 
   } catch (error: any) {
-    console.error('Error in verify-2fa-sms:', error);
+    edgeLogger.error('Error in verify-2fa-sms', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -8,6 +8,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { createAgoraTokens } from '../_shared/agoraTokenService.ts';
 import { getClientIP } from '../_shared/rateLimiter.ts';
 import { buildRtcToken, buildRtmToken, Role } from '../_shared/agoraTokenBuilder.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -41,7 +42,7 @@ Deno.serve(async (req) => {
     switch (action) {
       case 'validate-video-token': {
         // Validates guest token and returns session details + Agora credentials
-        console.log('[validate-guest-access] Validating video token:', token.substring(0, 8) + '...');
+        edgeLogger.info('[validate-guest-access] Validating video token', { tokenPrefix: token.substring(0, 8) });
 
         // Lookup guest token
         const { data: guestToken, error: tokenError } = await supabase
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (tokenError || !guestToken) {
-          console.error('[validate-guest-access] Invalid token');
+          edgeLogger.warn('[validate-guest-access] Invalid token');
           return new Response(
             JSON.stringify({ success: false, error: 'invalid', message: 'Invalid guest token' }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
         const expiresAt = new Date(guestToken.expires_at);
 
         if (now > expiresAt) {
-          console.error('[validate-guest-access] Token expired');
+          edgeLogger.warn('[validate-guest-access] Token expired');
           return new Response(
             JSON.stringify({ success: false, error: 'expired', message: 'Guest link has expired' }),
             { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (sessionError || !session) {
-          console.error('[validate-guest-access] Session not found');
+          edgeLogger.warn('[validate-guest-access] Session not found');
           return new Response(
             JSON.stringify({ success: false, error: 'session_ended', message: 'Video session not found' }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
 
         // Check if session is still active
         if (session.status === 'ended') {
-          console.error('[validate-guest-access] Session already ended');
+          edgeLogger.warn('[validate-guest-access] Session already ended');
           return new Response(
             JSON.stringify({ success: false, error: 'session_ended', message: 'Video session has ended' }),
             { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
           .eq('id', session.practice_id)
           .single();
 
-        console.log('[validate-guest-access] Token validated successfully');
+        edgeLogger.info('[validate-guest-access] Token validated successfully');
 
         return new Response(
           JSON.stringify({
@@ -140,7 +141,7 @@ Deno.serve(async (req) => {
 
       case 'validate-video-link': {
         // Validates video session guest link with audit logging
-        console.log('[validate-guest-access] Validating video link:', token.substring(0, 8) + '...');
+        edgeLogger.info('[validate-guest-access] Validating video link', { tokenPrefix: token.substring(0, 8) });
 
         const clientIp = getClientIP(req);
 
@@ -278,7 +279,7 @@ Deno.serve(async (req) => {
 
       case 'validate-share-link': {
         // Validates medical vault share link
-        console.log('[validate-guest-access] Validating share link:', token.substring(0, 8) + '...');
+        edgeLogger.info('[validate-guest-access] Validating share link', { tokenPrefix: token.substring(0, 8) });
 
         const clientIp = getClientIP(req);
 
@@ -304,7 +305,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (linkError || !shareLink) {
-          console.error('[validate-guest-access] Share link not found:', linkError);
+          edgeLogger.warn('[validate-guest-access] Share link not found', { error: linkError?.message });
           return new Response(
             JSON.stringify({ success: false, error: 'invalid_token', message: 'Invalid share link' }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -441,7 +442,7 @@ Deno.serve(async (req) => {
       }
     }
   } catch (error) {
-    console.error('[validate-guest-access] Error:', error);
+    edgeLogger.error('[validate-guest-access] Error', error);
     return new Response(
       JSON.stringify({
         success: false,
