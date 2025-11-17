@@ -173,7 +173,7 @@ serve(async (req) => {
         // Check if user already exists
         if (createUserError.message?.includes('already registered') || 
             createUserError.message?.includes('duplicate')) {
-          console.log('User already exists, fetching existing user...');
+          edgeLogger.info('User already exists, fetching existing user', { email: practiceData.email });
           const { data: existingUser, error: fetchError } = await supabaseAdmin.auth.admin
             .listUsers();
           
@@ -183,7 +183,7 @@ serve(async (req) => {
           }
           userId = foundUser.id;
           isNewUser = false; // CRITICAL: Don't send welcome email for existing users
-          console.log('Found existing user:', userId);
+          edgeLogger.info('Found existing user', { userId });
         } else {
           throw new Error(`Failed to create user: ${createUserError.message}`);
         }
@@ -192,7 +192,7 @@ serve(async (req) => {
       } else {
         userId = newUser.user.id;
         isNewUser = true;
-        console.log('Created new user:', userId);
+        edgeLogger.info('Created new user', { userId });
       }
 
       // Upload contract file if provided
@@ -215,7 +215,7 @@ serve(async (req) => {
             contract_url = urlData.publicUrl;
           }
         } catch (uploadError) {
-          console.error('Failed to upload contract:', uploadError);
+          edgeLogger.error('Failed to upload contract', uploadError);
         }
       }
 
@@ -246,7 +246,7 @@ serve(async (req) => {
         });
 
       if (profileError) {
-        console.error('Failed to upsert profile:', profileError);
+        edgeLogger.error('Failed to upsert profile', profileError);
         throw new Error(`Failed to upsert profile: ${profileError.message}`);
       }
 
@@ -262,13 +262,13 @@ serve(async (req) => {
         });
 
       if (roleError) {
-        console.error('Failed to upsert role:', roleError);
+        edgeLogger.error('Failed to upsert role', roleError);
         throw new Error(`Failed to upsert role: ${roleError.message}`);
       }
 
       // Link practice to rep via linked_topline_id
       if (practiceData.assigned_rep_user_id) {
-        console.log('Setting linked_topline_id for practice:', practiceData.assigned_rep_user_id);
+        edgeLogger.info('Setting linked_topline_id for practice', { repUserId: practiceData.assigned_rep_user_id });
         
         const { error: linkError } = await supabaseAdmin
           .from('profiles')
@@ -279,11 +279,11 @@ serve(async (req) => {
           .eq('id', userId);
 
         if (linkError) {
-          console.error('Failed to set linked_topline_id:', linkError);
+          edgeLogger.error('Failed to set linked_topline_id', linkError);
           throw new Error(`Failed to link practice to rep: ${linkError.message}`);
         }
         
-        console.log('Successfully set linked_topline_id for practice:', userId);
+        edgeLogger.info('Successfully set linked_topline_id for practice', { practiceUserId: userId });
       }
 
       // Upsert password status record (idempotent)
@@ -323,16 +323,15 @@ serve(async (req) => {
           
           if (!emailResponse.ok) {
             const errorText = await emailResponse.text();
-            console.error('Error sending welcome email:', errorText);
+            edgeLogger.error('Error sending welcome email', new Error(errorText));
           } else {
-            console.log('✅ Welcome email sent successfully to:', practiceData.email);
+            edgeLogger.info('Welcome email sent successfully', { email: practiceData.email });
           }
         } catch (emailErr) {
-          console.error('Failed to send welcome email:', emailErr);
-          console.error('Email error details:', emailErr);
+          edgeLogger.error('Failed to send welcome email', emailErr);
         }
       } else {
-        console.log('Skipping welcome email for existing user');
+        edgeLogger.info('Skipping welcome email for existing user');
       }
 
       // Update pending request
@@ -347,11 +346,11 @@ serve(async (req) => {
         .eq('id', requestId);
 
       if (updateError) {
-        console.error('Failed to update pending request:', updateError);
+        edgeLogger.error('Failed to update pending request', updateError);
         throw new Error(`Failed to update pending request: ${updateError.message}`);
       }
 
-      console.log('Practice approved successfully');
+      edgeLogger.info('Practice approved successfully', { practiceId: userId, isNewUser });
 
       return new Response(
         JSON.stringify({ 
@@ -394,7 +393,7 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    console.error('Error in approve-pending-practice:', error);
+    edgeLogger.error('Error in approve-pending-practice', error, { requestId, action });
     
     // Log error to database
     try {
@@ -411,7 +410,7 @@ serve(async (req) => {
         }
       });
     } catch (logError) {
-      console.error('Failed to log error:', logError);
+      edgeLogger.error('Failed to log error', logError);
     }
     
     return new Response(

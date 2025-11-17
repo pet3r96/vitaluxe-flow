@@ -104,7 +104,7 @@ export function DocumentsTab() {
         );
         
         if (invalidDocuments.length > 0) {
-          console.error('[DocumentsTab] SECURITY: Cross-practice documents detected', {
+          logger.error('[DocumentsTab] SECURITY: Cross-practice documents detected', undefined, {
             count: invalidDocuments.length,
             userPractice: effectivePracticeId,
             invalidPractices: [...new Set(invalidDocuments.map((d: any) => d.practice_id))]

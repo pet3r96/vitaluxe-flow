@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { validateApprovePendingProductRequest } from '../_shared/requestValidators.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -218,7 +219,7 @@ Deno.serve(async (req) => {
     throw new Error('Invalid action');
 
   } catch (error: any) {
-    console.error('Error in approve-pending-product:', error);
+    edgeLogger.error('Error in approve-pending-product', error);
     return new Response(
       JSON.stringify({ error: error?.message || 'Unknown error' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
