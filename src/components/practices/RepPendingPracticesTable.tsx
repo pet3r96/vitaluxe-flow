@@ -24,6 +24,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { getPayloadNew } from "@/types/realtime";
+import type { PendingPracticeRequest } from "@/types/manual-schema";
+
 type PendingPractice = {
   id: string;
   practice_name: string;
@@ -91,8 +94,9 @@ export function RepPendingPracticesTable() {
         (payload) => {
           console.debug('[RepPendingPracticesTable] Received update:', payload);
           
+          const newRecord = getPayloadNew(payload);
           // If a practice was approved, refresh all related queries
-          if (payload.new && (payload.new as any).status === 'approved') {
+          if (newRecord && newRecord.status === 'approved') {
             console.debug('[RepPendingPracticesTable] Practice approved, invalidating queries');
             queryClient.invalidateQueries({ queryKey: ['rep-pending-practices', effectiveUserId] });
             queryClient.invalidateQueries({ queryKey: ['rep-practices', effectiveUserId] });

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Reply } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import type { ThreadMessageRow } from "@/types/rpc";
 
 interface ThreadViewProps {
   selectedMessage: any;
@@ -20,7 +20,7 @@ export function ThreadView({ selectedMessage, replyText, setReplyText, sendReply
   const { data: threadMessages, isLoading } = useQuery({
     queryKey: ["thread-messages", threadId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("patient_messages")
         .select(`
           *,
@@ -31,7 +31,7 @@ export function ThreadView({ selectedMessage, replyText, setReplyText, sendReply
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as ThreadMessageRow[];
     },
     enabled: !!threadId,
   });
@@ -58,7 +58,7 @@ export function ThreadView({ selectedMessage, replyText, setReplyText, sendReply
       {/* Messages Thread */}
       <ScrollArea className="flex-1 pr-4 mb-4">
         <div className="space-y-4">
-          {threadMessages?.map((msg: any) => {
+          {threadMessages?.map((msg) => {
             const isProvider = msg.sender_type === 'provider';
             const senderName = isProvider 
               ? (msg.sender?.name || 'Provider')

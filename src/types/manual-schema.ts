@@ -156,6 +156,92 @@ export interface PharmacyRepAssignmentRow {
   topline_rep_id: string;
 }
 
+// Terms & Conditions tables
+export interface UserTermsAcceptance {
+  id: string;
+  user_id: string;
+  version: string;
+  accepted_at: string;
+  ip_address?: string | null;
+}
+
+export interface PatientTermsAcceptance {
+  id: string;
+  user_id: string;
+  patient_account_id?: string | null;
+  version: string;
+  accepted_at: string;
+  ip_address?: string | null;
+}
+
+// Document tables
+export interface PatientDocument {
+  id: string;
+  patient_id: string;
+  document_name: string;
+  document_type?: string | null;
+  file_path: string;
+  share_with_practice: boolean;
+  uploaded_at: string;
+  updated_at: string;
+}
+
+export interface ProviderDocumentPatient {
+  id: string;
+  document_id: string;
+  patient_id: string;
+  assigned_at: string;
+  assigned_by: string;
+}
+
+// Security tables
+export interface SecurityAlertRule {
+  id: string;
+  rule_name: string;
+  rule_type: string;
+  severity: string;
+  enabled: boolean;
+  conditions: unknown; // JSONB
+  actions: unknown; // JSONB
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SecurityEvent {
+  id: string;
+  event_type: string;
+  severity: string;
+  user_id?: string | null;
+  details: unknown; // JSONB
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+}
+
+export interface AuditLogArchive {
+  id: string;
+  user_id?: string | null;
+  action_type: string;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  details?: unknown | null; // JSONB
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+  archived_at: string;
+}
+
+// Practice branding
+export interface PracticeBranding {
+  practice_id: string;
+  practice_name: string;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  secondary_color?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ==================== EXISTING TYPES ====================
 
 // Rep product price overrides table

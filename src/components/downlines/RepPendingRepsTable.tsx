@@ -24,6 +24,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { getPayloadNew } from "@/types/realtime";
+import type { PendingRepRequest } from "@/types/manual-schema";
+
 type PendingRep = {
   id: string;
   full_name: string;
@@ -85,8 +88,9 @@ export function RepPendingRepsTable() {
         (payload) => {
           console.debug('[RepPendingRepsTable] Received update:', payload);
           
+          const newRecord = getPayloadNew(payload);
           // If a rep was approved, refresh all related queries
-          if (payload.new && (payload.new as any).status === 'approved') {
+          if (newRecord && newRecord.status === 'approved') {
             console.debug('[RepPendingRepsTable] Rep approved, invalidating queries');
             queryClient.invalidateQueries({ queryKey: ['rep-pending-reps', effectiveUserId] });
             queryClient.invalidateQueries({ queryKey: ['downlines-table', effectiveUserId] });

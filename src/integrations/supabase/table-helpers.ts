@@ -19,6 +19,14 @@ import type {
   PendingRepRequest,
   PendingPracticeRequest,
   InternalMessageReply,
+  UserTermsAcceptance,
+  PatientTermsAcceptance,
+  PatientDocument,
+  ProviderDocumentPatient,
+  SecurityAlertRule,
+  SecurityEvent,
+  AuditLogArchive,
+  PracticeBranding,
 } from '@/types/manual-schema';
 
 /**
@@ -44,3 +52,11 @@ export const ActiveSessions = () => table<ActiveSession>('active_sessions');
 export const PendingRepReq = () => table<PendingRepRequest>('pending_rep_requests');
 export const PendingPracticeReq = () => table<PendingPracticeRequest>('pending_practice_requests');
 export const InternalMsgReplies = () => table<InternalMessageReply>('internal_message_replies');
+export const UserTermsAccept = () => table<UserTermsAcceptance>('user_terms_acceptances');
+export const PatientTermsAccept = () => table<PatientTermsAcceptance>('patient_terms_acceptances');
+export const PatientDocs = () => table<PatientDocument>('patient_documents');
+export const ProviderDocPatients = () => table<ProviderDocumentPatient>('provider_document_patients');
+export const SecurityAlertRules = () => table<SecurityAlertRule>('security_alert_rules');
+export const SecurityEvents = () => table<SecurityEvent>('security_events');
+export const AuditLogsArchive = () => table<AuditLogArchive>('audit_logs_archive');
+export const PracticeBrand = () => table<PracticeBranding>('practice_branding');
