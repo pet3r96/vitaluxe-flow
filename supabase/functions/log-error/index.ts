@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validateLogErrorRequest } from "../_shared/requestValidators.ts";
+import { edgeLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +19,7 @@ serve(async (req) => {
     try {
       requestData = await req.json();
     } catch (error) {
-      console.error('Invalid JSON in request body:', error);
+      edgeLogger.error('Invalid JSON in request body', error);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -28,7 +29,7 @@ serve(async (req) => {
     // Validate input
     const validation = validateLogErrorRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request data', 
@@ -88,7 +89,7 @@ serve(async (req) => {
     });
 
     if (insertError) {
-      console.error("Failed to insert error log:", insertError);
+      edgeLogger.error("Failed to insert error log", insertError);
       throw insertError;
     }
 
@@ -100,7 +101,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error in log-error function:", error);
+    edgeLogger.error("Error in log-error function", error);
     
     // Properly serialize error - handle all types
     let errorDetails;

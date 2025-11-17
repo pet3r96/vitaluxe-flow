@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TermsAndConds } from "@/integrations/supabase/table-helpers";
 import { Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 
 interface PaymentWithTermsDialogProps {
   open: boolean;
@@ -94,7 +96,9 @@ export const PaymentWithTermsDialog = ({
                 <Label className="font-semibold">Terms and Conditions ({termsVersion})</Label>
                 <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                   <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <div dangerouslySetInnerHTML={{ __html: termsContent }} />
+                    <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                      {termsContent}
+                    </ReactMarkdown>
                   </div>
                 </ScrollArea>
               </div>
