@@ -42,13 +42,13 @@ export default function AcceptTerms() {
     if (!user || !effectiveRole || (effectiveRole === 'admin' && !isImpersonating)) return;
 
     const fetchTerms = async () => {
-      console.log('[AcceptTerms] Fetching terms for role:', effectiveRole, 'User:', user?.id, 'Effective:', effectiveUserId);
+      logger.info('[AcceptTerms] Fetching terms', { role: effectiveRole, hasUserId: !!user?.id, effectiveUserId });
       
       let data: any = null;
       let error: any = null;
 
       // All roles now use unified terms_and_conditions table
-      console.log('[AcceptTerms] Querying terms_and_conditions for role:', effectiveRole);
+      logger.info('[AcceptTerms] Querying terms_and_conditions', { role: effectiveRole });
       const res = await supabase
         .from('terms_and_conditions')
         .select('*')
@@ -58,17 +58,14 @@ export default function AcceptTerms() {
         .maybeSingle();
       data = res.data;
       error = res.error;
-      console.log('[AcceptTerms] Role terms query result:', { 
+      logger.info('[AcceptTerms] Role terms query result', { 
         found: !!data, 
         error: error?.message,
         dataPreview: data ? { id: data.id, version: data.version, role: data.role } : null 
       });
 
       if (error) {
-        console.error('[AcceptTerms] Error fetching terms:', error);
-        import('@/lib/logger').then(({ logger }) => {
-          logger.error('Error fetching terms', error, { effectiveRole, userId: user?.id });
-        });
+        logger.error('[AcceptTerms] Error fetching terms', error, { effectiveRole, userId: user?.id });
         toast.error(`Failed to load terms: ${error.message}`);
         setTerms(null);
         setLoading(false);
@@ -76,10 +73,10 @@ export default function AcceptTerms() {
       }
 
       if (!data) {
-        console.warn('[AcceptTerms] No terms found for role:', effectiveRole);
+        logger.warn('[AcceptTerms] No terms found for role', { effectiveRole });
         toast.error(`No terms found for role: ${effectiveRole}. Please contact support.`);
       } else {
-        console.log('[AcceptTerms] Terms loaded successfully:', data.id);
+        logger.info('[AcceptTerms] Terms loaded successfully', { termsId: data.id });
       }
 
       setTerms(data);
@@ -168,7 +165,7 @@ export default function AcceptTerms() {
         // Set session flag to prevent re-prompts in this session
         const sessionKey = `vitaluxe_terms_ok_${effectiveUserId || user?.id}`;
         sessionStorage.setItem(sessionKey, new Date().toISOString());
-        console.log('[AcceptTerms] Session flag set for user', effectiveUserId || user?.id);
+        logger.info('[AcceptTerms] Session flag set', { userId: effectiveUserId || user?.id });
 
         toast.success(isImpersonating 
           ? `Terms accepted for ${impersonatedUserName || 'impersonated user'}!`

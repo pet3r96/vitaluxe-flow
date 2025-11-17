@@ -28,6 +28,7 @@ import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { CreditCard, Building2, DollarSign } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { time, timeEnd } from "@/diag";
 import type { Order } from "@/types/orders";
 
 interface OrderDetailsDialogProps {
@@ -66,7 +67,7 @@ export const OrderDetailsDialog = ({
   const { data: fullOrderDetails } = useQuery({
     queryKey: ["order-full-details", order.id],
     queryFn: async () => {
-      if (import.meta.env.DEV) console.time(`[OrderDetails] Load full data for ${order.id}`);
+      if (import.meta.env.DEV) time(`[OrderDetails] Load full data for ${order.id}`);
       
       const { data, error } = await supabase
         .from("orders")
@@ -99,7 +100,7 @@ export const OrderDetailsDialog = ({
         .eq("id", order.id)
         .single();
       
-      if (import.meta.env.DEV) console.timeEnd(`[OrderDetails] Load full data for ${order.id}`);
+      if (import.meta.env.DEV) timeEnd(`[OrderDetails] Load full data for ${order.id}`);
       
       if (error) {
         logger.error('Failed to fetch full order details', error);

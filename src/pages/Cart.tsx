@@ -24,7 +24,7 @@ import { logger } from "@/lib/logger";
 
 const Cart = React.memo(function Cart() {
   count('Cart:render');
-  console.time('Cart-Render');
+  time('Cart-Render');
   logger.info('Cart component render started');
   
   // ===== ALL HOOKS FIRST - NO EXCEPTIONS =====
@@ -380,7 +380,7 @@ const Cart = React.memo(function Cart() {
   }, [cart?.id]); // Only run when cart ID changes - prevents infinite loops
 
   useEffect(() => {
-    console.timeEnd('Cart-Render');
+    timeEnd('Cart-Render');
   });
 
   // ===== NOW SAFE TO DO CONDITIONAL RENDERING =====
