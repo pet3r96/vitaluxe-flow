@@ -62,6 +62,14 @@ export interface RepProductVisibilityUpsert {
   updated_at: string;
 }
 
+// Practice team member (from RPC get_practice_team_members)
+export interface TeamMember {
+  user_id: string;
+  name: string;
+  role_display: string;
+  role_type: string;
+}
+
 // Patient portal terms table
 export interface PatientPortalTerms {
   id: string;

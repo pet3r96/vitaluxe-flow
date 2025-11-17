@@ -88,6 +88,10 @@ export interface PatientMessage {
   subject: string;
   body: string;
   sender_type: SenderType;
+  sender_id?: string;
+  thread_id?: string | null;
+  urgency?: 'normal' | 'urgent';
+  priority?: string;
   read_at: string | null;
   resolved: boolean;
   resolved_at: string | null;
@@ -96,8 +100,26 @@ export interface PatientMessage {
   created_at: string;
   updated_at: string;
   patient?: {
+    id: string;
     first_name: string;
     last_name: string;
+    email?: string;
+    phone?: string;
+  };
+}
+
+export interface PatientMessageWithJoins extends PatientMessage {
+  patient: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    phone?: string;
+    name?: string;
+  };
+  sender: {
+    id: string;
+    name: string;
   };
 }
 
