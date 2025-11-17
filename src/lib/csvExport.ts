@@ -1,14 +1,28 @@
 import { format } from "date-fns";
 
-export const downloadCSV = (
-  data: any[],
+// Overload for primitive arrays (string[][])
+export function downloadCSV(
+  data: string[][],
   headers: string[],
   filename: string
-) => {
+): void;
+
+// Overload for object arrays
+export function downloadCSV<T extends Record<string, unknown>>(
+  data: T[][],
+  headers: string[],
+  filename: string
+): void;
+
+export function downloadCSV<T extends Record<string, unknown>>(
+  data: (string | T)[][],
+  headers: string[],
+  filename: string
+) {
   const csvContent = [
     headers.join(","),
     ...data.map(row => 
-      row.map((cell: any) => {
+      row.map((cell) => {
         // Escape commas and quotes in cell content
         const cellStr = String(cell ?? "");
         if (cellStr.includes(",") || cellStr.includes('"') || cellStr.includes("\n")) {

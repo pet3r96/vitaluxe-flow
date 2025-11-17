@@ -20,6 +20,13 @@ export interface CalendarProvider {
   linked_practice_id?: string | null;
   type?: string;
   avatar_url?: string;
+  user?: {
+    id?: string;
+    first_name?: string;
+    last_name?: string;
+    full_name?: string;
+    [key: string]: unknown;
+  };
   profiles?: {
     first_name?: string;
     last_name?: string;
@@ -91,6 +98,7 @@ export interface VideoSession {
   provider_joined_at?: string;
   created_at: string;
   updated_at: string;
+  isSynthetic?: boolean;
   patient_appointments?: CalendarAppointment & {
     patient?: CalendarPatient;
     provider_id?: string;

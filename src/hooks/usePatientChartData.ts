@@ -81,7 +81,7 @@ export const usePatientChartData = (patientId: string) => {
 
   // realtime updates
   useEffect(() => {
-    const channels: any[] = [];
+    const channels: Array<ReturnType<typeof supabase.channel>> = [];
 
     const tables = [
       "patient_accounts",

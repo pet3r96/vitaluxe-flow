@@ -20,8 +20,36 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface Document {
+  id: string;
+  patient_account_id: string;
+  created_at: string;
+  record_type: string;
+  title?: string;
+  is_active?: boolean;
+  document_name?: string;
+  document_type?: string;
+  status?: string;
+  uploaded_by?: string;
+  uploaded_at?: string;
+  assigned_patient_ids?: string[];
+  assigned_patient_names?: string[];
+  is_internal?: boolean;
+  tags?: string[];
+  source_type?: string;
+  record_data?: {
+    title?: string;
+    url?: string;
+    file_type?: string;
+    file_size?: number;
+    share_with_practice?: boolean;
+    category?: string;
+    notes?: string;
+  };
+}
+
 interface DocumentsDataTableProps {
-  documents: any[];
+  documents: Document[];
   isLoading: boolean;
 }
 

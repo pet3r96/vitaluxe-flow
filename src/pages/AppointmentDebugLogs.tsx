@@ -22,7 +22,7 @@ export default function AppointmentDebugLogs() {
     const originalError = console.error;
     const originalWarn = console.warn;
 
-    const createLogEntry = (type: 'log' | 'error' | 'warn', args: any[]) => {
+    const createLogEntry = (type: 'log' | 'error' | 'warn', args: unknown[]) => {
       const message = args.map(arg => 
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
       ).join(' ');

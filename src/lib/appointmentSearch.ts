@@ -155,17 +155,19 @@ function calculateScore(appointment: any, query: string, searchType: SearchType)
   return score;
 }
 
+import type { CalendarAppointment } from "@/types/domain/calendar";
+
 /**
  * Filter appointments based on search query
  */
 export function filterAppointments(
-  appointments: any[],
+  appointments: CalendarAppointment[],
   query: string,
   options: {
     maxResults?: number;
     dateRange?: { start: Date; end: Date };
   } = {}
-): any[] {
+): CalendarAppointment[] {
   if (!query.trim()) return [];
 
   const { maxResults = 10, dateRange } = options;

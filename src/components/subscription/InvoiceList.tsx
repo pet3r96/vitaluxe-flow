@@ -12,8 +12,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+interface Invoice {
+  id: string;
+  amount_due: number;
+  amount_paid: number;
+  status: string;
+  created: number;
+  hosted_invoice_url?: string;
+  transaction_id?: string;
+  created_at?: string;
+  amount?: number;
+  payment_status?: string;
+}
+
 interface InvoiceListProps {
-  invoices: any[];
+  invoices: Invoice[];
 }
 
 export function InvoiceList({ invoices }: InvoiceListProps) {

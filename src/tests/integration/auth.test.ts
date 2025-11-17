@@ -242,7 +242,7 @@ describe('Authentication Flow Integration Tests', () => {
   describe('T11: Audit log entry', () => {
     it('should log each action with timestamp', async () => {
       // Arrange
-      const auditLog: any[] = [];
+      const auditLog: Array<{ action: string; timestamp: number; userId: string }> = [];
       
       // Act
       const user = await mockDB.insertUser({

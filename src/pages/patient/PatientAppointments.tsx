@@ -168,8 +168,8 @@ export default function PatientAppointments() {
 
         // Fetch providers and their profiles for display_name
         const providerIds = Array.from(new Set(rows.map((r: any) => r.provider_id).filter(Boolean)));
-        let providers: any[] = [];
-        let profiles: any[] = [];
+        let providers: Array<{ id: string; [key: string]: unknown }> = [];
+        let profiles: Array<{ id: string; [key: string]: unknown }> = [];
         if (providerIds.length > 0) {
           const { data: provs } = await supabase
             .from('providers')
@@ -270,7 +270,7 @@ export default function PatientAppointments() {
       if (error) throw error;
 
       // Optimistically remove from cache so it disappears immediately
-      queryClient.setQueryData(["patient-appointments", effectiveUserId], (old: any[] | undefined) => {
+      queryClient.setQueryData(["patient-appointments", effectiveUserId], (old: Array<Record<string, unknown>> | undefined) => {
         if (!old) return old;
         return old.filter((a) => a.id !== cancelId);
       });

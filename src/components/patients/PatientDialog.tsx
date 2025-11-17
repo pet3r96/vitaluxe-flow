@@ -115,7 +115,7 @@ export const PatientDialog = ({
             : birthRaw.slice(0, 10);
         } else {
           try {
-            birthFormatted = new Date(birthRaw as any).toISOString().split("T")[0];
+            birthFormatted = new Date(birthRaw).toISOString().split("T")[0];
           } catch {}
         }
       }
@@ -354,7 +354,7 @@ export const PatientDialog = ({
         const previousPatient = queryClient.getQueryData(["patient", patient.id]);
         
         // 3. Optimistically update to the new value BEFORE the mutation
-        queryClient.setQueryData(patientsKey, (oldData: any[] | undefined) => {
+        queryClient.setQueryData(patientsKey, (oldData: Array<Record<string, unknown>> | undefined) => {
           if (!oldData) return oldData;
           return oldData.map(p => 
             p.id === patient.id 
@@ -397,7 +397,7 @@ export const PatientDialog = ({
           
           // 5. Update cache with the actual returned data (confirms the update)
           if (updatedPatient) {
-            queryClient.setQueryData(patientsKey, (oldData: any[] | undefined) => {
+            queryClient.setQueryData(patientsKey, (oldData: Array<Record<string, unknown>> | undefined) => {
               if (!oldData) return oldData;
               return oldData.map(p => 
                 p.id === patient.id 
