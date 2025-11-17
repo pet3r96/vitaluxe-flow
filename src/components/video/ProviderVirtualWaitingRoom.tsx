@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { logger } from "@/lib/logger";
 import {
   Dialog,
   DialogContent,
@@ -111,7 +112,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
       dayAfterTomorrow.setHours(23, 59, 59, 999);
 
-      console.log("[ProviderVirtualWaitingRoom] Fetching video data with date range:", {
+      logger.info("[ProviderVirtualWaitingRoom] Fetching video data with date range", {
         from: yesterday.toISOString(),
         to: dayAfterTomorrow.toISOString(),
       });
@@ -144,7 +145,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       // Merge both sources - prefer video_sessions if they exist
       const sessionsByAppointmentId = new Map((sessionsData || []).map((s) => [s.appointment_id, s]));
 
-      console.log("[ProviderVirtualWaitingRoom] Sessions by appointment:", {
+      logger.info("[ProviderVirtualWaitingRoom] Sessions by appointment", {
         mapSize: sessionsByAppointmentId.size,
         keys: Array.from(sessionsByAppointmentId.keys()),
       });
@@ -156,7 +157,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       // Add appointments that don't have sessions yet
       (appointmentsData || []).forEach((apt) => {
         if (!sessionsByAppointmentId.has(apt.id)) {
-          console.log("[ProviderVirtualWaitingRoom] Creating synthetic session for appointment:", apt.id);
+          logger.info("[ProviderVirtualWaitingRoom] Creating synthetic session for appointment", { appointmentId: apt.id });
           // Synthetic session - minimal required fields, rest filled by query enrichment
           const now = new Date().toISOString();
           const syntheticSession: Partial<VideoSession> = {
@@ -173,14 +174,14 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
           // JUSTIFIED: Synthetic session with minimal fields for UI display - actual DB sessions have full structure
           merged.push(syntheticSession);
         } else {
-          console.log("[ProviderVirtualWaitingRoom] Real session exists for appointment:", apt.id);
+          logger.info("[ProviderVirtualWaitingRoom] Real session exists for appointment", { appointmentId: apt.id });
         }
       });
 
       // Sort by scheduled time
       merged.sort((a, b) => new Date(a.scheduled_start_time).getTime() - new Date(b.scheduled_start_time).getTime());
 
-      console.log("[ProviderVirtualWaitingRoom] ✅ Video data merged:", {
+      logger.info("[ProviderVirtualWaitingRoom] ✅ Video data merged", {
         sessions: sessionsData?.length || 0,
         appointments: appointmentsData?.length || 0,
         merged: merged.length,
@@ -215,7 +216,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
 
       if (error) throw error;
 
-      console.log("[ProviderVirtualWaitingRoom] ✅ Patients loaded:", {
+      logger.info("[ProviderVirtualWaitingRoom] ✅ Patients loaded", {
         count: data?.length || 0,
         sampleDisplay: data?.slice(0, 3).map((p) => getPatientDisplay(p)),
       });
@@ -275,7 +276,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
 
     try {
       const appointmentId = sessionId.replace("apt-", "");
-      console.log("[ProviderVirtualWaitingRoom] Preparing session for appointment:", appointmentId);
+      logger.info("[ProviderVirtualWaitingRoom] Preparing session for appointment", { appointmentId });
 
       const { data: ensureData, error: ensureError } = await supabase.functions.invoke("ensure-video-session", {
         body: { appointmentId },
@@ -285,7 +286,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         throw new Error("Failed to prepare video session");
       }
 
-      console.log("[ProviderVirtualWaitingRoom] ✅ Session prepared:", ensureData.sessionId);
+      logger.info("[ProviderVirtualWaitingRoom] ✅ Session prepared", { sessionId: ensureData.sessionId });
 
       toast({
         title: "Session Prepared",
@@ -295,7 +296,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       // Trigger immediate refetch to update UI
       queryClient.refetchQueries({ queryKey: ["provider-video-sessions", practiceId] });
     } catch (error: any) {
-      console.error("Error preparing session:", error);
+      logger.error("Error preparing session", error);
       toast({
         title: "Preparation Failed",
         description: error.message || "Failed to prepare video session",
@@ -310,7 +311,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
   useEffect(() => {
     const hasSyntheticSessions = videoSessions?.some((s) => isSyntheticSession(s.id));
     if (hasSyntheticSessions) {
-      console.log("[ProviderVirtualWaitingRoom] Synthetic sessions detected, refetch active");
+      logger.info("[ProviderVirtualWaitingRoom] Synthetic sessions detected, refetch active");
     }
   }, [videoSessions]);
 
@@ -324,7 +325,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       // If synthetic session, create it first
       if (isSyntheticSession(sessionId)) {
         const appointmentId = sessionId.replace("apt-", "");
-        console.log("[ProviderVirtualWaitingRoom] Creating session for appointment:", appointmentId);
+        logger.info("[ProviderVirtualWaitingRoom] Creating session for appointment", { appointmentId });
 
         const { data: ensureData, error: ensureError } = await supabase.functions.invoke("ensure-video-session", {
           body: { appointmentId },
