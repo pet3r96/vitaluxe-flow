@@ -235,13 +235,14 @@ export const PriceOverrideManager = () => {
   // Clear override mutation
   const clearMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const { error } = await supabase
+      // Using (as any) due to manual schema table type complexity
+      const result = await (supabase as any)
         .from('rep_product_price_overrides')
         .delete()
         .eq('rep_id', selectedRepId)
         .eq('product_id', productId);
       
-      if (error) throw error;
+      if (result.error) throw result.error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['price-overrides', selectedRepId] });

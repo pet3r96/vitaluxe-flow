@@ -106,17 +106,17 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
 
   const mutation = useOptimisticMutation(
     async (data: AllergyFormData) => {
-      // Check for conflicts before submission
-      const existingResult = await supabase
+      // Check for conflicts before submission - using (as any) due to JSONB type complexity
+      const existingResult = await (supabase as any)
         .from("patient_medical_vault")
         .select("id, record_data")
         .eq("patient_account_id", patientAccountId)
         .eq("record_type", "allergy")
         .eq("is_active", true);
 
-      const existingAllergies = existingResult.data?.map(r => ({ 
+      const existingAllergies = existingResult.data?.map((r: any) => ({ 
         id: r.id, 
-        nka: (r.record_data as any)?.nka || false 
+        nka: r.record_data?.nka || false 
       })) || [];
 
       // If adding NKA, check for existing specific allergies
