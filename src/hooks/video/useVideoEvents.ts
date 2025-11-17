@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 
 export interface VideoSessionEvent {
   id: string;
@@ -52,7 +53,7 @@ export const useVideoEvents = ({
   useEffect(() => {
     if (!enabled || !sessionId) return;
 
-    console.log('[useVideoEvents] Setting up realtime subscription for session:', sessionId);
+    logger.info('[useVideoEvents] Setting up realtime subscription for session', { sessionId });
 
     const channelName = `video-session-${sessionId}`;
     const realtimeChannel = supabase
@@ -66,7 +67,7 @@ export const useVideoEvents = ({
           filter: `session_id=eq.${sessionId}`,
         },
         (payload) => {
-          console.log('[useVideoEvents] New event received:', payload);
+          logger.info('[useVideoEvents] New event received', payload);
           const newEvent = payload.new as VideoSessionEvent;
           
           setEvents(prev => [...prev, newEvent]);
@@ -90,7 +91,7 @@ export const useVideoEvents = ({
             case 'patient_admitted':
               // If this user was admitted
               if (newEvent.user_uid === userUid) {
-                console.log('[useVideoEvents] Current user admitted');
+                logger.info('[useVideoEvents] Current user admitted');
                 setIsAdmitted(true);
                 setIsWaiting(false);
               }
@@ -101,11 +102,11 @@ export const useVideoEvents = ({
               break;
 
             case 'joined':
-              console.log('[useVideoEvents] User joined:', newEvent.user_uid);
+              logger.info('[useVideoEvents] User joined', { uid: newEvent.user_uid });
               break;
 
             case 'left':
-              console.log('[useVideoEvents] User left:', newEvent.user_uid);
+              logger.info('[useVideoEvents] User left', { uid: newEvent.user_uid });
               // Remove from waiting list if applicable
               setWaitingPatients(prev => 
                 prev.filter(p => p.uid !== newEvent.user_uid)

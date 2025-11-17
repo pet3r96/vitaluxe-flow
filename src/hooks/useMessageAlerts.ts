@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { getPayloadNew } from '@/types/realtime';
+import { logger } from '@/lib/logger';
 
 export function useMessageAlerts() {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -26,7 +27,7 @@ export function useMessageAlerts() {
       if (error) throw error;
       setUnreadCount(data || 0);
     } catch (error) {
-      console.error('Error fetching unread message count:', error);
+      logger.error('Error fetching unread message count', error);
       setUnreadCount(0);
     } finally {
       setLoading(false);
@@ -50,7 +51,7 @@ export function useMessageAlerts() {
       // Refresh count after marking as read
       await fetchUnreadCount();
     } catch (error) {
-      console.error('Error marking thread as read:', error);
+      logger.error('Error marking thread as read', error);
     }
   };
 

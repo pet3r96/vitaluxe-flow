@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 
 /**
  * Hook for optimistic updates - updates UI immediately before server confirms
@@ -47,7 +48,7 @@ export const useOptimisticMutation = <TData, TVariables>(
       }
       
       // Log full error for debugging
-      console.error('Mutation error:', error);
+      logger.error('Mutation error', error);
       
       // Extract error message from Supabase error
       const errorDetails = error instanceof Error ? error.message : String(error);

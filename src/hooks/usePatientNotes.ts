@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export interface PatientNote {
   id: string;
@@ -49,7 +50,7 @@ export function usePatientNotes(patientAccountId: string | undefined) {
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching patient notes:', error);
+        logger.error('Error fetching patient notes', error);
         throw error;
       }
       
@@ -74,7 +75,7 @@ export function useSharedPatientNotes(patientAccountId: string | undefined) {
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching shared patient notes:', error);
+        logger.error('Error fetching shared patient notes', error);
         throw error;
       }
       
@@ -97,7 +98,7 @@ export function useCreatePatientNote() {
         .single();
       
       if (error) {
-        console.error('Error creating patient note:', error);
+        logger.error('Error creating patient note', error);
         throw error;
       }
       
@@ -135,7 +136,7 @@ export function useUpdatePatientNote() {
         .single();
       
       if (error) {
-        console.error('Error updating patient note:', error);
+        logger.error('Error updating patient note', error);
         throw error;
       }
       
@@ -164,7 +165,7 @@ export function useDeletePatientNote() {
         .eq('id', id);
       
       if (error) {
-        console.error('Error deleting patient note:', error);
+        logger.error('Error deleting patient note', error);
         throw error;
       }
       

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getProviderDisplayName } from "@/utils/providerNameUtils";
+import { logger } from "@/lib/logger";
 
 interface ProfileData {
   id: string;
@@ -40,7 +41,7 @@ export const useProvidersAndStaff = (practiceId: string | null | undefined) => {
     queryFn: async () => {
       if (!practiceId) return [];
 
-      console.info('[useProvidersAndStaff] Fetching unified providers/staff for practice:', practiceId);
+      logger.info('[useProvidersAndStaff] Fetching unified providers/staff for practice', { practiceId });
 
       // Step 1: Fetch provider records
       const { data: providerRecords, error: providerError } = await supabase
@@ -51,7 +52,7 @@ export const useProvidersAndStaff = (practiceId: string | null | undefined) => {
 
       if (providerError) throw providerError;
       if (!providerRecords || providerRecords.length === 0) {
-        console.info('[useProvidersAndStaff] No providers/staff found');
+        logger.info('[useProvidersAndStaff] No providers/staff found');
         return [];
       }
 
@@ -63,7 +64,7 @@ export const useProvidersAndStaff = (practiceId: string | null | undefined) => {
         .in('id', userIds);
 
       if (profileError) {
-        console.error('[useProvidersAndStaff] Profile fetch error:', profileError);
+        logger.error('[useProvidersAndStaff] Profile fetch error', profileError);
         // Continue with empty profiles rather than failing
       }
 
@@ -105,7 +106,7 @@ export const useProvidersAndStaff = (practiceId: string | null | undefined) => {
       const providerCount = combined.filter(p => p.type === 'provider').length;
       const staffCount = combined.filter(p => p.type === 'staff').length;
       
-      console.info('[useProvidersAndStaff] ✅ Combined list loaded:', {
+      logger.info('[useProvidersAndStaff] Combined list loaded', {
         providers: providerCount,
         staff: staffCount,
         total: combined.length,

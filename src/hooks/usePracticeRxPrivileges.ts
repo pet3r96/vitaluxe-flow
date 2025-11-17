@@ -1,6 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 /**
  * Hook to determine if a practice can order RX products
@@ -17,7 +18,7 @@ export const usePracticeRxPrivileges = () => {
     queryFn: async () => {
       if (!effectivePracticeId) return { canOrderRx: false, hasProviders: false };
       
-      console.info('[usePracticeRxPrivileges] Checking RX eligibility for practice:', effectivePracticeId);
+      logger.info('[usePracticeRxPrivileges] Checking RX eligibility for practice', { effectivePracticeId });
       
       // Use list-providers function to get accurate provider data (bypasses RLS issues)
       const { data, error } = await supabase.functions.invoke('list-providers', {
@@ -25,7 +26,7 @@ export const usePracticeRxPrivileges = () => {
       });
       
       if (error) {
-        console.error('[usePracticeRxPrivileges] Error fetching providers:', error);
+        logger.error('[usePracticeRxPrivileges] Error fetching providers', error);
         return { canOrderRx: false, hasProviders: false };
       }
       
@@ -37,7 +38,7 @@ export const usePracticeRxPrivileges = () => {
         return npi && String(npi).trim().length > 0;
       }) || [];
       
-      console.info('[usePracticeRxPrivileges] Provider counts:', {
+      logger.info('[usePracticeRxPrivileges] Provider counts', {
         total: providers.length,
         withNPI: providersWithNpi.length,
         canOrderRx: providersWithNpi.length > 0,

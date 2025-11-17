@@ -1,6 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 export const useStaffOrderingPrivileges = () => {
   const { effectiveUserId, isStaffAccount } = useAuth();
@@ -18,7 +19,7 @@ export const useStaffOrderingPrivileges = () => {
         .single();
       
       if (error) {
-        console.error('Error fetching staff ordering privileges:', error);
+        logger.error('Error fetching staff ordering privileges', error);
         return false; // Fail closed for security
       }
       

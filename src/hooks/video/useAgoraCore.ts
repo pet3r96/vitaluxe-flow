@@ -7,6 +7,7 @@ import AgoraRTC, {
   ConnectionState,
   NetworkQuality,
 } from 'agora-rtc-sdk-ng';
+import { logger } from '@/lib/logger';
 
 export interface UseAgoraCoreParams {
   appId: string;
@@ -67,7 +68,7 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
   useEffect(() => {
     const handleUserPublished = async (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
       await client.subscribe(user, mediaType);
-      console.log('[useAgoraCore] User published:', user.uid, mediaType);
+      logger.info('[useAgoraCore] User published', { uid: user.uid, mediaType });
       
       setRemoteUsers(prev => {
         const existing = prev.find(u => u.uid === String(user.uid));
@@ -93,8 +94,8 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
     };
 
     const handleUserUnpublished = (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
-      console.log('[useAgoraCore] User unpublished:', user.uid, mediaType);
-      setRemoteUsers(prev => 
+      logger.info('[useAgoraCore] User unpublished', { uid: user.uid, mediaType });
+      setRemoteUsers(prev =>
         prev.map(u => 
           u.uid === String(user.uid)
             ? {
@@ -108,7 +109,7 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
     };
 
     const handleUserJoined = (user: IAgoraRTCRemoteUser) => {
-      console.log('[useAgoraCore] User joined:', user.uid);
+      logger.info('[useAgoraCore] User joined', { uid: user.uid });
       setRemoteUsers(prev => {
         if (prev.find(u => u.uid === String(user.uid))) return prev;
         return [...prev, {
@@ -120,12 +121,12 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
     };
 
     const handleUserLeft = (user: IAgoraRTCRemoteUser) => {
-      console.log('[useAgoraCore] User left:', user.uid);
+      logger.info('[useAgoraCore] User left', { uid: user.uid});
       setRemoteUsers(prev => prev.filter(u => u.uid !== String(user.uid)));
     };
 
     const handleConnectionStateChange = (state: ConnectionState) => {
-      console.log('[useAgoraCore] Connection state:', state);
+      logger.info('[useAgoraCore] Connection state', { state });
       setConnectionState(state);
     };
 

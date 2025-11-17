@@ -149,7 +149,7 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
 
     // Handle timeout
     if (error?.message === "Verification timed out") {
-      console.error("NPI verification timed out after 5 seconds");
+      logger.error("NPI verification timed out after 5 seconds");
       return {
         valid: false,
         npi,
@@ -194,7 +194,7 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
       error: "Unexpected response from verification service.",
     };
   } catch (error) {
-    console.error("NPI verification error:", error);
+    logger.error("NPI verification error", error);
     
     return {
       valid: false,

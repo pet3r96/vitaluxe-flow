@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface PatientIdentity {
   id: string;
@@ -103,7 +104,7 @@ export const usePatientChartData = (patientId: string) => {
             filter: `${filterField}=eq.${patientId}`,
           },
           () => {
-            console.log(`[Realtime Update] ${table} changed → refreshing chart`);
+            logger.info(`[Realtime Update] ${table} changed - refreshing chart`, { table });
             loadChart();
           },
         )

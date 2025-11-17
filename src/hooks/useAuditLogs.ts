@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 export interface AuditLog {
   id: string;
@@ -43,11 +44,11 @@ export const useAuditLogs = (patientAccountId?: string) => {
     queryKey: ["medical-vault-audit-logs", patientAccountId],
     queryFn: async () => {
       if (!patientAccountId) {
-        console.log('[useAuditLogs] No patientAccountId provided');
+        logger.info('[useAuditLogs] No patientAccountId provided');
         return [];
       }
 
-      console.log('[useAuditLogs] Fetching audit logs for:', patientAccountId);
+      logger.info('[useAuditLogs] Fetching audit logs for', { patientAccountId });
       
       const { data, error} = await supabase
         .from("medical_vault_audit_logs")
@@ -56,11 +57,11 @@ export const useAuditLogs = (patientAccountId?: string) => {
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('[useAuditLogs] Query error:', error);
+        logger.error('[useAuditLogs] Query error', error);
         throw error;
       }
       
-      console.log('[useAuditLogs] Found entries:', data?.length || 0, 'entries');
+      logger.info('[useAuditLogs] Found entries', { count: data?.length || 0 });
       return data as AuditLog[];
     },
     enabled: !!patientAccountId,
@@ -97,9 +98,9 @@ export const logMedicalVaultChange = async (params: {
       });
 
     if (error) {
-      console.error("Error logging medical vault change:", error);
+      logger.error("Error logging medical vault change", error);
     }
   } catch (error) {
-    console.error("Error logging medical vault change:", error);
+    logger.error("Error logging medical vault change", error);
   }
 };

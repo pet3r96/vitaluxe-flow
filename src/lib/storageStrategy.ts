@@ -147,18 +147,18 @@ export async function getSignedUrl(
       return {
         success: true,
         signed_url: data.signedUrl || data.signed_url,
-        storage_method: method
-      };
-    }
-
-    console.warn(`[StorageStrategy] Edge function failed, trying direct Storage:`, error?.message);
-  } catch (error: any) {
-    console.warn(`[StorageStrategy] Edge function error:`, error.message);
+      storage_method: method
+    };
   }
+
+  logger.warn(`[StorageStrategy] Edge function failed, trying direct Storage`, { errorMessage: error?.message });
+} catch (error: any) {
+  logger.warn(`[StorageStrategy] Edge function error`, { errorMessage: error.message });
+}
 
   // Fallback to direct Supabase Storage
   try {
-    console.log(`[StorageStrategy] 📦 Using Supabase Storage direct signed URL`);
+    logger.info(`[StorageStrategy] Using Supabase Storage direct signed URL`);
     
     const { data: storageData, error: storageError } = await supabase.storage
       .from(bucket)
@@ -167,7 +167,7 @@ export async function getSignedUrl(
     if (storageError) throw storageError;
     if (!storageData?.signedUrl) throw new Error('No signed URL returned');
 
-    console.log(`[StorageStrategy] ✅ Supabase Storage signed URL created`);
+    logger.info(`[StorageStrategy] Supabase Storage signed URL created`);
     
     return {
       success: true,

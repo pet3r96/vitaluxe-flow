@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 
 interface PatientPracticeSubscriptionStatus {
   isSubscribed: boolean;
@@ -18,7 +19,7 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
     queryKey: ["patient-practice-subscription", effectiveUserId],
     queryFn: async () => {
       if (!session?.access_token) {
-        console.error('[usePatientPracticeSubscription] No session token');
+        logger.error('[usePatientPracticeSubscription] No session token');
         return {
           isSubscribed: false,
           status: "no_session",
@@ -37,7 +38,7 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
 
       // Handle 404 patient_account_not_found gracefully (not a real error, just means no account exists)
       if (error) {
-        console.warn('[usePatientPracticeSubscription] Edge function error:', error);
+        logger.warn('[usePatientPracticeSubscription] Edge function error', { error });
         
         // Check if this is the expected "no patient account" case
         if (error.message?.includes('patient_account_not_found') || 
@@ -63,7 +64,7 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
       }
 
       if (!result?.success) {
-        console.warn('[usePatientPracticeSubscription] Non-success response:', result);
+        logger.warn('[usePatientPracticeSubscription] Non-success response', { result });
         
         // Handle patient_account_not_found specifically
         if (result?.status === 'patient_account_not_found' || 
@@ -101,7 +102,7 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
       const isSubscribed = result.subscription?.isSubscribed ?? false;
       const status = result.subscription?.status || "unknown";
 
-      console.debug('[usePatientPracticeSubscription] Final result:', {
+      logger.info('[usePatientPracticeSubscription] Final result', {
         status,
         isSubscribed,
         practiceId: result.practice.id,
