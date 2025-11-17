@@ -4728,6 +4728,36 @@ export type Database = {
           },
         ]
       }
+      rls_audit_results: {
+        Row: {
+          checked_at: string | null
+          details: string | null
+          has_select_policy: boolean | null
+          id: string
+          policy_count: number | null
+          rls_enabled: boolean | null
+          table_name: string | null
+        }
+        Insert: {
+          checked_at?: string | null
+          details?: string | null
+          has_select_policy?: boolean | null
+          id?: string
+          policy_count?: number | null
+          rls_enabled?: boolean | null
+          table_name?: string | null
+        }
+        Update: {
+          checked_at?: string | null
+          details?: string | null
+          has_select_policy?: boolean | null
+          id?: string
+          policy_count?: number | null
+          rls_enabled?: boolean | null
+          table_name?: string | null
+        }
+        Relationships: []
+      }
       sms_codes: {
         Row: {
           attempt_count: number | null
@@ -6227,6 +6257,33 @@ export type Database = {
           },
         ]
       }
+      rls_audit_latest: {
+        Row: {
+          checked_at: string | null
+          details: string | null
+          has_select_policy: boolean | null
+          policy_count: number | null
+          rls_enabled: boolean | null
+          table_name: string | null
+        }
+        Insert: {
+          checked_at?: string | null
+          details?: string | null
+          has_select_policy?: boolean | null
+          policy_count?: number | null
+          rls_enabled?: boolean | null
+          table_name?: string | null
+        }
+        Update: {
+          checked_at?: string | null
+          details?: string | null
+          has_select_policy?: boolean | null
+          policy_count?: number | null
+          rls_enabled?: boolean | null
+          table_name?: string | null
+        }
+        Relationships: []
+      }
       user_2fa_settings_decrypted: {
         Row: {
           created_at: string | null
@@ -6455,6 +6512,7 @@ export type Database = {
         Args: { p_order_line_id: string }
         Returns: Json
       }
+      check_rls_integrity: { Args: never; Returns: undefined }
       cleanup_expired_cart_lines: { Args: never; Returns: number }
       cleanup_expired_csrf_tokens: { Args: never; Returns: number }
       cleanup_expired_impersonation_sessions: { Args: never; Returns: number }
