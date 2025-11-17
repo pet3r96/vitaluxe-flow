@@ -8,8 +8,9 @@ import { generateCSRFToken, clearCSRFToken, getCSRFToken } from "@/lib/csrf";
 import { logger } from "@/lib/logger";
 // Idle timeout system removed - now using simple 60-minute hard session timeout
 import { authService } from "@/lib/authService";
-import type { SignUpRoleData, PasswordCheckResult } from "@/types/domain/auth";
-import type { ImpersonationSessionData } from "@/types/domain/admin";
+import type { SignUpRoleData, PasswordCheckResult, PasswordStatusData } from "@/types/domain/auth";
+import type { ImpersonationSessionData, ImpersonationSessionResponse } from "@/types/domain/admin";
+import type { ProfileChangePayload } from "@/types/errors";
 
 interface AuthContextType {
   user: User | null;
@@ -485,8 +486,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                           
                           // Only show trial toast if a NEW trial was actually created
                           const isNewTrial = subData && 
-                            !(subData as any)?.alreadySubscribed && 
-                            (subData as any)?.subscription_status !== 'active';
+                            !(subData as { alreadySubscribed?: boolean })?.alreadySubscribed && 
+                            (subData as { subscription_status?: string })?.subscription_status !== 'active';
                           
                           if (isNewTrial) {
                             toast.success(
@@ -843,8 +844,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
 
     realtimeManager.subscribe('profiles', (payload) => {
-      if (payload.eventType === 'UPDATE' && (payload.new as any).id === user.id) {
-        if ((payload.new as any).active === false && (payload.old as any).active === true) {
+      if (payload.eventType === 'UPDATE' && payload.new.id === user.id) {
+        const newProfile = payload.new as ProfileChangePayload;
+        const oldProfile = payload.old as ProfileChangePayload;
+        
+        if (newProfile.active === false && oldProfile.active === true) {
           toast.error("🚫 Your account has been disabled by an administrator. You will be signed out.");
           setTimeout(() => {
             void (async () => {
@@ -921,7 +925,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation'));
                 }
                 if (sessionData?.session) {
-                  const session = sessionData.session;
+                  const session = sessionData.session as ImpersonationSessionResponse;
                   setImpersonatedRole(session.impersonated_role);
                   setImpersonatedUserId(session.impersonated_user_id || null);
                   setImpersonatedUserName(session.impersonated_user_name || null);
@@ -970,8 +974,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle(),
         
         // 5. Check patient terms acceptance
-        (supabase as any)
-          .from('patient_terms_acceptances')
+        supabase
+          .from('patient_terms_acceptances' as any)
           .select('id')
           .eq('user_id', userId)
           .maybeSingle()
@@ -1051,7 +1055,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation'));
           }
           if (sessionData?.session) {
-            const session = sessionData.session;
+            const session = sessionData.session as ImpersonationSessionResponse;
             setImpersonatedRole(session.impersonated_role);
             setImpersonatedUserId(session.impersonated_user_id || null);
             setImpersonatedUserName(session.impersonated_user_name || null);
@@ -1068,7 +1072,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setMustChangePassword(false);
         setTermsAccepted(true);
       } else if (passwordResult.status === 'fulfilled' && passwordResult.value.data) {
-        const passwordData = passwordResult.value.data as any;
+        const passwordData = passwordResult.value.data as unknown as PasswordStatusData;
         setMustChangePassword(passwordData.must_change_password || false);
         
         // Check terms acceptance from either user_password_status OR patient_terms_acceptances
@@ -1189,7 +1193,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .select('temp_password')
           .eq('id', uid)
           .maybeSingle(),
-        (supabase as any)
+        supabase
           .from('patient_terms_acceptances' as any)
           .select('id')
           .eq('user_id', uid)
@@ -1210,10 +1214,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Check if user has temp_password flag set
       const hasTempPassword = profileResult.data?.temp_password || false;
-      const mustChange = (passwordStatusResult.data as any)?.must_change_password || false;
+      const mustChange = passwordStatusResult.data ? (passwordStatusResult.data as unknown as PasswordStatusData).must_change_password : false;
       
       // Check if terms are accepted - either in user_password_status OR patient_terms_acceptances
-      const termsAcceptInStatus = (passwordStatusResult.data as any)?.terms_accepted || false;
+      const termsAcceptInStatus = passwordStatusResult.data ? (passwordStatusResult.data as unknown as PasswordStatusData).terms_accepted : false;
       const hasPatientTermsAcceptance = patientTermsResult.data !== null;
       const termsAccept = termsAcceptInStatus || hasPatientTermsAcceptance;
 

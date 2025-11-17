@@ -13,6 +13,67 @@ export interface StandardError {
 }
 
 /**
+ * Known authentication error codes from Supabase and custom auth flows
+ */
+export type AuthErrorCode = 
+  | 'email_not_verified'
+  | 'temp_password_required'
+  | 'account_disabled'
+  | 'invalid_credentials'
+  | 'user_not_found'
+  | 'weak_password'
+  | 'email_exists';
+
+/**
+ * Authentication error with typed code field
+ */
+export interface AuthErrorWithCode extends StandardError {
+  code: AuthErrorCode;
+  email?: string;
+}
+
+/**
+ * Password status data from database checks
+ */
+export interface PasswordStatusData {
+  must_change_password: boolean;
+  terms_accepted: boolean;
+}
+
+/**
+ * Profile change payload for realtime subscriptions
+ */
+export interface ProfileChangePayload {
+  id: string;
+  active: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Type guard to check if error has a specific auth error code
+ */
+export function hasAuthErrorCode(error: unknown, code: AuthErrorCode): error is AuthErrorWithCode {
+  return isErrorLike(error) && error.code === code;
+}
+
+/**
+ * Type guard for authentication errors with codes
+ */
+export function isAuthError(error: unknown): error is AuthErrorWithCode {
+  return (
+    isErrorLike(error) && 
+    typeof error.code === 'string' &&
+    (error.code === 'email_not_verified' || 
+     error.code === 'temp_password_required' || 
+     error.code === 'account_disabled' ||
+     error.code === 'invalid_credentials' ||
+     error.code === 'user_not_found' ||
+     error.code === 'weak_password' ||
+     error.code === 'email_exists')
+  );
+}
+
+/**
  * Type guard to check if value is an Error instance
  */
 export function isError(error: unknown): error is Error {

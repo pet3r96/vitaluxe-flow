@@ -23,3 +23,11 @@ export interface TwoFAStatus {
   requires2FAVerify: boolean;
   user2FAPhone: string | null;
 }
+
+/**
+ * Password status data from user_password_status table
+ */
+export interface PasswordStatusData {
+  must_change_password: boolean;
+  terms_accepted: boolean;
+}
