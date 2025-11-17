@@ -183,7 +183,8 @@ Deno.serve(async (req) => {
     const patientAlreadyJoined = session.patient_joined_at !== null;
     
     if (patientAlreadyJoined) {
-      console.log('ℹ️ Patient already joined - skipping SMS notification');
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.info('[start-video-session] Patient already joined - skipping SMS notification');
     }
 
     if (patientPhone && !patientAlreadyJoined) {
@@ -216,7 +217,8 @@ Deno.serve(async (req) => {
 
         if (!linkError) {
           guestLinkUrl = `${origin}/video-guest/${token}`;
-          console.log('✅ Guest link created:', guestLinkUrl);
+          const { edgeLogger } = await import('../_shared/logger.ts');
+          edgeLogger.info('[start-video-session] Guest link created', { guestLinkUrl });
           
           // Log guest link generation
           await supabase.from('video_session_logs').insert({
@@ -228,7 +230,8 @@ Deno.serve(async (req) => {
           });
         }
       } catch (linkGenError) {
-        console.warn('⚠️ Failed to generate guest link:', linkGenError);
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.warn('[start-video-session] Failed to generate guest link', { error: linkGenError instanceof Error ? linkGenError.message : String(linkGenError) });
       }
 
       // Fetch practice name for template

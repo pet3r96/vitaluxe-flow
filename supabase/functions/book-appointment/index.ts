@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
       
       if (patientWithUser.user_id) {
         // Patient has portal access - use handleNotifications
-        console.log('[book-appointment] Patient has portal access, calling handleNotifications');
+        edgeLogger.info('[book-appointment] Patient has portal access, calling handleNotifications');
         try {
           let message;
           if (isVideo) {
