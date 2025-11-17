@@ -30,14 +30,10 @@ export const useAddToCart = () => {
       return data;
     },
     onSuccess: (_, variables) => {
-      console.log('[useAddToCart] Success, invalidating cart queries for:', variables.cartOwnerId);
-      // Invalidate all cart-related queries with consistent key
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return key === 'cart' || key === 'cart-count' || key === 'cart-owner';
-        }
-      });
+      console.log('[useAddToCart] Success - cart added for:', variables.cartOwnerId);
+      // Realtime subscription in useCartCount will handle the update automatically
+      // Only invalidate the main cart query for immediate UI feedback
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
     }
   });
 };

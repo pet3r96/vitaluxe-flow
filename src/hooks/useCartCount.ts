@@ -1,10 +1,87 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export const useCartCount = (cartOwnerId: string | null) => {
   const queryClient = useQueryClient();
   const lastOwnerIdRef = useRef<string | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced invalidation to prevent rapid refetches
+  const debouncedInvalidate = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      console.log('[useCartCount] Realtime event - invalidating cart-count');
+      queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
+    }, 300);
+  }, [queryClient, cartOwnerId]);
+
+  // Set up realtime subscription for cart_lines changes
+  useEffect(() => {
+    if (!cartOwnerId) {
+      return;
+    }
+
+    // Clean up existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    // First, get the cart_id for this owner
+    const setupRealtimeSubscription = async () => {
+      const { data: cart } = await supabase
+        .from("cart")
+        .select("id")
+        .eq("doctor_id", cartOwnerId)
+        .maybeSingle();
+
+      if (!cart) {
+        console.log('[useCartCount] No cart found for owner:', cartOwnerId);
+        return;
+      }
+
+      console.log('[useCartCount] Setting up realtime subscription for cart:', cart.id);
+
+      // Subscribe to cart_lines changes for this specific cart
+      const channel = supabase
+        .channel(`cart-lines-${cart.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'cart_lines',
+            filter: `cart_id=eq.${cart.id}`
+          },
+          (payload) => {
+            console.log('[useCartCount] Realtime event received:', payload.eventType);
+            debouncedInvalidate();
+          }
+        )
+        .subscribe((status) => {
+          console.log('[useCartCount] Subscription status:', status);
+        });
+
+      channelRef.current = channel;
+    };
+
+    setupRealtimeSubscription();
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [cartOwnerId, debouncedInvalidate]);
 
   // Listen for impersonation changes - only invalidate if owner changed
   useEffect(() => {
