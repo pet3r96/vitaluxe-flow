@@ -64,13 +64,12 @@ export default function AdminTermsManagement() {
     let data: any = null;
     let error: any = null;
 
-    if (activeRole === 'patient') {
-      const res = await supabase
-        .from('patient_portal_terms' as any)
-        .select<'*', PatientPortalTerms>('*')
-        .order('version', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (activeRole === 'patient') {
+        const res = await PortalTerms()
+          .select('*')
+          .order('version', { ascending: false })
+          .limit(1)
+          .maybeSingle();
       data = res.data;
       error = res.error;
     } else {
@@ -200,9 +199,8 @@ export default function AdminTermsManagement() {
       if (activeRole === 'patient') {
         if (terms?.id) {
           // Update existing patient portal terms
-          const { error } = await supabase
-            .from('patient_portal_terms' as any)
-            .update<PatientPortalTermsUpdate>({
+          const { error } = await PortalTerms()
+            .update({
               title,
               content,
               version: (terms?.version || 0) + 1,
@@ -214,9 +212,8 @@ export default function AdminTermsManagement() {
           if (error) throw error;
         } else {
           // Insert new patient portal terms
-          const { error } = await supabase
-            .from('patient_portal_terms' as any)
-            .insert<PatientPortalTermsInsert>({
+          const { error } = await PortalTerms()
+            .insert({
               title,
               content,
               version: 1,
@@ -275,9 +272,8 @@ export default function AdminTermsManagement() {
   const loadAttestation = async () => {
     setLoadingAttestation(true);
     
-    const { data, error } = await supabase
-      .from('checkout_attestation' as any)
-      .select<'*', CheckoutAttestation>('*')
+    const { data, error } = await CheckoutAttest()
+      .select('*')
       .eq('is_active', true)
       .maybeSingle();
 
@@ -313,9 +309,8 @@ export default function AdminTermsManagement() {
     setSavingAttestation(true);
 
     try {
-      const { error } = await supabase
-        .from('checkout_attestation' as any)
-        .update<CheckoutAttestationUpdate>({
+      const { error } = await CheckoutAttest()
+        .update({
           title: attestationTitle,
           subtitle: attestationSubtitle,
           content: attestationContent,

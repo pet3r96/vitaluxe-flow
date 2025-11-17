@@ -208,9 +208,8 @@ export default function Checkout() {
   const { data: checkoutAttestation } = useQuery<CheckoutAttestationData | null>({
     queryKey: ["checkout-attestation"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("checkout_attestation" as any)
-        .select<'*', CheckoutAttestation>('*')
+      const { data, error } = await CheckoutAttest()
+        .select('*')
         .eq("is_active", true)
         .maybeSingle();
 

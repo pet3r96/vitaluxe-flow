@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { InternalMsgReplies } from '@/integrations/supabase/table-helpers';
 import { useAuth } from "@/contexts/AuthContext";
 import { ConversationList } from "@/components/internal-chat/ConversationList";
 import { MessageThread } from "@/components/internal-chat/MessageThread";
@@ -229,19 +230,18 @@ const InternalChat = () => {
     queryKey: ['internal-message-replies', selectedMessageId],
     queryFn: async () => {
       if (!selectedMessageId) return [];
-      const { data, error } = await supabase
-        .from('internal_message_replies' as any)
-        .select<'*', InternalMessageReply>('*')
+      const { data, error } = await InternalMsgReplies()
+        .select('*')
         .eq('message_id', selectedMessageId)
         .order('created_at');
       if (error) throw error;
       
       // Get all unique sender IDs not in teamMap
       const senderIds = data.map(r => r.sender_id).filter(id => !teamMap[id]);
-      const uniqueSenderIds = [...new Set(senderIds)];
+      const uniqueSenderIds = [...new Set(senderIds)] as string[];
 
       // Single batch query for all missing profiles
-      const { data: profiles } = uniqueSenderIds.length > 0 
+      const { data: profiles } = uniqueSenderIds.length > 0
         ? await supabase
             .from('profiles')
             .select('id, name')
@@ -383,9 +383,8 @@ const InternalChat = () => {
   // Send reply mutation
   const sendReplyMutation = useMutation({
     mutationFn: async (body: string) => {
-      const { error } = await supabase
-        .from('internal_message_replies' as any)
-        .insert<InternalMessageReplyInsert>({
+      const { error } = await InternalMsgReplies()
+        .insert({
           message_id: selectedMessageId!,
           sender_id: effectiveUserId,
           body

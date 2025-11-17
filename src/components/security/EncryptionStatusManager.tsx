@@ -27,7 +27,7 @@ export const EncryptionStatusManager = () => {
   const { data: coverageData, isLoading: coverageLoading } = useQuery({
     queryKey: ["encryption-coverage"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_encryption_coverage" as any);
+      const { data, error } = await supabase.rpc("get_encryption_coverage") as { data: any; error: any };
       
       if (error) throw error;
       

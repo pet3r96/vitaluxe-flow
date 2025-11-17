@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { RepProductVis } from '@/integrations/supabase/table-helpers';
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
 import { resolveCartOwnerUserId } from "@/lib/cartOwnerResolver";
@@ -126,9 +127,8 @@ export const ProductsGrid = () => {
 
       console.log('[ProductsGrid] Fetching visibility for rep ID:', repId);
       
-      const { data, error } = await supabase
-        .from('rep_product_visibility' as any)
-        .select<'product_id, visible', RepProductVisibilityRow>('product_id, visible')
+      const { data, error } = await RepProductVis()
+        .select('product_id, visible')
         .eq('topline_rep_id', repId);
       
       if (error) {
