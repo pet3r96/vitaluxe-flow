@@ -178,12 +178,11 @@ const Auth = () => {
             return;
           }
 
-          // Track failed login attempt
+          // Track failed login attempt (IP extracted from headers in edge function)
           try {
             await supabase.functions.invoke("track-failed-login", {
               body: {
                 email,
-                ip_address: "browser",
                 user_agent: navigator.userAgent
               }
             });

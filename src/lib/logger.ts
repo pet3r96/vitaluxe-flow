@@ -98,6 +98,9 @@ class Logger {
    */
   private async sendToBackend(level: LogLevel, message: string, context?: LogContext) {
     try {
+      // Serialize context to prevent [object Object] errors
+      const serializedContext = this.serializeContext(this.sanitize(context || {}));
+      
       await supabase.functions.invoke('log-error', {
         body: {
           action_type: 'client_error',
@@ -108,7 +111,7 @@ class Logger {
             url: window.location.href,
             browser: navigator.userAgent,
             timestamp: new Date().toISOString(),
-            ...this.sanitize(context || {})
+            ...serializedContext
           }
         }
       });
@@ -118,6 +121,35 @@ class Logger {
         console.error('[Logger] Failed to send to backend:', err);
       }
     }
+  }
+
+  /**
+   * Serialize context to prevent [object Object] in logs
+   */
+  private serializeContext(context: LogContext): LogContext {
+    const serialized: LogContext = {};
+    
+    for (const [key, value] of Object.entries(context)) {
+      if (value === null || value === undefined) {
+        serialized[key] = value;
+      } else if (value instanceof Error) {
+        serialized[key] = {
+          message: value.message,
+          name: value.name,
+          stack: value.stack
+        };
+      } else if (typeof value === 'object') {
+        try {
+          serialized[key] = JSON.parse(JSON.stringify(value));
+        } catch {
+          serialized[key] = String(value);
+        }
+      } else {
+        serialized[key] = value;
+      }
+    }
+    
+    return serialized;
   }
 }
 
