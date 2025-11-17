@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from '../_shared/responses.ts';
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGenerateReceiptRequest } from '../_shared/requestValidators.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,7 @@ const corsHeaders = {
 
 serve(async (req) => {
   const requestStart = Date.now();
-  console.log(`[generate-order-receipt] ⏱️ Request started at ${new Date().toISOString()}`);
+  edgeLogger.info('Receipt generation request started');
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -21,7 +22,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('[generate-order-receipt] Missing Authorization header');
+      edgeLogger.error('Missing Authorization header');
       return errorResponse('Unauthorized - Missing credentials', 401);
     }
 
@@ -37,11 +38,11 @@ serve(async (req) => {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error('[generate-order-receipt] Auth error:', authError);
+        edgeLogger.error('Auth error', authError);
         return errorResponse('Unauthorized - Invalid session', 401);
       }
 
-      console.log('[generate-order-receipt] User authenticated:', user.id);
+      edgeLogger.info('User authenticated', { userId: user.id });
 
     // Parse and validate JSON
     let requestData;
@@ -56,7 +57,7 @@ serve(async (req) => {
 
     const validation = validateGenerateReceiptRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -70,7 +71,7 @@ serve(async (req) => {
       throw new Error('order_id is required');
     }
 
-    console.log('[generate-receipt] Generating receipt for order:', order_id);
+    edgeLogger.info('Generating receipt for order', { orderId: order_id });
 
     // Create admin client for storage operations
     const adminClient = createAdminClient();
@@ -81,11 +82,11 @@ serve(async (req) => {
         public: false, 
         fileSizeLimit: 20971520 // 20MB
       });
-      console.log('[generate-receipt] Receipts bucket ensured');
+      edgeLogger.info('Receipts bucket ensured');
     } catch (bucketError: any) {
       // Ignore if bucket already exists
       if (!bucketError.message?.includes('already exists')) {
-        console.warn('[generate-receipt] Bucket creation warning:', bucketError.message);
+        edgeLogger.warn('Bucket creation warning', bucketError);
       }
     }
 
@@ -121,7 +122,7 @@ serve(async (req) => {
       .single();
 
     if (orderError || !order) {
-      console.error('Order fetch error:', orderError);
+      edgeLogger.error('Order fetch error', orderError);
       throw new Error('Order not found');
     }
 
@@ -157,7 +158,7 @@ serve(async (req) => {
     }
 
     if (!isAdmin && !isPracticeOwner && !isStaffOfPractice) {
-      console.error('[generate-order-receipt] Unauthorized access attempt:', {
+      edgeLogger.error('Unauthorized access attempt', {
         userId: user.id,
         orderId: order_id,
         practiceId: order.doctor_id
@@ -165,7 +166,7 @@ serve(async (req) => {
       return errorResponse('You don\'t have permission to access this receipt', 403);
     }
 
-    console.log('[generate-order-receipt] Authorization successful:', {
+    edgeLogger.info('Authorization successful', {
       isAdmin,
       isPracticeOwner,
       isStaffOfPractice
@@ -195,7 +196,7 @@ serve(async (req) => {
       .eq('order_id', order_id);
 
     if (linesError || !orderLines || orderLines.length === 0) {
-      console.error('[generate-order-receipt] Order lines fetch error:', linesError);
+      edgeLogger.error('Order lines fetch error', linesError);
       return errorResponse('Failed to fetch order lines', linesError ? 500 : 404);
     }
 
@@ -489,16 +490,18 @@ serve(async (req) => {
         if (urlData?.url) {
           receiptUrl = urlData.url;
           uploadMethod = uploadData.storage_provider || 's3';
-          console.log('Receipt uploaded:', uploadData.storage_path);
+          edgeLogger.info('Receipt uploaded', { storagePath: uploadData.storage_path });
         }
       }
     } catch (s3Error) {
-      console.warn('S3 upload failed, falling back to Supabase Storage:', s3Error);
+      edgeLogger.warn('S3 upload failed, falling back to Supabase Storage', { 
+        error: s3Error instanceof Error ? s3Error.message : String(s3Error) 
+      });
     }
 
     // Fallback to Supabase Storage if S3 upload failed
     if (!receiptUrl) {
-      console.log(`[generate-order-receipt] ⏱️ Storage upload started`);
+      edgeLogger.info('Storage upload started');
       const storageStart = Date.now();
       
       const { error: uploadError } = await supabase.storage
@@ -509,7 +512,7 @@ serve(async (req) => {
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        edgeLogger.error('Upload error', uploadError);
         throw new Error('Failed to upload receipt');
       }
 
@@ -519,17 +522,16 @@ serve(async (req) => {
         .createSignedUrl(filePath, 3600);
 
       if (urlError || !signedUrlData) {
-        console.error('Signed URL error:', urlError);
+        edgeLogger.error('Signed URL error', urlError);
         throw new Error('Failed to generate download URL');
       }
 
       receiptUrl = signedUrlData.signedUrl;
       const storageDuration = Date.now() - storageStart;
-      console.log(`[generate-order-receipt] ✅ Storage upload completed in ${storageDuration}ms`);
-      console.log('Receipt uploaded to Supabase Storage:', fileName);
+      edgeLogger.info('Storage upload completed', { durationMs: storageDuration, fileName });
     }
 
-    console.log(`Receipt generated successfully via ${uploadMethod}:`, fileName);
+    edgeLogger.info('Receipt generated successfully', { uploadMethod, fileName });
 
     return new Response(
       JSON.stringify({
@@ -550,7 +552,7 @@ serve(async (req) => {
 
   } catch (error: any) {
     const duration = Date.now() - requestStart;
-    console.error(`[generate-order-receipt] ❌ ERROR after ${duration}ms:`, error);
+    edgeLogger.error('Receipt generation error', error, { durationMs: duration });
     
     // Log error to audit logs
     try {
@@ -566,7 +568,7 @@ serve(async (req) => {
         }
       });
     } catch (logError) {
-      console.error('Failed to log error:', logError);
+      edgeLogger.error('Failed to log error', logError);
     }
 
     return new Response(
@@ -581,6 +583,6 @@ serve(async (req) => {
     );
   } finally {
     const totalDuration = Date.now() - requestStart;
-    console.log(`[generate-order-receipt] ⏱️ Request completed in ${totalDuration}ms`);
+    edgeLogger.info('Request completed', { durationMs: totalDuration });
   }
 });
