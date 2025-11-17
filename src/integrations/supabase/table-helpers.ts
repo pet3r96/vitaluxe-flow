@@ -29,6 +29,8 @@ import type {
   PracticeBranding,
   AccountLockout,
   AlertRule,
+  TermsAndConditions,
+  EncryptionKey,
 } from '@/types/manual-schema';
 
 /**
@@ -64,3 +66,5 @@ export const AuditLogsArchive = () => table<AuditLogArchive>('audit_logs_archive
 export const PracticeBrand = () => table<PracticeBranding>('practice_branding');
 export const AccountLockouts = () => table<AccountLockout>('account_lockouts');
 export const AlertRules = () => table<AlertRule>('alert_rules');
+export const TermsAndConds = () => table<TermsAndConditions>('terms_and_conditions');
+export const EncryptionKeys = () => table<EncryptionKey>('encryption_keys');

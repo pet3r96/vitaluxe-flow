@@ -52,7 +52,7 @@ export function PerformanceDashboard({ dateRange }: PerformanceDashboardProps) {
         .lte("created_at", to.toISOString());
 
       const providerStats = appointments?.reduce((acc: any, apt: any) => {
-        const providerId = (apt as any).provider_id;
+        const providerId = apt.provider_id;
         if (!providerId) return acc;
 
         if (!acc[providerId]) {

@@ -415,7 +415,7 @@ export const PatientsDataTable = () => {
                   </TableCell>
                   {isAdmin && (
                     <TableCell>
-                      {(patient.practice as any)?.name || "-"}
+                      {patient.practice?.name || "-"}
                     </TableCell>
                   )}
                   <TableCell className="text-right">

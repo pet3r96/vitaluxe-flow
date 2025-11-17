@@ -153,7 +153,7 @@ export function CreateInternalMessageDialog({
               message_type: messageType,
               priority,
               patient_id: null
-            } as any)
+            })
             .select()
             .single();
 

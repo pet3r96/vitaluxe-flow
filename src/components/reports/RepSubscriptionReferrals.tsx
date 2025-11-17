@@ -190,10 +190,10 @@ export default function RepSubscriptionReferrals() {
                           <TableCell>
                             <div>
                               <div className="font-medium">
-                                {(commission as any).profiles?.full_name || 'N/A'}
+                                {(commission.profiles as any)?.full_name || 'N/A'}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {(commission as any).profiles?.email}
+                                {(commission.profiles as any)?.email}
                               </div>
                             </div>
                           </TableCell>

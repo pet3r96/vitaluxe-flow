@@ -123,8 +123,7 @@ export function ActivityLogSection() {
       }
 
       // Delete all sessions except the current one
-      const { error } = await (supabase as any)
-        .from('active_sessions')
+      const { error } = await ActiveSessions()
         .delete()
         .neq('id', currentSession.access_token); // Keep current session
 
