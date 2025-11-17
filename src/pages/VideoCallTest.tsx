@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useVideoDevices } from "@/hooks/video/useVideoDevices";
 import { DeviceSelector } from "@/components/video/precall/DeviceSelector";
+import { logger } from "@/lib/logger";
 import {
   CheckCircle2,
   XCircle,
@@ -323,7 +324,11 @@ export default function VideoCallTest() {
     if (devices.selectedSpeaker) {
       localStorage.setItem("preferred-speaker", devices.selectedSpeaker);
     }
-    console.log("[VideoCallTest] Preferences saved");
+    logger.info("Video call test preferences saved", { 
+      hasCamera: !!devices.selectedCamera,
+      hasMicrophone: !!devices.selectedMicrophone,
+      hasSpeaker: !!devices.selectedSpeaker
+    });
   };
 
   // ============================================================================
@@ -335,7 +340,7 @@ export default function VideoCallTest() {
       
       const returnUrl = sessionStorage.getItem("video-test-return-url");
       if (returnUrl) {
-        console.log("[VideoCallTest] Auto-returning to:", returnUrl);
+        logger.info("Auto-returning after video call test", { returnUrl });
         setTimeout(() => {
           navigate(returnUrl);
           sessionStorage.removeItem("video-test-return-url");

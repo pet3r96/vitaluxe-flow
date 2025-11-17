@@ -134,25 +134,25 @@ export function useAgoraCall({
       });
 
       client.on("user-unpublished", (user) => {
-        console.log("[useAgoraCall] Remote user unpublished");
+        logger.info("Remote user unpublished");
       });
 
       // Join channel
-      console.log("[useAgoraCall] Joining channel:", channel);
+      logger.info("Joining Agora channel", { channelName: channel });
 
-      console.log("[DEBUG] Agora JOIN PARAMETERS:", {
-        appId,
-        channel,
-        token: token?.substring(0, 20) + "...",
-        userId,
+      logger.info("Agora JOIN parameters", {
+        appIdSample: appId?.substring(0, 8) + '...',
+        channelName: channel,
+        tokenPreview: token?.substring(0, 20) + '...',
+        uid: userId,
       });
 
       await client.join(appId, channel, token, userId);
 
-      console.log("[useAgoraCall] Joined successfully");
+      logger.info("Joined Agora channel successfully", { channelName: channel });
 
       // Create and publish local tracks
-      console.log("[useAgoraCall] Creating local tracks...");
+      logger.info("Creating local tracks");
       const mic = await AgoraRTC.createMicrophoneAudioTrack();
       const cam = await AgoraRTC.createCameraVideoTrack();
 

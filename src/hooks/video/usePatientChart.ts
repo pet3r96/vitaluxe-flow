@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { usePatientChartData } from "@/hooks/usePatientChartData";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 export interface UsePatientChartReturn {
   chart: any;
@@ -46,7 +47,7 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
       setHasUnreadUpdates(true);
       await refresh();
     } catch (error) {
-      console.error("[usePatientChart] Failed to add note:", error);
+      logger.error("Failed to add note to patient chart", error, { patientId });
       throw error;
     }
   }, [patientId, refresh]);
@@ -71,7 +72,7 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
       setHasUnreadUpdates(true);
       await refresh();
     } catch (error) {
-      console.error("[usePatientChart] Failed to update vital:", error);
+      logger.error("Failed to update vital signs", error, { patientId });
       throw error;
     }
   }, [patientId, refresh]);
@@ -118,7 +119,7 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
       setHasUnreadUpdates(true);
       await refresh();
     } catch (error) {
-      console.error("[usePatientChart] Failed to add document:", error);
+      logger.error("Failed to add document to patient chart", error, { patientId });
       throw error;
     }
   }, [patientId, refresh]);

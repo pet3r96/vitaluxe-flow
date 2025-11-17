@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Link2, Loader2, QrCode, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface Props {
   sessionId: string;
@@ -45,7 +46,7 @@ export function GuestLinkGenerator({ sessionId, trigger }: Props) {
         description: "Share this link with your guest to allow them to join",
       });
     } catch (error: any) {
-      console.error('Failed to generate guest link:', error);
+      logger.error('Failed to generate guest link', error, { sessionId });
       toast({
         title: "Failed to generate link",
         description: error.message || "Please try again",

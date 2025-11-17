@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 
 export interface UseVideoDevicesReturn {
   cameras: MediaDeviceInfo[];
@@ -51,10 +52,10 @@ export const useVideoDevices = (): UseVideoDevicesReturn => {
       const audioInputs = devices.filter(d => d.kind === 'audioinput');
       const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
       
-      console.log('[useVideoDevices] Devices enumerated:', {
-        cameras: videoInputs.length,
-        microphones: audioInputs.length,
-        speakers: audioOutputs.length,
+      logger.info('Video devices enumerated', {
+        cameraCount: videoInputs.length,
+        microphoneCount: audioInputs.length,
+        speakerCount: audioOutputs.length,
       });
       
       setCameras(videoInputs);
@@ -74,7 +75,7 @@ export const useVideoDevices = (): UseVideoDevicesReturn => {
 
       setHasPermissions(true);
     } catch (error) {
-      console.error('[useVideoDevices] Error enumerating devices:', error);
+      logger.error('Error enumerating video devices', error);
       setHasPermissions(false);
     }
   }, [selectedCamera, selectedMicrophone, selectedSpeaker]);
@@ -82,7 +83,7 @@ export const useVideoDevices = (): UseVideoDevicesReturn => {
   // Request permissions
   const requestPermissions = useCallback(async (): Promise<boolean> => {
     try {
-      console.log('[useVideoDevices] Requesting permissions');
+      logger.info('Requesting media device permissions');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: true, 
         video: true 
@@ -94,10 +95,10 @@ export const useVideoDevices = (): UseVideoDevicesReturn => {
       // Now enumerate devices
       await enumerateDevices();
       
-      console.log('[useVideoDevices] Permissions granted');
+      logger.info('Media device permissions granted');
       return true;
     } catch (error) {
-      console.error('[useVideoDevices] Permission denied:', error);
+      logger.error('Media device permission denied', error);
       setHasPermissions(false);
       return false;
     }
@@ -105,27 +106,27 @@ export const useVideoDevices = (): UseVideoDevicesReturn => {
 
   // Refresh devices
   const refreshDevices = useCallback(async () => {
-    console.log('[useVideoDevices] Refreshing devices');
+    logger.info('Refreshing video devices');
     await enumerateDevices();
   }, [enumerateDevices]);
 
   // Select camera
   const selectCamera = useCallback((deviceId: string) => {
-    console.log('[useVideoDevices] Selecting camera:', deviceId);
+    logger.info('Selecting camera device', { deviceId });
     setSelectedCamera(deviceId);
     localStorage.setItem(STORAGE_KEYS.CAMERA, deviceId);
   }, []);
 
   // Select microphone
   const selectMicrophone = useCallback((deviceId: string) => {
-    console.log('[useVideoDevices] Selecting microphone:', deviceId);
+    logger.info('Selecting microphone device', { deviceId });
     setSelectedMicrophone(deviceId);
     localStorage.setItem(STORAGE_KEYS.MICROPHONE, deviceId);
   }, []);
 
   // Select speaker
   const selectSpeaker = useCallback((deviceId: string) => {
-    console.log('[useVideoDevices] Selecting speaker:', deviceId);
+    logger.info('Selecting speaker device', { deviceId });
     setSelectedSpeaker(deviceId);
     localStorage.setItem(STORAGE_KEYS.SPEAKER, deviceId);
   }, []);
@@ -133,7 +134,7 @@ export const useVideoDevices = (): UseVideoDevicesReturn => {
   // Listen for device changes
   useEffect(() => {
     const handleDeviceChange = () => {
-      console.log('[useVideoDevices] Device change detected');
+      logger.info('Video device change detected');
       enumerateDevices();
     };
 
