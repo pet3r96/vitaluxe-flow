@@ -53,11 +53,13 @@ const lazyWithRetry = (componentImport: () => Promise<any>, componentName: strin
         /Loading chunk/.test(msg);
 
       if (isChunkError) {
-        console.warn(`[App] Chunk load error for ${componentName}, attempting auto-reload...`, {
-          errorName: name,
-          errorMessage: msg,
-          hasRetried,
-          componentName,
+        import('@/lib/logger').then(({ logger }) => {
+          logger.warn(`Chunk load error for ${componentName}, attempting auto-reload`, {
+            errorName: name,
+            errorMessage: msg,
+            hasRetried,
+            componentName,
+          });
         });
 
         // Auto-reload once
@@ -70,11 +72,12 @@ const lazyWithRetry = (componentImport: () => Promise<any>, componentName: strin
         }
       }
 
-      console.error(`[App] Component load failed for ${componentName}:`, {
-        name,
-        message: msg,
-        isChunkError,
-        hasRetried,
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error(`Component load failed for ${componentName}`, new Error(msg), {
+          name,
+          isChunkError,
+          hasRetried,
+        });
       });
 
       throw error;

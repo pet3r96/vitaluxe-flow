@@ -39,7 +39,9 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Redirect if no user
   useEffect(() => {
     if (!initializing && !user) {
-      console.log('[ProtectedRoute] ⚠️ Redirecting to /auth (source: route-guard, user: null)');
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Redirecting to /auth - no user');
+      });
       navigate("/auth");
     }
   }, [user, initializing, navigate]);
@@ -70,11 +72,15 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         const sessionFlag = sessionStorage.getItem(sessionKey);
         
         if (sessionFlag) {
-          console.log('[ProtectedRoute] termsAccepted=false but session flag present, skipping redirect');
+          import('@/lib/logger').then(({ logger }) => {
+            logger.info('Terms accepted flag in session, skipping redirect');
+          });
           return;
         }
         
-        console.log('[ProtectedRoute] Redirecting to /accept-terms (terms not accepted)');
+        import('@/lib/logger').then(({ logger }) => {
+          logger.info('Redirecting to /accept-terms - terms not accepted');
+        });
         navigate("/accept-terms");
       }
     }
@@ -91,7 +97,9 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   useEffect(() => {
     if (user && effectiveRole && !passwordStatusChecked) {
       const timeout = setTimeout(() => {
-        console.warn('[ProtectedRoute] Password status check timeout after 10s - auth system should handle this');
+        import('@/lib/logger').then(({ logger }) => {
+          logger.warn('Password status check timeout after 10s');
+        });
       }, 10000);
       
       return () => clearTimeout(timeout);
@@ -116,7 +124,9 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (user && effectiveRole && !passwordStatusChecked) {
-    console.log('[ProtectedRoute] Waiting for password status check');
+    import('@/lib/logger').then(({ logger }) => {
+      logger.info('Waiting for password status check');
+    });
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -129,7 +139,9 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   // Wait for 2FA status check to complete before rendering
   if (user && effectiveRole && !twoFAStatusChecked && !isImpersonating) {
-    console.log('[ProtectedRoute] Waiting for 2FA status check');
+    import('@/lib/logger').then(({ logger }) => {
+      logger.info('Waiting for 2FA status check');
+    });
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -144,7 +156,9 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // The global Global2FADialogs component handles showing the actual dialog
   if (!isImpersonating && twoFAStatusChecked && !mustChangePassword) {
     if (requires2FASetup || requires2FAVerify) {
-      console.log('[ProtectedRoute] Blocking content - 2FA required (dialog shown globally)');
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Blocking content - 2FA required');
+      });
       return (
         <div className="min-h-screen flex items-center justify-center bg-background">
           <div className="text-center">

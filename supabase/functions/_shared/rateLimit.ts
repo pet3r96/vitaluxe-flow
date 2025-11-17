@@ -40,7 +40,8 @@ export async function checkRateLimit(
 
   // Fail-open to avoid hard lockouts on DB errors
   if (error) {
-    console.error('Rate limit check error (failing open):', error);
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.error('Rate limit check error (failing open)', error);
     return { allowed: true };
   }
 
@@ -61,7 +62,8 @@ export async function checkRateLimit(
     });
 
   if (insertError) {
-    console.error('Rate limit insert error (failing open):', insertError);
+    const { edgeLogger } = await import('./logger.ts');
+    edgeLogger.error('Rate limit insert error (failing open)', insertError);
   }
 
   return { allowed: true };
