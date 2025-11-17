@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getSubscriptionStatus, SubscriptionStatus } from "@/lib/subscriptionCheck";
 import { supabase } from "@/integrations/supabase/client";
 import { realtimeManager } from "@/lib/realtimeManager";
+import { logger } from "@/lib/logger";
 
 interface SubscriptionContextType extends SubscriptionStatus {
   refreshSubscription: () => Promise<void>;
@@ -24,12 +25,12 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const refreshSubscription = async () => {
-    console.log('[SubscriptionContext] refreshSubscription called', { effectiveRole, effectivePracticeId });
+    logger.info('[SubscriptionContext] refreshSubscription called', { effectiveRole, effectivePracticeId });
     
     // Patients, Pharmacies, and Providers always have access (operational accounts, not subscription customers)
     // Providers inherit their parent practice's subscription
     if (effectiveRole === 'patient' || effectiveRole === 'pharmacy' || effectiveRole === 'provider') {
-      console.log('[SubscriptionContext] Auto-granting access for', effectiveRole);
+      logger.info('[SubscriptionContext] Auto-granting access for', { effectiveRole });
       setSubscriptionStatus({
         isSubscribed: true,
         status: 'active',
@@ -44,7 +45,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
     // Allow doctor and staff roles (staff inherit practice subscription via effectivePracticeId)
     if (!user?.id || !effectivePracticeId) {
-      console.log('[SubscriptionContext] No user or practice ID', { userId: user?.id, effectivePracticeId });
+      logger.info('[SubscriptionContext] No user or practice ID', { userId: user?.id, effectivePracticeId });
       setSubscriptionStatus({
         isSubscribed: false,
         status: null,
@@ -61,7 +62,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const practiceIdToCheck = effectivePracticeId || user.id;
     
     if (!practiceIdToCheck) {
-      console.log('[SubscriptionContext] No practice ID to check');
+      logger.info('[SubscriptionContext] No practice ID to check');
       setSubscriptionStatus({
         isSubscribed: false,
         status: null,
@@ -78,13 +79,13 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       // If impersonating (effectivePracticeId differs from user.id), use edge function
       // to bypass RLS issues during impersonation
       if (effectivePracticeId && effectivePracticeId !== user.id) {
-        console.log('[SubscriptionContext] Using edge function for impersonation', { effectivePracticeId });
+        logger.info('[SubscriptionContext] Using edge function for impersonation', { effectivePracticeId });
         const { data, error } = await supabase.functions.invoke('get-practice-subscription-status', {
           body: { practiceId: effectivePracticeId }
         });
         
         if (error) {
-          console.error('[SubscriptionContext] Edge function error:', error);
+          logger.error('[SubscriptionContext] Edge function error', error);
           throw error;
         }
         
@@ -103,7 +104,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         setSubscriptionStatus(status);
       }
     } catch (error) {
-      console.error('Error fetching subscription status:', error);
+      logger.error('Error fetching subscription status', error);
     } finally {
       setLoading(false);
     }

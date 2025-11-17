@@ -73,17 +73,17 @@ Deno.serve(async (req) => {
       practiceId = staffData?.practice_id || null;
       practiceIdSource = 'computed-staff';
     } else {
-      edgeLogger.error('[list-staff] No valid role for user (providers cannot view staff list)', new Error('Invalid role'));
+      edgeLogger.error('[list-staff] No valid role for user (providers cannot view staff list)', { message: 'Invalid role' });
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('[list-staff] practiceId:', practiceId, 'source:', practiceIdSource);
+    edgeLogger.info('[list-staff] practiceId resolved', { practiceId, source: practiceIdSource });
 
     if (!practiceId && !roles.includes('admin')) {
-      edgeLogger.error('[list-staff] No practice_id found for user', new Error('No practice ID'));
+      edgeLogger.error('[list-staff] No practice_id found for user', { message: 'No practice ID' });
       return new Response(JSON.stringify({ staff: [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     }
 
     if (!staffRows || staffRows.length === 0) {
-      console.log('[list-staff] No staff found for practice', practiceId);
+      edgeLogger.info('[list-staff] No staff found for practice', { practiceId });
       
       // Defensive logging: Check for orphaned staff users
       const { data: orphanedStaff } = await supabase
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
         .eq('role', 'staff');
       
       if (orphanedStaff && orphanedStaff.length > 0) {
-        console.warn(`⚠️ Found ${orphanedStaff.length} staff users in user_roles without providers records!`);
+        edgeLogger.warn('⚠️ Found orphaned staff users', { count: orphanedStaff.length });
       }
       
       return new Response(JSON.stringify({ staff: [] }), {
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
       .in('id', practiceIds);
 
     if (profilesError) {
-      console.error('[list-staff] Profiles query error:', profilesError);
+      edgeLogger.error('[list-staff] Profiles query error', profilesError);
       return new Response(JSON.stringify({ error: profilesError.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[list-staff] Error:', error);
+    edgeLogger.error('[list-staff] Error', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PatientVirtualWaitingRoom } from "@/components/video/PatientVirtualWaitingRoom";
 import { usePatientDashboard } from "@/hooks/usePatientDashboard";
+import { logger } from "@/lib/logger";
 
 
 export default function PatientDashboard() {
@@ -99,7 +100,7 @@ export default function PatientDashboard() {
       {/* Medical Vault Onboarding Alert - only show if intake is complete */}
       {patientAccount?.intake_completed_at && !loadingVault && (() => {
         const shouldShowBanner = !medicalVault?.has_data;
-        console.log('[PatientDashboard] 🎗️ Banner decision:', {
+        logger.info('[PatientDashboard] 🎗️ Banner decision', {
           intake_completed: !!patientAccount?.intake_completed_at,
           loading_vault: loadingVault,
           has_data: medicalVault?.has_data,

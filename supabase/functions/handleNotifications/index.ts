@@ -156,7 +156,7 @@ serve(async (req) => {
         .single();
 
       if (insertError) {
-        console.error('[handleNotifications] Failed to create in-app notification:', insertError);
+        edgeLogger.error('[handleNotifications] Failed to create in-app notification', insertError);
         results.errors.push(`In-app failed: ${insertError.message}`);
         await logNotificationDelivery({
           userId: payload.user_id,
@@ -200,7 +200,7 @@ serve(async (req) => {
       // Use phone from patient_accounts if profiles.phone is null
       if (!userPhone && patientAccount.phone) {
         userPhone = patientAccount.phone;
-        console.log('[handleNotifications] Using phone from patient_accounts');
+        edgeLogger.info('[handleNotifications] Using phone from patient_accounts');
       }
     } else {
       const { data: practiceAccount } = await supabase
@@ -225,7 +225,7 @@ serve(async (req) => {
         .single();
 
       if (settingsError) {
-        console.log('[handleNotifications] Practice settings not found, defaulting to enabled');
+        edgeLogger.info('[handleNotifications] Practice settings not found, defaulting to enabled');
       } else if (practiceSettings) {
         practiceEmailEnabled = practiceSettings.enable_email_notifications ?? true;
         practiceSmsEnabled = practiceSettings.enable_sms_notifications ?? true;
@@ -236,7 +236,7 @@ serve(async (req) => {
     const shouldSendEmail = emailEnabled && profile?.email && (!respectPracticeSettings || practiceEmailEnabled);
     const shouldSendSms = smsEnabled && userPhone && (!respectPracticeSettings || practiceSmsEnabled);
     
-    console.log('[handleNotifications] Channel decisions:', {
+    edgeLogger.info('[handleNotifications] Channel decisions', {
       notificationCategory,
       respectsPracticeSettings: respectPracticeSettings,
       userPreferences: { emailEnabled, smsEnabled, inAppEnabled },
@@ -254,7 +254,7 @@ serve(async (req) => {
     });
 
     // Step 6: Send email if enabled
-    console.log('[handleNotifications] Email decision:', {
+    edgeLogger.info('[handleNotifications] Email decision', {
       notificationType: payload.notification_type,
       userPreference: emailEnabled,
       practiceSettings: practiceEmailEnabled,
@@ -404,7 +404,7 @@ serve(async (req) => {
       }
     }
 
-    console.log('[handleNotifications] Completed:', results);
+    edgeLogger.info('[handleNotifications] Completed', { results });
 
     return new Response(
       JSON.stringify(results),
