@@ -52,7 +52,7 @@ export default function ChangePassword() {
           });
           
           if (error || !data?.valid) {
-            console.error('Token validation failed:', error || 'Invalid token');
+            logger.error('Token validation failed', error || new Error('Invalid token'));
             toast.error("This password reset link is invalid, expired, or has already been used.");
             navigate("/auth?message=link_expired_or_used");
             return;
@@ -64,7 +64,7 @@ export default function ChangePassword() {
           }
           setTokenVerified(true);
         } catch (error) {
-          console.error('Token validation error:', error);
+          logger.error('Token validation error', error instanceof Error ? error : new Error(String(error)));
           toast.error("Failed to verify password reset link.");
           navigate("/auth?message=link_expired_or_used");
         } finally {
@@ -118,7 +118,7 @@ export default function ChangePassword() {
     try {
       // TOKEN MODE: Use edge function with token (unauthenticated)
       if (tokenMode && tokenFromUrl) {
-        console.log('[ChangePassword] Resetting password with token...');
+        logger.info('[ChangePassword] Resetting password with token');
         const { data, error } = await supabase.functions.invoke('reset-password-with-token', {
           body: {
             token: tokenFromUrl,
@@ -127,21 +127,21 @@ export default function ChangePassword() {
         });
 
         if (error) {
-          console.error('[ChangePassword] Token reset error:', error);
+          logger.error('[ChangePassword] Token reset error', error);
           throw error;
         }
         if (data?.error) {
-          console.error('[ChangePassword] Token reset failed:', data);
+          logger.error('[ChangePassword] Token reset failed', new Error(data.error));
           throw new Error(data.error);
         }
 
-        console.log('[ChangePassword] Password reset successful, data:', data);
+        logger.info('[ChangePassword] Password reset successful');
 
         toast.success("Password set successfully! Logging you in...");
         
         // Get user email from response or URL parameter
         const userEmail = data.email || emailFromUrl;
-        console.log('[ChangePassword] Attempting auto-login with email:', userEmail);
+        logger.info('[ChangePassword] Attempting auto-login', { hasEmail: !!userEmail });
 
         // Auto-login the user with their new password
         if (userEmail) {
@@ -152,22 +152,22 @@ export default function ChangePassword() {
             });
             
             if (signInError) {
-              console.error('[ChangePassword] Auto-login failed:', signInError);
+              logger.error('[ChangePassword] Auto-login failed', signInError);
               // If auto-login fails, redirect to login page with email pre-filled
               const redirectUrl = `/auth?email=${encodeURIComponent(userEmail)}&message=password_reset_success`;
-              console.log('[ChangePassword] Redirecting to:', redirectUrl);
+              logger.info('[ChangePassword] Redirecting to login', { url: redirectUrl });
               setTimeout(() => {
                 navigate(redirectUrl);
               }, 2000);
             } else {
-              console.log('[ChangePassword] Auto-login successful, redirecting to home');
+              logger.info('[ChangePassword] Auto-login successful, redirecting to home');
               // Successfully logged in, redirect to home
               setTimeout(() => {
                 navigate("/");
               }, 1000);
             }
           } catch (loginError) {
-            console.error('[ChangePassword] Auto-login error:', loginError);
+            logger.error('[ChangePassword] Auto-login error', loginError instanceof Error ? loginError : new Error(String(loginError)));
             // Fallback to redirect to login page with email
             const redirectUrl = userEmail 
               ? `/auth?email=${encodeURIComponent(userEmail)}&message=password_reset_success`
@@ -178,7 +178,7 @@ export default function ChangePassword() {
           }
         } else {
           // No email available, redirect to login without pre-fill
-          console.log('[ChangePassword] No email available, redirecting to login');
+          logger.info('[ChangePassword] No email available, redirecting to login');
           setTimeout(() => {
             navigate("/auth?message=password_reset_success");
           }, 2000);
@@ -233,7 +233,7 @@ export default function ChangePassword() {
           .eq('id', user?.id);
 
         if (profileError) {
-          console.error('Failed to clear temp_password flag:', profileError);
+          logger.error('Failed to clear temp_password flag', profileError);
           // Don't throw error - password change was successful, this is just cleanup
         }
 

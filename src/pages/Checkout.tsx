@@ -166,7 +166,7 @@ export default function Checkout() {
         .maybeSingle();
 
       if (error) {
-        console.error("Error fetching staff provider record:", error);
+        logger.error("Error fetching staff provider record", error);
         return null;
       }
       return data;
@@ -358,7 +358,7 @@ export default function Checkout() {
         // All payments succeeded
         const orderCount = createdOrders.length;
         const deletedCount = deletedCartLineIds?.length || 0;
-        console.log('[Checkout] Cart cleared confirmation', { deletedCount });
+        logger.info('[Checkout] Cart cleared confirmation', { deletedCount });
         
         // Send order notifications to patients - OPTIMIZED: Run in parallel for faster checkout
         const notificationPromises = createdOrders.map(async (order) => {
@@ -372,7 +372,7 @@ export default function Checkout() {
 
               if (patientWithUser && patientWithUser.user_id) {
                 const orderTotal = order.total_amount || 0;
-                console.log('[Checkout] Sending notification for patient order');
+                logger.info('[Checkout] Sending notification for patient order');
                 await supabase.functions.invoke('handleNotifications', {
                   body: {
                     user_id: patientWithUser.user_id,
@@ -388,7 +388,7 @@ export default function Checkout() {
                 });
               }
             } catch (notifError) {
-              console.error('[Checkout] Error sending order notification:', notifError);
+              logger.error('[Checkout] Error sending order notification', notifError instanceof Error ? notifError : new Error(String(notifError)));
             }
           }
         });
@@ -397,7 +397,7 @@ export default function Checkout() {
         await Promise.allSettled(notificationPromises);
         
         // CRITICAL: Clear cart using edge function (belt & suspenders)
-        console.log('[Checkout] Clearing cart after successful order', { 
+        logger.info('[Checkout] Clearing cart after successful order', { 
           cartOwnerId, 
           effectiveUserId,
           deletedCount 
@@ -411,12 +411,12 @@ export default function Checkout() {
             });
             
             if (clearError) {
-              console.error('[Checkout] Error clearing cart via function:', clearError);
+              logger.error('[Checkout] Error clearing cart via function', clearError);
             } else {
-              console.log('[Checkout] Successfully cleared cart via edge function');
+              logger.info('[Checkout] Successfully cleared cart via edge function');
             }
           } catch (err) {
-            console.error('[Checkout] Exception calling clear-cart:', err);
+            logger.error('[Checkout] Exception calling clear-cart', err instanceof Error ? err : new Error(String(err)));
           }
         }
         
@@ -562,7 +562,7 @@ export default function Checkout() {
   const handlePrescriptionChange = (lineId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      console.log('File selected:', file.name, 'Type:', file.type);
+      logger.info('File selected for prescription upload', { fileName: file.name, fileType: file.type });
       
       const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
       const validExtensions = ['.pdf', '.png', '.jpg', '.jpeg'];

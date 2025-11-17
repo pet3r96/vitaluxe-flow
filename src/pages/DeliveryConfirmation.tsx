@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Package, Truck, MapPin, Edit, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight } from "lucide-react";
 import { DeliveryAddressEditor } from "@/components/orders/DeliveryAddressEditor";
 import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
+import { logger } from "@/lib/logger";
 
 export default function DeliveryConfirmation() {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ export default function DeliveryConfirmation() {
     queryKey: ["profile", practiceIdForShipping],
     enabled: !!practiceIdForShipping,
     queryFn: async () => {
-      console.log("[DeliveryConfirmation] Fetching profile for:", practiceIdForShipping);
+      logger.info("[DeliveryConfirmation] Fetching profile", { practiceIdForShipping });
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -77,10 +78,10 @@ export default function DeliveryConfirmation() {
         .single();
 
       if (error) {
-        console.error("[DeliveryConfirmation] Profile fetch error:", error);
+        logger.error("[DeliveryConfirmation] Profile fetch error", error);
         throw error;
       }
-      console.log("[DeliveryConfirmation] Profile data:", data);
+      logger.info("[DeliveryConfirmation] Profile data loaded successfully");
       return data;
     },
   });
@@ -102,13 +103,13 @@ export default function DeliveryConfirmation() {
       if (error) throw error;
     },
     onSuccess: () => {
-      console.log('[DeliveryConfirmation] Practice address updated successfully');
+      logger.info('[DeliveryConfirmation] Practice address updated successfully');
       queryClient.invalidateQueries({ queryKey: ["profile", practiceIdForShipping] });
       toast.success("Practice address updated successfully");
       setEditingAddress(null);
     },
     onError: (error: any) => {
-      console.error("Error updating practice address:", error);
+      logger.error("Error updating practice address", error);
       toast.error(`Failed to update practice address: ${error?.message || 'Unknown error'}`);
     },
   });
@@ -116,8 +117,12 @@ export default function DeliveryConfirmation() {
   // Update patient address mutation
   const updatePatientAddress = useMutation({
     mutationFn: async ({ patientName, lineIds, patientId, address }: { patientName: string; lineIds: string[]; patientId?: string; address: any }) => {
-      console.log('[DeliveryConfirmation] Updating patient address for:', patientName, 'Line IDs:', lineIds, 'Patient ID:', patientId);
-      console.log('[DeliveryConfirmation] Address data being saved:', {
+      logger.info('[DeliveryConfirmation] Updating patient address', { 
+        patientName, 
+        lineIdCount: lineIds.length, 
+        hasPatientId: !!patientId 
+      });
+      logger.info('[DeliveryConfirmation] Address data being saved', {
         street: address.street,
         city: address.city,
         state: address.state,
@@ -144,23 +149,23 @@ export default function DeliveryConfirmation() {
       });
 
       if (error) {
-        console.error('[DeliveryConfirmation] Cart lines update error:', error);
+        logger.error('[DeliveryConfirmation] Cart lines update error', error);
         throw error;
       }
       
-      console.log('[DeliveryConfirmation] Cart lines update complete:', {
+      logger.info('[DeliveryConfirmation] Cart lines update complete', {
         rowsUpdated: data?.length || 0,
-        lineIds,
+        lineIdCount: lineIds.length,
         updatedRowIds: data?.map(d => d.id) || []
       });
       
       if (!data || data.length === 0) {
-        console.warn('[DeliveryConfirmation] Warning: Cart update returned 0 rows. Check RLS policies.');
+        logger.warn('[DeliveryConfirmation] Warning: Cart update returned 0 rows. Check RLS policies');
       }
 
       // Update the patient record if patientId is provided
       if (patientId) {
-        console.log('[DeliveryConfirmation] Updating patient record with ID:', patientId);
+        logger.info('[DeliveryConfirmation] Updating patient record', { patientId });
 
         // Prefer updating patients table (source of truth)
         const { data: patientsData, error: patientsError } = await supabase
@@ -175,7 +180,7 @@ export default function DeliveryConfirmation() {
           .select('id');
 
         if (patientsError || !patientsData || patientsData.length === 0) {
-          console.warn('[DeliveryConfirmation] Patients update failed or no rows affected, attempting patient_accounts fallback');
+          logger.warn('[DeliveryConfirmation] Patients update failed, attempting fallback');
 
           // Fallback: try updating patient_accounts table if patientId actually refers to that table in legacy data
           const { data: patientData, error: patientError } = await supabase
@@ -191,18 +196,18 @@ export default function DeliveryConfirmation() {
             .select('id');
 
           if (patientError || !patientData || patientData.length === 0) {
-            console.error('[DeliveryConfirmation] Both patient updates failed:', { patientError, patientsError });
+            logger.error('[DeliveryConfirmation] Both patient updates failed', { patientError, patientsError });
             toast.warning("Address saved for this order, but the patient record could not be updated.");
           } else {
-            console.log('[DeliveryConfirmation] Patient_accounts table updated successfully:', patientData);
+            logger.info('[DeliveryConfirmation] Patient_accounts table updated successfully');
           }
         } else {
-          console.log('[DeliveryConfirmation] Patients table updated successfully:', patientsData);
+          logger.info('[DeliveryConfirmation] Patients table updated successfully');
         }
       }
       
       // NOW ROUTE THE ORDER: Fetch cart line meta and call route-order-to-pharmacy
-      console.log('[DeliveryConfirmation] Starting order routing for edited lines');
+      logger.info('[DeliveryConfirmation] Starting order routing for edited lines');
       
       const { data: metas, error: metaError } = await supabase
         .from("cart_lines")
@@ -210,18 +215,18 @@ export default function DeliveryConfirmation() {
         .in("id", lineIds);
       
       if (metaError) {
-        console.error('[DeliveryConfirmation] Failed to fetch line meta for routing:', metaError);
+        logger.error('[DeliveryConfirmation] Failed to fetch line meta for routing', metaError);
         throw new Error("Failed to fetch cart line details for routing");
       }
       
       if (!metas || metas.length === 0) {
-        console.warn('[DeliveryConfirmation] No cart lines found for routing');
+        logger.warn('[DeliveryConfirmation] No cart lines found for routing');
         throw new Error("No cart lines found for routing");
       }
       
       // Resolve practice context for routing
       const practiceContextId = (isProviderAccount || isStaff) ? effectivePracticeId : effectiveUserId;
-      console.log('[DeliveryConfirmation] Practice context for routing:', practiceContextId);
+      logger.info('[DeliveryConfirmation] Practice context for routing', { practiceContextId });
       
       // Resolve user_topline_rep_id for scoping
       let user_topline_rep_id = null;
@@ -242,7 +247,7 @@ export default function DeliveryConfirmation() {
           
           if (repData?.id) {
             user_topline_rep_id = repData.id;
-            console.log('[DeliveryConfirmation] Resolved topline rep ID:', user_topline_rep_id);
+            logger.info('[DeliveryConfirmation] Resolved topline rep ID', { repId: user_topline_rep_id });
           }
         }
       }
@@ -250,7 +255,11 @@ export default function DeliveryConfirmation() {
       // Route each line
       const routingErrors: string[] = [];
       for (const meta of metas) {
-        console.log(`[DeliveryConfirmation] Routing line ${meta.id}, product ${meta.product_id} to state ${address.state.toUpperCase()}`);
+        logger.info('[DeliveryConfirmation] Routing line', { 
+          lineId: meta.id, 
+          productId: meta.product_id, 
+          state: address.state.toUpperCase() 
+        });
         
         const { data: routing, error: routingError } = await supabase.functions.invoke('route-order-to-pharmacy', {
           body: {
@@ -262,12 +271,15 @@ export default function DeliveryConfirmation() {
         
         if (routingError || !routing?.pharmacy_id) {
           const reason = routing?.reason || routingError?.message || 'No pharmacy available';
-          console.error(`[DeliveryConfirmation] Routing failed for line ${meta.id}:`, reason);
+          logger.error('[DeliveryConfirmation] Routing failed for line', new Error(reason), { lineId: meta.id });
           routingErrors.push(`${meta.product_id}: ${reason}`);
           continue;
         }
         
-        console.log(`[DeliveryConfirmation] Routing successful for line ${meta.id}, pharmacy ${routing.pharmacy_id}`);
+        logger.info('[DeliveryConfirmation] Routing successful', { 
+          lineId: meta.id, 
+          pharmacyId: routing.pharmacy_id 
+        });
         
         // Format the address string for storage
         const formattedAddress = address.formatted || 
@@ -292,7 +304,7 @@ export default function DeliveryConfirmation() {
         });
         
         if (updateError) {
-          console.error(`[DeliveryConfirmation] Failed to update routing for line ${meta.id}:`, updateError);
+          logger.error('[DeliveryConfirmation] Failed to update routing for line', updateError, { lineId: meta.id });
           routingErrors.push(`${meta.product_id}: Failed to save routing`);
         }
       }
@@ -301,7 +313,7 @@ export default function DeliveryConfirmation() {
         throw new Error(`Some items could not be routed: ${routingErrors.join(', ')}`);
       }
       
-      console.log('[DeliveryConfirmation] All lines routed successfully');
+      logger.info('[DeliveryConfirmation] All lines routed successfully');
       return { lineIds, address, patientId };
     },
     // Optimistic update temporarily disabled for debugging
@@ -332,7 +344,7 @@ export default function DeliveryConfirmation() {
     //   return { previousData };
     // },
     onSuccess: (data) => {
-      console.log('[DeliveryConfirmation] Patient address saved and routed, invalidating cache');
+      logger.info('[DeliveryConfirmation] Patient address saved and routed, invalidating cache');
       queryClient.invalidateQueries({ queryKey: ["cart", cartOwnerId] });
       queryClient.invalidateQueries({ queryKey: ["cart-count", cartOwnerId] });
       
@@ -344,7 +356,7 @@ export default function DeliveryConfirmation() {
       setEditingAddress(null);
     },
     onError: (error: any, variables, context: any) => {
-      console.error("Error updating patient address:", error);
+      logger.error("Error updating patient address", error);
       // Rollback optimistic update
       if (context?.previousData) {
         queryClient.setQueryData(["cart", effectiveUserId], context.previousData);
@@ -662,7 +674,7 @@ export default function DeliveryConfirmation() {
                         variant="secondary"
                         size="sm"
                         onClick={() => {
-                          console.log('[DeliveryConfirmation] Applying patient record address');
+                          logger.info('[DeliveryConfirmation] Applying patient record address');
                           updatePatientAddress.mutate({
                             patientName,
                             lineIds: lines.map(l => l.id),
@@ -698,7 +710,10 @@ export default function DeliveryConfirmation() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        console.log('[DeliveryConfirmation] Editing patient address. Lines:', lines.map(l => l.id), 'Patient ID:', lines[0].patient_id);
+                        logger.info('[DeliveryConfirmation] Editing patient address', { 
+                          lineIds: lines.map(l => l.id), 
+                          patientId: lines[0].patient_id 
+                        });
                         setEditingAddress({
                           type: 'patient',
                           patientId: lines[0].patient_id,
@@ -771,7 +786,7 @@ export default function DeliveryConfirmation() {
             if (editingAddress.type === 'practice') {
               updatePracticeAddress.mutate(address);
             } else if (editingAddress.patientName && editingAddress.lineIds) {
-              console.log('[DeliveryConfirmation] Saving patient address with patient ID:', editingAddress.patientId);
+              logger.info('[DeliveryConfirmation] Saving patient address', { patientId: editingAddress.patientId });
               updatePatientAddress.mutate({
                 patientName: editingAddress.patientName,
                 lineIds: editingAddress.lineIds,
