@@ -262,7 +262,9 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
-      console.error('Error creating account:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error creating account', error);
+      });
       
       // Extract the actual error message from the response
       let errorMessage = 'Failed to create account. Please try again.';

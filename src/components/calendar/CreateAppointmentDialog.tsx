@@ -57,16 +57,8 @@ export function CreateAppointmentDialog({
   // Debug logging for providers
   useEffect(() => {
     if (open) {
-      console.log('[CreateAppointmentDialog] Providers received:', providers);
-      console.log('[CreateAppointmentDialog] Number of providers:', providers?.length);
-      providers?.forEach((p, idx) => {
-        console.log(`[CreateAppointmentDialog] Provider ${idx}:`, {
-          id: p.id,
-          full_name: p.full_name,
-          first_name: p.first_name,
-          last_name: p.last_name,
-          raw: p
-        });
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('CreateAppointmentDialog providers', { count: providers?.length });
       });
     }
   }, [open, providers]);
@@ -114,7 +106,9 @@ export function CreateAppointmentDialog({
     if (open && isProviderAccount && !defaultProviderId) {
       const myProvider = providers.find(p => p.user_id === effectiveUserId);
       if (myProvider) {
-        console.log('[CreateAppointmentDialog] Auto-selecting logged-in provider:', myProvider.id);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.info('Auto-selecting logged-in provider');
+        });
         setValue('providerId', myProvider.id);
       }
     }
@@ -201,31 +195,29 @@ export function CreateAppointmentDialog({
 
       if (error) throw error;
 
-      console.log('[CreateAppointmentDialog] ✅ Appointment created:', {
-        id: data.id,
-        type: values.appointmentType,
-        status: isWalkIn ? 'checked_in' : 'scheduled',
-        isWalkIn,
-        patient_id: selectedPatientId,
-        start_time: startDateTime.toISOString(),
-        end_time: endDateTime.toISOString(),
-        created_at: new Date().toISOString()
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('Appointment created', { 
+          appointmentId: data.id,
+          type: values.appointmentType,
+          isWalkIn 
+        });
       });
       
       // Add extra logging for walk-ins
       if (isWalkIn) {
-        console.log('[CreateAppointmentDialog] 🚶 Walk-in appointment created - should appear in calendar immediately');
-        console.log('[CreateAppointmentDialog] Walk-in details:', {
-          appointment_id: data.id,
-          checked_in_at: data.checked_in_at,
-          status: data.status,
-          start_time: data.start_time
+        import('@/lib/logger').then(({ logger }) => {
+          logger.info('Walk-in appointment created', {
+            appointmentId: data.id,
+            status: data.status
+          });
         });
       }
 
       // If this is a video appointment, create video session via edge function
       if (values.visitType === 'video') {
-        console.log('[CreateAppointmentDialog] Creating video session via edge function');
+        import('@/lib/logger').then(({ logger }) => {
+          logger.info('Creating video session via edge function');
+        });
 
         const { data: videoSession, error: videoError } = await supabase.functions.invoke(
           'create-video-session',
@@ -242,11 +234,15 @@ export function CreateAppointmentDialog({
         );
 
         if (videoError) {
-          console.error('[CreateAppointmentDialog] Error creating video session:', videoError);
+          import('@/lib/logger').then(({ logger }) => {
+            logger.error('Error creating video session', videoError);
+          });
           throw videoError;
         }
 
-        console.log('[CreateAppointmentDialog] Video session created:', videoSession);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.info('Video session created', { hasSession: !!videoSession?.session?.id });
+        });
 
         // Link video session to appointment
         const sessionId = videoSession?.session?.id;
@@ -257,7 +253,9 @@ export function CreateAppointmentDialog({
             .eq('id', data.id);
 
           if (updateError) {
-            console.error('[CreateAppointmentDialog] Error linking video session:', updateError);
+            import('@/lib/logger').then(({ logger }) => {
+              logger.error('Error linking video session', updateError);
+            });
             throw updateError;
           }
 
@@ -321,9 +319,8 @@ export function CreateAppointmentDialog({
             providerJoinUrl = `${baseUrl}/practice/video/${data.video_session_id}`;
             patientJoinUrl = `${baseUrl}/patient/video/${data.video_session_id}`;
             
-            console.log('[CreateAppointmentDialog] Video join URLs generated:', {
-              provider: providerJoinUrl,
-              patient: patientJoinUrl
+            import('@/lib/logger').then(({ logger }) => {
+              logger.info('Video join URLs generated');
             });
           }
           
@@ -363,12 +360,18 @@ export function CreateAppointmentDialog({
               entity_id: data.id
             }
           });
-          console.log('[CreateAppointmentDialog] Notification sent for appointment:', data.id);
+          import('@/lib/logger').then(({ logger }) => {
+            logger.info('Notification sent for appointment');
+          });
         } catch (notifError) {
-          console.error('[CreateAppointmentDialog] Failed to send notification:', notifError);
+          import('@/lib/logger').then(({ logger }) => {
+            logger.error('Failed to send notification', notifError);
+          });
         }
       } else {
-        console.log('[CreateAppointmentDialog] No portal access for patient; skipping notifications.');
+        import('@/lib/logger').then(({ logger }) => {
+          logger.info('No portal access for patient; skipping notifications');
+        });
       }
       
       toast.success(

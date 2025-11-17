@@ -134,9 +134,11 @@ export const AccountsDataTable = () => {
         
         // Warn if practice_id points to a person (data integrity issue)
         if (p.staff_role_type || p.has_prescriber) {
-          console.warn(
-            `[Accounts] Suspicious practice_id: ${p.id} → "${p.name}" appears to be a person, not a practice`
-          );
+          import('@/lib/logger').then(({ logger }) => {
+            logger.warn('Suspicious practice_id - appears to be person not practice', { 
+              practiceId: p.id 
+            });
+          });
         }
       });
 

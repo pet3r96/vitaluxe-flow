@@ -71,7 +71,9 @@ export function PrintDayDialog({
       const { count } = await query;
       setPreviewCount(count || 0);
     } catch (error) {
-      console.error('Error loading preview:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error loading preview', error);
+      });
       toast({
         title: "Preview Error",
         description: "Failed to load appointment count.",
@@ -120,7 +122,9 @@ export function PrintDayDialog({
       onOpenChange(false);
 
     } catch (error: any) {
-      console.error('Error generating PDF:', error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Error generating PDF', error);
+      });
       
       let errorMessage = "Failed to generate schedule. Please try again.";
       if (error.message?.includes('authenticated')) {

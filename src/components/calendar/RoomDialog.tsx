@@ -78,7 +78,9 @@ export function RoomDialog({ open, onOpenChange, practiceId, room, onSuccess }: 
       toast.success(room ? "Room updated successfully" : "Room created successfully");
       onSuccess();
     } catch (error: any) {
-      console.error("Error saving room:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error saving room", error);
+      });
       toast.error(error.message || "Failed to save room");
     } finally {
       setIsSaving(false);

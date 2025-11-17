@@ -126,7 +126,9 @@ export function HoursOfOperationForm({ practiceId, currentSettings, onSuccess }:
       toast.success("Calendar settings updated successfully");
       onSuccess();
     } catch (error: any) {
-      console.error("Error saving settings:", error);
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error("Error saving settings", error);
+      });
       toast.error(error.message || "Failed to update settings");
     } finally {
       setIsSaving(false);
