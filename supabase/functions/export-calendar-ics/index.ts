@@ -1,5 +1,6 @@
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 function formatDateToICS(date: string): string {
   const d = new Date(date);
@@ -24,7 +25,7 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      console.error('Auth error:', authError);
+      edgeLogger.error('Auth error', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
     const { data: appointments, error: appointmentsError } = await query;
 
     if (appointmentsError) {
-      console.error('Error fetching appointments:', appointmentsError);
+      edgeLogger.error('Error fetching appointments', appointmentsError);
       throw appointmentsError;
     }
 
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
     const practiceIds = [...new Set(appointments?.map(apt => apt.practice_id).filter(Boolean) || [])];
     let practiceMap = new Map();
     
-    console.log(`Found ${practiceIds.length} unique practice IDs to fetch addresses for`);
+    edgeLogger.info('Found unique practice IDs to fetch addresses', { count: practiceIds.length });
     
     if (practiceIds.length > 0) {
       const { data: practices, error: practiceError } = await supabaseClient
@@ -157,11 +158,11 @@ Deno.serve(async (req) => {
         .in('id', practiceIds);
       
       if (practiceError) {
-        console.error('Error fetching practice addresses:', practiceError);
+        edgeLogger.error('Error fetching practice addresses', practiceError);
       }
       
       if (practices) {
-        console.log(`Successfully fetched ${practices.length} practice addresses`);
+        edgeLogger.info('Successfully fetched practice addresses', { count: practices.length });
         for (const practice of practices) {
           const addressParts = [];
           if (practice.address_street) addressParts.push(practice.address_street);
@@ -171,7 +172,6 @@ Deno.serve(async (req) => {
           
           const fullAddress = addressParts.join(', ');
           practiceMap.set(practice.id, fullAddress);
-          console.log(`Practice ${practice.id} address: ${fullAddress}`);
         }
       }
     }
@@ -202,11 +202,11 @@ X-WR-TIMEZONE:America/New_York
       if (apt.practice_id) {
         practiceAddress = practiceMap.get(apt.practice_id) || '';
         if (!practiceAddress) {
-          console.warn(`Appointment ${apt.id}: practice_id ${apt.practice_id} found but no address in map`);
-        }
-      } else {
-        console.warn(`Appointment ${apt.id}: Missing practice_id`);
+        edgeLogger.warn('Appointment practice_id found but no address in map', { appointmentId: apt.id, practiceId: apt.practice_id });
       }
+    } else {
+      edgeLogger.warn('Appointment missing practice_id', { appointmentId: apt.id });
+    }
       
       const location = practiceAddress ? `${roomName}, ${practiceAddress}` : roomName;
       

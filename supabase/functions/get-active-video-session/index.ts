@@ -1,5 +1,6 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -31,17 +32,17 @@ Deno.serve(async (req) => {
       );
       decodedUserId = payload.sub;
     } catch (e) {
-      console.error('[get-active-video-session] Failed to decode JWT:', e);
+      edgeLogger.error('[get-active-video-session] Failed to decode JWT', e);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[get-active-video-session] Auth decoded user:', decodedUserId);
+    edgeLogger.info('[get-active-video-session] Auth decoded user', { userId: decodedUserId });
 
     const userId = decodedUserId!;
-    console.log('[get-active-video-session] Looking for session for user:', userId);
+    edgeLogger.info('[get-active-video-session] Looking for session for user', { userId });
 
     // Check for impersonation
     const { data: impersonationData } = await supabaseAdmin
@@ -52,7 +53,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const effectiveUserId = impersonationData?.impersonated_user_id || userId;
-    console.log('[get-active-video-session] Effective user ID:', effectiveUserId);
+    edgeLogger.info('[get-active-video-session] Effective user ID', { effectiveUserId });
 
     // Get user's profile to determine their practice
     const { data: profile } = await supabaseAdmin
@@ -83,7 +84,7 @@ Deno.serve(async (req) => {
       .eq('user_id', effectiveUserId)
       .maybeSingle();
 
-    console.log('[get-active-video-session] Provider:', !!providerData, 'Patient:', !!patientData);
+    edgeLogger.info('[get-active-video-session] Role check', { isProvider: !!providerData, isPatient: !!patientData });
 
     // Build query for active sessions
     let sessionQuery = supabaseAdmin
@@ -120,12 +121,12 @@ Deno.serve(async (req) => {
     const { data: sessions, error: sessionError } = await sessionQuery;
 
     if (sessionError) {
-      console.error('[get-active-video-session] Session query error:', sessionError);
+      edgeLogger.error('[get-active-video-session] Session query error', sessionError);
       throw sessionError;
     }
 
     if (!sessions || sessions.length === 0) {
-      console.log('[get-active-video-session] No sessions found');
+      edgeLogger.info('[get-active-video-session] No sessions found');
       return new Response(
         JSON.stringify({ session: null, message: 'No active video session found' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -134,7 +135,7 @@ Deno.serve(async (req) => {
 
     // Return the most recent session
     const session = sessions[0];
-    console.log('[get-active-video-session] Found session:', session.id);
+    edgeLogger.info('[get-active-video-session] Found session', { sessionId: session.id });
 
     // Determine user role in this session
     let role = 'guest';
@@ -174,7 +175,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[get-active-video-session] Error:', error);
+    edgeLogger.error('[get-active-video-session] Error', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
