@@ -1453,7 +1453,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             target_user_email: targetEmail || '',
             target_user_name: userName || '',
             target_role: role,
-            session_id: session?.access_token?.substring(0, 20) || '',
           })
           .select('id')
           .single();
