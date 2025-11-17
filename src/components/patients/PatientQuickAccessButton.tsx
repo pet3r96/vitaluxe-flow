@@ -103,11 +103,11 @@ export function PatientQuickAccessButton({
 
       const pdfBlob = await generateMedicalVaultPDF(
         data.account,
-        data.medications,
-        data.conditions,
-        data.allergies,
-        data.vitals,
-        data.immunizations,
+        data.medications as any,
+        data.conditions as any,
+        data.allergies as any,
+        data.vitals as any,
+        data.immunizations as any,
         data.surgeries,
         data.pharmacies,
         data.emergencyContacts

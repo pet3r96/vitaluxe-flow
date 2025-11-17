@@ -177,11 +177,15 @@ export function WaitingRoomPanel({
       
       mergedVideoAppointments.push({
         id: `apt-${apt.id}`,
+        practice_id: practiceId,
         appointment_id: apt.id,
-        patient_id: apt.patient_id,
+        patient_id: apt.id,
         provider_id: apt.provider_id,
+        channel_name: `apt-${apt.id}`,
         scheduled_start_time: apt.start_time,
         status: apt.status === 'checked_in' ? 'waiting' : 'scheduled',
+        created_at: apt.created_at || new Date().toISOString(),
+        updated_at: apt.updated_at || new Date().toISOString(),
         isSynthetic: true,
         patient_appointments: {
           id: apt.id,
