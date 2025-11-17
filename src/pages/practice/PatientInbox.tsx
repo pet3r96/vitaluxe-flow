@@ -19,7 +19,7 @@ import { ThreadView } from "@/components/internal-chat/ThreadView";
 
 export default function PatientInbox() {
   const queryClient = useQueryClient();
-  const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [selectedMessage, setSelectedMessage] = useState<import("@/types/manual-schema").PatientMessageWithRelations | null>(null);
   const [replyText, setReplyText] = useState("");
   const [filterTab, setFilterTab] = useState<'active' | 'urgent' | 'resolved'>('active');
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,7 +52,8 @@ export default function PatientInbox() {
   });
 
   // Fetch conversation threads (grouped by thread_id)
-  const { data: messages, isLoading: messagesLoading } = useQuery({
+  // Fetch conversation threads (grouped by thread_id)
+  const { data: messages, isLoading: messagesLoading } = useQuery<import("@/types/manual-schema").PatientMessageWithRelations[]>({
     queryKey: ["patient-messages-inbox", practiceId, filterTab, searchQuery, selectedPatientFilter],
     queryFn: async () => {
       if (!practiceId) return [];
@@ -68,21 +69,21 @@ export default function PatientInbox() {
 
       // Apply tab filters
       if (filterTab === 'active') {
-        query = (query as any).eq('resolved', false);
+        query = query.eq('resolved', false) as typeof query;
       } else if (filterTab === 'urgent') {
-        query = (query as any).eq('urgency', 'urgent').eq('resolved', false);
+        query = query.eq('urgency', 'urgent').eq('resolved', false) as typeof query;
       } else if (filterTab === 'resolved') {
-        query = query.eq('resolved', true);
+        query = query.eq('resolved', true) as typeof query;
       }
 
       // Apply search
       if (searchQuery) {
-        query = query.or(`subject.ilike.%${searchQuery}%,message_body.ilike.%${searchQuery}%`);
+        query = query.or(`subject.ilike.%${searchQuery}%,message_body.ilike.%${searchQuery}%`) as typeof query;
       }
 
       // Apply patient filter
       if (selectedPatientFilter) {
-        query = query.eq('patient_id', selectedPatientFilter);
+        query = query.eq('patient_id', selectedPatientFilter) as typeof query;
       }
 
       const { data, error } = await query;
@@ -97,9 +98,9 @@ export default function PatientInbox() {
         }
       });
       
-      return Array.from(threadsMap.values()).sort((a, b) => 
+      return Array.from(threadsMap.values()).sort((a: any, b: any) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      ) as import("@/types/manual-schema").PatientMessageWithRelations[];
     },
     enabled: !!practiceId
   });

@@ -25,6 +25,7 @@ export async function fetchPatientMedicalData(patientId: string): Promise<Patien
     .limit(200);
 
   // Group records by type
+  // JSONB Boundary: vault records come from database with Json type for record_data
   const medications = vaultRecords?.filter(r => r.record_type === 'medication').slice(0, 50) || [];
   const conditions = vaultRecords?.filter(r => r.record_type === 'condition').slice(0, 50) || [];
   const allergies = vaultRecords?.filter(r => r.record_type === 'allergy').slice(0, 50) || [];
@@ -36,13 +37,13 @@ export async function fetchPatientMedicalData(patientId: string): Promise<Patien
 
   return {
     account,
-    medications: medications as any,
-    conditions: conditions as any,
-    allergies: allergies as any,
-    vitals: vitals as any,
-    immunizations: immunizations as any,
-    surgeries: surgeries as any,
-    pharmacies: pharmacies as any,
-    emergencyContacts: emergencyContacts as any,
+    medications: medications as any, // JSONB boundary cast
+    conditions: conditions as any, // JSONB boundary cast
+    allergies: allergies as any, // JSONB boundary cast
+    vitals: vitals as any, // JSONB boundary cast
+    immunizations: immunizations as any, // JSONB boundary cast
+    surgeries: surgeries as any, // JSONB boundary cast
+    pharmacies: pharmacies as any, // JSONB boundary cast
+    emergencyContacts: emergencyContacts as any, // JSONB boundary cast
   };
 }

@@ -33,17 +33,17 @@ const AdminAlerts = () => {
   const [detailsDialog, setDetailsDialog] = useState<AdminAlert | null>(null);
   const navigate = useNavigate();
 
-  // JUSTIFIED: Complex nested query causes TypeScript inference depth limit
-  const { data: alerts, refetch } = useQuery({
+  // Query admin alerts - using helper cast to avoid type inference depth
+  const { data: alerts, refetch } = useQuery<AdminAlert[]>({
     queryKey: ["admin-alerts", typeFilter, severityFilter, resolvedFilter],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query: any = supabase
         .from("admin_alerts")
         .select(`
           *,
           pharmacies (id, name)
         `)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false});
 
       if (typeFilter !== "all") {
         query = query.eq("alert_type", typeFilter);
