@@ -72,8 +72,14 @@ serve(async (req) => {
     console.log('[get-cart-count] Final count:', count || 0);
     
     return new Response(
-      JSON.stringify({ count: count || 0 }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ count: count || 0, cart_id: cart.id }),
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'max-age=5, stale-while-revalidate=10'
+        } 
+      }
     );
 
   } catch (error: any) {
