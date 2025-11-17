@@ -291,9 +291,6 @@ verify_jwt = false
 [functions.backfill-rep-links]
 verify_jwt = true
 
-[functions.get-dashboard-data]
-verify_jwt = true
-
 [functions.list-providers]
 verify_jwt = true
 
@@ -333,9 +330,6 @@ verify_jwt = true
 [functions.validate-appointment-time]
 verify_jwt = true
 
-[functions.validate-share-link]
-verify_jwt = false
-
 [functions.get-dashboard-stats]
 verify_jwt = true
 
@@ -372,9 +366,6 @@ verify_jwt = false
 [functions.generate-video-guest-link]
 verify_jwt = true
 
-[functions.validate-video-guest-link]
-verify_jwt = false
-
 [functions.ensure-video-session]
 verify_jwt = true
 
@@ -387,7 +378,7 @@ verify_jwt = true
 [functions.resolve-practice-room-join]
 verify_jwt = true
 
-[functions.validate-guest-token]
+[functions.validate-guest-access]
 verify_jwt = false
 
 [functions.create-instant-video-session]
