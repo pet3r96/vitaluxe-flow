@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import type { RepProductVisibilityRow, RepProductVisibilityUpsert } from "@/types/manual-schema";
 import {
   Table,
   TableBody,
@@ -72,14 +73,14 @@ export const ToplineProductVisibilityManager = () => {
       // Fetch visibility settings for this topline
       const { data: visibilitySettings, error: visError } = await supabase
         .from("rep_product_visibility" as any)
-        .select("product_id, visible")
-        .eq("topline_rep_id", toplineRepId) as any;
+        .select<'product_id, visible', RepProductVisibilityRow>('product_id, visible')
+        .eq("topline_rep_id", toplineRepId);
 
       if (visError) throw visError;
 
       // Merge the data - default ALL products to visible
       const visibilityMap = new Map<string, boolean>(
-        (visibilitySettings || []).map((v: any) => [v.product_id, v.visible as boolean])
+        visibilitySettings?.map(v => [v.product_id, v.visible]) || []
       );
 
       return allProducts.map(product => ({
@@ -103,12 +104,12 @@ export const ToplineProductVisibilityManager = () => {
 
       const { error } = await supabase
         .from("rep_product_visibility" as any)
-        .upsert({
+        .upsert<RepProductVisibilityUpsert>({
           topline_rep_id: toplineRepId,
           product_id: productId,
           visible: !currentVisible,
           updated_at: new Date().toISOString(),
-        }, { onConflict: "topline_rep_id,product_id" } as any);
+        }, { onConflict: "topline_rep_id,product_id" });
 
       if (error) throw error;
     },
@@ -135,7 +136,7 @@ export const ToplineProductVisibilityManager = () => {
       const { error } = await supabase
         .from("rep_product_visibility" as any)
         .delete()
-        .eq("topline_rep_id", toplineRepId) as any;
+        .eq("topline_rep_id", toplineRepId);
 
       if (error) throw error;
 

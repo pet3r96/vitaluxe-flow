@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { EdgeFunctionResponse, getEdgeFunctionError } from "@/types/edgeFunction";
+import type { PharmacyRepAssignmentRow, PharmacyRepAssignmentInsert } from "@/types/manual-schema";
 import {
   Dialog,
   DialogContent,
@@ -79,9 +80,9 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
   useEffect(() => {
     const fetchAssignments = async () => {
       if (pharmacy) {
-        const { data: assignments } = await (supabase as any)
-          .from("pharmacy_rep_assignments")
-          .select("topline_rep_id")
+        const { data: assignments } = await supabase
+          .from("pharmacy_rep_assignments" as any)
+          .select<'topline_rep_id', PharmacyRepAssignmentRow>('topline_rep_id')
           .eq("pharmacy_id", pharmacy.id);
         
         const assignedReps = assignments?.map(a => a.topline_rep_id) || [];
@@ -218,13 +219,13 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         
         // Handle scope assignments for new pharmacy
         if (newPharmacy && formData.scope_type === "scoped" && formData.assigned_topline_reps.length > 0) {
-          const assignments = formData.assigned_topline_reps.map(rep_id => ({
+          const assignments: PharmacyRepAssignmentInsert[] = formData.assigned_topline_reps.map(rep_id => ({
             pharmacy_id: newPharmacy.id,
             topline_rep_id: rep_id
           }));
           
-          const { error: assignError } = await (supabase as any)
-            .from("pharmacy_rep_assignments")
+          const { error: assignError } = await supabase
+            .from("pharmacy_rep_assignments" as any)
             .insert(assignments);
           
           if (assignError) throw assignError;
@@ -234,20 +235,20 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
       // Handle scope assignments for existing pharmacy
       if (pharmacy) {
         // Delete existing assignments
-        await (supabase as any)
-          .from("pharmacy_rep_assignments")
+        await supabase
+          .from("pharmacy_rep_assignments" as any)
           .delete()
           .eq("pharmacy_id", pharmacy.id);
         
         // Insert new assignments if scoped
         if (formData.scope_type === "scoped" && formData.assigned_topline_reps.length > 0) {
-          const assignments = formData.assigned_topline_reps.map(rep_id => ({
+          const assignments: PharmacyRepAssignmentInsert[] = formData.assigned_topline_reps.map(rep_id => ({
             pharmacy_id: pharmacy.id,
             topline_rep_id: rep_id
           }));
           
-          const { error: assignError } = await (supabase as any)
-            .from("pharmacy_rep_assignments")
+          const { error: assignError } = await supabase
+            .from("pharmacy_rep_assignments" as any)
             .insert(assignments);
           
           if (assignError) throw assignError;

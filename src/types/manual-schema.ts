@@ -6,7 +6,10 @@
 
 import type { Database } from '@/integrations/supabase/types';
 
-// Provider documents table (not in generated types)
+// ==================== MISSING DATABASE TABLES ====================
+// These tables exist in the database but are not in generated Supabase types
+
+// Provider documents table (accessed via RPC, not direct table)
 export interface ProviderDocument {
   id: string;
   practice_id: string;
@@ -20,6 +23,140 @@ export interface ProviderDocument {
   uploaded_by?: string;
   is_active?: boolean;
 }
+
+// Internal message replies table
+export interface InternalMessageReply {
+  id: string;
+  message_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InternalMessageReplyInsert {
+  message_id: string;
+  sender_id: string;
+  body: string;
+}
+
+// Rep product visibility table
+export interface RepProductVisibility {
+  id: string;
+  topline_rep_id: string;
+  product_id: string;
+  visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RepProductVisibilityRow {
+  product_id: string;
+  visible: boolean;
+}
+
+export interface RepProductVisibilityUpsert {
+  topline_rep_id: string;
+  product_id: string;
+  visible: boolean;
+  updated_at: string;
+}
+
+// Patient portal terms table
+export interface PatientPortalTerms {
+  id: string;
+  title: string;
+  content: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  updated_by?: string;
+}
+
+export interface PatientPortalTermsInsert {
+  title: string;
+  content: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  updated_by?: string;
+}
+
+export interface PatientPortalTermsUpdate {
+  title?: string;
+  content?: string;
+  version?: number;
+  updated_at?: string;
+  updated_by?: string;
+}
+
+// Checkout attestation table
+export interface CheckoutAttestation {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  content: string;
+  checkbox_text: string;
+  version: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  updated_by?: string;
+}
+
+export interface CheckoutAttestationUpdate {
+  title?: string;
+  subtitle?: string;
+  content?: string;
+  checkbox_text?: string;
+  version?: number;
+  updated_at?: string;
+  updated_by?: string;
+}
+
+// Subscription upgrade prompts table
+export interface SubscriptionUpgradePrompt {
+  id: string;
+  practice_id: string;
+  last_shown_at: string | null;
+  show_count: number;
+  permanently_dismissed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubscriptionUpgradePromptInsert {
+  practice_id: string;
+  last_shown_at?: string;
+  show_count?: number;
+  permanently_dismissed?: boolean;
+}
+
+export interface SubscriptionUpgradePromptUpdate {
+  last_shown_at?: string;
+  show_count?: number;
+  permanently_dismissed?: boolean;
+}
+
+// Pharmacy rep assignments table
+export interface PharmacyRepAssignment {
+  id: string;
+  pharmacy_id: string;
+  topline_rep_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PharmacyRepAssignmentInsert {
+  pharmacy_id: string;
+  topline_rep_id: string;
+}
+
+export interface PharmacyRepAssignmentRow {
+  topline_rep_id: string;
+}
+
+// ==================== EXISTING TYPES ====================
 
 // Rep product price overrides table
 export interface RepProductPriceOverride {
@@ -171,5 +308,35 @@ export interface SupabaseClientExtensions {
     Row: ProviderDocument;
     Insert: Omit<ProviderDocument, 'id' | 'uploaded_at'>;
     Update: Partial<Omit<ProviderDocument, 'id' | 'uploaded_at'>>;
+  };
+  internal_message_replies: {
+    Row: InternalMessageReply;
+    Insert: InternalMessageReplyInsert;
+    Update: Partial<Omit<InternalMessageReply, 'id' | 'created_at'>>;
+  };
+  rep_product_visibility: {
+    Row: RepProductVisibility;
+    Insert: Omit<RepProductVisibility, 'id' | 'created_at' | 'updated_at'>;
+    Update: Partial<Omit<RepProductVisibility, 'id' | 'created_at'>>;
+  };
+  patient_portal_terms: {
+    Row: PatientPortalTerms;
+    Insert: PatientPortalTermsInsert;
+    Update: PatientPortalTermsUpdate;
+  };
+  checkout_attestation: {
+    Row: CheckoutAttestation;
+    Insert: Omit<CheckoutAttestation, 'id' | 'created_at' | 'updated_at'>;
+    Update: CheckoutAttestationUpdate;
+  };
+  subscription_upgrade_prompts: {
+    Row: SubscriptionUpgradePrompt;
+    Insert: SubscriptionUpgradePromptInsert;
+    Update: SubscriptionUpgradePromptUpdate;
+  };
+  pharmacy_rep_assignments: {
+    Row: PharmacyRepAssignment;
+    Insert: PharmacyRepAssignmentInsert;
+    Update: Partial<Omit<PharmacyRepAssignment, 'id' | 'created_at'>>;
   };
 }

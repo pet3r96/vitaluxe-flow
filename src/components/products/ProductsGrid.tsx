@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
 import { resolveCartOwnerUserId } from "@/lib/cartOwnerResolver";
+import type { RepProductVisibilityRow } from "@/types/manual-schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -125,9 +126,9 @@ export const ProductsGrid = () => {
 
       console.log('[ProductsGrid] Fetching visibility for rep ID:', repId);
       
-      const { data, error } = await (supabase as any)
-        .from('rep_product_visibility')
-        .select('product_id, visible')
+      const { data, error } = await supabase
+        .from('rep_product_visibility' as any)
+        .select<'product_id, visible', RepProductVisibilityRow>('product_id, visible')
         .eq('topline_rep_id', repId);
       
       if (error) {

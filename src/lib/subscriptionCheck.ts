@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { PracticeSubscription, SubscriptionUpgradePrompt, SubscriptionStatus as SubscriptionStatusType } from "@/types/subscriptions";
+import type { PracticeSubscription, SubscriptionStatus as SubscriptionStatusType } from "@/types/subscriptions";
+import type { SubscriptionUpgradePrompt, SubscriptionUpgradePromptInsert, SubscriptionUpgradePromptUpdate } from "@/types/manual-schema";
 
 export interface SubscriptionStatus {
   isSubscribed: boolean;
@@ -103,19 +104,19 @@ export const shouldShowUpgradePrompt = async (practiceId: string): Promise<boole
   
   const { data, error } = await supabase
     .from('subscription_upgrade_prompts' as any)
-    .select('last_shown_at, permanently_dismissed')
+    .select<'last_shown_at, permanently_dismissed', Pick<SubscriptionUpgradePrompt, 'last_shown_at' | 'permanently_dismissed'>>('last_shown_at, permanently_dismissed')
     .eq('practice_id', practiceId)
     .maybeSingle();
     
   if (error) return true;
   if (!data) return true;
   
-  const prompt = data as unknown as SubscriptionUpgradePrompt;
-  if (prompt.permanently_dismissed) return false;
+  if (data.permanently_dismissed) return false;
   
-  if (prompt.last_shown_at) {
+  if (data.last_shown_at) {
+    const now = Date.now();
     const daysSinceLastShown = Math.floor(
-      (Date.now() - new Date(prompt.last_shown_at).getTime()) / (1000 * 60 * 60 * 24)
+      (now - new Date(data.last_shown_at).getTime()) / (1000 * 60 * 60 * 24)
     );
     return daysSinceLastShown >= 30;
   }
@@ -126,49 +127,47 @@ export const shouldShowUpgradePrompt = async (practiceId: string): Promise<boole
 export const updateUpgradePromptShown = async (practiceId: string): Promise<void> => {
   const { data: existing } = await supabase
     .from('subscription_upgrade_prompts' as any)
-    .select('id, show_count')
+    .select<'id, show_count', Pick<SubscriptionUpgradePrompt, 'id' | 'show_count'>>('id, show_count')
     .eq('practice_id', practiceId)
     .maybeSingle();
     
   if (existing) {
-    const prompt = existing as unknown as SubscriptionUpgradePrompt & { show_count?: number };
     await supabase
       .from('subscription_upgrade_prompts' as any)
-      .update({
+      .update<SubscriptionUpgradePromptUpdate>({
         last_shown_at: new Date().toISOString(),
-        show_count: (prompt.show_count || 0) + 1
-      } as any)
-      .eq('id', prompt.id);
+        show_count: (existing.show_count || 0) + 1
+      })
+      .eq('id', existing.id);
   } else {
     await supabase
       .from('subscription_upgrade_prompts' as any)
-      .insert({
+      .insert<SubscriptionUpgradePromptInsert>({
         practice_id: practiceId,
         last_shown_at: new Date().toISOString(),
         show_count: 1
-      } as any);
+      });
   }
 };
 
 export const dismissUpgradePromptPermanently = async (practiceId: string): Promise<void> => {
   const { data: existing } = await supabase
     .from('subscription_upgrade_prompts' as any)
-    .select('id')
+    .select<'id', Pick<SubscriptionUpgradePrompt, 'id'>>('id')
     .eq('practice_id', practiceId)
     .maybeSingle();
     
   if (existing) {
-    const prompt = existing as unknown as SubscriptionUpgradePrompt;
     await supabase
       .from('subscription_upgrade_prompts' as any)
-      .update({ permanently_dismissed: true } as any)
-      .eq('id', prompt.id);
+      .update<SubscriptionUpgradePromptUpdate>({ permanently_dismissed: true })
+      .eq('id', existing.id);
   } else {
     await supabase
       .from('subscription_upgrade_prompts' as any)
-      .insert({
+      .insert<SubscriptionUpgradePromptInsert>({
         practice_id: practiceId,
         permanently_dismissed: true
-      } as any);
+      });
   }
 };
