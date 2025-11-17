@@ -108,9 +108,9 @@ export function PatientQuickAccessButton({
         data.allergies as any,
         data.vitals as any,
         data.immunizations as any,
-        data.surgeries,
-        data.pharmacies,
-        data.emergencyContacts
+        data.surgeries as any,
+        data.pharmacies as any,
+        data.emergencyContacts as any
       );
 
       const pdfUrl = URL.createObjectURL(pdfBlob);
