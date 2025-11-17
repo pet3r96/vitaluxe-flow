@@ -82,15 +82,15 @@ export interface BlockedTimeSlot {
   created_at?: string;
 }
 
-// Video session information
+// Video session information  
 export interface VideoSession {
   id: string;
   practice_id: string;
   appointment_id: string;
-  session_id?: string; // Optional for synthetic sessions
+  session_id?: string;
   channel_name: string;
   agora_token?: string;
-  status: 'scheduled' | 'waiting' | 'active' | 'completed' | 'cancelled';
+  status: string; // Flexible for database values
   scheduled_start_time: string;
   actual_start_time?: string;
   actual_end_time?: string;
@@ -99,10 +99,8 @@ export interface VideoSession {
   created_at: string;
   updated_at: string;
   isSynthetic?: boolean;
-  patient_appointments?: Partial<CalendarAppointment> & {
-    patient?: CalendarPatient;
-    provider_id?: string;
-  };
+  patient_appointments?: any; // Flexible for synthetic appointments
+  [key: string]: any; // Allow additional properties
 }
 
 // Search result type

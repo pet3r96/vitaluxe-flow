@@ -16,20 +16,20 @@ export type {
   TypedVaultRecord,
 } from "@/types/vault/records";
 
-// Flexible vault record type for runtime data (database returns string, not literal types)
+// Flexible vault record type for runtime data (uses any for JSONB boundary as documented in vault.ts)
 interface VaultRecordBase {
   id: string;
   patient_account_id: string;
   record_type: string;
-  record_data: Record<string, unknown>;
+  record_data: any; // JSONB boundary - keep as any for runtime flexibility
   created_at: string;
   updated_at?: string;
   is_active?: boolean;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface PatientMedicalData {
-  account: any; // Database row type
+  account: any;
   medications: VaultRecordBase[];
   conditions: VaultRecordBase[];
   allergies: VaultRecordBase[];
