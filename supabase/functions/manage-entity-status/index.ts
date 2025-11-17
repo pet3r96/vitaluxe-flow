@@ -1,0 +1,302 @@
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { corsHeaders } from '../_shared/cors.ts';
+
+/**
+ * Consolidated Entity Status Management Endpoint
+ * Actions: provider-status, staff-status, practice-room, status-configs
+ */
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get('Authorization');
+    const supabaseClient = createAuthClient(authHeader);
+    const supabaseAdmin = createAdminClient();
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = await req.json();
+    const { action } = body;
+
+    console.log('[manage-entity-status] Action:', action, 'User:', user.id);
+
+    switch (action) {
+      case 'provider-status': {
+        // From manage-provider-status
+        const { providerId, active } = body;
+
+        if (!providerId) {
+          return new Response(
+            JSON.stringify({ error: 'providerId required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { data: roleData } = await supabaseClient
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+        
+        const role = roleData?.role;
+        const isDoctor = role === 'doctor';
+        const isAdmin = role === 'admin';
+        
+        if (!isDoctor && !isAdmin) {
+          return new Response(
+            JSON.stringify({ error: 'Only practices or admins can manage provider status' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        let providerQuery = supabaseClient
+          .from('providers')
+          .select('user_id, practice_id')
+          .eq('id', providerId);
+        
+        if (isDoctor) {
+          providerQuery = providerQuery.eq('practice_id', user.id);
+        }
+        
+        const { data: providerData, error: fetchError } = await providerQuery.single();
+
+        if (fetchError || !providerData) {
+          return new Response(
+            JSON.stringify({ error: 'Provider not found or access denied' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        let updateQuery = supabaseClient
+          .from('providers')
+          .update({ active, updated_at: new Date().toISOString() })
+          .eq('id', providerId);
+        
+        if (isDoctor) {
+          updateQuery = updateQuery.eq('practice_id', user.id);
+        }
+        
+        const { error: updateError } = await updateQuery;
+        if (updateError) throw updateError;
+
+        const { error: profileUpdateError } = await supabaseAdmin
+          .from('profiles')
+          .update({ active, updated_at: new Date().toISOString() })
+          .eq('id', providerData.user_id);
+
+        if (profileUpdateError) throw profileUpdateError;
+        
+        return new Response(
+          JSON.stringify({ success: true, message: active ? 'Provider activated' : 'Provider deactivated' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'staff-status': {
+        // From manage-staff-status
+        const { staffId, active, canOrder } = body;
+
+        if (!staffId) {
+          return new Response(
+            JSON.stringify({ error: 'Staff ID is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { data: roles } = await supabaseClient
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
+
+        const userRoles = roles?.map(r => r.role) || [];
+        const isAdmin = userRoles.includes('admin');
+        const isDoctor = userRoles.includes('doctor');
+
+        if (!isAdmin && !isDoctor) {
+          return new Response(
+            JSON.stringify({ error: 'Forbidden: Only admins and practice owners can manage staff' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const updateData: any = { updated_at: new Date().toISOString() };
+        if (active !== undefined) updateData.active = active;
+        if (canOrder !== undefined) updateData.can_order = canOrder;
+
+        const { data, error } = await supabaseAdmin
+          .from('practice_staff')
+          .update(updateData)
+          .eq('user_id', staffId)
+          .select()
+          .maybeSingle();
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'practice-room': {
+        // From manage-practice-room
+        const { practiceId, roomId, name, description, color, active, capacity, operation } = body;
+
+        if (!operation || !practiceId) {
+          throw new Error('Operation and practice ID are required');
+        }
+
+        let result;
+
+        if (operation === 'create') {
+          if (!name) throw new Error('Room name is required');
+
+          const { data, error } = await supabaseClient
+            .from('practice_rooms')
+            .insert({
+              practice_id: practiceId,
+              name,
+              description: description || null,
+              color: color || '#3B82F6',
+              active: active !== undefined ? active : true,
+              capacity: capacity || 1,
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          result = { success: true, data };
+        } else if (operation === 'update') {
+          if (!roomId) throw new Error('Room ID is required for update');
+
+          const updateData: any = { updated_at: new Date().toISOString() };
+          if (name !== undefined) updateData.name = name;
+          if (description !== undefined) updateData.description = description;
+          if (color !== undefined) updateData.color = color;
+          if (active !== undefined) updateData.active = active;
+          if (capacity !== undefined) updateData.capacity = capacity;
+
+          const { data, error } = await supabaseClient
+            .from('practice_rooms')
+            .update(updateData)
+            .eq('id', roomId)
+            .eq('practice_id', practiceId)
+            .select()
+            .single();
+
+          if (error) throw error;
+          result = { success: true, data };
+        } else if (operation === 'delete') {
+          if (!roomId) throw new Error('Room ID is required for delete');
+
+          const { error } = await supabaseClient
+            .from('practice_rooms')
+            .delete()
+            .eq('id', roomId)
+            .eq('practice_id', practiceId);
+
+          if (error) throw error;
+          result = { success: true };
+        }
+
+        return new Response(
+          JSON.stringify(result),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
+      case 'status-configs': {
+        // From manage-status-configs (simplified)
+        const { operation, statusConfig } = body;
+
+        const { data: roleData } = await supabaseClient
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!roleData || roleData.role !== 'admin') {
+          return new Response(
+            JSON.stringify({ error: 'Admin access required' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        let result;
+
+        if (operation === 'create') {
+          const { data, error } = await supabaseClient
+            .from('order_status_configs')
+            .insert({
+              status_key: statusConfig.status_key,
+              display_name: statusConfig.display_name,
+              description: statusConfig.description || null,
+              color_class: statusConfig.color_class,
+              sort_order: statusConfig.sort_order,
+              is_active: statusConfig.is_active !== false,
+              is_system_default: false,
+              created_by: user.id,
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          result = data;
+        } else if (operation === 'update') {
+          const updateData: any = { updated_at: new Date().toISOString() };
+          if (statusConfig.display_name) updateData.display_name = statusConfig.display_name;
+          if (statusConfig.description !== undefined) updateData.description = statusConfig.description;
+          if (statusConfig.color_class) updateData.color_class = statusConfig.color_class;
+          if (statusConfig.sort_order !== undefined) updateData.sort_order = statusConfig.sort_order;
+          if (statusConfig.is_active !== undefined) updateData.is_active = statusConfig.is_active;
+
+          const { data, error } = await supabaseClient
+            .from('order_status_configs')
+            .update(updateData)
+            .eq('id', statusConfig.id)
+            .select()
+            .single();
+
+          if (error) throw error;
+          result = data;
+        } else if (operation === 'delete') {
+          const { error } = await supabaseClient
+            .from('order_status_configs')
+            .update({ is_active: false, updated_at: new Date().toISOString() })
+            .eq('id', statusConfig.id);
+
+          if (error) throw error;
+          result = { success: true };
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, data: result }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      default:
+        return new Response(
+          JSON.stringify({ error: `Invalid action: ${action}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+    }
+
+  } catch (error: any) {
+    console.error('[manage-entity-status] Error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message || 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
