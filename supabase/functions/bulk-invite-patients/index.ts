@@ -2,6 +2,7 @@ import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 interface BulkInviteRequest {
   patientIds: string[];
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', new Error(csrfError || 'Invalid CSRF token'), { userId: user.id });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
         }
 
         // Call send-welcome-email function (replaces deprecated send-patient-welcome-email)
-        console.log(`[bulk-invite-patients] Calling send-welcome-email for patient portal access`);
+        edgeLogger.info('Calling send-welcome-email for patient portal access', { patientId });
         const sendEmailResponse = await fetch(
           `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-welcome-email`,
           {
@@ -142,7 +143,7 @@ Deno.serve(async (req) => {
 
         results.successful++;
       } catch (error: any) {
-        console.error(`Failed to invite patient ${patientId}:`, error);
+        edgeLogger.error('Failed to invite patient', error, { patientId });
         results.failed++;
         results.errors.push({
           patientId,
@@ -165,7 +166,7 @@ Deno.serve(async (req) => {
         }
       });
     } catch (auditError) {
-      console.error('Failed to log audit event:', auditError);
+      edgeLogger.error('Failed to log audit event', auditError instanceof Error ? auditError : new Error(String(auditError)));
     }
 
     return new Response(
@@ -174,7 +175,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Error in bulk-invite-patients function:', error);
+    edgeLogger.error('Error in bulk-invite-patients function', error);
     return new Response(
       JSON.stringify({ 
         success: false, 

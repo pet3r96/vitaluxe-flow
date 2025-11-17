@@ -1,17 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    console.log('[get-patient-practice] Invoked');
+    edgeLogger.info('Function invoked');
     
     const authHeader = req.headers.get('Authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
     
     if (!token) {
-      console.error('[get-patient-practice] Missing authorization token');
+      edgeLogger.error('Missing authorization token', new Error('No auth token provided'));
       return new Response(JSON.stringify({ error: 'Missing authorization token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -27,17 +28,17 @@ Deno.serve(async (req) => {
     // Verify user authentication
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !user) {
-      console.error('[get-patient-practice] Authentication failed:', userError);
+      edgeLogger.error('Authentication failed', userError || new Error('User not found'));
       return new Response(JSON.stringify({ error: 'Not authenticated' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('[get-patient-practice] User authenticated:', user.id);
+    edgeLogger.info('User authenticated', { userId: user.id });
 
     // Check for active impersonation session using service role
-    console.log('[get-patient-practice] Checking impersonation for admin:', user.id);
+    edgeLogger.info('Checking impersonation for admin', { userId: user.id });
     const { data: impersonationSession, error: impersonationError } = await supabaseAdmin
       .from('active_impersonation_sessions')
       .select('impersonated_user_id, impersonated_role')
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
     
-    console.log('[get-patient-practice] Impersonation query result:', { 
+    edgeLogger.info('Impersonation query result', {
       found: !!impersonationSession, 
       role: impersonationSession?.impersonated_role,
       impersonated_id: impersonationSession?.impersonated_user_id,
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
     });
 
     if (impersonationError) {
-      console.error('[get-patient-practice] Impersonation check error:', impersonationError);
+      edgeLogger.error('Impersonation check error', impersonationError);
     }
 
     // Use impersonated user ID if impersonating as patient, otherwise use actual user ID
@@ -61,7 +62,7 @@ Deno.serve(async (req) => {
       ? impersonationSession.impersonated_user_id 
       : user.id;
 
-    console.log('[get-patient-practice] Effective user ID:', effectiveUserId, 'Impersonating:', !!impersonationSession);
+    edgeLogger.info('Effective user ID', { effectiveUserId, isImpersonating: !!impersonationSession });
 
     // Get patient account and practice info using service role to bypass RLS during impersonation
     const { data: patientAccount, error: patientError } = await supabaseAdmin
@@ -74,10 +75,10 @@ Deno.serve(async (req) => {
       .eq('user_id', effectiveUserId)
       .maybeSingle();
 
-    console.log('[get-patient-practice] Patient account lookup:', { patientAccount, error: patientError });
+    edgeLogger.info('Patient account lookup', { found: !!patientAccount, hasError: !!patientError });
 
     if (patientError) {
-      console.error('[get-patient-practice] Database error:', patientError);
+      edgeLogger.error('Database error', patientError);
       return new Response(JSON.stringify({ error: 'Failed to fetch patient data' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
     }
 
     if (!patientAccount) {
-      console.error('[get-patient-practice] Patient account not found');
+      edgeLogger.error('Patient account not found', new Error('Patient account not found'));
       return new Response(JSON.stringify({ error: 'Patient account not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -105,13 +106,13 @@ Deno.serve(async (req) => {
       } : null
     };
 
-    console.log('[get-patient-practice] Successfully fetched data:', response);
+    edgeLogger.info('Successfully fetched data', { hasPractice: !!response.practice });
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('[get-patient-practice] Unexpected error:', error);
+    edgeLogger.error('Unexpected error', error);
     return new Response(JSON.stringify({ error: error.message || 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

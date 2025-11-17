@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { generateSecurePassword } from '../_shared/passwordGenerator.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 interface CreatePortalAccountRequest {
   patientId: string;
@@ -69,7 +70,7 @@ Deno.serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', new Error(csrfError || 'Invalid CSRF token'), { userId: user.id });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -111,16 +112,16 @@ Deno.serve(async (req) => {
         .select('practice_id, name, email')
         .eq('id', patientId)
         .maybeSingle();
-      
-      console.log('[create-patient-portal-account] Patient lookup result:', { 
+
+      edgeLogger.info('Patient lookup result', {
         found: !!patientData,
         practiceId: patientData?.practice_id,
         patientName: patientData?.name,
         error: patientError?.message 
       });
-      
+
       if (patientError) {
-        console.error('[create-patient-portal-account] Patient lookup failed:', patientError);
+        edgeLogger.error('Patient lookup failed', patientError);
         return new Response(
           JSON.stringify({ 
             error: 'Patient not found',
@@ -145,7 +146,7 @@ Deno.serve(async (req) => {
           patientName: patientData.name
         });
       } else {
-        console.error('[create-patient-portal-account] Patient has no practice_id');
+        edgeLogger.error('Patient has no practice_id', new Error('Patient missing practice_id'));
         return new Response(
           JSON.stringify({ error: 'Patient is not associated with a practice' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -239,8 +240,8 @@ Deno.serve(async (req) => {
         .select('status, trial_ends_at, current_period_end, practice_id')
         .eq('practice_id', effectivePracticeId)
         .maybeSingle();
-      
-      console.error('[create-patient-portal-account] Any subscription found:', anySubscription);
+
+      edgeLogger.error('Any subscription found', new Error('Subscription missing or invalid'), { anySubscription: !!anySubscription });
       
       return new Response(
         JSON.stringify({ 
@@ -256,8 +257,8 @@ Deno.serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    console.log('[create-patient-portal-account] Subscription verified:', {
+
+    edgeLogger.info('Subscription verified', {
       practiceId: effectivePracticeId,
       status: subscription.status
     });
@@ -293,7 +294,7 @@ Deno.serve(async (req) => {
       .eq('id', patientId)
       .maybeSingle();
 
-    console.log('[create-patient-portal-account] Patient query result:', {
+    edgeLogger.info('Patient query result', {
       found: !!patient,
       error: patientError?.message,
       errorCode: patientError?.code,
@@ -424,7 +425,7 @@ Deno.serve(async (req) => {
           }
         });
       } catch (auditError) {
-        console.error('Failed to log audit event (reinvite):', auditError);
+        edgeLogger.error('Failed to log audit event (reinvite)', auditError instanceof Error ? auditError : new Error(String(auditError)));
       }
 
       return new Response(
@@ -493,9 +494,9 @@ Deno.serve(async (req) => {
           } else {
             console.error('[PATIENT PORTAL] Failed to find user after registration error:', createAuthError);
             throw new Error(`User registration conflict: ${createAuthError.message}`);
-          }
-        } else {
-          console.error('[PATIENT PORTAL] Failed to create auth user:', createAuthError);
+            }
+          } else {
+            edgeLogger.error('Failed to create auth user', createAuthError);
           throw new Error(`Failed to create auth user: ${createAuthError.message}`);
         }
       } else if (!newAuthUser.user) {
@@ -580,7 +581,7 @@ Deno.serve(async (req) => {
       });
 
     if (tokenError) {
-      console.error('Failed to create temp password token:', tokenError);
+      edgeLogger.error('Failed to create temp password token', tokenError);
       // Don't fail the entire request
     }
 
@@ -598,10 +599,10 @@ Deno.serve(async (req) => {
         }
       });
     } catch (auditError) {
-      console.error('Failed to log audit event:', auditError);
+      edgeLogger.error('Failed to log audit event', auditError instanceof Error ? auditError : new Error(String(auditError)));
     }
 
-    console.log('[PATIENT PORTAL] ✅ Account creation completed successfully:', {
+    edgeLogger.info('Account creation completed successfully', {
       patientAccountId: patientAccount.id,
       authUserId,
       email: normalizedEmail,
