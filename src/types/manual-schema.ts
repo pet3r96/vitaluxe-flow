@@ -136,6 +136,26 @@ export interface OrdersByStatusRow {
   count: number;
 }
 
+// Rep product price overrides table (in public schema, not always in generated types)
+export interface RepProductPriceOverrideRow {
+  id: string;
+  rep_id: string;
+  product_id: string;
+  override_topline_price: number | null;
+  override_downline_price: number | null;
+  override_retail_price: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RepProductPriceOverrideInsert {
+  rep_id: string;
+  product_id: string;
+  override_topline_price?: number | null;
+  override_downline_price?: number | null;
+  override_retail_price?: number | null;
+}
+
 // Type guard helpers
 export function isProviderDocument(doc: any): doc is ProviderDocument {
   return doc && typeof doc.practice_id === 'string' && typeof doc.document_name === 'string';

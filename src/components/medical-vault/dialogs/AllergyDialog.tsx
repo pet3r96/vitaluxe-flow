@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asAllergy } from "@/lib/vault";
+import { insertVaultRecord, type AllergyRecordData } from "@/lib/medicalVaultInsert";
 
 const allergySchema = z.object({
   nka: z.boolean().optional(),
@@ -106,17 +107,20 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
   const mutation = useOptimisticMutation(
     async (data: AllergyFormData) => {
       // Check for conflicts before submission
-      const existingResult = await (supabase as any)
-        .from("patient_medical_vault")
+      // Note: Query must bypass Supabase generated types due to JSONB deep instantiation errors
+      const vaultQuery: any = supabase.from("patient_medical_vault");
+      const { data: existingRecords, error: queryError } = await vaultQuery
         .select("id, record_data")
         .eq("patient_account_id", patientAccountId)
         .eq("record_type", "allergy")
         .eq("is_active", true);
 
-      const existingAllergies = existingResult.data?.map(r => ({ 
+      if (queryError) throw queryError;
+
+      const existingAllergies = (existingRecords || []).map((r: any) => ({ 
         id: r.id, 
-        nka: (r.record_data as any)?.nka || false 
-      })) || [];
+        nka: (r.record_data as { nka?: boolean })?.nka || false 
+      }));
 
       // If adding NKA, check for existing specific allergies
       if (data.nka) {
@@ -155,17 +159,25 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           .eq("id", allergy.id);
         if (error) throw error;
       } else {
-        const insertData = {
+        const recordData: AllergyRecordData = {
+          nka: data.nka || false,
+          allergen_name: data.allergen_name || null,
+          reaction_type: data.reaction_type || null,
+          severity: data.severity || null,
+          date_recorded: fullDate,
+          notes: data.notes || null,
+        };
+        
+        const { error } = await insertVaultRecord(supabase, {
           record_type: "allergy",
-          record_data: recordData as any,
+          record_data: recordData,
           patient_account_id: patientAccountId,
-          is_active: true,
+          patient_id: patientAccountId, // In medical vault context, these are the same
+          title: data.nka ? "No Known Allergies" : (data.allergen_name || "Allergy"),
           created_by_user_id: user?.id,
           created_by_role: mapRoleToAuditRole(effectiveRole),
-        };
-        const { error } = await (supabase as any)
-          .from("patient_medical_vault")
-          .insert(insertData);
+          is_active: true,
+        });
         if (error) throw error;
       }
     },
