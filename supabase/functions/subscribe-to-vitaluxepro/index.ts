@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,7 +69,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (impErr) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.warn('Impersonation lookup error');
     }
 
@@ -83,7 +83,6 @@ serve(async (req) => {
         impersonatedRole = impSession.impersonated_role;
         if (impSession.impersonated_role === 'doctor') {
           practiceId = impSession.impersonated_user_id;
-          const { edgeLogger } = await import('../_shared/logger.ts');
           edgeLogger.info('Using impersonated doctor as practice');
         } else if (impSession.impersonated_role === 'provider') {
           const { data: provider, error: provErr } = await supabaseAdmin
@@ -92,16 +91,13 @@ serve(async (req) => {
             .eq('user_id', impSession.impersonated_user_id)
             .single();
           if (provErr) {
-            const { edgeLogger } = await import('../_shared/logger.ts');
             edgeLogger.warn('Provider lookup failed for impersonated provider');
           } else if (provider?.practice_id) {
             practiceId = provider.practice_id as string;
-            const { edgeLogger } = await import('../_shared/logger.ts');
             edgeLogger.info('Using provider practice_id from impersonation');
           }
         }
       } else {
-        const { edgeLogger } = await import('../_shared/logger.ts');
         edgeLogger.info('Ignoring expired impersonation session');
       }
     }
@@ -118,7 +114,6 @@ serve(async (req) => {
       const roles = (userRoles || []).map((r: any) => r.role);
       if (roles.includes('doctor')) {
         practiceId = actorUserId;
-        const { edgeLogger } = await import('../_shared/logger.ts');
         edgeLogger.info('Using self (doctor) as practice');
       }
     }
@@ -132,7 +127,6 @@ serve(async (req) => {
         .single();
       if (!selfProvErr && selfProvider?.practice_id) {
         // Provider trying to subscribe directly - BLOCK THIS
-        const { edgeLogger } = await import('../_shared/logger.ts');
         edgeLogger.warn('Provider attempted direct subscription - blocked');
         return new Response(
           JSON.stringify({
@@ -145,7 +139,6 @@ serve(async (req) => {
     }
 
     if (!practiceId) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.warn('No valid practice context resolved');
       return new Response(
         JSON.stringify({
@@ -164,7 +157,6 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('Practice profile not found', profileError);
       return new Response(
         JSON.stringify({ error: 'Practice profile not found' }),
@@ -172,7 +164,6 @@ serve(async (req) => {
       );
     }
 
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.info('Effective practice resolved for subscription');
 
     // Check if subscription already exists (use service role)
@@ -189,7 +180,6 @@ serve(async (req) => {
     if (existingSub) {
       // Subscription exists - reactivate ONLY if cancelled or expired (NO new trial)
       if (existingSub.status === 'cancelled' || existingSub.status === 'expired') {
-        const { edgeLogger } = await import('../_shared/logger.ts');
         edgeLogger.info('Reactivating subscription without new trial');
 
         // DO NOT give another trial - just reactivate as active (requires payment)

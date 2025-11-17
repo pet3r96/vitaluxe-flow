@@ -47,7 +47,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.info('User authenticated for send message');
 
     // Parse and validate request body with Zod schema
