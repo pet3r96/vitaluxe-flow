@@ -11,6 +11,7 @@ import { SubscriptionOverview } from "@/components/subscription/SubscriptionOver
 import { PaymentMethodManager } from "@/components/subscription/PaymentMethodManager";
 import { InvoiceList } from "@/components/subscription/InvoiceList";
 import { SubscriptionActionsCard } from "@/components/subscription/SubscriptionActionsCard";
+import { logger } from "@/lib/logger";
 
 export default function MySubscription() {
   const { effectiveRole, isProviderAccount, effectivePracticeId, user } = useAuth();
@@ -45,7 +46,7 @@ export default function MySubscription() {
         
         setSubscriptionData(data);
       } catch (err: any) {
-        console.error("Error fetching subscription details:", err);
+        logger.error("Error fetching subscription details", err);
         setError(err.message || "Failed to load subscription details");
       } finally {
         setLoading(false);
