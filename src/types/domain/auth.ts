@@ -29,5 +29,5 @@ export interface TwoFAStatus {
  */
 export interface PasswordStatusData {
   must_change_password: boolean;
-  terms_accepted: boolean;
+  // terms_accepted removed - checked via user_terms_acceptances table instead
 }
