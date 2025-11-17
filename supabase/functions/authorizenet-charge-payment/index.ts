@@ -1,6 +1,7 @@
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,14 +37,14 @@ Deno.serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Charging payment for order ${order_id}, amount: $${amount}`);
+    edgeLogger.info("Charging payment for order", { order_id, amount });
 
     // Fetch the order to get the doctor_id (practice owner)
     const { data: order, error: orderError } = await supabase
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (orderError || !order) {
-      console.error('Order not found:', orderError);
+      edgeLogger.error('Order not found', orderError);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -63,8 +64,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Order ${order_id} placed by practice ${order.doctor_id}`);
-    console.log(`Verifying payment method ${payment_method_id}...`);
+    edgeLogger.info("Order found", { order_id, practice_id: order.doctor_id });
+    edgeLogger.info("Verifying payment method", { payment_method_id });
 
     // Fetch payment method (no practice_id filter initially)
     const { data: paymentMethod, error: pmError } = await supabase
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (pmError || !paymentMethod) {
-      console.error('Payment method not found:', pmError);
+      edgeLogger.error('Payment method not found', pmError);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -86,21 +87,21 @@ Deno.serve(async (req) => {
 
     // Get the current user placing the order
     const currentUserId = user.id;
-    console.log('Authorization check starting:', { currentUserId, order_doctor_id: order.doctor_id, payment_method_practice_id: paymentMethod.practice_id });
+    edgeLogger.info('Authorization check starting', { currentUserId, order_doctor_id: order.doctor_id, payment_method_practice_id: paymentMethod.practice_id });
 
     // Verify ownership: payment method must belong to the practice or the user must be authorized
     let isAuthorized = false;
 
     // Case 1: Payment method belongs to the practice that owns the order
     if (paymentMethod.practice_id === order.doctor_id) {
-      console.log('✓ Payment authorized: practice card');
+      edgeLogger.info('Payment authorized: practice card');
       isAuthorized = true;
     } else if (currentUserId === order.doctor_id) {
       // Case 2: Current user is the practice owner
-      console.log('✓ Payment authorized: practice owner');
+      edgeLogger.info('Payment authorized: practice owner');
       isAuthorized = true;
     } else {
-      console.log('Checking staff/provider membership for user on practice...');
+      edgeLogger.info('Checking staff/provider membership for user on practice');
       // Check if user is a provider for this practice
       const { data: providerLink } = await supabaseAdmin
         .from('providers')
@@ -119,19 +120,19 @@ Deno.serve(async (req) => {
         .eq('active', true)
         .maybeSingle();
 
-      console.log('Membership checks:', { hasProviderLink: !!providerLink, hasStaffMembership: !!staffMembership });
+      edgeLogger.info('Membership checks', { hasProviderLink: !!providerLink, hasStaffMembership: !!staffMembership });
 
       if (providerLink || staffMembership) {
         // User is linked to this practice: allow practice card or personal card
         if (paymentMethod.practice_id === order.doctor_id || paymentMethod.practice_id === currentUserId) {
-          console.log('✓ Payment authorized: linked user using practice or personal card');
+          edgeLogger.info('Payment authorized: linked user using practice or personal card');
           isAuthorized = true;
         }
       }
     }
 
     if (!isAuthorized) {
-      console.error('Payment authorization failed', {
+      edgeLogger.error('Payment authorization failed', undefined, {
         payment_method_practice_id: paymentMethod.practice_id,
         order_doctor_id: order.doctor_id,
         current_user_id: currentUserId
@@ -156,11 +157,11 @@ Deno.serve(async (req) => {
     if (lastFour === '0000') {
       // Test card - guaranteed success
       isSuccess = true;
-      console.log('Test card detected (0000) - forcing success');
+      edgeLogger.info('Test card detected (0000) - forcing success');
     } else if (lastFour === '1111') {
       // Test card - guaranteed failure
       isSuccess = false;
-      console.log('Test card detected (1111) - forcing failure');
+      edgeLogger.info('Test card detected (1111) - forcing failure');
     } else {
       // Real cards - simulate 90% success rate
       isSuccess = Math.random() > 0.1;
@@ -182,7 +183,7 @@ Deno.serve(async (req) => {
         .eq('id', order_id);
 
       if (updateError) {
-        console.error('Error updating order:', updateError);
+        edgeLogger.error('Error updating order', updateError);
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -192,7 +193,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      console.log(`Payment successful: ${mockTransactionId}`);
+      edgeLogger.info("Payment successful", { transaction_id: mockTransactionId });
 
       return new Response(
         JSON.stringify({
@@ -210,7 +211,7 @@ Deno.serve(async (req) => {
       );
     } else {
       // Simulate payment failure
-      console.log(`Payment failed for order ${order_id}`);
+      edgeLogger.info("Payment failed for order", { order_id });
       
       // Mark payment method as declined
       const { error: updateError } = await supabaseAdmin
@@ -219,7 +220,7 @@ Deno.serve(async (req) => {
         .eq('id', payment_method_id);
         
       if (updateError) {
-        console.error('Failed to mark payment method as declined:', updateError);
+        edgeLogger.error('Failed to mark payment method as declined', updateError);
       }
       
       return new Response(
@@ -239,7 +240,7 @@ Deno.serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    edgeLogger.error('Unexpected error in authorizenet-charge-payment', error);
     return new Response(
       JSON.stringify({ 
         success: false, 

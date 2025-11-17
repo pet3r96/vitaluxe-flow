@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { bookAppointmentSchema, validateInput } from '../_shared/zodSchemas.ts';
 import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const normalizePhoneToE164 = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
     }
 
     const { providerId, appointmentDate, appointmentTime, clientDateTimeIso, timezoneOffsetMinutes, reasonForVisit, visitType, notes } = validation.data;
-    console.log('[book-appointment] Request data:', { providerId, appointmentDate, appointmentTime, clientDateTimeIso, reasonForVisit, visitType });
+    edgeLogger.info('Book appointment request', { providerId, appointmentDate, appointmentTime, visitType });
 
     // Get patient's assigned practice from patient_accounts using effective user ID
     const { data: patientAccount, error: patientError } = await supabaseClient
@@ -169,7 +170,7 @@ Deno.serve(async (req) => {
     if (error) throw error;
 
     // Send notification to patient
-    console.log('[book-appointment] Sending notification for appointment:', data.id);
+    edgeLogger.info('Sending notification for appointment', { appointmentId: data.id });
     
     const { data: patientWithUser, error: patientUserError } = await supabaseClient
       .from('patient_accounts')
@@ -178,7 +179,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (patientUserError) {
-      console.error('[book-appointment] Error fetching patient user data:', patientUserError);
+      edgeLogger.error('Error fetching patient user data', patientUserError);
     } else if (patientWithUser) {
       const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
       const appointmentDateFormatted = new Date(data.start_time).toLocaleDateString();
@@ -192,7 +193,7 @@ Deno.serve(async (req) => {
         .single();
       
       if (practiceError) {
-        console.error('[book-appointment] Error fetching practice address:', practiceError);
+        edgeLogger.error('Error fetching practice address', practiceError);
       }
       
       const isVideo = visitType === 'video';
@@ -225,13 +226,13 @@ Deno.serve(async (req) => {
               }
             }
           });
-          console.log('[book-appointment] Notification sent via handleNotifications');
+          edgeLogger.info('Notification sent via handleNotifications');
         } catch (notifError) {
-          console.error('[book-appointment] Error calling handleNotifications:', notifError);
+          edgeLogger.error('Error calling handleNotifications', notifError);
         }
       } else {
         // No portal access - send email/SMS directly
-        console.log('[book-appointment] Patient has no portal access, sending direct email/SMS');
+        edgeLogger.info('Patient has no portal access, sending direct email/SMS');
         
         let directMessage;
         if (isVideo) {
@@ -271,9 +272,9 @@ Deno.serve(async (req) => {
                 eventType: 'appointment_confirmation'
               }
             });
-            console.log('[book-appointment] Email sent to:', patientWithUser.email);
+            edgeLogger.info('Email sent to patient', { email: patientWithUser.email });
           } catch (emailError) {
-            console.error('[book-appointment] Error sending email:', emailError);
+            edgeLogger.error('Error sending email', emailError);
           }
         }
         

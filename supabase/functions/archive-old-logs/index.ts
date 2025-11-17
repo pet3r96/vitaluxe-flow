@@ -17,21 +17,23 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    console.log("Starting log archival process...");
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info("Starting log archival process");
 
     // Call the database function
     const { data, error } = await supabaseClient.rpc("archive_old_audit_logs");
 
     if (error) throw error;
 
-    console.log(`Successfully archived ${data} logs`);
+    edgeLogger.info("Successfully archived logs", { count: data });
 
     return new Response(
       JSON.stringify({ success: true, archived_count: data }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error archiving logs:", error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error("Error archiving logs", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
