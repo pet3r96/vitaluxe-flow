@@ -29,6 +29,8 @@
  * }
  */
 
+import { edgeLogger } from './logger.ts';
+
 export interface RateLimitConfig {
   maxRequests: number;    // Maximum requests allowed in the time window
   windowSeconds: number;  // Time window in seconds
@@ -64,7 +66,7 @@ export class RateLimiter {
     
     // Check if limit is exceeded
     if (timestamps.length >= config.maxRequests) {
-      console.warn(`⚠️ Rate limit exceeded for ${ip} on ${endpoint}`);
+      edgeLogger.warn('Rate limit exceeded', { ip, endpoint });
       
       // Log rate limit violation to security_events
       try {
@@ -81,7 +83,7 @@ export class RateLimiter {
           },
         });
       } catch (error) {
-        console.error('Failed to log rate limit violation:', error);
+        edgeLogger.error('Failed to log rate limit violation', error);
       }
 
       return { allowed: false, remaining: 0 };

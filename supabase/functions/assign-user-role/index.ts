@@ -120,7 +120,7 @@ serve(async (req) => {
         isAdminCreated: signupData.isAdminCreated
       });
     } catch (error) {
-      console.error('[assign-user-role] JSON parsing error:', error);
+      edgeLogger.error('[assign-user-role] JSON parsing error', error);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -135,7 +135,7 @@ serve(async (req) => {
     });
     
     if (!basicValidation.valid) {
-      console.warn('Basic validation failed:', basicValidation.errors);
+      edgeLogger.warn('Basic validation failed', { errors: basicValidation.errors });
       return new Response(
         JSON.stringify({ error: 'Invalid request data', details: basicValidation.errors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -152,7 +152,7 @@ serve(async (req) => {
     if (signupData.roleData.phone) {
       const phoneResult = validatePhone(signupData.roleData.phone);
       if (!phoneResult.valid) {
-        console.error('Phone validation failed:', phoneResult.error);
+        edgeLogger.error('Phone validation failed', null, { error: phoneResult.error });
         return new Response(
           JSON.stringify({ error: `Phone validation: ${phoneResult.error}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -164,7 +164,7 @@ serve(async (req) => {
     if (signupData.role === 'doctor' && signupData.roleData.npi) {
       const npiResult = validateNPI(signupData.roleData.npi);
       if (!npiResult.valid) {
-        console.error('NPI validation failed:', npiResult.error);
+        edgeLogger.error('NPI validation failed', null, { error: npiResult.error });
         return new Response(
           JSON.stringify({ error: `NPI validation: ${npiResult.error}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -172,7 +172,7 @@ serve(async (req) => {
       }
 
       // Real-time NPI verification against NPPES registry
-      console.log(`[assign-user-role] Verifying NPI ${signupData.roleData.npi} against NPPES...`);
+      edgeLogger.info('[assign-user-role] Verifying NPI against NPPES', { npi: signupData.roleData.npi });
       try {
         const nppesResponse = await fetch(
           `https://npiregistry.cms.hhs.gov/api/?number=${signupData.roleData.npi}&version=2.1`
@@ -182,7 +182,7 @@ serve(async (req) => {
           const nppesData = await nppesResponse.json();
           
           if (nppesData.result_count === 0) {
-            console.error(`[assign-user-role] NPI ${signupData.roleData.npi} not found in NPPES registry`);
+            edgeLogger.error('[assign-user-role] NPI not found in NPPES registry', null, { npi: signupData.roleData.npi });
             return new Response(
               JSON.stringify({ error: 'NPI not found in NPPES registry. Please verify the NPI number.' }),
               { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -190,25 +190,29 @@ serve(async (req) => {
           }
           
           const provider = nppesData.results[0];
-          console.log(`[assign-user-role] ✓ NPI verified: ${provider.basic.name || provider.basic.first_name} ${provider.basic.last_name || ''}`);
+          edgeLogger.info('[assign-user-role] NPI verified', {
+            providerName: `${provider.basic.name || provider.basic.first_name} ${provider.basic.last_name || ''}`
+          });
           
           // Log warning if deactivated
           if (provider.basic.status?.toLowerCase() === 'deactivated') {
-            console.warn(`[assign-user-role] Warning: NPI ${signupData.roleData.npi} is deactivated`);
+            edgeLogger.warn('[assign-user-role] Warning: NPI is deactivated', { npi: signupData.roleData.npi });
           }
         } else {
-          console.warn(`[assign-user-role] NPPES API unavailable (${nppesResponse.status}), proceeding with format validation only`);
+          edgeLogger.warn('[assign-user-role] NPPES API unavailable, proceeding with format validation only', {
+            status: nppesResponse.status
+          });
         }
       } catch (error) {
-        console.warn(`[assign-user-role] NPPES verification failed:`, error);
-        console.log('[assign-user-role] Proceeding with format validation only');
+        edgeLogger.warn('[assign-user-role] NPPES verification failed, proceeding with format validation only');
+        edgeLogger.info('[assign-user-role] Proceeding with format validation only');
       }
     }
 
     if (signupData.roleData.dea) {
       const deaResult = validateDEA(signupData.roleData.dea);
       if (!deaResult.valid) {
-        console.error('DEA validation failed:', deaResult.error);
+        edgeLogger.error('DEA validation failed', null, { error: deaResult.error });
         return new Response(
           JSON.stringify({ error: `DEA validation: ${deaResult.error}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -1,3 +1,5 @@
+import { edgeLogger } from './logger.ts';
+
 interface LogNotificationParams {
   notificationId?: string;
   userId: string;
@@ -27,12 +29,12 @@ export async function logNotificationDelivery(params: LogNotificationParams): Pr
       });
     
     if (error) {
-      console.error(`[NotificationLogger] Failed to log ${params.channel} delivery:`, error);
+      edgeLogger.error(`[NotificationLogger] Failed to log ${params.channel} delivery`, error);
     } else {
-      console.log(`[NotificationLogger] Logged ${params.channel} ${params.status} for user ${params.userId}`);
+      edgeLogger.info(`[NotificationLogger] Logged ${params.channel} ${params.status}`, { userId: params.userId });
     }
   } catch (error) {
-    console.error(`[NotificationLogger] Exception logging delivery:`, error);
+    edgeLogger.error(`[NotificationLogger] Exception logging delivery`, error);
     // Don't throw - logging failures shouldn't break notification sending
   }
 }
