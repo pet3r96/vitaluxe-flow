@@ -25,7 +25,7 @@ export const useCallTimer = (): UseCallTimerReturn => {
   const start = useCallback(() => {
     if (isRunning) return;
     
-    console.log('[useCallTimer] Starting timer');
+    logger.info('Call timer started');
     setIsRunning(true);
     
     intervalRef.current = setInterval(() => {
@@ -37,7 +37,7 @@ export const useCallTimer = (): UseCallTimerReturn => {
   const stop = useCallback(() => {
     if (!isRunning) return;
     
-    console.log('[useCallTimer] Stopping timer');
+    logger.info('Call timer stopped', { duration });
     setIsRunning(false);
     
     if (intervalRef.current) {
@@ -48,7 +48,7 @@ export const useCallTimer = (): UseCallTimerReturn => {
 
   // Reset timer
   const reset = useCallback(() => {
-    console.log('[useCallTimer] Resetting timer');
+    logger.info('Call timer reset');
     stop();
     setDuration(0);
   }, [stop]);

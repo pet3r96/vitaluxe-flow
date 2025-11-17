@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 import { usePatientChartData } from "@/hooks/usePatientChartData";
 import { MedicalChartDrawer } from "@/components/video/MedicalChartDrawer";
@@ -127,7 +128,7 @@ export default function TelehealthRoom({ appId, channel, token, uid, isProvider,
 
       // CRITICAL: Emit patient_waiting event AFTER successful join
       if (!isProvider) {
-        console.log("[Patient] Broadcasting patient_waiting event to provider");
+        logger.info("Broadcasting patient_waiting event to provider", { sessionId });
         await emitEvent(sessionId, "patient_waiting", String(uid));
       }
 

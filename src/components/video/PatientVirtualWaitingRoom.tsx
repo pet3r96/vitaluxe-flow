@@ -9,6 +9,7 @@ import { format, differenceInMinutes, isBefore, addMinutes } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { VideoSessionStatus } from "./VideoSessionStatus";
 import type { VideoSessionStatus as VideoSessionStatusType } from "@/types/video-session";
+import { logger } from "@/lib/logger";
 
 interface PatientVirtualWaitingRoomProps {
   patientId: string;
@@ -91,7 +92,7 @@ export const PatientVirtualWaitingRoom = ({
 
       onJoinSession?.(sessionId);
     } catch (error) {
-      console.error('Error joining session:', error);
+      logger.error('Error joining session', error, { sessionId });
       toast({
         title: "Error",
         description: "Failed to join video session",

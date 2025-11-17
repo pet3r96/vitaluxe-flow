@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, Clock, Copy, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import AgoraRTM from "agora-rtm-sdk";
+import { logger } from "@/lib/logger";
 
 interface CredentialValidatorProps {
   appId: string;
@@ -34,7 +35,7 @@ export const CredentialValidator = ({ appId, token, rtmToken, rtmUid }: Credenti
         setBackendEcho({ appIdSample: data.appIdSample, cert8: data.cert8 });
       }
     } catch (err) {
-      console.warn("Could not fetch backend echo:", err);
+      logger.warn("Could not fetch backend echo", err);
     }
   };
 
@@ -49,7 +50,7 @@ export const CredentialValidator = ({ appId, token, rtmToken, rtmUid }: Credenti
         setTokenExpiry(Date.now() + 86400000); // Placeholder: 24h from now
       }
     } catch (err) {
-      console.warn("Could not parse token expiry:", err);
+      logger.warn("Could not parse token expiry", err);
     }
   };
 
@@ -73,7 +74,7 @@ export const CredentialValidator = ({ appId, token, rtmToken, rtmUid }: Credenti
         description: "RTM connection validated successfully",
       });
     } catch (error: any) {
-      console.error("RTM probe failed:", error);
+      logger.error("RTM probe failed", error);
       setRtmProbeStatus('error');
       setRtmProbeError(error.message || "Unknown RTM error");
       toast({
