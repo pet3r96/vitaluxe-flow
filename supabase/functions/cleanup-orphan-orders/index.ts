@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +18,7 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  console.log("[cleanup-orphan-orders] Starting cleanup");
+  edgeLogger.info('Starting cleanup of orphan orders');
 
   try {
     const supabaseAdmin = createAdminClient();
@@ -48,7 +49,7 @@ serve(async (req) => {
     // Find orphan orders (orders without order_lines)
     const orphanOrders = allOrders.filter(order => !orderIdsWithLines.has(order.id));
 
-    console.log("[cleanup-orphan-orders] Found orphan orders:", {
+    edgeLogger.info('Found orphan orders', {
       total: allOrders.length,
       withLines: orderIdsWithLines.size,
       orphans: orphanOrders.length
@@ -73,11 +74,11 @@ serve(async (req) => {
       .in("id", orphanIds);
 
     if (deleteError) {
-      console.error("[cleanup-orphan-orders] Delete error:", deleteError);
+      edgeLogger.error('Failed to delete orphan orders', deleteError);
       throw deleteError;
     }
 
-    console.log("[cleanup-orphan-orders] Successfully deleted orphan orders:", orphanIds.length);
+    edgeLogger.info('Successfully deleted orphan orders', { count: orphanIds.length });
 
     return new Response(
       JSON.stringify({ 
@@ -95,7 +96,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error("[cleanup-orphan-orders] Error:", error);
+    edgeLogger.error('Orphan orders cleanup failed', error);
     return new Response(
       JSON.stringify({ 
         error: error.message || "Cleanup failed",

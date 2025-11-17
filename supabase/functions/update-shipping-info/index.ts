@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { validateUpdateShippingRequest } from "../_shared/requestValidators.ts";
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,7 +47,7 @@ serve(async (req: Request) => {
     try {
       requestData = await req.json();
     } catch (error) {
-      console.error('Invalid JSON in request body:', error);
+      edgeLogger.error('Invalid JSON in update shipping request', error);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -56,7 +57,7 @@ serve(async (req: Request) => {
     // Validate input
     const validation = validateUpdateShippingRequest(requestData);
     if (!validation.valid) {
-      console.warn('Validation failed:', validation.errors);
+      edgeLogger.warn('Update shipping validation failed', { errors: validation.errors });
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request data', 
@@ -76,20 +77,20 @@ serve(async (req: Request) => {
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError) {
-      console.error('Auth error:', userError);
+      edgeLogger.error('Update shipping auth error', userError);
       throw new Error(`Authentication failed: ${userError.message}`);
     }
     if (!user) {
       throw new Error('No user found');
     }
 
-    console.log('Authenticated user:', user.id);
+    edgeLogger.info('Update shipping request authenticated');
 
     // Validate CSRF token
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('Update shipping CSRF validation failed', { error: csrfError });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -110,12 +111,12 @@ serve(async (req: Request) => {
 
     const { orderLineId, trackingNumber, carrier, status, changeDescription }: UpdateShippingRequest = requestData;
 
-    console.log('Incoming payload:', { orderLineId, trackingNumber, carrier, status });
+    edgeLogger.info('Update shipping payload received', { orderLineId });
 
     // Normalize status
     const normalizedStatus = normalizeStatus(status);
     if (status && !normalizedStatus) {
-      console.error('Unsupported status value:', status);
+      edgeLogger.error('Unsupported shipping status value', null, { status });
       throw new Error(`Unsupported status value: "${status}". Allowed values: pending, filled, shipped, denied, change_requested`);
     }
 
@@ -153,11 +154,11 @@ serve(async (req: Request) => {
       }
     }
 
-    console.log('Update data:', updateData);
+    edgeLogger.info('Update shipping data prepared');
 
     // If nothing changed, return success without updating
     if (Object.keys(updateData).length === 0) {
-      console.log('No changes detected, skipping update');
+      edgeLogger.info('No shipping changes detected, skipping update');
       return new Response(
         JSON.stringify({ success: true, message: 'No changes detected' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -189,14 +190,14 @@ serve(async (req: Request) => {
       });
 
     if (auditError) {
-      console.error('Audit log error:', auditError);
+      edgeLogger.error('Audit log error (non-fatal)', auditError);
       // Don't fail the request if audit logging fails
     }
 
     // Auto-create EasyPost shipment if status is 'shipped' and tracking number is provided
     if (normalizedStatus === 'shipped' && trackingNumber && !currentLine.easypost_shipment_id) {
       try {
-        console.log('Auto-creating EasyPost shipment for order line:', orderLineId);
+        edgeLogger.info('Auto-creating EasyPost shipment for order line', { orderLineId });
         
         // Get order line details for shipment creation
         const { data: orderLineDetails, error: orderLineError } = await supabase
@@ -219,7 +220,7 @@ serve(async (req: Request) => {
           .single();
 
         if (orderLineError) {
-          console.error('Error getting order line details for shipment:', orderLineError);
+          edgeLogger.error('Error getting order line details for shipment', orderLineError, { orderLineId });
         } else if (orderLineDetails.pharmacies) {
           // Parse patient address for street/city/zip (state comes from destination_state field)
           const patientAddressParts = orderLineDetails.patient_address?.split(',') || [];
@@ -259,13 +260,13 @@ serve(async (req: Request) => {
 
           if (shipmentResponse.ok) {
             const shipmentData = await shipmentResponse.json();
-            console.log('Auto-created EasyPost shipment:', shipmentData.shipment?.id);
+            edgeLogger.info('Auto-created EasyPost shipment', { shipmentId: shipmentData.shipment?.id });
           } else {
-            console.error('Failed to auto-create EasyPost shipment:', await shipmentResponse.text());
+            edgeLogger.error('Failed to auto-create EasyPost shipment');
           }
         }
       } catch (error) {
-        console.error('Error auto-creating EasyPost shipment:', error);
+        edgeLogger.error('Error auto-creating EasyPost shipment', error, { orderLineId });
         // Don't fail the main request if shipment creation fails
       }
     }
@@ -276,7 +277,7 @@ serve(async (req: Request) => {
     );
 
   } catch (error: any) {
-    console.error('Error updating shipping info:', error);
+    edgeLogger.error('Error updating shipping info', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

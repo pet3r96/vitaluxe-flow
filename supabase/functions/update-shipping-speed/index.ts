@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +15,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('[update-shipping-speed] Missing Authorization header');
+      edgeLogger.error('update-shipping-speed missing auth header');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -29,7 +30,7 @@ serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('[update-shipping-speed] Auth error:', authError);
+      edgeLogger.error('update-shipping-speed auth error', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -41,14 +42,14 @@ serve(async (req) => {
     // Normalize to unique UUIDs
     const uniqueLineIds = [...new Set(lineIds || [])].filter((id: any) => typeof id === 'string' && id.length > 0);
 
-    console.log('[update-shipping-speed] Request:', {
+    edgeLogger.info('update-shipping-speed request', {
       originalCount: lineIds?.length || 0,
       uniqueCount: uniqueLineIds.length,
       shipping_speed
     });
 
     if (uniqueLineIds.length === 0) {
-      console.log('[update-shipping-speed] No valid line IDs, returning success (idempotent)');
+      edgeLogger.info('update-shipping-speed no valid line IDs (idempotent)');
       return new Response(
         JSON.stringify({ success: true, updated: 0, message: 'No lines to update' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -71,12 +72,12 @@ serve(async (req) => {
       .select("id");
 
     if (updateError) {
-      console.error('[update-shipping-speed] Update error:', updateError);
+      edgeLogger.error('update-shipping-speed update error', updateError);
       throw updateError;
     }
 
     const updatedCount = updatedLines?.length || 0;
-    console.log('[update-shipping-speed] Success:', {
+    edgeLogger.info('update-shipping-speed success', {
       uniqueLineIds: uniqueLineIds.length,
       updatedCount,
       shipping_speed
@@ -93,7 +94,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[update-shipping-speed] Error:', error);
+    edgeLogger.error('update-shipping-speed error', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

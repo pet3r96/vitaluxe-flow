@@ -3,6 +3,7 @@ import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { validateCalculateShippingRequest } from '../_shared/requestValidators.ts';
 import { handleError, createErrorResponse } from '../_shared/errorHandler.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,14 +28,14 @@ serve(async (req) => {
     try {
       requestData = await req.json();
     } catch (parseError) {
-      console.error('Failed to parse request body:', parseError);
+      edgeLogger.error('Failed to parse shipping calculation request', parseError);
       return createErrorResponse('Invalid JSON in request body', 400, null, undefined, corsHeaders);
     }
 
     // Validate input
     const validation = validateCalculateShippingRequest(requestData);
     if (!validation.valid) {
-      console.error('Shipping calculation validation failed:', validation.errors);
+      edgeLogger.error('Shipping calculation validation failed', { errors: validation.errors });
       return createErrorResponse(
         'Invalid shipping calculation parameters',
         400,
@@ -46,7 +47,7 @@ serve(async (req) => {
 
     const { pharmacy_id, shipping_speed } = requestData;
 
-    console.info(`Calculating shipping for pharmacy ${pharmacy_id} with speed ${shipping_speed}`);
+    edgeLogger.info('Calculating shipping cost', { shipping_speed });
 
     // Query pharmacy_shipping_rates
     const { data, error } = await supabase
@@ -57,7 +58,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (error) {
-      console.error("Database error fetching shipping rate:", error.message);
+      edgeLogger.error('Database error fetching shipping rate', error);
       return handleError(
         supabase,
         error,
@@ -77,7 +78,7 @@ serve(async (req) => {
 
     const shipping_cost = data?.rate ?? defaultRates[shipping_speed] ?? 9.99;
 
-    console.info(`Shipping cost calculated: $${shipping_cost}`);
+    edgeLogger.info('Shipping cost calculated', { shipping_cost });
 
     return new Response(
       JSON.stringify({ 
@@ -89,7 +90,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Shipping calculation error:", error);
+    edgeLogger.error('Shipping calculation error', error);
     return handleError(
       supabase,
       error,

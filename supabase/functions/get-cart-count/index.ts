@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +15,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('[get-cart-count] Missing Authorization header');
+      edgeLogger.error('get-cart-count missing auth header');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -29,7 +30,7 @@ serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('[get-cart-count] Auth error:', authError);
+      edgeLogger.error('get-cart-count auth error', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -39,14 +40,14 @@ serve(async (req) => {
     const { cartOwnerId } = await req.json();
 
     if (!cartOwnerId) {
-      console.log('[get-cart-count] No cartOwnerId provided');
+      edgeLogger.info('get-cart-count no owner ID provided');
       return new Response(
         JSON.stringify({ count: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[get-cart-count] Fetching count for owner:', cartOwnerId);
+    edgeLogger.info('Fetching cart count');
 
     const { data: cart } = await supabase
       .from("cart")
@@ -69,7 +70,7 @@ serve(async (req) => {
 
     if (error) throw error;
     
-    console.log('[get-cart-count] Final count:', count || 0);
+    edgeLogger.info('Cart count retrieved', { count: count || 0 });
     
     return new Response(
       JSON.stringify({ count: count || 0, cart_id: cart.id }),
@@ -83,7 +84,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[get-cart-count] Error:', error);
+    edgeLogger.error('get-cart-count error', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
