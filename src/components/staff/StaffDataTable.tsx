@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +34,7 @@ export const StaffDataTable = () => {
     queryKey: ["staff", effectiveUserId, effectiveRole, effectivePracticeId],
     staleTime: 300000, // 5 minutes
     queryFn: async () => {
-      console.log('[StaffDataTable] Fetching staff via edge function', {
+      logger.info('[StaffDataTable] Fetching staff via edge function', {
         effectiveUserId,
         effectiveRole,
         effectivePracticeId
@@ -45,12 +46,12 @@ export const StaffDataTable = () => {
       });
 
       if (error) {
-        console.error('[StaffDataTable] Error from edge function:', error);
+        logger.error('[StaffDataTable] Error from edge function', error);
         throw error;
       }
 
       const staffList = data?.staff || [];
-      console.log('[StaffDataTable] Received staff:', {
+      logger.info('[StaffDataTable] Received staff:', {
         count: staffList.length,
         sample: staffList[0] ? {
           id: staffList[0].id,
@@ -64,7 +65,7 @@ export const StaffDataTable = () => {
       // Log any missing data
       staffList.forEach((s: any, idx: number) => {
         if (!s.profiles?.full_name && !s.profiles?.name && !s.profiles?.email) {
-          console.warn('[StaffDataTable] ⚠️ Staff missing display fields:', {
+          logger.warn('[StaffDataTable] ⚠️ Staff missing display fields:', {
             index: idx,
             staffId: s.id,
             userId: s.user_id,

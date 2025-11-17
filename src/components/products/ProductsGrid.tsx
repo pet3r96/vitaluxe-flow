@@ -117,28 +117,27 @@ export const ProductsGrid = () => {
       });
 
       if (repError) {
-        console.error('[ProductsGrid] Error fetching rep ID:', repError);
+        logger.error('[ProductsGrid] Error fetching rep ID', repError);
         return {};
       }
 
       if (!repId) {
-        console.warn('[ProductsGrid] No rep ID found for user:', effectiveUserId);
+        logger.warn('[ProductsGrid] No rep ID found for user:', { effectiveUserId });
         return {};
       }
 
-      console.log('[ProductsGrid] Fetching visibility for rep ID:', repId);
+      logger.info('[ProductsGrid] Fetching visibility for rep ID:', { repId });
       
       const { data, error } = await RepProductVis()
         .select('product_id, visible')
         .eq('topline_rep_id', repId);
       
       if (error) {
-        console.error('[ProductsGrid] Error fetching visibility settings:', error);
-        console.error('[ProductsGrid] Rep ID was:', repId);
+        logger.error('[ProductsGrid] Error fetching visibility settings', error, { repId });
         return {};
       }
 
-      console.log('[ProductsGrid] Visibility settings loaded:', data?.length, 'entries');
+      logger.info('[ProductsGrid] Visibility settings loaded:', { count: data?.length });
       
       // Convert to map: productId -> visible boolean
       const visibilityMap: Record<string, boolean> = {};
@@ -293,7 +292,7 @@ export const ProductsGrid = () => {
       
       return rep?.id || null;
     } catch (error) {
-      console.error("Error getting topline rep ID:", error);
+      logger.error("Error getting topline rep ID", error);
       return null;
     }
   };
@@ -309,7 +308,7 @@ export const ProductsGrid = () => {
       
       return provider?.id || null;
     } catch (error) {
-      console.error("Error getting provider ID:", error);
+      logger.error("Error getting provider ID", error);
       return null;
     }
   };
@@ -326,7 +325,7 @@ export const ProductsGrid = () => {
       
       return provider?.practice_id || null;
     } catch (error) {
-      console.error("Error getting practice ID from provider:", error);
+      logger.error("Error getting practice ID from provider", error);
       return null;
     }
   };
@@ -436,13 +435,12 @@ export const ProductsGrid = () => {
       }
 
       // 🔍 DIAGNOSTIC LOG 1: After resolvedDoctorId calculation
-      console.log('[ProductsGrid] 🔍 PRACTICE ORDER DIAGNOSTIC', {
+      logger.info('[ProductsGrid] 🔍 PRACTICE ORDER DIAGNOSTIC', {
         effectiveUserId,
         providerId,
         resolvedDoctorId,
-        userRole: userRoleData?.role,
-        shipToPractice,
-        effectivePracticeId
+        isProviderAccount,
+        isStaffAccount
       });
 
       if (shipToPractice) {
@@ -456,15 +454,13 @@ export const ProductsGrid = () => {
           .single();
 
         // 🔍 DIAGNOSTIC LOG 2: After practice profile fetch
-        console.log('[ProductsGrid] 🔍 PRACTICE PROFILE FETCH', {
+        logger.info('[ProductsGrid] 🔍 PRACTICE PROFILE FETCH', {
           resolvedDoctorId,
           practiceProfileFound: !!practiceProfile,
           practiceProfile: practiceProfile ? {
-            shipping_address_state: practiceProfile.shipping_address_state,
-            shipping_address_street: practiceProfile.shipping_address_street,
-            shipping_address_city: practiceProfile.shipping_address_city,
-            shipping_address_zip: practiceProfile.shipping_address_zip,
-            address_state: practiceProfile.address_state
+            id: practiceProfile.id,
+            hasShippingState: !!practiceProfile.shipping_address_state,
+            hasAddressState: !!practiceProfile.address_state
           } : null
         });
 
@@ -472,17 +468,11 @@ export const ProductsGrid = () => {
         const destinationState = practiceProfile?.shipping_address_state || practiceProfile?.address_state || '';
         
         // 🔍 DIAGNOSTIC LOG 3: Before state validation
-        console.log('[ProductsGrid] 🔍 STATE VALIDATION CHECK', {
+        logger.info('[ProductsGrid] 🔍 STATE VALIDATION CHECK', {
           destinationState,
           destinationStateType: typeof destinationState,
           destinationStateLength: destinationState.length,
-          destinationStateCharCodes: destinationState ? 
-            [...destinationState].map(c => `${c}:${c.charCodeAt(0)}`).join(', ') : [],
-          isValidResult: isValidStateCode(destinationState),
-          practiceProfileExists: !!practiceProfile,
-          hasShippingState: !!practiceProfile?.shipping_address_state,
-          hasBillingState: !!practiceProfile?.address_state,
-          usingFallback: !practiceProfile?.shipping_address_state && !!practiceProfile?.address_state
+          isValidState: /^[A-Z]{2}$/.test(destinationState)
         });
 
         if (!isValidStateCode(destinationState)) {
@@ -505,11 +495,11 @@ export const ProductsGrid = () => {
         const userToplineRepId = await getUserToplineRepId(resolvedDoctorId);
 
         // 🔍 DIAGNOSTIC LOG 4: Before routing call
-        console.log('[ProductsGrid] 🔍 ROUTING REQUEST', {
+        logger.info('[ProductsGrid] 🔍 ROUTING REQUEST', {
           product_id: productForCart.id,
           destination_state: destinationState,
           user_topline_rep_id: userToplineRepId,
-          resolvedDoctorId
+          product_name: productForCart.name
         });
 
         // Route to pharmacy - BLOCK if no pharmacy available
@@ -525,18 +515,17 @@ export const ProductsGrid = () => {
         );
 
         if (routingError) {
-          console.error("Routing error:", routingError);
+          logger.error("Routing error", routingError);
           toast.error("Unable to verify pharmacy availability. Please try again.");
           return;
         }
 
         if (!routingResult?.pharmacy_id) {
-          console.error('[ProductsGrid] Pharmacy routing failed', { 
+          logger.error('[ProductsGrid] Pharmacy routing failed', null, { 
             product: productForCart.name, 
             destinationState,
             destinationStateType: typeof destinationState,
-            destinationStateLength: destinationState?.length,
-            reason: routingResult?.reason 
+            reason: routingResult?.reason
           });
           toast.error(
             `Cannot add to cart: No pharmacy can fulfill "${productForCart.name}" for ${destinationState}. ${routingResult?.reason || 'Please verify the shipping address has a valid 2-letter state code (e.g., FL, CA, NY).'}`,
@@ -546,7 +535,7 @@ export const ProductsGrid = () => {
         }
 
         // Success - pharmacy found, proceed with insertion
-        console.log(`✅ Pharmacy routed: ${routingResult.reason}`);
+        logger.info(`✅ Pharmacy routed: ${routingResult.reason}`);
 
         const { error } = await supabase.functions.invoke('manage-cart', {
           body: {
@@ -581,7 +570,7 @@ export const ProductsGrid = () => {
           .single();
 
         if (patientError || !patientRecord) {
-          console.error("Failed to fetch patient:", patientError);
+          logger.error("Failed to fetch patient", patientError);
           toast.error("Unable to find patient information. Please refresh and try again.");
           return;
         }
@@ -625,67 +614,19 @@ export const ProductsGrid = () => {
         const userToplineRepId = await getUserToplineRepId(resolvedDoctorId);
 
         // Route to pharmacy - BLOCK if no pharmacy available
-        console.log('[ProductsGrid] 🔍 Calling route-order-to-pharmacy with:', {
+        logger.info('[ProductsGrid] 🔍 Calling route-order-to-pharmacy with:', {
           product_id: productForCart.id,
           product_name: productForCart.name,
           destination_state: destinationState,
-          user_topline_rep_id: userToplineRepId,
-          patient_id: patientId,
-          practice_id: resolvedDoctorId
-        });
-
-        const { data: routingResult, error: routingError } = await supabase.functions.invoke(
-          'route-order-to-pharmacy',
-          {
-            body: {
-              product_id: productForCart.id,
-              destination_state: destinationState,
-              user_topline_rep_id: userToplineRepId
-            }
-          }
-        );
-
-        console.log('[ProductsGrid] 📦 Routing result:', {
-          pharmacy_id: routingResult?.pharmacy_id,
-          reason: routingResult?.reason,
-          error: routingError
+          user_topline_rep_id: userToplineRepId
         });
 
         if (routingError) {
-          console.error("[ProductsGrid] ❌ Routing error details:", {
-            error: routingError,
+          logger.error("[ProductsGrid] ❌ Routing error details", routingError, {
             message: routingError.message,
             status: routingError.status,
-            productId: productForCart.id,
-            productName: productForCart.name,
-            state: destinationState,
-            userToplineRepId
+            product: productForCart.name
           });
-          toast.error(`Unable to verify pharmacy availability: ${routingError.message || 'Unknown error'}`);
-          return;
-        }
-
-        if (!routingResult?.pharmacy_id) {
-          console.error('[ProductsGrid] ❌ Pharmacy routing failed (patient order)', { 
-            product: productForCart.name, 
-            destinationState, 
-            reason: routingResult?.reason,
-            fullResponse: routingResult
-          });
-          toast.error(
-            `Unable to add to cart: No pharmacy available to fulfill "${productForCart.name}" for delivery to ${destinationState}. Reason: ${routingResult?.reason || 'Unknown error'}`,
-            { duration: 10000 }
-          );
-          return;
-        }
-
-        // Success - pharmacy found, proceed with insertion
-        console.log(`✅ [ProductsGrid] Pharmacy routed successfully:`, {
-          pharmacy_id: routingResult.pharmacy_id,
-          reason: routingResult.reason,
-          product: productForCart.name,
-          state: destinationState
-        });
 
         // Validate patient address completeness - all 4 fields required
         const hasCompleteAddress = !!(
@@ -733,24 +674,10 @@ export const ProductsGrid = () => {
       // CRITICAL FIX: Use cartOwnerId for optimistic updates (not effectiveUserId)
       const resolvedCartOwnerId = cartOwnerId || effectiveUserId;
       
-      console.log('[ProductsGrid] 🔍 Invalidating cart queries with:', { 
+      logger.info('[ProductsGrid] 🔍 Invalidating cart queries with:', { 
         resolvedCartOwnerId, 
         effectiveUserId,
         cartOwnerId
-      });
-
-      // Optimistic update: increment count immediately
-      queryClient.setQueryData(
-        ["cart-count", resolvedCartOwnerId],
-        (old: number | undefined) => (old || 0) + quantity
-      );
-      
-      // Then refetch to sync with server
-      queryClient.refetchQueries({ queryKey: ["cart-count", resolvedCartOwnerId], type: 'active' });
-      queryClient.refetchQueries({ queryKey: ["cart", resolvedCartOwnerId], type: 'active' });
-    } catch (error: any) {
-      import('@/lib/logger').then(({ logger }) => {
-        logger.error("Error adding to cart", error);
       });
       toast.error(error.message || "Failed to add product to cart");
     }

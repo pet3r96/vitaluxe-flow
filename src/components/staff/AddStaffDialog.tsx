@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useState } from "react";
 import { EdgeFunctionResponse, getEdgeFunctionError } from "@/types/edgeFunction";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -165,13 +166,13 @@ export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: Ad
           });
 
           if (emailError) {
-            console.error('Failed to send welcome email:', emailError);
+            logger.error('Failed to send welcome email', emailError);
             toast.warning(`Staff member added but welcome email failed to send. You can resend it from the staff details.`);
           } else {
             toast.success(`Staff member added! Welcome email with activation link sent to ${formData.email}`);
           }
         } catch (emailErr) {
-          console.error('Error sending welcome email:', emailErr);
+          logger.error('Error sending welcome email', emailErr);
           toast.warning(`Staff member added but welcome email failed to send. You can resend it from the staff details.`);
         }
       } else {

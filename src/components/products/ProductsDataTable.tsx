@@ -235,7 +235,7 @@ export const ProductsDataTable = () => {
             logger.info('ProductsDataTable resolved provider practice', logger.sanitize({ practiceId: resolvedDoctorId }));
           }
         } catch (error) {
-          console.error('[ProductsDataTable] ❌ Error resolving provider practice:', error);
+          logger.error('[ProductsDataTable] ❌ Error resolving provider practice', error);
         }
       }
       
@@ -244,13 +244,11 @@ export const ProductsDataTable = () => {
         resolvedDoctorId = effectivePracticeId;
       }
       
-      console.log('[ProductsDataTable] 🎯 Cart context:', {
-        effectiveRole,
+      logger.info('[ProductsDataTable] 🎯 Cart context:', {
         effectiveUserId,
+        effectiveRole,
         effectivePracticeId,
-        resolvedDoctorId,
-        selectedProviderId: providerId,
-        shipToPractice
+        isProviderAccount
       });
       
       // First, resolve practice ID for correct pricing lookup
@@ -373,7 +371,7 @@ export const ProductsDataTable = () => {
         );
 
         if (routingError) {
-          console.error("Routing error:", routingError);
+          logger.error("Routing error", routingError);
           toast.error("Unable to verify pharmacy availability. Please try again.");
           return;
         }
@@ -385,7 +383,7 @@ export const ProductsDataTable = () => {
           return;
         }
 
-        console.log(`✅ Pharmacy routed: ${routingResult.reason}`);
+        logger.info(`✅ Pharmacy routed: ${routingResult.reason}`);
 
         const { error } = await supabase.functions.invoke('manage-cart', {
           body: {
@@ -420,7 +418,7 @@ export const ProductsDataTable = () => {
           .single();
         
         if (patientError || !patientRecord) {
-          console.error("Failed to fetch patient:", patientError);
+          logger.error("Failed to fetch patient", patientError);
           toast.error("Unable to find patient information. Please refresh and try again.");
           return;
         }
@@ -463,18 +461,15 @@ export const ProductsDataTable = () => {
         );
 
         if (routingError) {
-          console.error("Routing error:", routingError);
+          logger.error("Routing error", routingError);
           toast.error("Unable to verify pharmacy availability. Please try again.");
           return;
         }
 
         if (!routingResult?.pharmacy_id) {
-          console.error('[ProductsDataTable] Routing failed', {
-            product: productForCart.name,
-            destinationState,
-            destinationStateType: typeof destinationState,
-            destinationStateLength: destinationState?.length,
-            reason: routingResult?.reason
+          logger.error('[ProductsDataTable] Routing failed', null, {
+            error: routingError,
+            product_id: productForCart.id
           });
           toast.error(
             `Cannot add to cart: No pharmacy available for "${productForCart.name}" in ${destinationState}. ${routingResult?.reason || 'Please verify address has valid 2-letter state code.'}`

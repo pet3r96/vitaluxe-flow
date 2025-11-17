@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAgoraCore } from "@/hooks/video/useAgoraCore";
@@ -57,7 +58,7 @@ export default function TelehealthRoomUnified({
   useEffect(() => {
     const initSession = async () => {
       try {
-        console.log("[TelehealthRoom] Joining session...", { appId, channel, uid });
+        logger.info("[TelehealthRoom] Joining session...", { appId, channel, uid });
         
         // Join Agora channel
         await agora.join(channel, token, String(uid));
@@ -65,27 +66,27 @@ export default function TelehealthRoomUnified({
 
         // Guest: auto-join without publishing or waiting
         if (isGuest) {
-          console.log("[TelehealthRoom] Guest joining - view-only mode");
+          logger.info("[TelehealthRoom] Guest joining - view-only mode");
           // Guests don't publish tracks or emit events
         } else if (isProvider) {
           // Provider: publish tracks immediately
-          console.log("[TelehealthRoom] Provider joining - publishing tracks");
+          logger.info("[TelehealthRoom] Provider joining - publishing tracks");
           await agora.publishTracks();
         } else {
           // Patient: emit waiting event after join
-          console.log("[TelehealthRoom] Patient joining - emitting waiting event");
+          logger.info("[TelehealthRoom] Patient joining - emitting waiting event");
           await events.emitWaiting();
           setIsWaiting(true);
         }
       } catch (error) {
-        console.error("[TelehealthRoom] Failed to join session:", error);
+        logger.error("[TelehealthRoom] Failed to join session", error);
       }
     };
 
     initSession();
 
     return () => {
-      console.log("[TelehealthRoom] Leaving session");
+      logger.info("[TelehealthRoom] Leaving session");
       agora.leave();
       timer.stop();
     };
@@ -96,7 +97,7 @@ export default function TelehealthRoomUnified({
   // ============================================================================
   useEffect(() => {
     if (!isProvider && events.isAdmitted && isWaiting) {
-      console.log("[TelehealthRoom] Patient admitted - publishing tracks");
+      logger.info("[TelehealthRoom] Patient admitted - publishing tracks");
       setIsWaiting(false);
       agora.publishTracks();
     }
