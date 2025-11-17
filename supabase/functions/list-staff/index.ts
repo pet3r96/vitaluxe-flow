@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('[list-staff] Found staff members', { count: staff.length, practiceId });
     if (staff.length > 0) {
-      edgeLogger.info('[list-staff] First staff profile', { name: staff[0].profiles?.name || staff[0].profiles?.email || 'no-name' });
+      edgeLogger.info('[list-staff] First staff profile', { hasName: !!staff[0].profiles?.name, hasEmail: !!staff[0].profiles?.email });
     }
 
     return new Response(JSON.stringify({ staff }), {

@@ -174,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Get user email for frontend auto-login
     const userEmail = userData?.user?.email;
-    edgeLogger.info('[reset-password-with-token] Returning success with email', { email: userEmail });
+    edgeLogger.info('[reset-password-with-token] Returning success with email', { emailDomain: userEmail?.split('@')[1] });
     
     return new Response(
       JSON.stringify({ 

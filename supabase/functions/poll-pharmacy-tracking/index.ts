@@ -41,7 +41,7 @@ serve(async (req) => {
     // Poll each pharmacy
     for (const pharmacy of pharmacies) {
       try {
-        edgeLogger.info('Polling pharmacy', { pharmacyName: pharmacy.name, pharmacyId: pharmacy.id });
+        edgeLogger.info('Polling pharmacy', { hasPharmacyName: !!pharmacy.name, pharmacyId: pharmacy.id });
 
         // Fetch active orders for this pharmacy
         const { data: orderLines } = await supabaseAdmin
