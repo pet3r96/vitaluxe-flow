@@ -314,7 +314,7 @@ serve(async (req) => {
         .maybeSingle();
       
       if (pharmacyError) {
-        console.error('[get-orders-page] ❌ Error fetching pharmacy:', parseErr(pharmacyError));
+        edgeLogger.error('[get-orders-page] Error fetching pharmacy', pharmacyError);
         return new Response(
           JSON.stringify({ error: `Failed to fetch pharmacy record: ${parseErr(pharmacyError)}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -322,7 +322,7 @@ serve(async (req) => {
       }
       
       if (!pharmacyRecord) {
-        console.warn('[get-orders-page] ⚠️ No active pharmacy found for user');
+        edgeLogger.warn('[get-orders-page] No active pharmacy found for user');
         return new Response(
           JSON.stringify({
             orders: [],
@@ -347,7 +347,7 @@ serve(async (req) => {
         });
       
       if (orderIdsError) {
-        console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
+        edgeLogger.error('[get-orders-page] Error fetching order IDs', orderIdsError);
         return new Response(
           JSON.stringify({ error: `Failed to fetch order IDs: ${parseErr(orderIdsError)}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -357,7 +357,7 @@ serve(async (req) => {
       const uniqueOrderIds = [...new Set(orderIds?.map((row: any) => row.order_id) || [])];
       
       if (uniqueOrderIds.length === 0) {
-        console.log('[get-orders-page] ℹ️ No orders found for pharmacy');
+        edgeLogger.info('[get-orders-page] No orders found for pharmacy');
         return new Response(
           JSON.stringify({
             orders: [],
@@ -376,7 +376,7 @@ serve(async (req) => {
       
     } else if (roleNorm === 'downline') {
       // Downline rep: lookup rep record, get linked practices
-      console.log(`[get-orders-page] Downline role - practiceId (user_id): ${practiceId}`);
+      edgeLogger.info(`[get-orders-page] Downline role`, { practiceIdUserId: practiceId });
       
       const { data: repData, error: repError } = await supabase
         .from('reps')
@@ -386,7 +386,7 @@ serve(async (req) => {
         .maybeSingle();
       
       if (repError || !repData) {
-        console.warn('[get-orders-page] Downline rep record not found:', repError?.message || 'No data');
+        edgeLogger.warn('[get-orders-page] Downline rep record not found', repError ? { error: repError.message } : {});
         return new Response(
           JSON.stringify({
             orders: [],
@@ -431,7 +431,7 @@ serve(async (req) => {
       
     } else if (roleNorm === 'topline') {
       // Topline rep: lookup rep record, get all downlines + their practices
-      console.log(`[get-orders-page] Topline role - practiceId (user_id): ${practiceId}`);
+      edgeLogger.info(`[get-orders-page] Topline role`, { practiceIdUserId: practiceId });
       
       const { data: repData, error: repError } = await supabase
         .from('reps')
@@ -441,7 +441,7 @@ serve(async (req) => {
         .maybeSingle();
       
       if (repError || !repData) {
-        console.warn('[get-orders-page] Topline rep record not found:', repError?.message || 'No data');
+        edgeLogger.warn('[get-orders-page] Topline rep record not found', repError ? { error: repError.message } : {});
         return new Response(
           JSON.stringify({
             orders: [],
@@ -483,7 +483,7 @@ serve(async (req) => {
       const practiceIds = [...new Set(linkedPractices?.map(p => p.id) || [])];
       
       if (practiceIds.length === 0) {
-        console.warn('[get-orders-page] No practices linked to topline/downlines:', repData.id);
+        edgeLogger.warn('[get-orders-page] No practices linked to topline/downlines', { repId: repData.id });
         return new Response(
           JSON.stringify({
             orders: [],
@@ -498,35 +498,35 @@ serve(async (req) => {
         );
       }
       
-      console.log(`[get-orders-page] ✅ Topline ${repData.id}: found ${practiceIds.length} practices across ${allRepIds.length} reps`);
+      edgeLogger.info(`[get-orders-page] Topline practices found`, { repId: repData.id, practiceCount: practiceIds.length, repCount: allRepIds.length });
       query = query.in('doctor_id', practiceIds);
       
     } else if (roleNorm === 'admin') {
       // Admin sees all orders - no filter
-      console.log('[get-orders-page] Admin role - no filtering');
+      edgeLogger.info('[get-orders-page] Admin role - no filtering');
     } else {
-      console.warn(`[get-orders-page] ⚠️ Unknown role: ${roleNorm}, defaulting to practice filter`);
+      edgeLogger.warn(`[get-orders-page] Unknown role, defaulting to practice filter`, { role: roleNorm });
       query = query.eq('doctor_id', practiceId);
     }
 
     // Status filter
     if (status && status !== 'all') {
-      console.log(`[get-orders-page] Filtering by status: ${status}`);
+      edgeLogger.info(`[get-orders-page] Filtering by status`, { status });
       query = query.eq('status', status);
     }
 
     // Two-phase search implementation
     if (search && search.trim().length >= 3) {
       const searchTerm = search.trim();
-      console.log(`[get-orders-page] Applying search: "${searchTerm}"`);
+      edgeLogger.info(`[get-orders-page] Applying search`, { searchTerm });
       
       // Phase 1: Check if search looks like UUID
       if (isUUID(searchTerm)) {
-        console.log('[get-orders-page] Search is UUID - filtering by order ID');
+        edgeLogger.info('[get-orders-page] Search is UUID - filtering by order ID');
         query = query.eq('id', searchTerm);
       } else {
         // Phase 2: Search by patient name in order_lines
-        console.log('[get-orders-page] Search is text - looking up patient names');
+        edgeLogger.info('[get-orders-page] Search is text - looking up patient names');
         const { data: searchOrderIds, error: searchError } = await supabase
           .from('order_lines')
           .select('order_id')
@@ -535,7 +535,7 @@ serve(async (req) => {
           .limit(2000);
         
         if (searchError) {
-          console.error('[get-orders-page] ❌ Search error:', parseErr(searchError));
+          edgeLogger.error('[get-orders-page] Search error', searchError);
           return new Response(
             JSON.stringify({ error: `Search failed: ${parseErr(searchError)}` }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -545,7 +545,7 @@ serve(async (req) => {
         const searchUniqueOrderIds = [...new Set(searchOrderIds?.map(ol => ol.order_id) || [])];
         
         if (searchUniqueOrderIds.length === 0) {
-          console.log('[get-orders-page] ℹ️ No orders match search term');
+          edgeLogger.info('[get-orders-page] No orders match search term');
           return new Response(
             JSON.stringify({
               orders: [],
@@ -559,7 +559,7 @@ serve(async (req) => {
           );
         }
         
-        console.log(`[get-orders-page] ✅ Found ${searchUniqueOrderIds.length} orders matching search`);
+        edgeLogger.info(`[get-orders-page] Found orders matching search`, { count: searchUniqueOrderIds.length });
         query = query.in('id', searchUniqueOrderIds);
       }
     }
@@ -569,11 +569,11 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .range(from, to);
 
-    console.log(`[get-orders-page] Executing query with range ${from}-${to}`);
+    edgeLogger.info(`[get-orders-page] Executing query`, { from, to });
     const { data: orders, error: ordersError, count } = await query;
 
     if (ordersError) {
-      console.error('[get-orders-page] ❌ Query error:', parseErr(ordersError));
+      edgeLogger.error('[get-orders-page] Query error', ordersError);
       return new Response(
         JSON.stringify({ error: `Query failed: ${parseErr(ordersError)}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -591,7 +591,7 @@ serve(async (req) => {
         .in('order_id', orderIds);
       
       if (linesError) {
-        console.error('[get-orders-page] Order lines error:', linesError);
+        edgeLogger.error('[get-orders-page] Order lines error', linesError);
       } else {
         orderLinesData = lines || [];
       }
@@ -601,30 +601,30 @@ serve(async (req) => {
         const supabaseUrlAdmin = Deno.env.get('SUPABASE_URL') ?? '';
         const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
         if (!supabaseUrlAdmin || !serviceKey) {
-          console.warn('[get-orders-page] Service role envs missing, skipping product hydration');
+          edgeLogger.warn('[get-orders-page] Service role envs missing, skipping product hydration');
         } else {
           const admin = createClient(supabaseUrlAdmin, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
           const productIds = [...new Set((orderLinesData || []).map((l: any) => l.product_id).filter(Boolean))];
-          console.log(`[get-orders-page] Hydration: ${productIds.length} unique product_ids`);
+          edgeLogger.info(`[get-orders-page] Hydrating products`, { productCount: productIds.length });
           if (productIds.length > 0) {
             const { data: products, error: prodErr } = await admin
               .from('products')
               .select('id, name, product_types(id, name)')
               .in('id', productIds);
             if (prodErr) {
-              console.error('[get-orders-page] Product hydration error:', prodErr);
+              edgeLogger.error('[get-orders-page] Product hydration error', prodErr);
             } else {
               const pmap = new Map(products.map((p: any) => [p.id, p]));
               orderLinesData = (orderLinesData || []).map((l: any) => ({
                 ...l,
                 products: pmap.get(l.product_id) || null,
               }));
-              console.log(`[get-orders-page] Hydration: attached products for ${products?.length || 0} products`);
+              edgeLogger.info(`[get-orders-page] Products hydrated`, { count: products?.length || 0 });
             }
           }
         }
       } catch (e) {
-        console.error('[get-orders-page] Hydration exception:', parseErr(e));
+        edgeLogger.error('[get-orders-page] Hydration exception', e instanceof Error ? e : new Error(String(e)));
       }
     }
 
@@ -635,16 +635,20 @@ serve(async (req) => {
     }));
 
     const duration = performance.now() - startTime;
-    console.log(`[get-orders-page] ✅ SUCCESS: ${ordersWithLines?.length || 0} orders fetched in ${duration.toFixed(2)}ms (total: ${count || 0})`);
+    edgeLogger.info(`[get-orders-page] SUCCESS`, { 
+      ordersCount: ordersWithLines?.length || 0, 
+      durationMs: duration.toFixed(2), 
+      total: count || 0 
+    });
 
     // Performance warning
     if (duration > 1000) {
-      console.warn(`[get-orders-page] ⚠️ SLOW QUERY: ${duration.toFixed(2)}ms - check indexes and filters`);
+      edgeLogger.warn(`[get-orders-page] SLOW QUERY - check indexes and filters`, { durationMs: duration.toFixed(2) });
     }
     
     // Diagnostic logging for empty results
     if (count === 0) {
-      console.warn(`[get-orders-page] ⚠️ Zero orders returned`, {
+      edgeLogger.warn(`[get-orders-page] Zero orders returned`, {
         role: roleNorm,
         scopeId: practiceId,
         status,
@@ -667,13 +671,13 @@ serve(async (req) => {
     );
   } catch (error) {
     const duration = Date.now() - requestStart;
-    console.error(`[get-orders-page] ❌ ERROR after ${duration}ms:`, error);
+    edgeLogger.error(`[get-orders-page] ERROR`, error instanceof Error ? error : new Error(String(error)), { durationMs: duration });
     return new Response(
       JSON.stringify({ error: parseErr(error) }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } finally {
     const totalDuration = Date.now() - requestStart;
-    console.log(`[get-orders-page] ⏱️ Request completed in ${totalDuration}ms`);
+    edgeLogger.info(`[get-orders-page] Request completed`, { durationMs: totalDuration });
   }
 });
