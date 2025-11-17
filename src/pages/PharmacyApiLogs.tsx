@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Download, RefreshCw, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import type { PharmacyOrderTransmissionWithRelations } from "@/types/domain/pharmacy";
 
 const PharmacyApiLogs = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -78,7 +79,7 @@ const PharmacyApiLogs = () => {
 
       const { data, error, count } = await query;
       if (error) throw error;
-      return { logs: data, total: count || 0 };
+      return { logs: data as PharmacyOrderTransmissionWithRelations[], total: count || 0 };
     },
   });
 

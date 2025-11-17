@@ -98,9 +98,15 @@ class RealtimeManager implements IRealtimeManager {
         'postgres_changes',
         { event: '*', schema: 'public', table },
         (payload: RealtimePostgresChangesPayload<T>) => {
+          const recordId = payload.new && typeof payload.new === 'object' && 'id' in payload.new
+            ? (payload.new as { id?: string }).id 
+            : payload.old && typeof payload.old === 'object' && 'id' in payload.old
+              ? (payload.old as { id?: string }).id 
+              : undefined;
+          
           logger.info(`Realtime event on ${table}:`, { 
             event: payload.eventType,
-            id: (payload.new as any)?.id || (payload.old as any)?.id 
+            id: recordId
           });
 
           // Debounce invalidations to avoid excessive refetches

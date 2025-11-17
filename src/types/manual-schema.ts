@@ -70,6 +70,18 @@ export interface TeamMember {
   role_type: string;
 }
 
+// Terms Management Record (for terms tables not in generated types)
+export interface TermsManagementRecord {
+  id: string;
+  role?: string;
+  title: string;
+  content: string;
+  version: number;
+  created_at: string;
+  updated_at?: string;
+  effective_date?: string;
+}
+
 // Patient portal terms table
 export interface PatientPortalTerms {
   id: string;

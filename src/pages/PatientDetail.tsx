@@ -23,6 +23,13 @@ import { PatientPortalStatusBadge } from "@/components/patients/PatientPortalSta
 import { PatientNotesSection } from "@/components/patients/PatientNotesSection";
 import { TreatmentPlansTab } from "@/components/treatment-plans/TreatmentPlansTab";
 import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
+import type { 
+  Medication, 
+  Condition, 
+  Allergy, 
+  Immunization, 
+  Pharmacy as VaultPharmacy 
+} from "@/lib/medicalVaultPdfGenerator";
 import { PDFViewer } from "@/components/documents/PDFViewer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
@@ -323,13 +330,13 @@ export default function PatientDetail() {
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patient,
-        medications as any,
-        conditions as any,
-        allergies as any,
+        (medications || []) as unknown as Medication[],
+        (conditions || []) as unknown as Condition[],
+        (allergies || []) as unknown as Allergy[],
         vitals,
-        immunizations as any,
+        (immunizations || []) as unknown as Immunization[],
         surgeries,
-        pharmacies as any,
+        (pharmacies || []) as unknown as VaultPharmacy[],
         emergencyContacts
       );
       
@@ -385,13 +392,13 @@ export default function PatientDetail() {
     try {
       const pdfBlob = await generateMedicalVaultPDF(
         patient,
-        medications as any,
-        conditions as any,
-        allergies as any,
+        (medications || []) as unknown as Medication[],
+        (conditions || []) as unknown as Condition[],
+        (allergies || []) as unknown as Allergy[],
         vitals,
-        immunizations as any,
+        (immunizations || []) as unknown as Immunization[],
         surgeries,
-        pharmacies as any,
+        (pharmacies || []) as unknown as VaultPharmacy[],
         emergencyContacts
       );
       

@@ -29,15 +29,14 @@ const Support = () => {
   const { data: supportThreads, isLoading } = useQuery<PatientMessage[]>({
     queryKey: ["support-threads", searchQuery],
     queryFn: async (): Promise<PatientMessage[]> => {
-      // @ts-ignore - Supabase types can cause deep instantiation issues
       const result = await supabase
         .from("patient_messages")
-        .select("*")
+        .select<'*', PatientMessage>('*')
         .order("created_at", { ascending: false});
 
       if (result.error) throw result.error;
       
-      const tickets = (result.data || []) as any;
+      const tickets = result.data || [];
       
       // Apply search filter client-side
       if (searchQuery && tickets.length > 0) {

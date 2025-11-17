@@ -76,7 +76,7 @@ const RepDashboard = () => {
     const ordersChannel = supabase
       .channel('rep-dashboard-orders')
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
         (_payload: RealtimePayload<Database['public']['Tables']['orders']['Row']>) => {
           queryClient.invalidateQueries({ 
@@ -90,7 +90,7 @@ const RepDashboard = () => {
     const repsChannel = supabase
       .channel('rep-dashboard-reps')
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'reps' },
         (_payload: RealtimePayload<Database['public']['Tables']['reps']['Row']>) => {
           queryClient.invalidateQueries({ 
@@ -104,7 +104,7 @@ const RepDashboard = () => {
     const profitsChannel = supabase
       .channel('rep-dashboard-profits')
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'order_profits' },
         (_payload: RealtimePayload<Database['public']['Tables']['order_profits']['Row']>) => {
           queryClient.invalidateQueries({ 
