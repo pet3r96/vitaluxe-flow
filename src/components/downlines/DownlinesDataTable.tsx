@@ -90,14 +90,15 @@ export function DownlinesDataTable() {
       const downlineRepIds = downlineReps.map(rep => rep.id);
 
       // Get practice counts for each downline using profiles table
-      const profilesQuery = await supabase
+      // Using (as any) on supabase client due to TypeScript limitation with .in() array queries
+      const profilesResult = await (supabase as any)
         .from("profiles")
         .select("id, linked_topline_id")
         .eq("role", "practice")
         .in("linked_topline_id", downlineRepIds);
       
-      const practiceProfiles = profilesQuery.data;
-      const practicesError = profilesQuery.error;
+      const practiceProfiles: Array<{ id: string; linked_topline_id: string | null }> | null = profilesResult.data;
+      const practicesError: any = profilesResult.error;
 
       if (practicesError) throw practicesError;
 
