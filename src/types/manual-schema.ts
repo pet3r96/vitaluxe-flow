@@ -242,6 +242,38 @@ export interface PracticeBranding {
   updated_at: string;
 }
 
+// Account lockouts table
+export interface AccountLockout {
+  id: string;
+  user_id: string;
+  user_email: string;
+  lockout_reason: string;
+  locked_at: string;
+  locked_until?: string | null;
+  locked_by?: string | null;
+  unlocked_at?: string | null;
+  unlocked_by?: string | null;
+  ip_address?: string | null;
+  failed_attempts?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Alert rules table
+export interface AlertRule {
+  id: string;
+  name: string;
+  description?: string | null;
+  event_type: string;
+  threshold: number;
+  time_window_minutes: number;
+  severity: string;
+  enabled: boolean;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ==================== EXISTING TYPES ====================
 
 // Rep product price overrides table

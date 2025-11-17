@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { SecurityAlertRules } from "@/integrations/supabase/table-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,8 +38,7 @@ export const AlertsViewer = () => {
   const { data: unresolvedAlerts, isLoading: loadingUnresolved } = useQuery({
     queryKey: ["alerts", "unresolved"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("alerts")
+      const { data, error } = await SecurityAlertRules()
         .select("*")
         .eq("resolved", false)
         .order("triggered_at", { ascending: false });
@@ -51,8 +51,7 @@ export const AlertsViewer = () => {
   const { data: resolvedAlerts, isLoading: loadingResolved } = useQuery({
     queryKey: ["alerts", "resolved"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("alerts")
+      const { data, error } = await SecurityAlertRules()
         .select("*")
         .eq("resolved", true)
         .order("resolved_at", { ascending: false })
@@ -66,14 +65,13 @@ export const AlertsViewer = () => {
   const resolveAlertMutation = useMutation({
     mutationFn: async ({ alertId, notes }: { alertId: string; notes: string }) => {
       const { data: userData } = await supabase.auth.getUser();
-      const { error } = await (supabase as any)
-        .from("alerts")
+      const { error } = await SecurityAlertRules()
         .update({
           resolved: true,
           resolved_at: new Date().toISOString(),
           resolved_by: userData.user?.id,
           notes: notes || null,
-        } as any)
+        })
         .eq("id", alertId);
       
       if (error) throw error;
@@ -93,8 +91,7 @@ export const AlertsViewer = () => {
 
   const deleteAlertMutation = useMutation({
     mutationFn: async (alertId: string) => {
-      const { error } = await (supabase as any)
-        .from("alerts")
+      const { error } = await SecurityAlertRules()
         .delete()
         .eq("id", alertId);
       
@@ -113,14 +110,15 @@ export const AlertsViewer = () => {
   const markAllResolvedMutation = useMutation({
     mutationFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
-      const { error } = await (supabase as any)
-        .from("alerts")
+      const alertIds = unresolvedAlerts?.map(a => a.id) || [];
+      
+      const { error } = await SecurityAlertRules()
         .update({
           resolved: true,
           resolved_at: new Date().toISOString(),
           resolved_by: userData.user?.id,
-        } as any)
-        .eq("resolved", false);
+        })
+        .in("id", alertIds);
       
       if (error) throw error;
     },
