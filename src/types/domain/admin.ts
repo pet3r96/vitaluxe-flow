@@ -41,6 +41,19 @@ export interface ImpersonationSessionData {
   logId?: string;
 }
 
+/**
+ * Raw impersonation session data from edge function response
+ * (matches database column names from active_impersonation_sessions)
+ */
+export interface ImpersonationSessionResponse {
+  impersonated_role: string;
+  impersonated_user_id: string | null;
+  impersonated_user_name: string | null;
+  impersonation_log_id: string | null;
+  expires_at?: string;
+  last_activity?: string;
+}
+
 // ============= Audit Logs =============
 
 export type AuditActionType = 

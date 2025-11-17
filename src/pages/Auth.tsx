@@ -22,6 +22,8 @@ import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/go
 import { cn } from "@/lib/utils";
 import { useErrorDialog } from "@/hooks/use-error-dialog";
 import { ErrorAlertDialog } from "@/components/ui/error-alert-dialog";
+import { hasAuthErrorCode } from "@/types/errors";
+
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -151,15 +153,15 @@ const Auth = () => {
         } = await signIn(email, password);
         if (error) {
           // Check if this is an email verification error
-          if ((error as any).code === 'email_not_verified') {
-            setReminderEmail((error as any).email || email);
+          if (hasAuthErrorCode(error, 'email_not_verified')) {
+            setReminderEmail(error.email || email);
             setShowVerificationReminder(true);
             setLoading(false);
             return;
           }
 
           // Check if this is a temporary password error
-          if ((error as any).code === 'temp_password_required') {
+          if (hasAuthErrorCode(error, 'temp_password_required')) {
             // Redirect to change password page with email parameter
             navigate(`/change-password?email=${encodeURIComponent(email)}&message=You must change your temporary password before logging in.`);
             setLoading(false);
@@ -167,10 +169,10 @@ const Auth = () => {
           }
 
           // Check if this is a disabled account error
-          if ((error as any).code === 'account_disabled') {
+          if (hasAuthErrorCode(error, 'account_disabled')) {
             showError(
               "Account Disabled",
-              (error as any).message || "Your account has been disabled. Please contact your practice for assistance."
+              error.message || "Your account has been disabled. Please contact your practice for assistance."
             );
             setLoading(false);
             return;
