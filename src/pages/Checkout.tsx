@@ -406,8 +406,8 @@ export default function Checkout() {
         // Call clear-cart edge function to ensure all lines are removed
         if (cartOwnerId) {
           try {
-            const { error: clearError } = await supabase.functions.invoke('clear-cart', {
-              body: { cartOwnerId }
+            const { error: clearError } = await supabase.functions.invoke('manage-cart', {
+              body: { action: 'clear', cartOwnerId }
             });
             
             if (clearError) {
@@ -521,8 +521,9 @@ export default function Checkout() {
     if (urlError) throw urlError;
 
     // Update cart line with prescription URL via edge function
-    const { error: updateError } = await supabase.functions.invoke('update-cart-prescription', {
+    const { error: updateError } = await supabase.functions.invoke('manage-cart', {
       body: {
+        action: 'update-prescription',
         lineId,
         prescriptionUrl: urlData.signedUrl
       }

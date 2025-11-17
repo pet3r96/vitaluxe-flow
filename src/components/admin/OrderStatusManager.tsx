@@ -74,8 +74,8 @@ export const OrderStatusManager = () => {
 
   const createStatusMutation = useMutation({
     mutationFn: async (statusConfig: any) => {
-      const { data, error } = await supabase.functions.invoke("manage-status-configs", {
-        body: { operation: "create", statusConfig },
+      const { data, error } = await supabase.functions.invoke("manage-entity-status", {
+        body: { action: "status-configs", operation: "create", statusConfig },
       });
       if (error) throw error;
       return data;
@@ -97,8 +97,8 @@ export const OrderStatusManager = () => {
 
   const updateStatusMutation = useMutation({
     mutationFn: async (statusConfig: any) => {
-      const { data, error } = await supabase.functions.invoke("manage-status-configs", {
-        body: { operation: "update", statusConfig },
+      const { data, error } = await supabase.functions.invoke("manage-entity-status", {
+        body: { action: "status-configs", operation: "update", statusConfig },
       });
       if (error) throw error;
       return data;
@@ -121,8 +121,8 @@ export const OrderStatusManager = () => {
 
   const deleteStatusMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await supabase.functions.invoke("manage-status-configs", {
-        body: { operation: "delete", statusConfig: { id } },
+      const { data, error } = await supabase.functions.invoke("manage-entity-status", {
+        body: { action: "status-configs", operation: "delete", statusConfig: { id } },
       });
       if (error) throw error;
       return data;

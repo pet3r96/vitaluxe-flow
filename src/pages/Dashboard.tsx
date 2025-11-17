@@ -57,8 +57,8 @@ const Dashboard = () => {
   const { data: dashboardStats, isLoading: statsLoading } = useRealtimeQuery(
     ["dashboard-stats-batched", effectiveRole, effectiveUserId, String(isImpersonating)],
     async () => {
-      const { data, error } = await supabase.functions.invoke('get-dashboard-stats', {
-        body: { role: effectiveRole, isImpersonating, effectiveUserId }
+      const { data, error } = await supabase.functions.invoke('manage-dashboard', {
+        body: { action: 'summary', role: effectiveRole, isImpersonating, effectiveUserId }
       });
       
       if (error) throw error;

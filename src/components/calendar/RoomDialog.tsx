@@ -59,9 +59,10 @@ export function RoomDialog({ open, onOpenChange, practiceId, room, onSuccess }: 
 
     setIsSaving(true);
     try {
-      const { error } = await supabase.functions.invoke("manage-practice-room", {
+      const { error } = await supabase.functions.invoke("manage-entity-status", {
         body: {
-          action: room ? "update" : "create",
+          action: "practice-room",
+          operation: room ? "update" : "create",
           practiceId,
           roomId: room?.id,
           name: name.trim(),

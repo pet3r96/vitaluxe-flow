@@ -127,8 +127,9 @@ export default function DeliveryConfirmation() {
       });
       
       // Update cart_lines with structured address
-      const { data, error } = await supabase.functions.invoke('update-cart-address', {
+      const { data, error } = await supabase.functions.invoke('manage-cart', {
         body: {
+          action: 'update-address',
           lineIds,
           address: {
             street: address.street,
@@ -273,8 +274,9 @@ export default function DeliveryConfirmation() {
           `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
         
         // Update cart line with routing results and formatted address via edge function
-        const { error: updateError } = await supabase.functions.invoke('update-cart-address', {
+        const { error: updateError } = await supabase.functions.invoke('manage-cart', {
           body: {
+            action: 'update-address',
             lineIds: [meta.id],
             address: {
               street: address.street,

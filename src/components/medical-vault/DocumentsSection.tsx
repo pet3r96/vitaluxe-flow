@@ -166,8 +166,9 @@ const { data: documents = [], isLoading } = useQuery({
         isProviderDoc
       });
 
-      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+      const { data, error } = await supabase.functions.invoke('manage-documents', {
         body: {
+          action: 'get-signed-url',
           bucket,
           path: doc.storage_path,
           expiresIn: 300

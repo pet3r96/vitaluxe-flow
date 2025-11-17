@@ -107,9 +107,10 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
     try {
       const bucketName = getBucketName(doc);
       
-      // Use the get-s3-signed-url edge function for proper bucket routing
-      const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+      // Use the manage-documents edge function for proper bucket routing
+      const { data, error } = await supabase.functions.invoke('manage-documents', {
         body: {
+          action: 'get-signed-url',
           bucket: bucketName,
           path: doc.storage_path,
           expiresIn: 3600

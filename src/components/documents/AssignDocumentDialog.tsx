@@ -25,8 +25,8 @@ export function AssignDocumentDialog({ documentId, open, onOpenChange }: AssignD
     mutationFn: async () => {
       if (selectedPatientIds.length === 0) throw new Error("Please select at least one patient");
 
-      const { data, error } = await supabase.functions.invoke("assign-document-to-patient", {
-        body: { documentId, patientIds: selectedPatientIds, message },
+      const { data, error } = await supabase.functions.invoke("manage-documents", {
+        body: { action: 'assign', documentId, patientIds: selectedPatientIds, message },
       });
 
       if (error) throw error;

@@ -54,8 +54,9 @@ export async function uploadDocument(
       reader.readAsDataURL(file);
     });
 
-    const { data: s3Data, error: s3Error } = await supabase.functions.invoke('upload-to-s3', {
+    const { data: s3Data, error: s3Error } = await supabase.functions.invoke('manage-documents', {
       body: {
+        action: 'upload',
         fileName,
         fileBuffer,
         contentType: file.type,
@@ -130,8 +131,9 @@ export async function getSignedUrl(
   
   // Try edge function (which has S3-first logic built-in)
   try {
-    const { data, error } = await supabase.functions.invoke('get-s3-signed-url', {
+    const { data, error } = await supabase.functions.invoke('manage-documents', {
       body: {
+        action: 'get-signed-url',
         bucketName: bucket,
         filePath,
         expiresIn

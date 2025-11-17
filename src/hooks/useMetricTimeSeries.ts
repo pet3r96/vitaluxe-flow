@@ -32,8 +32,9 @@ export function useMetricTimeSeries(
       const endStr = end.toISOString();
 
       // Use optimized edge function for server-side aggregation
-      const { data, error: fnError } = await supabase.functions.invoke('get-metric-timeseries', {
+      const { data, error: fnError } = await supabase.functions.invoke('manage-dashboard', {
         body: {
+          action: 'timeseries',
           metricType,
           period,
           startDate: startStr,

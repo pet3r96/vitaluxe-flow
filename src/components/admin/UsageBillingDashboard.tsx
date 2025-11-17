@@ -47,8 +47,9 @@ export const UsageBillingDashboard = () => {
         const startDate = startOfMonth(new Date()).toISOString();
         const endDate = new Date().toISOString();
 
-        const { data, error } = await supabase.functions.invoke('get-practice-usage-stats', {
+        const { data, error } = await supabase.functions.invoke('manage-dashboard', {
           body: {
+            action: 'usage',
             practiceId: effectivePracticeId,
             startDate,
             endDate
