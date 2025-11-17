@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -111,7 +112,7 @@ serve(async (req) => {
             }
           }
         } catch (error) {
-          console.error(`Failed to fetch address for patient ${patientId}:`, error);
+          edgeLogger.error('Failed to fetch patient address', error, { patientId });
         }
       }
     }
@@ -331,7 +332,7 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error('Error generating pharmacy order summary:', error);
+    edgeLogger.error('Error generating pharmacy order summary', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

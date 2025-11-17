@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGenerateTermsRequest } from '../_shared/requestValidators.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,7 +33,7 @@ async function getPracticeBranding(supabase: any, userId: string): Promise<{ log
       practiceName 
     };
   } catch (error) {
-    console.warn('Failed to get practice branding:', error);
+    edgeLogger.warn('Failed to get practice branding', { error: error instanceof Error ? error.message : String(error) });
     return { logoUrl: null, practiceName: 'VITALUXE SERVICES LLC' };
   }
 }
@@ -46,7 +47,7 @@ async function fetchLogoAsBase64(url: string): Promise<string | null> {
     const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
     return base64;
   } catch (error) {
-    console.warn('Failed to fetch logo:', error);
+    edgeLogger.warn('Failed to fetch logo', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }

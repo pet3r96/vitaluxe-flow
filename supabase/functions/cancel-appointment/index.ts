@@ -214,16 +214,16 @@ Deno.serve(async (req) => {
       });
       
       videoSessionUpdated = true;
-      console.log('✅ [cancel-appointment] Video session also cancelled');
+      edgeLogger.info('[cancel-appointment] Video session also cancelled');
     } else if (videoSession) {
-      console.log('ℹ️ [cancel-appointment] Video session already ended');
+      edgeLogger.info('[cancel-appointment] Video session already ended');
     }
 
-    console.log(`[cancel-appointment] Successfully cancelled appointment ${appointmentId}${videoSessionUpdated ? ' and ended video session' : ''}`);
+    edgeLogger.info('[cancel-appointment] Successfully cancelled appointment', { appointmentId, videoSessionEnded: videoSessionUpdated });
 
     // Send cancellation notification to patient (only if not already cancelled)
     if (!appointmentWasAlreadyCancelled && appointment) {
-      console.log('[cancel-appointment] Sending cancellation notification');
+      edgeLogger.info('[cancel-appointment] Sending cancellation notification');
       
       const { data: patientWithUser, error: patientUserError } = await supabaseAdmin
         .from('patient_accounts')
@@ -332,9 +332,9 @@ Deno.serve(async (req) => {
                     practiceAddress: practiceAddress
                   }
                 });
-                console.log('[cancel-appointment] SMS sent to:', normalizedPhone);
+                edgeLogger.info('[cancel-appointment] SMS sent', { phone: normalizedPhone });
               } catch (smsError) {
-                console.error('[cancel-appointment] Error sending SMS:', smsError);
+                edgeLogger.error('[cancel-appointment] Error sending SMS', smsError);
               }
             }
           }

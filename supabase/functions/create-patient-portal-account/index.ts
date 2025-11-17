@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
 
     // CRITICAL: For admins not impersonating, immediately fetch patient's practice
     if (isAdminRole && !isImpersonating) {
-      console.log('[create-patient-portal-account] Admin (not impersonating) - fetching patient practice context');
+      edgeLogger.info('[create-patient-portal-account] Admin (not impersonating) - fetching patient practice context');
       
       const { data: patientData, error: patientError } = await supabaseAdmin
         .from('patient_accounts')
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
       }
       
       if (!patientData) {
-        console.error('[create-patient-portal-account] Patient not found in database');
+        edgeLogger.error('[create-patient-portal-account] Patient not found in database');
         return new Response(
           JSON.stringify({ error: 'Patient not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       
       if (patientData.practice_id) {
         effectivePracticeId = patientData.practice_id;
-        console.log('[create-patient-portal-account] Admin using patient practice context:', { 
+        edgeLogger.info('[create-patient-portal-account] Admin using patient practice context', { 
           effectivePracticeId,
           patientName: patientData.name
         });
@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
 
     // If no practice context found, return clear error
     if (!effectivePracticeId) {
-      console.error('[create-patient-portal-account] No practice context:', {
+      edgeLogger.error('[create-patient-portal-account] No practice context', null, {
         authenticatedUser: user.id,
         isImpersonating,
         effectiveUserId,
@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[create-patient-portal-account] Context:', {
+    edgeLogger.info('[create-patient-portal-account] Context', {
       authenticatedUser: user.id,
       isImpersonating,
       effectiveUserId,
@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!subscription) {
-      console.error('[create-patient-portal-account] Subscription check failed:', {
+      edgeLogger.error('[create-patient-portal-account] Subscription check failed', null, {
         effectivePracticeId,
         effectiveUserId,
         isDoctorRole,
@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
     });
 
     // Fetch patient record and verify it belongs to effective practice
-    console.log('[create-patient-portal-account] Querying patient:', {
+    edgeLogger.info('[create-patient-portal-account] Querying patient', {
       patientId,
       effectivePracticeId,
       timestamp: new Date().toISOString()
@@ -304,10 +304,9 @@ Deno.serve(async (req) => {
     });
 
     if (patientError || !patient) {
-      console.error('[create-patient-portal-account] Patient not found:', {
+      edgeLogger.error('[create-patient-portal-account] Patient not found', patientError, {
         patientId,
         effectivePracticeId,
-        error: patientError,
         queryAttempted: true
       });
       
@@ -328,7 +327,7 @@ Deno.serve(async (req) => {
 
     // Ensure the patient belongs to the effective practice
     if (patient.practice_id !== effectivePracticeId) {
-      console.error('[create-patient-portal-account] Patient not in practice context', {
+      edgeLogger.error('[create-patient-portal-account] Patient not in practice context', null, {
         patientId: patient.id,
         patientPracticeId: patient.practice_id,
         effectivePracticeId
@@ -364,7 +363,7 @@ Deno.serve(async (req) => {
 
     // Normalize email to lowercase for case-insensitive matching
     const normalizedEmail = patient.email.trim().toLowerCase();
-    console.log('[create-patient-portal-account] Normalized email:', normalizedEmail);
+    edgeLogger.info('[create-patient-portal-account] Normalized email', { normalizedEmail });
 
     // Check if patient already has a portal account (case-insensitive)
     // CRITICAL: Only match accounts that have a linked auth user (user_id is not null)
@@ -376,14 +375,14 @@ Deno.serve(async (req) => {
       .not('user_id', 'is', null)
       .maybeSingle();
 
-    console.log('[create-patient-portal-account] Existing account check:', {
+    edgeLogger.info('[create-patient-portal-account] Existing account check', {
       found: !!existingAccount,
       hasUserId: !!existingAccount?.user_id,
       accountId: existingAccount?.id
     });
 
     if (existingAccount) {
-      console.log('[create-patient-portal-account] Found existing account with user_id, re-inviting:', existingAccount.id);
+      edgeLogger.info('[create-patient-portal-account] Found existing account with user_id, re-inviting', { accountId: existingAccount.id });
       
       // If account exists but is not active, reactivate it
       if (existingAccount.status !== 'active') {
@@ -450,7 +449,7 @@ Deno.serve(async (req) => {
     const foundUser = existingAuthUser?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
 
     if (foundUser) {
-      console.log('[create-patient-portal-account] Found existing auth user:', foundUser.id);
+      edgeLogger.info('[create-patient-portal-account] Found existing auth user', { authUserId: foundUser.id });
       // User exists in auth, update their password
       authUserId = foundUser.id;
       const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -459,11 +458,11 @@ Deno.serve(async (req) => {
       );
 
       if (passwordError) {
-        console.error('Failed to update password:', passwordError);
+        edgeLogger.error('Failed to update password', passwordError);
         throw new Error(`Failed to update password: ${passwordError.message}`);
       }
     } else {
-      console.log('[PATIENT PORTAL] Creating new auth user:', {
+      edgeLogger.info('[PATIENT PORTAL] Creating new auth user', {
         email: normalizedEmail,
         patientId,
         patientName: patient.name
@@ -482,7 +481,7 @@ Deno.serve(async (req) => {
       if (createAuthError) {
         // Handle case where user already exists but wasn't found in listUsers (pagination issue)
         if (createAuthError.message?.includes('already registered')) {
-          console.log('[PATIENT PORTAL] User already registered, fetching existing user');
+          edgeLogger.info('[PATIENT PORTAL] User already registered, fetching existing user');
           const { data: retryAuthUser } = await supabaseAdmin.auth.admin.listUsers();
           const retryFoundUser = retryAuthUser?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
           
@@ -490,9 +489,9 @@ Deno.serve(async (req) => {
             authUserId = retryFoundUser.id;
             // Update password for found user
             await supabaseAdmin.auth.admin.updateUserById(authUserId, { password: temporaryPassword });
-            console.log('[PATIENT PORTAL] Found and updated existing auth user:', authUserId);
+            edgeLogger.info('[PATIENT PORTAL] Found and updated existing auth user', { authUserId });
           } else {
-            console.error('[PATIENT PORTAL] Failed to find user after registration error:', createAuthError);
+            edgeLogger.error('[PATIENT PORTAL] Failed to find user after registration error', createAuthError);
             throw new Error(`User registration conflict: ${createAuthError.message}`);
             }
           } else {
@@ -503,7 +502,7 @@ Deno.serve(async (req) => {
         throw new Error('Failed to create auth user: No user returned');
       } else {
         authUserId = newAuthUser.user.id;
-        console.log('[PATIENT PORTAL] Auth user created successfully:', {
+        edgeLogger.info('[PATIENT PORTAL] Auth user created successfully', {
           authUserId,
           email: normalizedEmail,
           patientId
@@ -513,7 +512,7 @@ Deno.serve(async (req) => {
 
     // Update existing patient record with user_id to link portal account
     // Do NOT create a new patient record - update the existing one
-    console.log('[PATIENT PORTAL] Linking patient account to auth user:', {
+    edgeLogger.info('[PATIENT PORTAL] Linking patient account to auth user', {
       patientId,
       authUserId,
       email: normalizedEmail
@@ -532,10 +531,9 @@ Deno.serve(async (req) => {
       .single();
 
     if (accountError) {
-      console.error('[PATIENT PORTAL] Failed to link patient account:', {
+      edgeLogger.error('[PATIENT PORTAL] Failed to link patient account', accountError, {
         patientId,
         authUserId,
-        error: accountError.message,
         code: accountError.code
       });
       // Rollback: delete auth user if we just created them
@@ -545,7 +543,7 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to update patient account: ${accountError.message}`);
     }
 
-    console.log('[PATIENT PORTAL] Patient account linked successfully:', {
+    edgeLogger.info('[PATIENT PORTAL] Patient account linked successfully', {
       patientAccountId: patientAccount.id,
       authUserId,
       email: normalizedEmail,
@@ -563,7 +561,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     
     if (roleError) {
-      console.error('Failed to create patient role (will be created by trigger):', roleError);
+      edgeLogger.error('Failed to create patient role (will be created by trigger)', roleError);
       // Don't fail - trigger will handle this
     }
 
@@ -624,9 +622,9 @@ Deno.serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    console.error('[PATIENT PORTAL] ❌ Error occurred:', {
-      error: errorMessage,
-      stack: errorStack,
+    edgeLogger.error('[PATIENT PORTAL] Error occurred', error, {
+      errorMessage,
+      errorStack,
       timestamp: new Date().toISOString()
     });
     return new Response(

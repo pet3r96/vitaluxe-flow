@@ -336,7 +336,7 @@ serve(async (req) => {
         // STEP 9: Delete auth user (will cascade to profiles)
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
         if (deleteError) {
-          console.error(`Failed to delete auth user ${userId}:`, deleteError);
+          edgeLogger.error('Failed to delete auth user', deleteError, { userId });
           results.push({
             email: targetEmail,
             success: false,
@@ -361,7 +361,7 @@ serve(async (req) => {
           }
         });
 
-        console.log(`Successfully deleted user: ${targetEmail}`);
+        edgeLogger.info('Successfully deleted user', { targetEmail });
         results.push({
           email: targetEmail,
           success: true,
@@ -371,7 +371,7 @@ serve(async (req) => {
         deletedCount++;
 
       } catch (error: any) {
-        console.error(`Error processing ${targetEmail}:`, error);
+        edgeLogger.error('Error processing user', error, { targetEmail });
         results.push({
           email: targetEmail,
           success: false,
@@ -388,7 +388,7 @@ serve(async (req) => {
         .delete()
         .eq('id', pendingPracticeId);
       if (pendingError) {
-        console.log('Error deleting pending practice:', pendingError);
+        edgeLogger.error('Error deleting pending practice', pendingError);
       }
     }
 
@@ -412,7 +412,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Error in cleanup-test-data function:', error);
+    edgeLogger.error('Error in cleanup-test-data function', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

@@ -290,9 +290,9 @@ Deno.serve(async (req) => {
               message: smsMessage,
               metadata: { appointmentId: data.id }
             });
-            console.log('[book-appointment] SMS sent to:', normalizedPhone);
+            edgeLogger.info('[book-appointment] SMS sent', { phone: normalizedPhone });
           } catch (smsError) {
-            console.error('[book-appointment] Error sending SMS:', smsError);
+            edgeLogger.error('[book-appointment] Error sending SMS', smsError);
           }
         }
       }
@@ -304,8 +304,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    console.error('[book-appointment] Error:', error);
-    console.error('[book-appointment] Error stack:', errorStack);
+    edgeLogger.error('[book-appointment] Error occurred', error, { stack: errorStack });
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -319,14 +319,14 @@ export const ProductsDataTable = () => {
           return;
         }
         resolvedDoctorId = practiceId;
-        console.debug('[ProductsDataTable] Provider detected - using practice context for orders', { 
-          provider_user_id: providerId,  // ✅ Log correct provider ID
+        logger.info('[ProductsDataTable] Provider detected - using practice context for orders', { 
+          provider_user_id: providerId,
           practice_id: practiceId 
         });
       }
 
       if (shipToPractice) {
-        console.debug('[ProductsDataTable] Practice order - fetching practice shipping address', { effectiveUserId });
+        logger.info('[ProductsDataTable] Practice order - fetching practice shipping address', { effectiveUserId });
         
         // Get practice's shipping address
         const { data: practiceProfile } = await supabase
@@ -338,7 +338,7 @@ export const ProductsDataTable = () => {
         // Use direct state field from Google Address (no parsing needed)
         const destinationState = practiceProfile?.shipping_address_state || '';
         
-        console.debug('[ProductsDataTable] Practice shipping state resolved', { destinationState });
+        logger.info('[ProductsDataTable] Practice shipping state resolved', { destinationState });
 
         if (!isValidStateCode(destinationState)) {
           toast.error(
@@ -353,7 +353,7 @@ export const ProductsDataTable = () => {
           ? await getProviderIdFromUserId(providerId)
           : null;
         
-        console.debug('[ProductsDataTable] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
+        logger.info('[ProductsDataTable] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
 
         // Get user's topline rep ID for scoping (use resolved practice ID)
         const userToplineRepId = await getUserToplineRepId(resolvedDoctorId || effectiveUserId);

@@ -119,11 +119,11 @@ export const ProviderProfileForm = () => {
         });
 
         if (rpcError) {
-          console.error('[ProviderProfileForm] RPC error, falling back to plaintext:', rpcError);
+          logger.error('[ProviderProfileForm] RPC error, falling back to plaintext', rpcError);
         }
 
         const creds = rpcData?.[0];
-        console.log('[ProviderProfileForm] RPC returned:', !!creds);
+        logger.info('[ProviderProfileForm] RPC returned', { hasCredentials: !!creds });
         
         // Helper to get display name
         const getDisplayName = () => {
@@ -147,11 +147,11 @@ export const ProviderProfileForm = () => {
           setOriginalNpi(npiValue);
           
           if (!creds && !rpcError) {
-            console.log('[ProviderProfileForm] No RPC data, used plaintext fallback');
+            logger.info('[ProviderProfileForm] No RPC data, used plaintext fallback');
           }
         }
       } catch (error) {
-        console.error('[ProviderProfileForm] Error loading decrypted credentials:', error);
+        logger.error('[ProviderProfileForm] Error loading decrypted credentials', error);
         // Ultimate fallback
         const getDisplayName = () => {
           if (profile?.full_name) return profile.full_name;
