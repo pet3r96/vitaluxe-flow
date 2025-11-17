@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { PDFViewer } from "./PDFViewer";
+import { logger } from "@/lib/logger";
 
 interface PatientDocumentPreviewProps {
   open: boolean;
@@ -40,7 +41,7 @@ export function PatientDocumentPreview({
   const loadPreview = async () => {
     setLoading(true);
     try {
-      console.log('[PatientDocumentPreview] Loading preview:', {
+      logger.info('[PatientDocumentPreview] Loading preview', {
         bucketName,
         storagePath,
         documentName
@@ -56,7 +57,7 @@ export function PatientDocumentPreview({
       });
 
       if (error) {
-        console.error('[PatientDocumentPreview] Edge function error:', error);
+        logger.error('[PatientDocumentPreview] Edge function error', error, { bucketName, storagePath });
         throw new Error(error.message || 'Failed to generate preview URL');
       }
 
@@ -66,15 +67,14 @@ export function PatientDocumentPreview({
 
       const signedUrl = data.signedUrl || data.signed_url;
       if (!signedUrl) {
-        console.error('[PatientDocumentPreview] No signed URL in response:', data);
+        logger.error('[PatientDocumentPreview] No signed URL in response', { data });
         throw new Error('Server did not return a signed URL');
       }
 
-      console.log('[PatientDocumentPreview] Preview URL generated successfully');
+      logger.info('[PatientDocumentPreview] Preview URL generated successfully');
       setPreviewUrl(signedUrl);
     } catch (error: any) {
-      console.error("[PatientDocumentPreview] Error loading preview:", {
-        message: error.message,
+      logger.error("[PatientDocumentPreview] Error loading preview", error, {
         bucketName,
         storagePath,
         documentName

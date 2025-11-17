@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface DocumentCardProps {
   document: any;
@@ -58,7 +59,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
         .createSignedUrl(document.storage_path, 60);
 
       if (error || !data) {
-        console.error("Failed to create signed URL:", error);
+        logger.error("Failed to create signed URL", error, { documentId: document.id });
         toast.error("Failed to generate download link");
         return;
       }
@@ -81,7 +82,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
 
       toast.success("Document downloaded");
     } catch (error) {
-      console.error("Download error:", error);
+      logger.error("Download error", error, { documentId: document.id });
       toast.error("Failed to download document");
     }
   };

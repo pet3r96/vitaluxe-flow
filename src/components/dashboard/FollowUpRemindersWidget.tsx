@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { realtimeManager } from "@/lib/realtimeManager";
+import { logger } from "@/lib/logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, Check, Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +61,7 @@ export function FollowUpRemindersWidget() {
     },
     onError: (error) => {
       toast.error("Failed to update follow-up");
-      console.error(error);
+      logger.error("Failed to update follow-up", error);
     },
   });
 

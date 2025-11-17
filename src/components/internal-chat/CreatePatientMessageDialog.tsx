@@ -11,6 +11,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 
 interface CreatePatientMessageDialogProps {
   open: boolean;
@@ -62,7 +63,7 @@ export function CreatePatientMessageDialog({
       refetchPatients();
     },
     onError: (error: any) => {
-      console.error('Error creating portal account:', error);
+      logger.error('Error creating portal account', error);
       toast.error(error.message || 'Failed to create portal account');
     }
   });
@@ -104,7 +105,7 @@ export function CreatePatientMessageDialog({
       onSuccess();
       handleClose();
     } catch (error) {
-      console.error('Error sending patient message:', error);
+      logger.error('Error sending patient message', error, { patientAccountId: selectedPatient.patient_account_id });
       toast.error('Failed to send message');
     } finally {
       setSending(false);

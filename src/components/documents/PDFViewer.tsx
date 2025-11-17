@@ -3,6 +3,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Loader2, Printer } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logger";
 
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -28,7 +29,7 @@ export function PDFViewer({ url, onDownload, onPrint, className = "" }: PDFViewe
   }
 
   function onDocumentLoadError(error: Error) {
-    console.error("PDF load error:", error);
+    logger.error("PDF load error", error);
     setError("Failed to load PDF. Please try downloading instead.");
     setLoading(false);
   }

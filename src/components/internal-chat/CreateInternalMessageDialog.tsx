@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 
 interface CreateInternalMessageDialogProps {
   open: boolean;
@@ -108,17 +109,15 @@ export function CreateInternalMessageDialog({
         : null;
 
       if (regardingPatient && !validatedPatientId) {
-        console.warn('⚠️ Patient ID not found, clearing patient reference:', regardingPatient);
+        logger.warn('Patient ID not found, clearing patient reference', { patientId: regardingPatient });
       }
 
-      console.log('📨 Sending internal message:', {
-        practice_id: practiceId,
-        created_by: effectiveUserId,
-        subject,
-        message_type: messageType,
+      logger.info('Sending internal message', {
+        practiceId,
+        messageType,
         priority,
-        patient_id: validatedPatientId,
-        recipient_count: selectedRecipients.length
+        hasPatientId: !!validatedPatientId,
+        recipientCount: selectedRecipients.length
       });
 
       // Send to practice team via internal_messages
@@ -137,12 +136,12 @@ export function CreateInternalMessageDialog({
         .single();
 
       if (messageError) {
-        console.error('❌ Error inserting internal_messages:', messageError);
+        logger.error('Error inserting internal_messages', messageError, { practiceId });
         
         // Check if it's a FK constraint error on patient_id
         if (messageError.message?.includes('internal_messages_patient_id_fkey')) {
           // Retry without patient reference
-          console.log('🔄 Retrying without patient reference...');
+          logger.info('Retrying without patient reference');
           const { data: retryMessage, error: retryError } = await supabase
             .from('internal_messages')
             .insert({
@@ -185,7 +184,7 @@ export function CreateInternalMessageDialog({
         throw new Error(`Failed to create message: ${messageError.message || JSON.stringify(messageError)}`);
       }
 
-      console.log('✅ Message created:', message.id);
+      logger.info('Message created', { messageId: message.id, practiceId });
 
       // Add recipients
       const recipientsData = selectedRecipients.map(recipientId => ({
@@ -193,23 +192,23 @@ export function CreateInternalMessageDialog({
         recipient_id: recipientId
       }));
 
-      console.log('📬 Adding recipients:', recipientsData);
+      logger.info('Adding recipients', { messageId: message.id, count: recipientsData.length });
 
       const { error: recipientsError } = await supabase
         .from('internal_message_recipients')
         .insert(recipientsData);
 
       if (recipientsError) {
-        console.error('❌ Error inserting internal_message_recipients:', recipientsError);
+        logger.error('Error inserting internal_message_recipients', recipientsError, { messageId: message.id });
         throw new Error(`Failed to add recipients: ${recipientsError.message || JSON.stringify(recipientsError)}`);
       }
 
-      console.log('✅ Recipients added successfully');
+      logger.info('Recipients added successfully', { messageId: message.id });
       toast.success('Message sent to practice team');
       onSuccess();
       handleClose();
     } catch (error: any) {
-      console.error('❌ Error sending internal message:', error);
+      logger.error('Error sending internal message', error, { practiceId });
       toast.error(error.message || 'Failed to send message');
     } finally {
       setSending(false);

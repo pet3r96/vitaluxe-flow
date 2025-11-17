@@ -10,6 +10,7 @@ import { differenceInMinutes } from "date-fns";
 import { useEffect, useCallback, useMemo, useState } from "react";
 import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
 import { MedicalVaultQuickView } from "@/components/medical-vault/MedicalVaultQuickView";
+import { logger } from "@/lib/logger";
 
 export function WaitingRoomWidget() {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ export function WaitingRoomWidget() {
         .eq("status", "checked_in");
 
       if (countError) {
-        console.error("Error counting waiting patients:", countError);
+        logger.error("Error counting waiting patients", countError, { practiceId: effectivePracticeId });
         return { count: 0, patients: [] };
       }
 

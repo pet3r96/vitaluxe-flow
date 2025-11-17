@@ -20,6 +20,7 @@ import { ProviderDocuments } from '@/integrations/supabase/table-helpers';
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logger";
 
 interface Document {
   id: string;
@@ -85,7 +86,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
       queryClient.invalidateQueries({ queryKey: ["provider-documents"] });
     },
     onError: (error) => {
-      console.error("Delete error:", error);
+      logger.error("Delete error", error);
       toast.error("Failed to delete document");
     },
   });
@@ -138,7 +139,8 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
 
       toast.success(`Downloaded ${doc.document_name}`);
     } catch (error: any) {
-      console.error('[DocumentsDataTable] Download error:', error);
+      const bucketName = getBucketName(doc);
+      logger.error('[DocumentsDataTable] Download error', error, { documentName: doc.document_name, bucket: bucketName });
       toast.error("Failed to download document");
     }
   };

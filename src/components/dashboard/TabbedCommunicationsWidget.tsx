@@ -13,6 +13,7 @@ import { format, isPast, isToday } from "date-fns";
 import { toast } from "sonner";
 import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
 import { ProviderVirtualWaitingRoom } from "@/components/video/ProviderVirtualWaitingRoom";
+import { logger } from "@/lib/logger";
 
 export function TabbedCommunicationsWidget() {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ export function TabbedCommunicationsWidget() {
 
         return { count: count || 0, subjects };
       } catch (error) {
-        console.error("Failed to fetch patient messages:", error);
+        logger.error("Failed to fetch patient messages", error, { practiceId: effectivePracticeId });
         return { count: 0, subjects: [] };
       }
     },
@@ -127,7 +128,7 @@ export function TabbedCommunicationsWidget() {
           senders: senders.slice(0, 5)
         };
       } catch (error) {
-        console.error("Failed to fetch internal chat:", error);
+        logger.error("Failed to fetch internal chat", error, { practiceId: effectivePracticeId });
         return { count: 0, senders: [] };
       }
     },
@@ -174,7 +175,7 @@ export function TabbedCommunicationsWidget() {
     },
     onError: (error) => {
       toast.error("Failed to update follow-up");
-      console.error(error);
+      logger.error("Failed to update follow-up", error);
     },
   });
 

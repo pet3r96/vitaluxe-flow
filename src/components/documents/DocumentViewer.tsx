@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { logger } from "@/lib/logger";
 
 interface DocumentViewerProps {
   open: boolean;
@@ -42,7 +43,7 @@ export function DocumentViewer({ open, onOpenChange, document, bucketName = 'pro
       
       setFileUrl(data.signedUrl);
     } catch (error: any) {
-      console.error('[DocumentViewer] Failed to load:', error);
+      logger.error('[DocumentViewer] Failed to load', error, { documentId: document?.id, bucket: bucketName });
       toast.error("Failed to load document");
     } finally {
       setLoading(false);
@@ -84,7 +85,7 @@ export function DocumentViewer({ open, onOpenChange, document, bucketName = 'pro
 
       toast.success("Document downloaded");
     } catch (error: any) {
-      console.error('[DocumentViewer] Download error:', error);
+      logger.error('[DocumentViewer] Download error', error, { documentId: document?.id, bucket: bucketName });
       toast.error("Failed to download document");
     }
   };
