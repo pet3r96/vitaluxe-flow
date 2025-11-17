@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import type { SmsVerificationCodeWithProfile } from '@/types/manual-schema';
 
 export function SmsDebugPanel() {
   const { effectiveRole } = useAuth();
@@ -86,10 +87,6 @@ export function SmsDebugPanel() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-import type { SmsVerificationCodeWithProfile } from '@/types/manual-schema';
-
-// ... existing code
-
                 {smsCodesData?.map((code: SmsVerificationCodeWithProfile) => {
                   const isExpired = new Date(code.expires_at) < new Date();
                   const profile = code.profiles;

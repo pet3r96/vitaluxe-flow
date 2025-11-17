@@ -208,18 +208,16 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
           effectiveRole
         });
         
-        // Insert new record
-        const insertData: Partial<MedicalVaultRecord> = {
-          record_type: "vitals",
-          record_data: formattedData as VitalsRecordData,
-          patient_account_id: patientAccountId,
-          created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
-        };
-        
-        const { error } = await supabase
+        // Insert new record - using (as any) due to vitals record_type complexity
+        const { error } = await (supabase as any)
           .from("patient_medical_vault")
-          .insert(insertData);
+          .insert({
+            record_type: "vitals",
+            record_data: formattedData,
+            patient_account_id: patientAccountId,
+            created_by_user_id: authUser.id,
+            created_by_role: mapRoleToAuditRole(effectiveRole),
+          });
         
         if (error) {
           console.error('[VitalsDialog] Insert error:', {

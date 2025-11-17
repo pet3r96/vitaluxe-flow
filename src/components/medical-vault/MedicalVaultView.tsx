@@ -447,7 +447,7 @@ export function MedicalVaultView({
           }
           setAuditDialogOpen(open);
         }}
-        auditLogs={auditLogs as MedicalVaultAuditLog[]}
+        auditLogs={auditLogs as any[]}
         patientName={displayName}
         patientAccountId={patientAccountId}
         isLoading={isLoadingAuditLogs}
