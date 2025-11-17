@@ -43,20 +43,19 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Sanitize IP address - convert invalid formats to null
-    let ip = requestData.ip_address ?? null;
-    if (!ip || typeof ip !== "string") {
-      ip = null;
-    }
-    
-    // If present, validate IPv4 format
-    const ipv4Regex = /^(?:\d{1,3}\.){3}\d{1,3}$/;
-    if (ip && !ipv4Regex.test(ip)) {
-      // Don't block detection - just store sanitized value
-      ip = null;
-    }
+    const { email, attempt_count, ip_address } = requestData;
 
-    const { email, attempt_count } = requestData;
+    // Sanitize IP address passed from track-failed-login
+    let ip = ip_address ?? null;
+    if (ip && typeof ip === "string") {
+      const ipv4Regex = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+      if (!ipv4Regex.test(ip)) {
+        // Invalid format - store as null
+        ip = null;
+      }
+    } else {
+      ip = null;
+    }
 
     console.log(`Detecting brute force: ${attempt_count} attempts for ${email} from ${ip || 'unknown'}`);
 

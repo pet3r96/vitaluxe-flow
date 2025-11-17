@@ -31,7 +31,6 @@ export function validateCancelOrderRequest(data: any) {
 export function validateTrackFailedLoginRequest(data: any) {
   const validations = [
     validateEmail(data.email),
-    validateIP(data.ip_address),
     validateString(data.user_agent, 'user_agent', { maxLength: 500 })
   ];
   
@@ -41,7 +40,6 @@ export function validateTrackFailedLoginRequest(data: any) {
 export function validateDetectBruteForceRequest(data: any) {
   const validations = [
     validateEmail(data.email),
-    validateIP(data.ip_address),
     validateNumber(data.attempt_count, 'attempt_count', { required: true, min: 1 })
   ];
   
