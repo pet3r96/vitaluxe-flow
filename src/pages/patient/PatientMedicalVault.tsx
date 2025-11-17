@@ -23,6 +23,7 @@ import { PDFViewer } from "@/components/documents/PDFViewer";
 import { useAuditLogs } from "@/hooks/useAuditLogs";
 import { AuditLogDialog } from "@/components/medical-vault/dialogs/AuditLogDialog";
 import { generateAuditReportPDF } from "@/lib/auditReportPdfGenerator";
+import { logger } from "@/lib/logger";
 
 export default function PatientMedicalVault() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -39,7 +40,7 @@ export default function PatientMedicalVault() {
     queryFn: async () => {
       if (!effectiveUserId) throw new Error("Not authenticated");
       
-      console.log("👤 Fetching patient account for user ID:", effectiveUserId);
+      logger.info("Fetching patient account for user ID", { effectiveUserId });
       
       const { data, error } = await supabase
         .from("patient_accounts")
@@ -47,7 +48,7 @@ export default function PatientMedicalVault() {
         .eq("user_id", effectiveUserId)
         .maybeSingle();
       
-      console.log("📋 Patient account query result:", data, error);
+      logger.info("Patient account query result", { hasData: !!data, hasError: !!error });
       
       if (error) throw error;
       return data;
@@ -223,7 +224,7 @@ export default function PatientMedicalVault() {
       
       toast({ title: "Success", description: "PDF preview loaded" });
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
+      logger.error('Failed to generate PDF', error);
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
     } finally {
       setIsGeneratingPdf(false);
@@ -268,7 +269,7 @@ export default function PatientMedicalVault() {
             document.body.removeChild(printFrame);
           }, 1000);
         } catch (err) {
-          console.error('Print error:', err);
+          logger.error('Print error', err);
           document.body.removeChild(printFrame);
         }
       }, 500);
@@ -322,7 +323,7 @@ export default function PatientMedicalVault() {
       URL.revokeObjectURL(pdfUrl);
       toast({ title: "Success", description: "PDF downloaded successfully" });
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
+      logger.error('Failed to generate PDF', error);
       toast({ title: "Error", description: "Failed to download PDF", variant: "destructive" });
     } finally {
       setIsGeneratingPdf(false);

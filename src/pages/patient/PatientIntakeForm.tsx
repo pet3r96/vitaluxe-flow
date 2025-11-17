@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus, X } from "lucide-react";
 import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
+import { logger } from "@/lib/logger";
 
 const intakeSchema = z.object({
   date_of_birth: z.string().min(1, "Date of birth is required"),
@@ -272,7 +273,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   // Pre-fill form with existing data
   useEffect(() => {
     if (patientAccount) {
-      console.log('[PatientIntakeForm] Pre-populating form with patient data:', {
+      logger.info('[PatientIntakeForm] Pre-populating form with patient data', {
         date_of_birth: patientAccount.date_of_birth,
         gender_at_birth: patientAccount.gender_at_birth,
         phone: patientAccount.phone,
@@ -306,7 +307,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         pharmacy_phone: "",
       });
       
-      console.log('[PatientIntakeForm] Form reset complete. Current form values:', {
+      logger.info('[PatientIntakeForm] Form reset complete. Current form values', {
         date_of_birth: form.getValues('date_of_birth'),
         address: form.getValues('address'),
         city: form.getValues('city'),
@@ -367,7 +368,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
   useEffect(() => {
     if (existingImmunizations && existingImmunizations.length > 0) {
-      console.log('[Immunizations] Loading existing data:', existingImmunizations);
+      logger.info('[Immunizations] Loading existing data', { count: existingImmunizations?.length });
       const immunizationList = existingImmunizations.map((imm: any) => {
         // Handle date formatting - ensure it's in YYYY-MM-DD format
         let dateFormatted = '';
@@ -385,11 +386,11 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           date_administered: dateFormatted,
         };
       });
-      console.log('[Immunizations] Mapped list with formatted dates:', immunizationList);
+      logger.info('[Immunizations] Mapped list with formatted dates', { count: immunizationList.length });
       setImmunizations(immunizationList);
       setHasNoImmunizations(false);
     } else {
-      console.log('[Immunizations] No existing data found, existingImmunizations:', existingImmunizations);
+      logger.info('[Immunizations] No existing data found', { existingImmunizations });
     }
   }, [existingImmunizations]);
 
@@ -466,7 +467,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
 
       // Insert vitals if provided
       if (data.height || data.weight) {
-        console.log('[Vitals] Saving height/weight:', { height: data.height, weight: data.weight });
+        logger.info('[Vitals] Saving height/weight', { height: data.height, weight: data.weight });
         
         let heightInches = null;
         if (data.height) {
@@ -492,10 +493,10 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           } as any);
           
           if (heightError) {
-            console.error('Height insert error:', heightError);
+            logger.error('Height insert error', heightError);
             throw new Error(`Failed to save height: ${heightError.message}`);
           }
-          console.log('✅ Saved height');
+          logger.info('Saved height');
         }
         
         // Insert weight record to patient_medical_vault
@@ -516,10 +517,10 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           } as any);
           
           if (weightError) {
-            console.error('Weight insert error:', weightError);
+            logger.error('Weight insert error', weightError);
             throw new Error(`Failed to save weight: ${weightError.message}`);
           }
-          console.log('✅ Saved weight');
+          logger.info('Saved weight');
         }
       }
 
@@ -553,7 +554,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       if (medications.length > 0 && !hasNoMedications) {
         const incompleteCount = medications.filter(m => !m.name || !m.dosage || !m.frequency).length;
         if (incompleteCount > 0) {
-          console.warn(`⚠️ ${incompleteCount} medication(s) skipped due to missing required fields`);
+          logger.warn(`${incompleteCount} medication(s) skipped due to missing required fields`, { incompleteCount });
         }
         
         const medEntries = medications
@@ -570,7 +571,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           }));
         
         // 🔍 DIAGNOSTIC LOG: Before saving medications
-        console.log(`[PatientIntakeForm] 📊 Saving ${medEntries.length} medications:`, 
+        logger.info(`[PatientIntakeForm] Saving ${medEntries.length} medications`, 
           medEntries.map(m => ({ name: m.medication_name, dosage: m.dosage, frequency: m.frequency }))
         );
         
@@ -588,7 +589,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             .insert(vaultEntries as any);
           
           if (medError) {
-            console.error('Medication insert error:', medError);
+            logger.error('Medication insert error', medError);
             throw new Error(`Failed to save medications: ${medError.message}`);
           }
           
@@ -606,7 +607,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             });
           }
           
-          console.log(`✅ Saved ${medEntries.length} medication(s)`);
+          logger.info(`Saved ${medEntries.length} medication(s)`, { count: medEntries.length });
         }
       }
 
@@ -630,7 +631,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           } as any);
         
         if (nkaError) {
-          console.error('NKA insert error:', nkaError);
+          logger.error('NKA insert error', nkaError);
           throw new Error(`Failed to save NKA status: ${nkaError.message}`);
         }
         
@@ -646,11 +647,11 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           changeSummary: `Patient indicated: No Known Allergies (NKA)`,
         });
         
-        console.log(`✅ Saved NKA status`);
+        logger.info('Saved NKA status');
       } else if (allergies.length > 0) {
         const incompleteCount = allergies.filter(a => !a.name || !a.reaction).length;
         if (incompleteCount > 0) {
-          console.warn(`⚠️ ${incompleteCount} allergy/allergies skipped due to missing required fields`);
+          logger.warn(`${incompleteCount} allergy/allergies skipped due to missing required fields`, { incompleteCount });
         }
         
         const allergyEntries = allergies
@@ -667,7 +668,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           }));
         
         // 🔍 DIAGNOSTIC LOG: Before saving allergies
-        console.log(`[PatientIntakeForm] 📊 Saving ${allergyEntries.length} allergies:`,
+        logger.info(`[PatientIntakeForm] Saving ${allergyEntries.length} allergies`,
           allergyEntries.map(a => ({ name: a.allergen_name, reaction: a.reaction_type }))
         );
         
@@ -685,7 +686,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             .insert(vaultEntries as any);
           
           if (allergyError) {
-            console.error('Allergy insert error:', allergyError);
+            logger.error('Allergy insert error', allergyError);
             throw new Error(`Failed to save allergies: ${allergyError.message}`);
           }
           
@@ -703,7 +704,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             });
           }
           
-          console.log(`✅ Saved ${allergyEntries.length} allergy/allergies`);
+          logger.info(`Saved ${allergyEntries.length} allergy/allergies`, { count: allergyEntries.length });
         }
       }
 
@@ -711,7 +712,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       if (conditions.length > 0 && !hasNoConditions) {
         const incompleteCount = conditions.filter(c => !c.name || !c.diagnosed_date).length;
         if (incompleteCount > 0) {
-          console.warn(`⚠️ ${incompleteCount} condition(s) skipped due to missing required fields`);
+          logger.warn(`${incompleteCount} condition(s) skipped due to missing required fields`, { incompleteCount });
         }
         
         const conditionEntries = conditions
@@ -730,7 +731,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           }));
         
         // 🔍 DIAGNOSTIC LOG: Before saving conditions
-        console.log(`[PatientIntakeForm] 📊 Saving ${conditionEntries.length} conditions:`,
+        logger.info(`[PatientIntakeForm] Saving ${conditionEntries.length} conditions`,
           conditionEntries.map(c => ({ name: c.condition_name, date: c.date_diagnosed }))
         );
         
@@ -748,7 +749,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             .insert(vaultEntries as any);
           
           if (conditionError) {
-            console.error('Condition insert error:', conditionError);
+            logger.error('Condition insert error', conditionError);
             throw new Error(`Failed to save conditions: ${conditionError.message}`);
           }
           
@@ -766,7 +767,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             });
           }
           
-          console.log(`✅ Saved ${conditionEntries.length} condition(s)`);
+          logger.info(`Saved ${conditionEntries.length} condition(s)`, { count: conditionEntries.length });
         }
       }
 
@@ -774,7 +775,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       if (surgeries.length > 0 && !hasNoSurgeries) {
         const incompleteCount = surgeries.filter(s => !s.type || !s.date).length;
         if (incompleteCount > 0) {
-          console.warn(`⚠️ ${incompleteCount} surgery/surgeries skipped due to missing required fields`);
+          logger.warn(`${incompleteCount} surgery/surgeries skipped due to missing required fields`, { incompleteCount });
         }
         
         const surgeryEntries = surgeries
@@ -806,7 +807,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             .insert(vaultEntries as any);
           
           if (surgeryError) {
-            console.error('Surgery insert error:', surgeryError);
+            logger.error('Surgery insert error', surgeryError);
             throw new Error(`Failed to save surgeries: ${surgeryError.message}`);
           }
           
@@ -824,7 +825,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             });
           }
           
-          console.log(`✅ Saved ${surgeryEntries.length} surgery/surgeries`);
+          logger.info(`Saved ${surgeryEntries.length} surgery/surgeries`, { count: surgeryEntries.length });
         }
       }
 
@@ -832,7 +833,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       if (immunizations.length > 0 && !hasNoImmunizations) {
         const incompleteCount = immunizations.filter(i => !i.vaccine_name || !i.date_administered).length;
         if (incompleteCount > 0) {
-          console.warn(`⚠️ ${incompleteCount} immunization(s) skipped due to missing required fields`);
+          logger.warn(`${incompleteCount} immunization(s) skipped due to missing required fields`, { incompleteCount });
         }
         
       const immEntries = immunizations
@@ -859,7 +860,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             .insert(vaultEntries as any);
           
           if (immError) {
-            console.error('Immunization insert error:', immError);
+            logger.error('Immunization insert error', immError);
             throw new Error(`Failed to save immunizations: ${immError.message}`);
           }
           
@@ -877,7 +878,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             });
           }
           
-          console.log(`✅ Saved ${immEntries.length} immunization(s)`);
+          logger.info(`Saved ${immEntries.length} immunization(s)`, { count: immEntries.length });
         }
       }
 
@@ -931,9 +932,9 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             changeSummary: `Added preferred pharmacy: ${data.pharmacy_name}`,
           });
         }
-        console.log(`✅ Saved pharmacy information`);
+        logger.info('Saved pharmacy information');
       } else {
-        console.log(`⏭️ Skipped pharmacy (user indicated no pharmacy or no data provided)`);
+        logger.info('Skipped pharmacy (user indicated no pharmacy or no data provided)');
       }
 
       // Insert or update emergency contact using patient_medical_vault
@@ -983,9 +984,9 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
             changeSummary: `Added emergency contact: ${data.emergency_contact_name}`,
           });
         }
-        console.log(`✅ Saved emergency contact information`);
+        logger.info('Saved emergency contact information');
       } else {
-        console.log(`⏭️ Skipped emergency contact (user indicated no contact or no data provided)`);
+        logger.info('Skipped emergency contact (user indicated no contact or no data provided)');
       }
 
       // Log intake completion
@@ -1011,7 +1012,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         navigate('/medical-vault');
       }
     } catch (error) {
-      console.error('Intake submission error:', error);
+      logger.error('Intake submission error', error);
       toast.error("Failed to submit intake form. Please try again.");
     } finally {
       setSubmitting(false);
@@ -1842,7 +1843,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
               {!hasNoImmunizations && (
                 <>
                   {immunizations.map((imm, index) => {
-                    console.log(`[Immunization ${index}] Rendering:`, imm);
+                    logger.info(`[Immunization ${index}] Rendering`, { vaccine: imm.vaccine_name, date: imm.date_administered });
                     return (
                       <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
                       <div className="flex-1 w-full">

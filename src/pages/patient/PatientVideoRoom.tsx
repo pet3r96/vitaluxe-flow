@@ -4,6 +4,7 @@ import { AgoraVideoRoom } from "@/components/video/AgoraVideoRoom";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeChannel } from "@/lib/video/normalizeChannel";
 import { PreCallTestPrompt } from "@/components/video/PreCallTestPrompt";
+import { logger } from "@/lib/logger";
 
 const PatientVideoRoom = () => {
   const { sessionId } = useParams();
@@ -18,11 +19,11 @@ const PatientVideoRoom = () => {
   const [patientId, setPatientId] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
 
-  console.log("[PatientVideoRoom] Session ID:", sessionId);
+  logger.info("[PatientVideoRoom] Session ID", { sessionId });
 
   useEffect(() => {
     if (!sessionId) {
-      console.error("[PatientVideoRoom] Missing session ID.");
+      logger.error("[PatientVideoRoom] Missing session ID");
       return;
     }
 
