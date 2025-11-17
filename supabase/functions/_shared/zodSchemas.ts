@@ -53,6 +53,65 @@ export const cleanupCartSchema = z.object({
   // No input validation needed for cron job
 });
 
+export const placeOrderSchema = z.object({
+  cart_id: z.string().uuid(),
+  payment_method_id: z.string().uuid(),
+  discount_code: z.string().max(50).optional().nullable(),
+  discount_percentage: z.number().min(0).max(100).optional(),
+  merchant_fee_percentage: z.number().min(0).max(10).optional(),
+  csrf_token: z.string().min(1),
+});
+
+// Payment schemas
+export const chargePaymentSchema = z.object({
+  order_id: z.string().uuid(),
+  amount: z.number().positive(),
+  payment_method_id: z.string().uuid(),
+});
+
+export const refundSchema = z.object({
+  transaction_id: z.string().min(1),
+  amount: z.number().positive(),
+  reason: z.string().max(500).optional(),
+});
+
+// Admin schemas
+export const resetPasswordSchema = z.object({
+  user_id: z.string().uuid(),
+  new_password: z.string().min(8),
+});
+
+export const assignRoleSchema = z.object({
+  user_id: z.string().uuid(),
+  role: z.enum(["admin","doctor","provider","pharmacy","topline","downline","patient"]),
+});
+
+// Video/Agora schemas
+export const generateAgoraTokenSchema = z.object({
+  channel_name: z.string().min(1).max(64),
+  uid: z.number().int().positive(),
+  role: z.enum(["publisher","subscriber"]).optional(),
+});
+
+// Medical vault schemas
+export const vaultRecordSchema = z.object({
+  patient_account_id: z.string().uuid(),
+  record_type: z.enum(["medication","allergy","condition","immunization","surgery","vital","document"]),
+  record_data: z.record(z.unknown()),
+});
+
+// Security schemas
+export const trackFailedLoginSchema = z.object({
+  email: z.string().email(),
+  user_agent: z.string().max(500),
+});
+
+export const detectBruteForceSchema = z.object({
+  email: z.string().email(),
+  attempt_count: z.number().int().positive(),
+  ip_address: z.string().max(45).optional().nullable(),
+});
+
 // Helper function to safely parse and validate
 export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; errors: string[] } {
   const result = schema.safeParse(data);

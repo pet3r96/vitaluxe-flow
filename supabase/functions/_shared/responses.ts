@@ -4,18 +4,50 @@ import { corsHeaders } from "./cors.ts";
  * Standardized response helpers for Edge Functions
  */
 
-export function successResponse<T>(data: T, status = 200): Response {
+export interface ApiError { 
+  code: string; 
+  message: string; 
+  details?: unknown; 
+}
+
+export interface ApiResponse<T> { 
+  success: boolean; 
+  data?: T; 
+  error?: ApiError;
+  timestamp?: string;
+}
+
+export function ok<T>(data: T, status = 200): Response {
   return new Response(
     JSON.stringify({ 
       success: true, 
-      data, 
-      timestamp: new Date().toISOString() 
-    }),
-    { 
-      status, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      data,
+      timestamp: new Date().toISOString()
+    } as ApiResponse<T>), 
+    {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     }
   );
+}
+
+export function fail(code: string, message: string, details?: unknown, status = 400): Response {
+  return new Response(
+    JSON.stringify({ 
+      success: false, 
+      error: { code, message, details },
+      timestamp: new Date().toISOString()
+    } as ApiResponse<never>), 
+    {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
+  );
+}
+
+// Legacy aliases for backward compatibility
+export function successResponse<T>(data: T, status = 200): Response {
+  return ok(data, status);
 }
 
 export function errorResponse(
@@ -24,16 +56,5 @@ export function errorResponse(
   code?: string,
   details?: any
 ): Response {
-  return new Response(
-    JSON.stringify({ 
-      success: false, 
-      error, 
-      code,
-      details
-    }),
-    { 
-      status, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    }
-  );
+  return fail(code || "ERROR", error, details, status);
 }
