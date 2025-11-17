@@ -173,7 +173,7 @@ serve(async (req) => {
         // Check if user already exists
         if (createUserError.message?.includes('already registered') || 
             createUserError.message?.includes('duplicate')) {
-          edgeLogger.info('User already exists, fetching existing user', { email: practiceData.email });
+          edgeLogger.info('User already exists, fetching existing user', { emailDomain: practiceData.email?.split('@')[1] });
           const { data: existingUser, error: fetchError } = await supabaseAdmin.auth.admin
             .listUsers();
           
@@ -325,7 +325,7 @@ serve(async (req) => {
             const errorText = await emailResponse.text();
             edgeLogger.error('Error sending welcome email', new Error(errorText));
           } else {
-            edgeLogger.info('Welcome email sent successfully', { email: practiceData.email });
+            edgeLogger.info('Welcome email sent successfully', { emailDomain: practiceData.email?.split('@')[1] });
           }
         } catch (emailErr) {
           edgeLogger.error('Failed to send welcome email', emailErr);

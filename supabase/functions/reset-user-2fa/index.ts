@@ -77,7 +77,7 @@ serve(async (req) => {
       .from('two_fa_reset_logs')
       .insert({
         target_user_id: targetUserId,
-        target_user_email: targetUser.user.email || 'unknown',
+        target_user_emailDomain: targetUser.user.email?.split('@')[1] || 'unknown',
         reset_by_user_id: user.id,
         reset_by_email: adminEmail,
         reason: reason || 'No reason provided',

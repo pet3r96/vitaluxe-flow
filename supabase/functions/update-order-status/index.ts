@@ -143,7 +143,7 @@ serve(async (req) => {
         change_reason: changeReason || null,
         is_manual_override: true,
         metadata: {
-          user_email: user.email,
+        user_email: user.email,
           timestamp: new Date().toISOString(),
         },
       });

@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
     const apptStartMin = parseTimeToMinutes(appointmentTimeNorm);
     const apptEndMin = parseTimeToMinutes(appointmentEndTimeNorm);
 
-    console.log('[validate-appointment-time] Hours check:', JSON.stringify({
+    edgeLogger.info('[validate-appointment-time] Hours check', {
       practiceStartMin,
       practiceEndMin,
       apptStartMin,
@@ -183,10 +183,10 @@ Deno.serve(async (req) => {
       practiceEnd: endTimeNorm,
       apptStart: appointmentTimeNorm,
       apptEnd: appointmentEndTimeNorm
-    }));
+    });
 
     if (apptStartMin < practiceStartMin) {
-      console.log('[validate-appointment-time] REJECTED: Before opening hours');
+      edgeLogger.info('[validate-appointment-time] Rejected: Before opening hours');
       return new Response(
         JSON.stringify({
           valid: false,
@@ -271,7 +271,7 @@ Deno.serve(async (req) => {
     if (conflictError) throw conflictError;
 
     if (conflicts && conflicts.length > 0) {
-      console.log('[validate-appointment-time] REJECTED: Appointment conflict', { count: conflicts.length });
+      edgeLogger.info('[validate-appointment-time] Rejected: Appointment conflict', { count: conflicts.length });
       return new Response(
         JSON.stringify({
           valid: false,
