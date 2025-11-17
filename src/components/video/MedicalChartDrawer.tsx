@@ -5,11 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
+import type { MedicalChartData } from "@/types/domain/video";
+
+interface PatientInfo {
+  fullName?: string;
+  dob?: string;
+  gender?: string;
+  email?: string;
+  phone?: string;
+}
 
 interface MedicalChartDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  chart: any;
+  chart: MedicalChartData & { patient?: PatientInfo };
   patientId: string;
 }
 

@@ -6,3 +6,6 @@
 export * from './orders';
 export * from './patients';
 export * from './products';
+export * from './auth';
+export * from './reports';
+export * from './video';

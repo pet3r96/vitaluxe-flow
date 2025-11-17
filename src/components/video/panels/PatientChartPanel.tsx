@@ -4,10 +4,11 @@ import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import type { MedicalChartData } from '@/types/domain/video';
 
 export interface PatientChartPanelProps {
   patientId: string;
-  chart?: any;
+  chart?: MedicalChartData;
   isCollapsed?: boolean;
   onToggle?: () => void;
   className?: string;
@@ -105,7 +106,7 @@ export const PatientChartPanel = ({
                   <h3 className="text-sm font-semibold text-foreground mb-2">Active Conditions</h3>
                   {chart.conditions && chart.conditions.length > 0 ? (
                     <div className="space-y-2">
-                      {chart.conditions.slice(0, 3).map((condition: any, index: number) => (
+                      {chart.conditions.slice(0, 3).map((condition, index: number) => (
                         <div key={index} className="p-2 rounded bg-muted/50 text-sm">
                           {condition.condition_name}
                         </div>
@@ -120,7 +121,7 @@ export const PatientChartPanel = ({
                   <h3 className="text-sm font-semibold text-foreground mb-2">Current Medications</h3>
                   {chart.medications && chart.medications.length > 0 ? (
                     <div className="space-y-2">
-                      {chart.medications.slice(0, 3).map((med: any, index: number) => (
+                      {chart.medications.slice(0, 3).map((med, index: number) => (
                         <div key={index} className="p-2 rounded bg-muted/50">
                           <p className="text-sm font-medium">{med.medication_name}</p>
                           <p className="text-xs text-muted-foreground">{med.dosage}</p>

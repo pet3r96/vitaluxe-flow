@@ -8,6 +8,7 @@ import { generateCSRFToken, clearCSRFToken, getCSRFToken } from "@/lib/csrf";
 import { logger } from "@/lib/logger";
 // Idle timeout system removed - now using simple 60-minute hard session timeout
 import { authService } from "@/lib/authService";
+import type { SignUpRoleData, PasswordCheckResult, ImpersonationSessionData } from "@/types/domain/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -37,19 +38,19 @@ interface AuthContextType {
   setShowIntakeDialog: (show: boolean) => void;
   mark2FAVerified: () => void;
   mark2FAEnrolled?: (phone: string) => void;
-  checkPasswordStatus: (roleOverride?: string, userIdOverride?: string) => Promise<{ mustChangePassword: boolean; termsAccepted: boolean }>;
+  checkPasswordStatus: (roleOverride?: string, userIdOverride?: string) => Promise<PasswordCheckResult>;
   setImpersonation: (role: string | null, userId?: string | null, userName?: string | null, targetEmail?: string | null) => void;
   clearImpersonation: () => void;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (
     email: string, 
     password: string, 
     name: string, 
     role: string, 
-    roleData: any,
+    roleData: SignUpRoleData,
     fullName?: string,
     prescriberName?: string
-  ) => Promise<{ error: any }>;
+  ) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -1391,7 +1392,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     password: string, 
     name: string, 
     role: string, 
-    roleData: any,
+    roleData: SignUpRoleData,
     fullName?: string,
     prescriberName?: string
   ) => {

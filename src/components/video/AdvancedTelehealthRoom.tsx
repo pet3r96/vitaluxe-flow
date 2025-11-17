@@ -110,16 +110,16 @@ export default function TelehealthRoom({ appId, channel, token, uid, isProvider,
       clientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       const client = clientRef.current;
 
-      client.on("user-published", async (user: any, mediaType: any) => {
+      client.on("user-published", async (user: import("agora-rtc-sdk-ng").IAgoraRTCRemoteUser, mediaType: "audio" | "video") => {
         await client.subscribe(user, mediaType);
 
-        if (mediaType === "video") user.videoTrack.play(`remote-${user.uid}`);
-        if (mediaType === "audio") user.audioTrack.play();
+        if (mediaType === "video") user.videoTrack?.play(`remote-${user.uid}`);
+        if (mediaType === "audio") user.audioTrack?.play();
 
         setRemoteUsers((prev) => [...prev, user]);
       });
 
-      client.on("user-unpublished", (user: any) => {
+      client.on("user-unpublished", (user: import("agora-rtc-sdk-ng").IAgoraRTCRemoteUser) => {
         setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
       });
 
@@ -132,7 +132,7 @@ export default function TelehealthRoom({ appId, channel, token, uid, isProvider,
       }
 
       // Network quality
-      client.on("network-quality", (stats: any) => {
+      client.on("network-quality", (stats: import("@/types/domain/video").AgoraNetworkQuality) => {
         setConnectionQuality(Math.min(stats.uplinkNetworkQuality, stats.downlinkNetworkQuality));
       });
 
