@@ -11,6 +11,7 @@ import { CreateSupportTicketDialog } from "@/components/support-tickets/CreateSu
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import type { TicketTabState } from "@/types/domain/support";
+import { logger } from "@/lib/logger";
 
 interface SupportTicket {
   id: string;
@@ -47,7 +48,7 @@ export default function SupportTickets() {
 
       // Filter by practice_id for staff and doctors using effectivePracticeId
       if ((effectiveRole === "staff" || effectiveRole === "doctor") && effectivePracticeId) {
-        console.log('[SupportTickets] Filtering tickets for practice:', effectivePracticeId);
+        logger.info('[SupportTickets] Filtering tickets for practice', { practiceId: effectivePracticeId });
         query = query.eq("practice_id", effectivePracticeId);
       }
       // Admin sees all tickets (no filter)

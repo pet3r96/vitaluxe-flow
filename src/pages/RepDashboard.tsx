@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { RealtimePayload } from "@/types/realtime";
 import type { Database } from "@/integrations/supabase/types";
 import type { RepDashboardStats } from "@/types/edge-functions";
+import { logger } from "@/lib/logger";
 
 const RepDashboard = () => {
   const { user, effectiveRole, effectiveUserId } = useAuth();
@@ -48,7 +49,7 @@ const RepDashboard = () => {
         };
       }
 
-      console.log('[Rep Dashboard] Fetching batched stats via edge function');
+      logger.info('[Rep Dashboard] Fetching batched stats via edge function');
       const startTime = performance.now();
 
       const { data, error } = await supabase.functions.invoke<RepDashboardStats>('get-rep-dashboard-stats', {
@@ -56,10 +57,10 @@ const RepDashboard = () => {
       });
 
       const duration = performance.now() - startTime;
-      console.log(`[Rep Dashboard] ✅ Batched stats loaded in ${duration.toFixed(0)}ms`);
+      logger.info('[Rep Dashboard] Batched stats loaded', { durationMs: duration.toFixed(0) });
 
       if (error) {
-        console.error('[Rep Dashboard] Error fetching stats:', error);
+        logger.error('[Rep Dashboard] Error fetching stats', error);
         throw error;
       }
 

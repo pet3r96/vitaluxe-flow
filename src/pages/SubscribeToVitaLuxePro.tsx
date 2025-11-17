@@ -18,6 +18,7 @@ import logoLight from "@/assets/vitaluxe-logo-light.png";
 import logoDark from "@/assets/vitaluxe-logo-dark-bg.png";
 import { TrialExpiredDialog } from "@/components/subscription/TrialExpiredDialog";
 import { PaymentWithTermsDialog } from "@/components/subscription/PaymentWithTermsDialog";
+import { logger } from "@/lib/logger";
 
 export default function SubscribeToVitaLuxePro() {
   const { user, effectiveRole } = useAuth();
@@ -70,7 +71,7 @@ export default function SubscribeToVitaLuxePro() {
 
   // Show trial expired modal when needed - ONLY FOR DOCTORS
   useEffect(() => {
-    console.log('[SubscribeToVitaLuxePro] Trial modal check', { effectiveRole, status, isSubscribed, subscriptionLoading });
+    logger.info('[SubscribeToVitaLuxePro] Trial modal check', { effectiveRole, status, isSubscribed, subscriptionLoading });
     
     if (!subscriptionLoading && status && effectiveRole === 'doctor') {
       // Show blocking modal for expired trial or suspended subscription
@@ -79,7 +80,7 @@ export default function SubscribeToVitaLuxePro() {
         status === 'suspended' || 
         status === 'expired';
       
-      console.log('[SubscribeToVitaLuxePro] Should show modal?', shouldShowModal);
+      logger.info('[SubscribeToVitaLuxePro] Should show modal?', { shouldShowModal });
       setShowTrialExpiredDialog(shouldShowModal);
       
       // Redirect if actively subscribed
@@ -109,7 +110,7 @@ export default function SubscribeToVitaLuxePro() {
         if (result.error) throw result.error;
         setTermsContent(result.data?.content || "Terms not available.");
       } catch (error) {
-        console.error('Error fetching terms:', error);
+        logger.error('Error fetching terms', error);
         setTermsContent("Unable to load terms. Please contact support.");
       } finally {
         setLoadingTerms(false);
@@ -148,7 +149,7 @@ export default function SubscribeToVitaLuxePro() {
       setShowTrialExpiredDialog(false);
       navigate('/dashboard');
     } catch (error: any) {
-      console.error('Error cancelling subscription:', error);
+      logger.error('Error cancelling subscription', error);
       toast({
         title: "Cancellation Failed",
         description: error.message || "Unable to cancel subscription. Please try again.",
@@ -196,7 +197,7 @@ export default function SubscribeToVitaLuxePro() {
       const { data, error } = await supabase.functions.invoke('subscribe-to-vitaluxepro');
 
       if (error) {
-        console.error('[SubscribeToVitaLuxePro] Edge function error:', error);
+        logger.error('[SubscribeToVitaLuxePro] Edge function error', error);
         toast({
           title: 'Subscription Failed',
           description: error.message || 'Unable to process subscription. Please try again.',
@@ -243,7 +244,7 @@ export default function SubscribeToVitaLuxePro() {
       }
 
     } catch (error: any) {
-      console.error('Subscription error:', error);
+      logger.error('Subscription error', error);
       toast({
         title: "Subscription Failed",
         description: error.message || "Unable to process subscription. Please try again.",
