@@ -131,7 +131,7 @@ const RepProductivityReport = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Toplines</SelectItem>
-                {toplineReps.map((rep: any) => (
+                {toplineReps.map((rep: import("@/types/domain/reports").ToplineRepProfile) => (
                   <SelectItem key={rep.id} value={rep.id}>
                     {rep.profiles?.name || rep.profiles?.email}
                   </SelectItem>
@@ -243,7 +243,7 @@ const RepProductivityReport = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedData?.map((rep: any) => (
+                paginatedData?.map((rep: import("@/types/domain/reports").RepProductivityData) => (
                   <TableRow key={rep.rep_id}>
                     <TableCell>
                       <div>

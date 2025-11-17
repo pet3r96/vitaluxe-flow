@@ -4,13 +4,14 @@ import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { VideoDiagnosticsDetails } from "@/types/domain/video";
 
 interface DiagnosticResult {
   name: string;
   status: 'success' | 'error' | 'pending';
   message: string;
   timestamp: string;
-  details?: any;
+  details?: VideoDiagnosticsDetails;
 }
 
 interface VideoDiagnosticsProps {

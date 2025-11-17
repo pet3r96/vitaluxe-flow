@@ -149,7 +149,7 @@ const DownlinePerformanceView = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedData?.map((downline: any) => (
+                paginatedData?.map((downline: import("@/types/domain/reports").DownlinePerformanceData) => (
                   <TableRow key={downline.rep_id}>
                     <TableCell className="font-medium">{downline.rep_name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{downline.rep_email}</TableCell>
@@ -160,7 +160,7 @@ const DownlinePerformanceView = () => {
                     </TableCell>
                     <TableCell className="text-center font-medium">{downline.total_orders || 0}</TableCell>
                     <TableCell className="text-right font-medium">
-                      ${parseFloat(downline.total_commissions?.toString() || '0').toFixed(2)}
+                      ${parseFloat(String(downline.total_revenue || 0)).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={downline.statusVariant}>

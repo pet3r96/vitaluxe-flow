@@ -40,6 +40,20 @@ import { createInstantMeeting } from "@/utils/createInstantMeeting";
 import { useProvidersAndStaff } from "@/hooks/useProvidersAndStaff";
 import { useMemo } from "react";
 
+interface PatientSelectOption {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+}
+
+interface ProviderSelectOption {
+  id: string;
+  name?: string;
+  email?: string;
+  type?: string;
+}
+
 interface ProviderVirtualWaitingRoomProps {
   practiceId: string;
   onStartSession?: (sessionId: string) => void;
@@ -67,7 +81,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
   const [preparingSession, setPreparingSession] = useState<string | null>(null);
 
   // Helper function to display patient names consistently
-  const getPatientDisplay = (p: { first_name?: string; last_name?: string; email?: string; id: string }) => {
+  const getPatientDisplay = (p: PatientSelectOption) => {
     const name = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
     const base = name || "Unknown Patient";
     return p.email ? `${base} (${p.email})` : base;
@@ -800,7 +814,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
                         Failed to load patients. Try again.
                       </SelectItem>
                     ) : patients && patients.length > 0 ? (
-                      patients.map((patient: any) => (
+                      patients.map((patient: PatientSelectOption) => (
                         <SelectItem key={patient.id} value={patient.id}>
                           {getPatientDisplay(patient)}
                         </SelectItem>
@@ -826,7 +840,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
                         Please select a patient first
                       </SelectItem>
                     ) : filteredProviders && filteredProviders.length > 0 ? (
-                      filteredProviders.map((provider: any) => {
+                      filteredProviders.map((provider: ProviderSelectOption) => {
                         const displayName = getProviderDisplayName(provider);
                         return (
                           <SelectItem key={provider.id} value={provider.id}>
@@ -945,7 +959,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
                             Failed to load patients. Try again.
                           </SelectItem>
                         ) : patients && patients.length > 0 ? (
-                          patients.map((patient: any) => (
+                          patients.map((patient: PatientSelectOption) => (
                             <SelectItem key={patient.id} value={patient.id}>
                               {getPatientDisplay(patient)}
                             </SelectItem>
@@ -971,7 +985,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
                             Please select a patient first
                           </SelectItem>
                         ) : filteredProviders && filteredProviders.length > 0 ? (
-                          filteredProviders.map((provider: any) => {
+                          filteredProviders.map((provider: ProviderSelectOption) => {
                             const displayName = getProviderDisplayName(provider);
                             return (
                               <SelectItem key={provider.id} value={provider.id}>
