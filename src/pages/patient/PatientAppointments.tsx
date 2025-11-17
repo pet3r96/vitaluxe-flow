@@ -108,7 +108,7 @@ export default function PatientAppointments() {
               .from('profiles')
               .select('id, address_street, address_city, address_state, address_zip, name')
               .in('id', practiceIds as string[]),
-            (supabase as any)
+            (supabase as any)  // Helper boundary cast - practice_branding table not in generated types
               .from('practice_branding' as any)
               .select('practice_id, practice_name')
               .in('practice_id', practiceIds as string[])

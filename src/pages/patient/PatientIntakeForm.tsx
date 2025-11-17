@@ -89,6 +89,35 @@ interface PatientIntakeFormProps {
   targetPatientAccountId?: string; // When provided, use this instead of effectiveUserId (for practice users)
 }
 
+// Type guard helpers
+function isMedicationRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'medication' }> {
+  return record.record_type === 'medication';
+}
+
+function isConditionRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'condition' }> {
+  return record.record_type === 'condition';
+}
+
+function isAllergyRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'allergy' }> {
+  return record.record_type === 'allergy';
+}
+
+function isVitalRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'vital' }> {
+  return record.record_type === 'vital';
+}
+
+function isImmunizationRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'immunization' }> {
+  return record.record_type === 'immunization';
+}
+
+function isSurgeryRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'surgery' }> {
+  return record.record_type === 'surgery';
+}
+
+function isPharmacyRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'pharmacy' }> {
+  return record.record_type === 'pharmacy';
+}
+
 export default function PatientIntakeForm({ targetPatientAccountId }: PatientIntakeFormProps = {}) {
   const navigate = useNavigate();
   const { effectiveUserId, effectiveRole } = useAuth();

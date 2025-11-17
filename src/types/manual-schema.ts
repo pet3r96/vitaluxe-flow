@@ -509,6 +509,54 @@ export interface PatientChart {
   updated_at: string;
 }
 
+// ==================== QUERY RESULT TYPES ====================
+
+// Patient messages with joined relations
+export interface PatientMessageWithRelations {
+  id: string;
+  practice_id: string;
+  patient_id: string;
+  thread_id: string | null;
+  subject: string;
+  message_body: string;
+  sender_type: 'patient' | 'practice';
+  urgency: 'normal' | 'urgent';
+  resolved: boolean;
+  read_at: string | null;
+  created_at: string;
+  updated_at: string;
+  patient?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
+
+// Rep subscription commissions with relations
+export interface RepSubscriptionCommissionWithRelations {
+  id: string;
+  rep_id: string;
+  practice_id: string;
+  subscription_id: string;
+  payment_id: string | null;
+  commission_amount: number;
+  payment_status: 'pending' | 'paid' | 'cancelled';
+  created_at: string;
+  profiles?: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+  };
+  practice_subscriptions?: {
+    status: string;
+    monthly_price: number;
+  };
+  subscription_payments?: {
+    payment_status: string;
+    transaction_id: string | null;
+  };
+}
+
 // Supabase client extension for custom tables
 export interface SupabaseClientExtensions {
   provider_documents: {

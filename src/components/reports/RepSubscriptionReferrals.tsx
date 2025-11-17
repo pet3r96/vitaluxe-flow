@@ -67,11 +67,11 @@ export default function RepSubscriptionReferrals() {
   });
 
   // Calculate totals
-  const totalEarned = commissions?.reduce((sum: number, c: any) => sum + (c.commission_amount || 0), 0) || 0;
-  const pendingAmount = commissions?.filter((c: any) => c.payment_status === 'pending')
-    .reduce((sum: number, c: any) => sum + (c.commission_amount || 0), 0) || 0;
-  const paidAmount = commissions?.filter((c: any) => c.payment_status === 'paid')
-    .reduce((sum: number, c: any) => sum + (c.commission_amount || 0), 0) || 0;
+  const totalEarned = commissions?.reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
+  const pendingAmount = commissions?.filter((c) => c.payment_status === 'pending')
+    .reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
+  const paidAmount = commissions?.filter((c) => c.payment_status === 'paid')
+    .reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
 
   const pagination = usePagination({ totalItems: commissions?.length || 0, itemsPerPage: 10 });
   
@@ -96,7 +96,7 @@ export default function RepSubscriptionReferrals() {
   const filterCommissions = (status?: string) => {
     if (!commissions) return [];
     if (!status || status === 'all') return commissions;
-    return commissions.filter((c: any) => c.payment_status === status);
+    return commissions.filter((c) => c.payment_status === status);
   };
 
   if (isLoading) {
