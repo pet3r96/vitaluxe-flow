@@ -43,16 +43,29 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { email, ip_address, user_agent } = requestData;
+    // Sanitize IP address - convert invalid formats to null
+    let ip = requestData.ip_address ?? null;
+    if (!ip || typeof ip !== "string") {
+      ip = null;
+    }
+    
+    // If present, validate IPv4 format
+    const ipv4Regex = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+    if (ip && !ipv4Regex.test(ip)) {
+      // Don't block login - just store sanitized value
+      ip = null;
+    }
 
-    console.log(`Tracking failed login for email: ${email} from IP: ${ip_address}`);
+    const { email, user_agent } = requestData;
+
+    console.log(`Tracking failed login for email: ${email} from IP: ${ip || 'unknown'}`);
 
     // Log security event
     await supabaseClient.from("security_events").insert({
       event_type: "failed_login",
       severity: "medium",
       user_email: email,
-      ip_address,
+      ip_address: ip,
       user_agent,
       details: { email, timestamp: new Date().toISOString() },
     });
@@ -62,7 +75,7 @@ serve(async (req) => {
       .from("failed_login_attempts")
       .select("*")
       .eq("email", email)
-      .eq("ip_address", ip_address)
+      .eq("ip_address", ip)
       .gte("last_attempt_at", new Date(Date.now() - 10 * 60 * 1000).toISOString())
       .maybeSingle();
 
@@ -82,13 +95,13 @@ serve(async (req) => {
       if (newCount >= 5) {
         console.log(`Brute force detected for ${email}, invoking detect-brute-force`);
         await supabaseClient.functions.invoke("detect-brute-force", {
-          body: { email, ip_address, attempt_count: newCount },
+          body: { email, ip_address: ip, attempt_count: newCount },
         });
       }
     } else {
       await supabaseClient.from("failed_login_attempts").insert({
         email,
-        ip_address,
+        ip_address: ip,
         user_agent,
         attempt_count: 1,
       });

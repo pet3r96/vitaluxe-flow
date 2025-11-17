@@ -95,9 +95,21 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in log-error function:", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Ensure proper JSON response - never return [object Object]
+    const errorDetails = error instanceof Error 
+      ? { message: error.message, name: error.name, stack: error.stack }
+      : { raw: String(error) };
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ 
+        success: false,
+        error: {
+          code: 'LOGGING_ERROR',
+          message: 'Failed to log application error',
+          details: errorDetails
+        }
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
