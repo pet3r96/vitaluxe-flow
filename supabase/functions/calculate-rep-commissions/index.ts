@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,14 +95,14 @@ serve(async (req) => {
 
     if (commissionError) throw commissionError;
 
-    console.log(`Commission recorded: $${commissionAmount} for rep ${rep.id}`);
+    edgeLogger.info('Commission recorded', { commissionAmount, repId: rep.id });
 
     return new Response(
       JSON.stringify({ success: true, commissionAmount }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("Commission calculation error:", error);
+    edgeLogger.error('Commission calculation error', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }

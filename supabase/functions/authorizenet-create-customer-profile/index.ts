@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,7 +32,7 @@ interface CreateProfileRequest {
   practice_id?: string;
 }
 
-Deno.serve(async (req) => {
+    Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -60,7 +61,11 @@ Deno.serve(async (req) => {
     // Determine which practice to save to (for impersonation support)
     const targetPracticeId = requestData.practice_id || user.id;
     
-    console.log(`Creating payment profile for user ${user.id}, target practice: ${targetPracticeId}, type: ${requestData.payment_type}`);
+    edgeLogger.info('Creating payment profile', { 
+      userId: user.id, 
+      targetPractice: targetPracticeId, 
+      paymentType: requestData.payment_type 
+    });
 
     // TODO: Replace with actual Authorize.Net API call when keys are available
     // For now, simulate successful profile creation

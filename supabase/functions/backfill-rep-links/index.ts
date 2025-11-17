@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,10 +47,10 @@ Deno.serve(async (req) => {
 
     if (impersonationData?.impersonated_user_id) {
       effectiveUserId = impersonationData.impersonated_user_id;
-      console.log(`Using impersonated user ${effectiveUserId} for rep links`);
+      edgeLogger.info('Using impersonated user for rep links', { effectiveUserId });
     }
 
-    console.log(`Backfilling linked_topline_id for user ${effectiveUserId}`);
+    edgeLogger.info('Backfilling linked_topline_id', { userId: effectiveUserId });
 
     // Get approved practices that need linking
     const { data: approvedPractices, error: practicesErr } = await supabaseAdmin
@@ -60,14 +61,14 @@ Deno.serve(async (req) => {
       .is('linked_topline_id', null);
 
     if (practicesErr) {
-      console.error('Failed to fetch practices:', practicesErr);
+      edgeLogger.error('Failed to fetch practices', practicesErr);
       return new Response(
         JSON.stringify({ success: false, error: practicesErr.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    console.log(`Found ${approvedPractices?.length || 0} practices without linked_topline_id`);
+    edgeLogger.info('Practices found without linked_topline_id', { count: approvedPractices?.length || 0 });
 
     // Determine if user is topline or downline
     const { data: repData, error: repError } = await supabaseAdmin

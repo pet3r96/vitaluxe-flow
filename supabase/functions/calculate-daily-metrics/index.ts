@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { edgeLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -96,21 +97,21 @@ serve(async (req) => {
         });
 
       if (error) {
-        console.error(`Error for practice ${practiceId}:`, error);
+        edgeLogger.error('Error calculating metrics for practice', error, { practiceId });
         results.push({ practiceId, status: "error", error: error.message });
       } else {
         results.push({ practiceId, status: "success" });
       }
     }
 
-    console.log(`Calculated metrics for ${results.length} practices`);
+    edgeLogger.info('Calculated metrics', { practicesCount: results.length });
 
     return new Response(
       JSON.stringify({ success: true, results }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("Daily metrics calculation error:", error);
+    edgeLogger.error('Daily metrics calculation error', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }

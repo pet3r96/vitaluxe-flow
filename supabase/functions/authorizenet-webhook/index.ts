@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { validateWebhookRequest } from '../_shared/requestValidators.ts';
 import { validateAuthorizenetWebhookSignature, validateWebhookPayload } from '../_shared/webhookValidator.ts';
 import { handleError, createErrorResponse } from '../_shared/errorHandler.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,14 +31,14 @@ serve(async (req) => {
     try {
       payload = JSON.parse(rawBody);
     } catch (parseError) {
-      console.error('Failed to parse webhook payload:', parseError);
+      edgeLogger.error('Failed to parse webhook payload', parseError);
       return createErrorResponse('Invalid JSON payload', 400, null, undefined, corsHeaders);
     }
 
     // Validate webhook payload structure
     const structureValidation = validateWebhookPayload(payload);
     if (!structureValidation.valid) {
-      console.error('Invalid webhook structure:', structureValidation.errors);
+      edgeLogger.error('Invalid webhook structure', { errors: structureValidation.errors });
       return createErrorResponse(
         'Invalid webhook payload structure',
         400,
@@ -56,7 +57,7 @@ serve(async (req) => {
     );
     
     if (!signatureValidation.valid) {
-      console.error('Webhook signature validation failed:', signatureValidation.reason);
+      edgeLogger.error('Webhook signature validation failed', { reason: signatureValidation.reason });
       
       // Log security event
       await supabase.rpc('log_audit_event', {
@@ -76,7 +77,7 @@ serve(async (req) => {
     // Validate request data
     const validation = validateWebhookRequest(payload);
     if (!validation.valid) {
-      console.error('Webhook validation failed:', validation.errors);
+      edgeLogger.error('Webhook validation failed', { errors: validation.errors });
       return createErrorResponse(
         'Invalid webhook data',
         400,
@@ -87,7 +88,7 @@ serve(async (req) => {
     }
 
     const { eventType, payload: webhookPayload } = payload;
-    console.info(`Received Authorize.Net webhook: ${eventType}`);
+    edgeLogger.info('Received Authorize.Net webhook', { eventType });
 
     // Extract transaction ID safely
     const transactionId = webhookPayload?.id || webhookPayload?.authCode || null;
@@ -107,9 +108,9 @@ serve(async (req) => {
             .eq('transaction_id', transactionId);
 
           if (updateError) {
-            console.error('Failed to update order payment status:', updateError.message);
+            edgeLogger.error('Failed to update order payment status', updateError);
           } else {
-            console.info(`Order payment status updated for transaction ${transactionId}`);
+            edgeLogger.info('Order payment status updated', { transactionId });
           }
         }
         break;
@@ -117,7 +118,7 @@ serve(async (req) => {
 
       case 'net.authorize.payment.refund.created': {
         // Payment refunded - handled by refund endpoint
-        console.info(`Refund webhook received for transaction ${transactionId}`);
+        edgeLogger.info('Refund webhook received', { transactionId });
         break;
       }
 
@@ -133,16 +134,16 @@ serve(async (req) => {
             .eq('transaction_id', transactionId);
 
           if (updateError) {
-            console.error('Failed to update order to voided:', updateError.message);
+            edgeLogger.error('Failed to update order to voided', updateError);
           } else {
-            console.info(`Order voided for transaction ${transactionId}`);
+            edgeLogger.info('Order voided', { transactionId });
           }
         }
         break;
       }
 
       default:
-        console.info(`Unhandled webhook event type: ${eventType}`);
+        edgeLogger.info('Unhandled webhook event type', { eventType });
     }
 
     // Log webhook receipt to audit trail
