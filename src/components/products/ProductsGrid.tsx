@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { logger } from "@/lib/logger";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RepProductVis } from '@/integrations/supabase/table-helpers';
@@ -42,7 +43,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { logger } from "@/lib/logger";
 
 export const ProductsGrid = () => {
   const { effectiveRole, effectiveUserId, effectivePracticeId, isImpersonating, isProviderAccount } = useAuth();
@@ -587,7 +587,7 @@ export const ProductsGrid = () => {
             : patientRecord.address_street || null;
 
 
-        console.debug('[ProductsGrid] Patient shipping state resolved', { 
+        logger.info('[ProductsGrid] Patient shipping state resolved', { 
           destinationState, 
           patientId: patientRecord.id,
           hasAddressState: !!patientRecord.address_state

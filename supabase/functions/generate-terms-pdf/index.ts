@@ -610,7 +610,7 @@ Deno.serve(async (req) => {
       });
 
     if (statusError) {
-      console.error('Error updating user_password_status:', statusError);
+      edgeLogger.error('Error updating user_password_status', statusError);
       // Don't throw - acceptance was recorded, this is just status sync
     }
 
@@ -647,7 +647,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Error:', error);
+    edgeLogger.error('PDF generation error', error);
     return new Response(
       JSON.stringify({
         error: error?.message || 'An error occurred processing the request',
