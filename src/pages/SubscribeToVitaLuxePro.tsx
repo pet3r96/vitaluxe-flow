@@ -97,7 +97,8 @@ export default function SubscribeToVitaLuxePro() {
     const fetchTerms = async () => {
       setLoadingTerms(true);
       try {
-        // @ts-ignore - Temporary workaround for Supabase type depth issue
+        // JUSTIFIED: Supabase type instantiation is excessively deep for this table
+        // @ts-ignore - Deep instantiation workaround
         const result = await supabase
           .from('terms_and_conditions')
           .select('content')

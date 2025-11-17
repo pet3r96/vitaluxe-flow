@@ -10,6 +10,7 @@ import { Search, MessageSquare, CheckCircle2, Clock } from "lucide-react";
 import { CreateSupportTicketDialog } from "@/components/support-tickets/CreateSupportTicketDialog";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import type { TicketTabState } from "@/types/domain/support";
 
 interface SupportTicket {
   id: string;
@@ -31,7 +32,7 @@ interface SupportTicket {
 export default function SupportTickets() {
   const { effectiveRole, effectivePracticeId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"all" | "open" | "resolved">("all");
+  const [activeTab, setActiveTab] = useState<TicketTabState>("all");
 
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ["support-tickets", effectiveRole, effectivePracticeId],

@@ -76,3 +76,12 @@ export function getPayloadNew<T>(payload: RealtimePostgresChangesPayload<T>): T 
 export function getPayloadOld<T>(payload: RealtimePostgresChangesPayload<T>): T | null {
   return (payload.old && Object.keys(payload.old).length > 0) ? payload.old as T : null;
 }
+
+/**
+ * Helper type for realtime payloads with id field access
+ * Use when you need to access id from payload.new or payload.old
+ */
+export type RealtimePayloadWithId<T = Record<string, any>> = RealtimePostgresChangesPayload<T> & {
+  new: (T & { id?: string }) | Record<string, never>;
+  old: (T & { id?: string }) | Record<string, never>;
+};
