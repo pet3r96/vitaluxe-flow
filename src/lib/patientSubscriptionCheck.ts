@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PracticeSubscription, SubscriptionStatus } from "@/types/subscriptions";
+import { logger } from "@/lib/logger";
 
 export interface PatientPracticeSubscriptionStatus {
   practiceId: string;
@@ -22,7 +23,7 @@ export const getPatientPracticeSubscription = async (
     .single();
 
   if (patientError || !patientAccount?.practice_id) {
-    console.error('[PatientSubscriptionCheck] Error fetching patient practice:', patientError);
+    logger.error("Error fetching patient practice", patientError, { patientAccountId });
     return null;
   }
 
@@ -34,7 +35,7 @@ export const getPatientPracticeSubscription = async (
     .maybeSingle();
 
   if (subError) {
-    console.error('[PatientSubscriptionCheck] Error fetching subscription:', subError);
+    logger.error("Error fetching patient subscription", subError, { practiceId: patientAccount.practice_id });
     return null;
   }
 

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 /**
  * Fetches practice details directly from profiles table
@@ -6,11 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export async function getPracticeDetails(practiceId: string | null) {
   if (!practiceId) {
-    console.log('[getPracticeDetails] No practice ID provided');
+    logger.info("No practice ID provided");
     return null;
   }
 
-  console.log('[getPracticeDetails] Fetching details for practice:', practiceId);
+  logger.info("Fetching practice details", { practiceId });
 
   const { data, error } = await supabase
     .from('profiles')
@@ -28,16 +29,16 @@ export async function getPracticeDetails(practiceId: string | null) {
     .maybeSingle();
 
   if (error) {
-    console.error('[getPracticeDetails] Error fetching practice:', error);
+    logger.error("Error fetching practice", error, { practiceId });
     return null;
   }
 
   if (!data) {
-    console.warn('[getPracticeDetails] Practice not found:', practiceId);
+    logger.warn("Practice not found", { practiceId });
     return null;
   }
 
-  console.log('[getPracticeDetails] Practice found:', data.name || data.company);
+  logger.info("Practice found", { practiceId, name: data.name || data.company });
   return data;
 }
 

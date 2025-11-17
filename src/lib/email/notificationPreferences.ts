@@ -6,6 +6,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { validateRecipientEmail } from "./emailValidation";
+import { logger } from "@/lib/logger";
 
 export interface PreferenceEvaluation {
   allowed: boolean;
@@ -54,7 +55,7 @@ export async function evaluateNotificationPreferences({
     .maybeSingle();
 
   if (error) {
-    console.error('[NotificationPreferences] Error fetching preferences:', error);
+    logger.error("Error fetching notification preferences", error, { userId, eventType });
     return {
       allowed: false,
       reason: 'database_error',
@@ -101,7 +102,7 @@ export async function hasPreferencesConfigured(userId: string): Promise<boolean>
     .eq('user_id', userId);
 
   if (error) {
-    console.error('[NotificationPreferences] Error checking preferences:', error);
+    logger.error("Error checking notification preferences", error, { userId });
     return false;
   }
 

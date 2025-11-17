@@ -1,6 +1,7 @@
 /**
  * Performance utilities for monitoring and optimization
  */
+import { logger } from "@/lib/logger";
 
 /**
  * Debounce function - limits how often a function can be called
@@ -42,7 +43,7 @@ export const measureRenderTime = (componentName: string) => {
   const start = performance.now();
   return () => {
     const end = performance.now();
-    console.log(`${componentName} rendered in ${(end - start).toFixed(2)}ms`);
+    logger.info("Component render time", { componentName, timeMs: (end - start).toFixed(2) });
   };
 };
 

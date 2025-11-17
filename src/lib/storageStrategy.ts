@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 /**
  * Unified Storage Strategy with S3-First, Supabase Storage Fallback
@@ -39,7 +40,7 @@ export async function uploadDocument(
   const fileExt = file.name.split(".").pop();
   const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
   
-  console.log(`[StorageStrategy] Uploading to bucket: ${bucket}, file: ${fileName}`);
+  logger.info("Uploading document", { bucket, fileName });
   
   // Try S3 first
   try {
@@ -69,7 +70,7 @@ export async function uploadDocument(
 
     // Check if S3 upload succeeded
     if (!s3Error && s3Data?.success && s3Data?.s3_key) {
-      console.log(`[StorageStrategy] ✅ S3 upload successful: ${s3Data.s3_key}`);
+      logger.info("S3 upload successful", { s3Key: s3Data.s3_key });
       return {
         success: true,
         storage_path: fileName,
@@ -79,15 +80,15 @@ export async function uploadDocument(
     }
 
     // S3 not configured or failed - log and fallback
-    console.warn(`[StorageStrategy] S3 upload skipped/failed, falling back to Supabase Storage:`, 
-      s3Error?.message || 'AWS not configured');
+    logger.warn("S3 upload skipped/failed, falling back to Supabase Storage", 
+      { errorMessage: s3Error?.message || 'AWS not configured' });
   } catch (error: any) {
-    console.warn(`[StorageStrategy] S3 upload error, falling back to Supabase Storage:`, error.message);
+    logger.warn("S3 upload error, falling back to Supabase Storage", { errorMessage: error.message });
   }
 
   // Fallback to Supabase Storage
   try {
-    console.log(`[StorageStrategy] 📦 Using Supabase Storage fallback for bucket: ${bucket}`);
+    logger.info("Using Supabase Storage fallback", { bucket });
     
     const { error: uploadError } = await supabase.storage
       .from(bucket)
@@ -97,7 +98,7 @@ export async function uploadDocument(
 
     if (uploadError) throw uploadError;
 
-    console.log(`[StorageStrategy] ✅ Supabase Storage upload successful: ${fileName}`);
+    logger.info("Supabase Storage upload successful", { fileName });
     
     return {
       success: true,
@@ -106,7 +107,7 @@ export async function uploadDocument(
       s3_key: null
     };
   } catch (error: any) {
-    console.error(`[StorageStrategy] ❌ Both S3 and Supabase Storage failed:`, error);
+    logger.error("Both S3 and Supabase Storage failed", error);
     return {
       success: false,
       storage_path: '',
@@ -127,7 +128,7 @@ export async function getSignedUrl(
   filePath: string,
   expiresIn: number = 300
 ): Promise<SignedUrlResult> {
-  console.log(`[StorageStrategy] Getting signed URL for: ${bucket}/${filePath}`);
+  logger.info("Getting signed URL", { bucket, filePath });
   
   // Try edge function (which has S3-first logic built-in)
   try {
@@ -142,7 +143,7 @@ export async function getSignedUrl(
 
     if (!error && data?.signedUrl) {
       const method = data.storage_method || 's3';
-      console.log(`[StorageStrategy] ✅ Signed URL generated via ${method}`);
+      logger.info("Signed URL generated", { method, bucket });
       return {
         success: true,
         signed_url: data.signedUrl || data.signed_url,
@@ -174,7 +175,7 @@ export async function getSignedUrl(
       storage_method: 'supabase'
     };
   } catch (error: any) {
-    console.error(`[StorageStrategy] ❌ Failed to generate signed URL:`, error);
+    logger.error("Failed to generate signed URL", error);
     return {
       success: false,
       signed_url: '',
