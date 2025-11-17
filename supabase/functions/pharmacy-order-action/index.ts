@@ -133,7 +133,7 @@ serve(async (req) => {
         .eq('assigned_pharmacy_id', pharmacy.id);
 
       if (fetchError) {
-        console.error('Error fetching order lines:', fetchError);
+        edgeLogger.error('Error fetching order lines', fetchError);
         throw fetchError;
       }
 
@@ -154,7 +154,7 @@ serve(async (req) => {
       const updateError = results.find(r => r.error)?.error;
 
       if (updateError) {
-        console.error('Error updating order lines to on_hold:', updateError);
+        edgeLogger.error('Error updating order lines to on_hold', updateError);
         throw updateError;
       }
 
@@ -172,7 +172,7 @@ serve(async (req) => {
         .single();
 
       if (threadError) {
-        console.error('Error creating message thread:', threadError);
+        edgeLogger.error('Error creating message thread', threadError);
       } else {
         // Add pharmacy and practice as recipients to internal messaging system
         const recipients = [
@@ -185,7 +185,7 @@ serve(async (req) => {
           .insert(recipients);
 
         if (recipientsError) {
-          console.error('Error adding message recipients:', recipientsError);
+          edgeLogger.error('Error adding message recipients', recipientsError);
         }
 
         // Create initial message
@@ -200,7 +200,7 @@ serve(async (req) => {
           });
 
         if (messageError) {
-          console.error('Error creating initial message:', messageError);
+          edgeLogger.error('Error creating initial message', messageError);
         }
       }
 
@@ -224,7 +224,7 @@ serve(async (req) => {
         });
 
         if (notifError) {
-          console.error('Error creating notification:', notifError);
+          edgeLogger.error('Error creating notification', notifError);
         }
       }
 
@@ -253,7 +253,7 @@ serve(async (req) => {
         .eq('assigned_pharmacy_id', pharmacy.id);
 
       if (fetchError) {
-        console.error('Error fetching order lines:', fetchError);
+        edgeLogger.error('Error fetching order lines', fetchError);
         throw fetchError;
       }
 
@@ -274,7 +274,7 @@ serve(async (req) => {
       const updateError = results.find(r => r.error)?.error;
 
       if (updateError) {
-        console.error('Error updating order lines to denied:', updateError);
+        edgeLogger.error('Error updating order lines to denied', updateError);
         throw updateError;
       }
 
@@ -293,7 +293,7 @@ serve(async (req) => {
         .single();
 
       if (threadError) {
-        console.error('Error creating message thread:', threadError);
+        edgeLogger.error('Error creating message thread', threadError);
       } else {
         // Add pharmacy and practice as recipients
         const recipients = [
@@ -306,7 +306,7 @@ serve(async (req) => {
           .insert(recipients);
 
         if (recipientsError) {
-          console.error('Error adding message recipients:', recipientsError);
+          edgeLogger.error('Error adding message recipients', recipientsError);
         }
 
         // Create initial message
@@ -321,12 +321,12 @@ serve(async (req) => {
           });
 
         if (messageError) {
-          console.error('Error creating initial message:', messageError);
+          edgeLogger.error('Error creating initial message', messageError);
         }
       }
 
       // Trigger automatic refund
-      console.log('Initiating automatic refund for order:', order_id);
+      edgeLogger.info('Initiating automatic refund for order', { orderId: order_id });
       
       const { data: refundData, error: refundError } = await supabase.functions.invoke(
         'authorizenet-refund-transaction',
@@ -341,7 +341,7 @@ serve(async (req) => {
       );
 
       if (refundError) {
-        console.error('Error processing refund:', refundError);
+        edgeLogger.error('Error processing refund', refundError);
         // Log but don't fail - we want to track this
         await supabase.from('error_logs').insert({
           error_message: `Refund failed for declined order ${order_id}: ${refundError.message}`,
@@ -350,7 +350,7 @@ serve(async (req) => {
           severity: 'error',
         });
       } else {
-        console.log('Refund processed successfully:', refundData);
+        edgeLogger.info('Refund processed successfully', refundData);
       }
 
       // Send notification to practice
@@ -374,7 +374,7 @@ serve(async (req) => {
         });
 
         if (notifError) {
-          console.error('Error creating notification:', notifError);
+          edgeLogger.error('Error creating notification', notifError);
         }
       }
 
