@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 import { Loader2, CheckCircle, XCircle, AlertCircle, Activity } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -90,7 +91,7 @@ export const PharmacyApiConfigDialog = ({
   useEffect(() => {
     if (!credentials || credentials.length === 0) return;
 
-    console.log("Loading credentials:", credentials);
+    logger.info('Loading credentials', { count: credentials.length });
 
     credentials.forEach((cred) => {
       if (cred.credential_type === "api_key" || cred.credential_type === "bearer_token") {
@@ -160,7 +161,7 @@ export const PharmacyApiConfigDialog = ({
 
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Error saving API config:", error);
+      logger.error('Error saving API config', error);
       toast({
         title: "Error saving configuration",
         description: error.message,
@@ -252,7 +253,7 @@ export const PharmacyApiConfigDialog = ({
         });
       }
     } catch (error: any) {
-      console.error("Diagnostics error:", error);
+      logger.error('Diagnostics error', error);
       toast({
         title: "Failed to run diagnostics",
         description: error.message || "An error occurred while running diagnostics",

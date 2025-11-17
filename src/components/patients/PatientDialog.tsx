@@ -337,10 +337,10 @@ export const PatientDialog = ({
           throw new Error("Patient ID is required for updates");
         }
 
-        console.log('[PatientDialog] Updating patient:', { 
+        logger.info('Updating patient', logger.sanitize({ 
           patientId: patient.id, 
           email: patientData.email 
-        });
+        }));
 
         // Build the exact query key that PatientsDataTable uses
         const patientsKey = ["patients", effectiveRole, effectivePracticeId];
@@ -368,7 +368,7 @@ export const PatientDialog = ({
           ...patientData
         }));
         
-        console.log('[PatientDialog] Optimistic update applied, now executing DB update');
+        logger.info('Optimistic update applied, executing DB update');
 
         try {
           // 4. Execute the mutation and get the updated data back
@@ -382,7 +382,7 @@ export const PatientDialog = ({
           const updatedPatient = updatedPatients?.[0];
 
           if (error) {
-            console.error('[PatientDialog] Update error:', error);
+            logger.error('Patient update error', error);
             // Rollback on error
             if (previousPatients) {
               queryClient.setQueryData(patientsKey, previousPatients);
@@ -393,7 +393,7 @@ export const PatientDialog = ({
             throw error;
           }
           
-          console.log('[PatientDialog] Update success, got data back:', updatedPatient);
+          logger.info('Patient update success', { patientId: updatedPatient?.id });
           
           // 5. Update cache with the actual returned data (confirms the update)
           if (updatedPatient) {
@@ -409,7 +409,7 @@ export const PatientDialog = ({
             queryClient.setQueryData(["patient", patient.id], updatedPatient);
           }
           
-          console.log('[PatientDialog] Cache updated with server data');
+          logger.info('Cache updated with server data');
           
           // 6. Invalidate to trigger background refetch (but don't await it)
           queryClient.invalidateQueries({ queryKey: patientsKey });
@@ -419,7 +419,7 @@ export const PatientDialog = ({
           
           toast.success("✅ Patient updated successfully");
         } catch (error) {
-          console.error('[PatientDialog] Mutation failed:', error);
+          logger.error('Patient mutation failed', error);
           throw error;
         }
       } else {

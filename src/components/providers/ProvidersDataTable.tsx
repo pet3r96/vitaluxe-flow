@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { EdgeFunctionResponse, isEdgeFunctionError } from "@/types/edgeFunction";
+import { logger } from "@/lib/logger";
 import {
   Table,
   TableBody,
@@ -23,7 +24,6 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { sanitizeEncrypted } from "@/lib/utils";
 import { getProviderDisplayName } from "@/utils/providerNameUtils";
-import { logger } from "@/lib/logger";
 
 export const ProvidersDataTable = () => {
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
@@ -39,7 +39,7 @@ export const ProvidersDataTable = () => {
     queryKey: ["providers", effectiveUserId, effectiveRole, effectivePracticeId],
     staleTime: 300000, // 5 minutes - providers change occasionally
     queryFn: async () => {
-      console.log('[ProvidersDataTable] Fetching providers via edge function', {
+      logger.info('Fetching providers via edge function', {
         effectiveUserId,
         effectiveRole,
         effectivePracticeId
@@ -51,30 +51,26 @@ export const ProvidersDataTable = () => {
       });
 
       if (error) {
-        console.error('[ProvidersDataTable] Error from edge function:', error);
+        logger.error('Error from edge function', error);
         throw error;
       }
 
       const providersList = data?.providers || [];
-      console.log('[ProvidersDataTable] Received providers:', {
+      logger.info('Received providers', {
         count: providersList.length,
         sample: providersList[0] ? {
           id: providersList[0].id,
-          hasProfile: !!providersList[0].profiles,
-          fullName: providersList[0].profiles?.full_name,
-          name: providersList[0].profiles?.name,
-          email: providersList[0].profiles?.email
+          hasProfile: !!providersList[0].profiles
         } : null
       });
       
       // Log any missing data
       providersList.forEach((p: any, idx: number) => {
         if (!p.profiles?.full_name && !p.profiles?.name && !p.profiles?.email) {
-          console.warn('[ProvidersDataTable] ⚠️ Provider missing display fields:', {
+          logger.warn('Provider missing display fields', {
             index: idx,
             providerId: p.id,
-            userId: p.user_id,
-            profileData: p.profiles
+            userId: p.user_id
           });
         }
       });
@@ -89,7 +85,7 @@ export const ProvidersDataTable = () => {
     if (!selectedProvider || !providers) return;
     const updated = providers.find((p: any) => p.id === selectedProvider.id);
     if (updated && JSON.stringify(updated) !== JSON.stringify(selectedProvider)) {
-      console.log('[ProvidersDataTable] Syncing selectedProvider with fresh data');
+      logger.info('Syncing selectedProvider with fresh data');
       setSelectedProvider(updated);
     }
   }, [providers, selectedProvider?.id]);
@@ -97,7 +93,7 @@ export const ProvidersDataTable = () => {
   // Refetch when dialog closes to ensure fresh data on next open
   useEffect(() => {
     if (!detailsDialogOpen) {
-      console.log('[ProvidersDataTable] Dialog closed, refetching providers...');
+      logger.info('Dialog closed, refetching providers');
       refetch();
     }
   }, [detailsDialogOpen, refetch]);

@@ -183,7 +183,7 @@ export default function PatientDetail() {
   const { data: medicalData, isLoading: isLoadingMedicalData } = useQuery({
     queryKey: ["patient-medical-data-parallel", actualPatientId],
     queryFn: async () => {
-      console.time('[PatientDetail] Parallel medical data fetch');
+      const fetchStart = Date.now();
       
       // Run all queries in parallel using patient_medical_vault with record_type filters
       const [
@@ -278,7 +278,10 @@ export default function PatientDetail() {
           })
       ]);
 
-      console.timeEnd('[PatientDetail] Parallel medical data fetch');
+      logger.info('Medical data fetched', { 
+        patientId: actualPatientId,
+        durationMs: Date.now() - fetchStart 
+      });
       
       return {
         medications,

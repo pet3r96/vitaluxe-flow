@@ -127,7 +127,7 @@ export function PatientQuickAccessButton({
       
       toast({ title: "Success", description: "PDF downloaded successfully" });
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
+      logger.error('Failed to generate PDF', error);
       toast({ title: "Error", description: "Failed to download PDF", variant: "destructive" });
     } finally {
       setIsGeneratingPdf(false);

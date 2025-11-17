@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface PharmacyDeclineDialogProps {
   orderId: string;
@@ -45,7 +46,7 @@ export const PharmacyDeclineDialog = ({ orderId, onSuccess }: PharmacyDeclineDia
       setAdditionalNotes("");
       onSuccess();
     } catch (error: any) {
-      console.error('Error declining order:', error);
+      logger.error('Error declining order', error);
       toast.error(error.message || 'Failed to decline order');
     } finally {
       setIsSubmitting(false);
