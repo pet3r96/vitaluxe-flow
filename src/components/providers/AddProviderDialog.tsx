@@ -179,6 +179,20 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
 
       logger.info("Submitting provider creation", { effectiveRole });
 
+      const requestBody = {
+        email: formData.email.trim(),
+        role: "provider",
+        practiceId: targetPracticeId,
+        roleData: {
+          prescriber_name: formData.prescriberName.trim(),
+          npi: formData.npi.trim(),
+          dea: formData.dea.trim(),
+          license_number: formData.licenseNumber.trim(),
+          phone: formData.phone.replace(/\D/g, ''),
+          full_name: formData.fullName.trim(),
+        }
+      };
+
       const { data, error } = await supabase.functions.invoke('assign-user-role', {
         body: requestBody,
         headers: {

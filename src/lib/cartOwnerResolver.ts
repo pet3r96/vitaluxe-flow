@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 // Cache to prevent repeated async calls with same inputs
 const ownerCache = new Map<string, { value: string; timestamp: number }>();
@@ -23,32 +24,32 @@ export async function resolveCartOwnerUserId(
   // Check cache
   const cached = ownerCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    console.log('[CartOwnerResolver] Using cached result:', cached.value);
+    logger.info("Using cached cart owner result", { userId });
     return cached.value;
   }
 
-  console.log('[CartOwnerResolver] Input:', { userId, role, practiceId });
+  logger.info("Resolving cart owner", { userId, role, practiceId });
 
   let resolvedId: string;
 
   // Providers and doctors use their own account
   if (role === 'provider' || role === 'doctor') {
-    console.log('[CartOwnerResolver] Provider/doctor - using own user_id:', userId);
+    logger.info("Cart owner: provider using own user_id", { userId });
     resolvedId = userId;
   }
   // Staff users: use practice_id directly for shared practice cart
   else if (role === 'staff' && practiceId) {
-    console.log('[CartOwnerResolver] Staff - using practice_id for cart:', practiceId);
+    logger.info("Cart owner: staff using practice_id", { practiceId });
     resolvedId = practiceId;
   }
   // Practice users: use their own user_id (which should equal practice_id)
   else if (role === 'practice') {
-    console.log('[CartOwnerResolver] Practice user - using own user_id:', userId);
+    logger.info("Cart owner: practice user using own user_id", { userId });
     resolvedId = userId;
   }
   // Admin and other roles - use their own ID as fallback
   else {
-    console.log('[CartOwnerResolver] Fallback to user_id:', userId);
+    logger.info("Cart owner: fallback to user_id", { userId });
     resolvedId = userId;
   }
 
@@ -61,7 +62,7 @@ export async function resolveCartOwnerUserId(
 // Clear cache when impersonation changes
 if (typeof window !== 'undefined') {
   window.addEventListener('impersonation-changed', () => {
-    console.log('[CartOwnerResolver] Clearing cache due to impersonation change');
+    logger.info("Clearing cart owner cache due to impersonation change");
     ownerCache.clear();
   });
 }

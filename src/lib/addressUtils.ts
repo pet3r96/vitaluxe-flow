@@ -1,6 +1,7 @@
 /**
  * Address utility functions for extracting and validating address components
  */
+import { logger } from "@/lib/logger";
 
 /**
  * @deprecated Use direct address_state field instead of parsing formatted addresses.
@@ -12,7 +13,7 @@
  * @returns Two-letter state code or empty string if not found
  */
 export const extractStateFromAddress = (address: string | null | undefined): string => {
-  console.warn('⚠️ extractStateFromAddress is deprecated. Use direct address_state field from database instead.');
+  logger.warn("extractStateFromAddress is deprecated - use direct address_state field instead");
   if (!address) return '';
   
   // Extract state from address (2 uppercase letters before ZIP)
@@ -32,7 +33,7 @@ export const extractStateWithFallback = (
   address: string | null | undefined,
   fallbackState?: string | null
 ): string => {
-  console.warn('⚠️ extractStateWithFallback is deprecated. Use direct address_state field from database instead.');
+  logger.warn("extractStateWithFallback is deprecated - use direct address_state field instead");
   const extracted = extractStateFromAddress(address);
   if (extracted) return extracted;
   

@@ -2,6 +2,7 @@
 // Documentation: https://npiregistry.cms.hhs.gov/api-page
 
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface NPPESResult {
   number: string;
@@ -157,7 +158,7 @@ export async function verifyNPI(npi: string): Promise<NPIVerificationResult> {
     }
 
     if (error) {
-      console.error("NPI verification edge function error:", error);
+      logger.error("NPI verification edge function error", error);
       return {
         valid: false,
         npi,

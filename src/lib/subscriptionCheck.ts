@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UpgradePrompts } from '@/integrations/supabase/table-helpers';
 import type { PracticeSubscription, SubscriptionStatus as SubscriptionStatusType } from "@/types/subscriptions";
 import type { SubscriptionUpgradePrompt, SubscriptionUpgradePromptInsert, SubscriptionUpgradePromptUpdate } from "@/types/manual-schema";
+import { logger } from "@/lib/logger";
 
 export interface SubscriptionStatus {
   isSubscribed: boolean;
@@ -36,7 +37,7 @@ export const hasActiveSubscription = async (practiceId: string): Promise<boolean
 };
 
 export const getSubscriptionStatus = async (practiceId: string): Promise<SubscriptionStatus> => {
-  console.log('[SubscriptionCheck] Checking subscription for practice:', practiceId);
+  logger.info("Checking subscription", { practiceId });
   
   const { data, error } = await supabase
     .from('practice_subscriptions')
@@ -45,11 +46,11 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
     .maybeSingle();
     
   if (error) {
-    console.error('[SubscriptionCheck] Query error:', error);
+    logger.error("Subscription query error", error, { practiceId });
   }
   
   if (error || !data) {
-    console.log('[SubscriptionCheck] No subscription found for practice:', practiceId);
+    logger.info("No subscription found", { practiceId });
     return {
       isSubscribed: false,
       status: null,
@@ -62,10 +63,10 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
   
   const subscription = data as PracticeSubscription;
   
-  console.log('[SubscriptionCheck] Found subscription:', {
+  logger.info("Found subscription", {
+    practiceId,
     status: subscription.status,
-    trial_ends_at: subscription.trial_ends_at,
-    current_period_end: subscription.current_period_end
+    trialEndsAt: subscription.trial_ends_at
   });
   
   const now = new Date();

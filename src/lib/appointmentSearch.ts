@@ -253,7 +253,7 @@ export function getRecentSearches(): string[] {
     const stored = localStorage.getItem('appointment-search-recent');
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
-    console.error('Failed to get recent searches:', error);
+    logger.error("Failed to get recent searches", error);
     return [];
   }
 }
@@ -265,6 +265,6 @@ export function clearRecentSearches() {
   try {
     localStorage.removeItem('appointment-search-recent');
   } catch (error) {
-    console.error('Failed to clear recent searches:', error);
+    logger.error("Failed to clear recent searches", error);
   }
 }

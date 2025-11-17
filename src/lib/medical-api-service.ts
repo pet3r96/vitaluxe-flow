@@ -3,6 +3,7 @@
  * Provides autocomplete functionality for medications, conditions, and allergens
  * using public NIH APIs
  */
+import { logger } from "@/lib/logger";
 
 export interface MedicalSuggestion {
   value: string;
@@ -34,7 +35,7 @@ export async function searchMedications(query: string): Promise<MedicalSuggestio
       code: candidate.rxcui,
     }));
   } catch (error) {
-    console.error('Error fetching medications:', error);
+    logger.error("Error fetching medications from API", error);
     return [];
   }
 }
@@ -63,7 +64,7 @@ export async function searchConditions(query: string): Promise<MedicalSuggestion
       code: item[1], // ICD-10 code if available
     }));
   } catch (error) {
-    console.error('Error fetching conditions:', error);
+    logger.error("Error fetching conditions from API", error);
     return [];
   }
 }
