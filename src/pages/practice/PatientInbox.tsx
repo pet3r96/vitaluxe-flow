@@ -58,7 +58,8 @@ export default function PatientInbox() {
     queryFn: async () => {
       if (!practiceId) return [];
 
-      let query = supabase
+      // Helper boundary cast: prevents excessive type instantiation in complex query builder chains
+      let query: any = supabase
         .from("patient_messages")
         .select(`
           *,
@@ -69,21 +70,21 @@ export default function PatientInbox() {
 
       // Apply tab filters
       if (filterTab === 'active') {
-        query = query.eq('resolved', false) as typeof query;
+        query = query.eq('resolved', false);
       } else if (filterTab === 'urgent') {
-        query = query.eq('urgency', 'urgent').eq('resolved', false) as typeof query;
+        query = query.eq('urgency', 'urgent').eq('resolved', false);
       } else if (filterTab === 'resolved') {
-        query = query.eq('resolved', true) as typeof query;
+        query = query.eq('resolved', true);
       }
 
       // Apply search
       if (searchQuery) {
-        query = query.or(`subject.ilike.%${searchQuery}%,message_body.ilike.%${searchQuery}%`) as typeof query;
+        query = query.or(`subject.ilike.%${searchQuery}%,message_body.ilike.%${searchQuery}%`);
       }
 
       // Apply patient filter
       if (selectedPatientFilter) {
-        query = query.eq('patient_id', selectedPatientFilter) as typeof query;
+        query = query.eq('patient_id', selectedPatientFilter);
       }
 
       const { data, error } = await query;
