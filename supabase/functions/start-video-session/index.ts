@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -41,7 +42,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (sessionError || !session) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('Video session not found', sessionError);
       return new Response(JSON.stringify({ error: 'Session not found' }), {
         status: 404,
@@ -66,7 +66,6 @@ Deno.serve(async (req) => {
     const providerName = providerProfile?.full_name || providerProfile?.name || 'Provider';
 
     if (providerError || !provider) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('Provider not found', providerError);
       return new Response(JSON.stringify({ error: 'Provider not found' }), {
         status: 404,
@@ -113,7 +112,6 @@ Deno.serve(async (req) => {
     }
 
     if (!authorized) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('Authorization failed for video session start');
       return new Response(JSON.stringify({ error: 'Not authorized to start this session' }), {
         status: 403,
@@ -129,7 +127,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (appointmentError || !appointment) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.error('Appointment not found', appointmentError);
       return new Response(JSON.stringify({ error: 'Appointment not found' }), {
         status: 404,
@@ -145,7 +142,6 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (profileError) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.warn('Patient profile not found');
     }
 
@@ -186,7 +182,6 @@ Deno.serve(async (req) => {
     const patientAlreadyJoined = session.patient_joined_at !== null;
     
     if (patientAlreadyJoined) {
-      const { edgeLogger } = await import('../_shared/logger.ts');
       edgeLogger.info('Patient already joined - skipping SMS notification');
     }
 
@@ -220,7 +215,6 @@ Deno.serve(async (req) => {
 
         if (!linkError) {
           guestLinkUrl = `${origin}/video-guest/${token}`;
-          const { edgeLogger } = await import('../_shared/logger.ts');
           edgeLogger.info('[start-video-session] Guest link created', { guestLinkUrl });
           
           // Log guest link generation
@@ -233,7 +227,6 @@ Deno.serve(async (req) => {
           });
         }
       } catch (linkGenError) {
-        const { edgeLogger } = await import('../_shared/logger.ts');
         edgeLogger.warn('[start-video-session] Failed to generate guest link', { error: linkGenError instanceof Error ? linkGenError.message : String(linkGenError) });
       }
 
