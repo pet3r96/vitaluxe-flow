@@ -10,6 +10,7 @@ import { useUpdatePatientNote, PatientNote } from "@/hooks/usePatientNotes";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface EditPatientNoteDialogProps {
   open: boolean;
@@ -75,7 +76,7 @@ export function EditPatientNoteDialog({
       
       userName = profile?.full_name || user.email || 'Unknown User';
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      logger.error("Error fetching user profile", error);
       userName = user.email || 'Unknown User';
     }
 

@@ -7,6 +7,7 @@ import { FileText, User, Calendar, Activity, Download } from "lucide-react";
 import type { AuditLog } from "@/hooks/useAuditLogs";
 import { generateAuditReportPDF } from "@/lib/auditReportPdfGenerator";
 import { toast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuditLogDialogProps {
@@ -35,11 +36,7 @@ export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName, pat
       const logsToExport = auditLogs || [];
       
       if (logsToExport.length === 0) {
-        console.error('[AuditLog] No logs available for export:', {
-          auditLogsLength: auditLogs.length,
-          isLoading,
-          patientAccountId
-        });
+        logger.error("No logs available for export", undefined, { auditLogsLength: auditLogs.length, isLoading, patientAccountId });
         
         toast({ 
           title: "No Data", 
@@ -58,7 +55,7 @@ export function AuditLogDialog({ open, onOpenChange, auditLogs, patientName, pat
       URL.revokeObjectURL(url);
       toast({ title: "Success", description: "Audit report downloaded" });
     } catch (error) {
-      console.error('Download error:', error);
+      logger.error("Audit log download error", error);
       toast({ title: "Error", description: "Failed to download audit report", variant: "destructive" });
     }
   };

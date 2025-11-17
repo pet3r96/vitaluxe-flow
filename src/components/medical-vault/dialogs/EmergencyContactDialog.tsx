@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asEmergencyContact } from "@/lib/vault";
 import React from "react";
 import { insertVaultRecord, type EmergencyContactRecordData } from "@/lib/medicalVaultInsert";
+import { logger } from "@/lib/logger";
 
 const emergencyContactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -73,12 +74,6 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) throw new Error("Not authenticated");
       
-      console.log('[EmergencyContactDialog] Auth check:', {
-        authUserId: authUser.id,
-        patientAccountId,
-        mode,
-      });
-      
       const recordData = {
         name: data.name,
         relationship: data.relationship,
@@ -95,10 +90,9 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
           .eq("id", contact.id);
         
         if (error) {
-          console.error('[EmergencyContactDialog] UPDATE failed:', error.message);
+          logger.error("Emergency contact UPDATE failed", error, { contactId: contact.id });
           throw error;
         }
-        console.log('[EmergencyContactDialog] UPDATE success');
       } else {
         const recordData: EmergencyContactRecordData = {
           name: data.name,
@@ -121,14 +115,9 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
         });
         
         if (error) {
-          console.error('[EmergencyContactDialog] INSERT failed:', {
-            error: error.message,
-            authUserId: authUser.id,
-            patientAccountId,
-          });
+          logger.error("Emergency contact INSERT failed", error, { patientAccountId });
           throw error;
         }
-        console.log('[EmergencyContactDialog] INSERT success');
       }
     },
     {

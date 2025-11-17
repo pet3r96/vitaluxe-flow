@@ -18,6 +18,7 @@ import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs"
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asCondition } from "@/lib/vault";
 import { insertVaultRecord, type ConditionRecordData } from "@/lib/medicalVaultInsert";
+import { logger } from "@/lib/logger";
 
 const conditionSchema = z.object({
   condition_name: z.string().min(1, "Condition name is required"),
@@ -123,14 +124,9 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
           .eq("id", condition.id);
         
         if (error) {
-          console.error('[ConditionDialog] UPDATE failed:', {
-            error: error.message,
-            code: error.code,
-            conditionId: condition.id,
-          });
+          logger.error("Condition UPDATE failed", error, { conditionId: condition.id });
           throw error;
         }
-        console.log('[ConditionDialog] UPDATE success');
       } else {
         const recordData: ConditionRecordData = {
           condition_name: data.condition_name,
@@ -155,17 +151,9 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
         });
         
         if (error) {
-          console.error('[ConditionDialog] INSERT failed:', {
-            error: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-            authUserId: authUser.id,
-            patientAccountId,
-          });
+          logger.error("Condition INSERT failed", error, { patientAccountId });
           throw error;
         }
-        console.log('[ConditionDialog] INSERT success');
       }
     },
     {

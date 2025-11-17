@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { logger } from "@/lib/logger";
 
 interface PatientAppointmentsListProps {
   patientId: string;
@@ -23,12 +24,9 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  console.log('[PatientAppointmentsList] Rendered with props:', { patientId, practiceId });
-
   const { data: appointments, isLoading } = useQuery({
     queryKey: ['patient-appointments', patientId, practiceId],
     queryFn: async () => {
-      console.log('[PatientAppointmentsList] 🔍 Fetching appointments for:', { patientId, practiceId });
       
       // Simplified query without FK traversals that might fail
       const { data, error } = await supabase
@@ -39,11 +37,9 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
         .order('start_time', { ascending: false });
 
       if (error) {
-        console.error('[PatientAppointmentsList] ❌ Query error:', error);
+        logger.error("Patient appointments query error", error, { patientId, practiceId });
         throw error;
       }
-      
-      console.log('[PatientAppointmentsList] ✅ Fetched appointments:', data?.length || 0);
       
       if (!data || data.length === 0) {
         return [];
@@ -84,7 +80,6 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
           : null
       }));
       
-      console.log('[PatientAppointmentsList] 📊 Enriched appointments sample:', enriched[0]);
       return enriched;
     },
     staleTime: 10000, // 10 seconds

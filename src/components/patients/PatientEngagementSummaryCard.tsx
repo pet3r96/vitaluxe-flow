@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, ClipboardList, CalendarClock, Bell, StickyNote } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logger";
 
 interface PatientEngagementSummaryCardProps {
   patientAccountId: string;
@@ -42,7 +43,9 @@ export function PatientEngagementSummaryCard({
     // Subscribe to each table with custom invalidation callback
     tables.forEach(table => {
       realtimeManager.subscribe(table, (payload) => {
-        console.log(`[PatientEngagement] ${table} changed, invalidating...`, payload.eventType);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.info("Patient engagement table changed", { table, eventType: payload.eventType });
+        });
         queryClient.invalidateQueries({ queryKey });
       });
     });
@@ -82,8 +85,6 @@ export function PatientEngagementSummaryCard({
         supabase.rpc("get_patient_unified_documents", { p_patient_id: patientAccountId }),
       ]);
 
-      console.log('[PatientEngagementSummary] Follow-ups query result:', followups);
-
       const result = {
         notes: notes.count || 0,
         plans: plans.count || 0,
@@ -91,8 +92,6 @@ export function PatientEngagementSummaryCard({
         followups: followups.count || 0,
         documents: Array.isArray(docs.data) ? docs.data.length : 0,
       };
-
-      console.log('[PatientEngagementSummary] All counts:', result);
 
       return result;
     },

@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { PatientDocumentPreview } from "@/components/documents/PatientDocumentPreview";
 import { format } from "date-fns";
+import { logger } from "@/lib/logger";
 
 interface PatientDocument {
   id: string;
@@ -37,7 +38,6 @@ export function DocumentsSection({ patientAccountId, mode, canEdit }: DocumentsS
 const { data: documents = [], isLoading } = useQuery({
   queryKey: ["patient-documents-vault", patientAccountId, mode],
   queryFn: async () => {
-    console.log('[DocumentsSection] Fetching documents for patient_account:', patientAccountId, 'mode:', mode);
 
     // In practice mode, mirror Document Center behavior by using the unified RPC
     if (mode === 'practice') {

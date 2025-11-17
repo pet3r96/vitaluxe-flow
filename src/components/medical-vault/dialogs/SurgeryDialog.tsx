@@ -15,6 +15,7 @@ import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs"
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asSurgery } from "@/lib/vault";
 import { insertVaultRecord, type SurgeryRecordData } from "@/lib/medicalVaultInsert";
+import { logger } from "@/lib/logger";
 
 const surgerySchema = z.object({
   surgery_type: z.string().min(1, "Surgery type is required"),
@@ -51,12 +52,6 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) throw new Error("Not authenticated");
       
-      console.log('[SurgeryDialog] Auth check:', {
-        authUserId: authUser.id,
-        patientAccountId,
-        mode,
-      });
-      
       const recordData = {
         surgery_type: data.surgery_type,
         surgery_date: `${data.surgery_date}-01`,
@@ -72,10 +67,9 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
           .eq("id", surgery.id);
         
         if (error) {
-          console.error('[SurgeryDialog] UPDATE failed:', error.message);
+          logger.error("Surgery UPDATE failed", error, { surgeryId: surgery.id });
           throw error;
         }
-        console.log('[SurgeryDialog] UPDATE success');
       } else {
         const recordData: SurgeryRecordData = {
           surgery_type: data.surgery_type,
@@ -93,14 +87,9 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
         });
         
         if (error) {
-          console.error('[SurgeryDialog] INSERT failed:', {
-            error: error.message,
-            authUserId: authUser.id,
-            patientAccountId,
-          });
+          logger.error("Surgery INSERT failed", error, { patientAccountId });
           throw error;
         }
-        console.log('[SurgeryDialog] INSERT success');
       }
     },
     {

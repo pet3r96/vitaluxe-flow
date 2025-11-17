@@ -15,6 +15,7 @@ import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs"
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asImmunization } from "@/lib/vault";
 import { insertVaultRecord, type ImmunizationRecordData } from "@/lib/medicalVaultInsert";
+import { logger } from "@/lib/logger";
 
 const immunizationSchema = z.object({
   vaccine_name: z.string().min(1, "Vaccine name is required"),
@@ -51,12 +52,6 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) throw new Error("Not authenticated");
       
-      console.log('[ImmunizationDialog] Auth check:', {
-        authUserId: authUser.id,
-        patientAccountId,
-        mode,
-      });
-      
       const formattedData = {
         vaccine_name: data.vaccine_name,
         date_administered: `${data.date_administered}-01`, // Convert YYYY-MM to YYYY-MM-01
@@ -72,10 +67,9 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
           .eq("id", immunization.id);
         
         if (error) {
-          console.error('[ImmunizationDialog] UPDATE failed:', error.message);
+          logger.error("Immunization UPDATE failed", error, { immunizationId: immunization.id });
           throw error;
         }
-        console.log('[ImmunizationDialog] UPDATE success');
       } else {
         const formattedData: ImmunizationRecordData = {
           vaccine_name: data.vaccine_name,
@@ -93,14 +87,9 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
         });
         
         if (error) {
-          console.error('[ImmunizationDialog] INSERT failed:', {
-            error: error.message,
-            authUserId: authUser.id,
-            patientAccountId,
-          });
+          logger.error("Immunization INSERT failed", error, { patientAccountId });
           throw error;
         }
-        console.log('[ImmunizationDialog] INSERT success');
       }
     },
     {

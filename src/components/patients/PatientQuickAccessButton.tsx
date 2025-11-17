@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { usePatientMedicalData } from "@/hooks/usePatientMedicalData";
+import { logger } from "@/lib/logger";
 
 interface PatientQuickAccessButtonProps {
   patientId: string;
