@@ -34,6 +34,7 @@ import { PDFViewer } from "@/components/documents/PDFViewer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { realtimeManager } from "@/lib/realtimeManager";
+import { logger } from "@/lib/logger";
 
 export default function PatientDetail() {
   const { patientId } = useParams();
@@ -46,8 +47,6 @@ export default function PatientDetail() {
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
-
-  console.log('[PatientDetail] effectivePracticeId:', effectivePracticeId);
 
   const practiceId = effectivePracticeId;
 
@@ -94,12 +93,12 @@ export default function PatientDetail() {
         .maybeSingle();
 
       if (error) {
-        console.error('[PatientDetail] Error fetching patient:', error);
+        logger.error("Error fetching patient", error, { patientId: actualPatientId });
         throw error;
       }
       
       if (!data) {
-        console.warn('[PatientDetail] Patient not found or no access:', { actualPatientId, effectivePracticeId });
+        logger.warn("Patient not found or no access", { patientId: actualPatientId, practiceId: effectivePracticeId });
         return null;
       }
       
@@ -123,7 +122,7 @@ export default function PatientDetail() {
         .maybeSingle();
 
       if (error) {
-        console.error('Portal status error:', error);
+        logger.error("Portal status error", error, { patientId: actualPatientId });
         return null;
       }
       return data;
@@ -151,7 +150,6 @@ export default function PatientDetail() {
   const { data: providers = [] } = useQuery({
     queryKey: ["providers", practiceId],
     queryFn: async () => {
-      console.info('[PatientDetail] Fetching providers via list-providers');
       const { data, error } = await supabase.functions.invoke('list-providers', {
         body: { practice_id: practiceId }
       });
@@ -159,12 +157,6 @@ export default function PatientDetail() {
       if (error) throw error;
       
       const providersList = data?.providers || [];
-      console.info('[PatientDetail] ✅ Providers loaded:', {
-        count: providersList.length,
-        sampleNames: providersList.slice(0, 2).map((p: any) => 
-          p.profiles?.prescriber_name || p.profiles?.full_name || 'Unknown'
-        )
-      });
       
       return providersList;
     },
@@ -314,10 +306,8 @@ export default function PatientDetail() {
   const emergencyContacts = medicalData?.emergencyContacts || [];
 
   const handleViewChart = async () => {
-    console.log("[PatientDetail] handleViewChart called with patient:", patient);
-    
     if (!patient) {
-      console.error("[PatientDetail] No patient data available");
+      logger.error("No patient data available for chart generation");
       toast({
         variant: "destructive",
         title: "Error",
@@ -344,7 +334,7 @@ export default function PatientDetail() {
       setPdfPreviewUrl(url);
       setPreviewDialogOpen(true);
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      logger.error("Error generating PDF", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -378,7 +368,7 @@ export default function PatientDetail() {
             document.body.removeChild(printFrame);
           }, 1000);
         } catch (err) {
-          console.error('Print error:', err);
+          logger.error("Print error", err);
           document.body.removeChild(printFrame);
         }
       }, 500);
@@ -416,7 +406,7 @@ export default function PatientDetail() {
         description: "Medical chart downloaded successfully.",
       });
     } catch (error) {
-      console.error("Error downloading PDF:", error);
+      logger.error("Error downloading PDF", error);
       toast({
         variant: "destructive",
         title: "Error",

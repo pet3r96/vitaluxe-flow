@@ -117,12 +117,12 @@ export const PatientsDataTable = () => {
       );
 
       if (portalError) {
-        console.error('[Patient Portal] Edge function invocation error:', portalError);
+        logger.error("Portal edge function invocation error", portalError);
         throw portalError;
       }
 
       if (!portalData?.success) {
-        console.error('[Patient Portal] Function returned error:', portalData);
+        logger.error("Portal function returned error", undefined, { error: portalData?.error });
         throw new Error(portalData?.error || 'Failed to create portal account');
       }
 
@@ -163,7 +163,7 @@ export const PatientsDataTable = () => {
 
       // Don't fail the entire operation if email fails
       if (emailError) {
-        console.warn('[Patient Portal] Email sending failed:', emailError);
+        logger.warn("Portal email sending failed", { error: emailError });
         return { 
           portalData, 
           patient,
@@ -209,7 +209,7 @@ export const PatientsDataTable = () => {
             }
           });
         } catch (auditError) {
-          console.error('[Patient Portal] Audit log failed:', auditError);
+          logger.error("Portal audit log failed", auditError);
           // Don't fail the operation if audit logging fails
         }
       }
@@ -218,7 +218,7 @@ export const PatientsDataTable = () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
     onError: (error: any) => {
-      console.error('[Patient Portal] Invite failed:', error);
+      logger.error("Portal invite failed", error);
       
       // Extract error details
       const errorMessage = error?.context?.error || 
