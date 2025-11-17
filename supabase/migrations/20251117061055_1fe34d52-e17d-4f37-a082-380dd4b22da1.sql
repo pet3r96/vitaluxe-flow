@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "practice_owner_manage_staff" ON practice_staff;
