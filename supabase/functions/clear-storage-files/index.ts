@@ -43,7 +43,8 @@ async function listAllFiles(
       });
 
     if (error) {
-      console.error(`Error listing ${bucketName}/${prefix}:`, error);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error(`Error listing ${bucketName}/${prefix}`, error);
       break;
     }
 
@@ -86,7 +87,8 @@ Deno.serve(async (req) => {
     // Authentication check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('Missing authorization header');
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Missing authorization header');
       return new Response(
         JSON.stringify({ success: false, error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -112,7 +114,8 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
     if (userError || !user) {
-      console.error('Authentication failed:', userError?.message || 'No user found');
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Authentication failed', userError, { hasUser: !!user });
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -122,7 +125,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`User authenticated: ${user.email}`);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('User authenticated');
 
     // Admin-only check
     const { data: roleCheck, error: roleError } = await supabaseAdmin
@@ -133,7 +137,8 @@ Deno.serve(async (req) => {
       .single();
 
     if (roleError || !roleCheck) {
-      console.error(`Access denied for user: ${user.email}`);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Access denied - admin role required');
       return new Response(
         JSON.stringify({ 
           success: false, 

@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[PATIENT PORTAL] Starting account creation:', {
+    edgeLogger.info('[PATIENT PORTAL] Starting account creation', {
       authenticatedUser: user.id,
       isImpersonating,
       effectiveUserId,

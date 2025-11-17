@@ -59,7 +59,8 @@ serve(async (req) => {
               }
             );
           } catch (error) {
-            console.error('[email-diagnostics] Postmark connectivity test failed:', error);
+          const { edgeLogger } = await import('../_shared/logger.ts');
+          edgeLogger.error('[email-diagnostics] Postmark connectivity test failed', error);
             return new Response(
               JSON.stringify({
                 success: true,

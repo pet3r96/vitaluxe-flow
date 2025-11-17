@@ -112,14 +112,16 @@ serve(async (req) => {
         const { count } = await query;
         return count || 0;
       } catch (error) {
-        console.error(`Error counting ${table}:`, error);
+        const { edgeLogger } = await import('../_shared/logger.ts');
+        edgeLogger.error('Error counting table', error, { tableName: table });
         return 0;
       }
     };
 
     // DRY RUN MODE - Role-based authorization
     if (mode === 'dryRun') {
-      console.log('Factory reset dry run initiated by', user.email);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.info('Factory reset dry run initiated');
 
       const current_counts: Record<string, number> = {
         // Transaction/Order Data

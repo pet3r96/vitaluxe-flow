@@ -27,7 +27,8 @@ serve(async (req: Request) => {
     try {
       requestData = await req.json();
     } catch (error) {
-      console.error('Invalid JSON in request body:', error);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Invalid JSON in request body', error);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -64,20 +65,23 @@ serve(async (req: Request) => {
     }
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError) {
-      console.error('Auth error:', userError);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('Auth error', userError);
       throw new Error(`Authentication failed: ${userError.message}`);
     }
     if (!user) {
       throw new Error('No user found');
     }
 
-    console.log('Authenticated user:', user.id);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.info('Authenticated user', { userId: user.id });
 
     // Validate CSRF token
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      const { edgeLogger } = await import('../_shared/logger.ts');
+      edgeLogger.error('CSRF validation failed', new Error(csrfError || 'Invalid CSRF'));
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

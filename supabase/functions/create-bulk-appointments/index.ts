@@ -45,7 +45,8 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Create bulk appointments error:', error);
+    const { edgeLogger } = await import('../_shared/logger.ts');
+    edgeLogger.error('Create bulk appointments error', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

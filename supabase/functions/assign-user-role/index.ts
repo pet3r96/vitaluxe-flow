@@ -342,34 +342,26 @@ serve(async (req) => {
         );
       }
     } else if (signupData.role === 'provider') {
-      console.log('🔍 Provider role validation', {
-        roleData: signupData.roleData,
-        roleDataKeys: Object.keys(signupData.roleData || {}),
-        practiceId: signupData.roleData?.practiceId,
-        licenseNumber: signupData.roleData?.licenseNumber,
-        npi: signupData.roleData?.npi,
-        fullName: signupData.fullName,
-        prescriberName: signupData.prescriberName
+      edgeLogger.info('Provider role validation', {
+        hasPractice: !!signupData.roleData.practiceId,
+        hasNPI: !!signupData.roleData.npi,
+        hasDEA: !!signupData.roleData.dea,
+        hasName: !!signupData.name,
+        hasPrescriberName: !!signupData.prescriberName
       });
 
-      if (!signupData.roleData.practiceId) {
-        return new Response(
-          JSON.stringify({ error: 'Providers must be linked to a practice' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (!signupData.roleData.licenseNumber || !signupData.roleData.npi) {
-        console.error('❌ Missing provider credentials:', {
-          hasLicense: !!signupData.roleData.licenseNumber,
-          hasNPI: !!signupData.roleData.npi
+      // CRITICAL: Providers must have prescriber credentials
+      if (!signupData.roleData.npi || !signupData.roleData.dea) {
+        edgeLogger.error('Missing provider credentials', {
+          hasNPI: !!signupData.roleData.npi,
+          hasDEA: !!signupData.roleData.dea
         });
-        return new Response(
-          JSON.stringify({ error: 'Providers must provide License Number and NPI' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return errorResponse('Providers must have NPI and DEA numbers', 400);
       }
-      if (!signupData.fullName || !signupData.prescriberName) {
-        console.error('❌ Missing provider names:', {
+
+      // CRITICAL: Providers must have full name
+      if (!signupData.name && !signupData.prescriberName) {
+        edgeLogger.error('Missing provider names', {
           hasFullName: !!signupData.fullName,
           hasPrescriberName: !!signupData.prescriberName
         });

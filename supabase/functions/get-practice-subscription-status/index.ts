@@ -80,7 +80,7 @@ serve(async (req) => {
       if (!isExpired) {
         if (impSession.impersonated_role === 'doctor') {
           practiceId = impSession.impersonated_user_id;
-          console.log('[get-practice-subscription-status] Using impersonated doctor as practice', { practiceId });
+          edgeLogger.info('[get-practice-subscription-status] Using impersonated doctor as practice', { practiceId });
         } else if (impSession.impersonated_role === 'provider') {
           const { data: provider, error: provErr } = await supabaseAdmin
             .from('providers')
@@ -89,7 +89,7 @@ serve(async (req) => {
             .single();
           if (!provErr && provider?.practice_id) {
             practiceId = provider.practice_id as string;
-            console.log('[get-practice-subscription-status] Using provider.practice_id from impersonation', { practiceId });
+            edgeLogger.info('[get-practice-subscription-status] Using provider.practice_id from impersonation', { practiceId });
           }
         } else if (impSession.impersonated_role === 'staff') {
           const { data: staff, error: staffErr } = await supabaseAdmin
@@ -99,7 +99,7 @@ serve(async (req) => {
             .maybeSingle();
           if (!staffErr && staff?.practice_id) {
             practiceId = staff.practice_id as string;
-            console.log('[get-practice-subscription-status] Using practice_staff.practice_id from impersonation', { practiceId });
+            edgeLogger.info('[get-practice-subscription-status] Using practice_staff.practice_id from impersonation', { practiceId });
           }
         }
       }
