@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { logger } from "@/lib/logger";
+import { time, timeEnd } from "@/diag";
 import {
   Dialog,
   DialogContent,
@@ -317,7 +318,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
 
   const handleStartSession = async (sessionId: string) => {
     setStartingSession(sessionId);
-    console.time(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
+    time(`ProviderVirtualWaitingRoom start-video-session-${sessionId}`);
 
     try {
       let realSessionId = sessionId;
@@ -336,7 +337,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         }
 
         realSessionId = ensureData.sessionId;
-        console.log("[ProviderVirtualWaitingRoom] ✅ Session created:", realSessionId);
+        logger.info('Session created', { realSessionId });
 
         // Trigger immediate refetch to update UI
         queryClient.refetchQueries({ queryKey: ["provider-video-sessions", practiceId] });
@@ -349,7 +350,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       });
 
       const { error } = (await Promise.race([invokePromise, timeoutPromise])) as { error?: any };
-      console.timeEnd(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
+      timeEnd(`ProviderVirtualWaitingRoom start-video-session-${sessionId}`);
 
       if (error) throw error;
 
@@ -361,8 +362,8 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       // Auto-join the provider to the unified video room
       navigate('/video/room');
     } catch (error: any) {
-      console.timeEnd(`[ProviderVirtualWaitingRoom] start-video-session-${sessionId}`);
-      console.error("Error starting session:", error);
+      timeEnd(`ProviderVirtualWaitingRoom start-video-session-${sessionId}`);
+      logger.error('Error starting session', error);
 
       if (error.message === "timeout") {
         toast({
@@ -390,7 +391,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
     // If synthetic session, create it first
     if (isSyntheticSession(sessionId)) {
       const appointmentId = sessionId.replace("apt-", "");
-      console.log("[ProviderVirtualWaitingRoom] Creating session before joining:", appointmentId);
+      logger.info('Creating session before joining', { appointmentId });
 
       try {
         const { data: ensureData, error: ensureError } = await supabase.functions.invoke("ensure-video-session", {
@@ -407,9 +408,9 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         }
 
         realSessionId = ensureData.sessionId;
-        console.log("[ProviderVirtualWaitingRoom] ✅ Session created:", realSessionId);
+        logger.info('Session created for join', { realSessionId });
       } catch (error) {
-        console.error("Error ensuring session:", error);
+        logger.error('Error ensuring session', error);
         toast({
           title: "Error",
           description: "Failed to prepare video session",
@@ -432,7 +433,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       // If synthetic session, create it first
       if (isSyntheticSession(sessionId)) {
         const appointmentId = sessionId.replace("apt-", "");
-        console.log("[ProviderVirtualWaitingRoom] Creating session for guest link:", appointmentId);
+        logger.info('Creating session for guest link', { appointmentId });
 
         const { data: ensureData, error: ensureError } = await supabase.functions.invoke("ensure-video-session", {
           body: { appointmentId },
@@ -443,7 +444,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         }
 
         realSessionId = ensureData.sessionId;
-        console.log("[ProviderVirtualWaitingRoom] ✅ Session created:", realSessionId);
+        logger.info('Session created for guest', { realSessionId });
 
         // Trigger immediate refetch to update UI
         queryClient.refetchQueries({ queryKey: ["provider-video-sessions", practiceId] });
@@ -471,8 +472,8 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         description: "Share this link with your patient via SMS",
       });
     } catch (error: any) {
-      console.timeEnd(`[ProviderVirtualWaitingRoom] generate-guest-link-${sessionId}`);
-      console.error("Error generating guest link:", error);
+      timeEnd(`ProviderVirtualWaitingRoom generate-guest-link-${sessionId}`);
+      logger.error('Error generating guest link', error);
 
       if (error.message === "timeout") {
         toast({
@@ -550,7 +551,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
 
       console.log("✅ [UI] Queries refreshed, appointment should be removed from list");
     } catch (error: any) {
-      console.error("❌ [UI] Error cancelling appointment:", error);
+      logger.error('Error cancelling appointment', error);
       toast({
         title: "Error",
         description: error.message || "Failed to cancel appointment",
@@ -620,9 +621,9 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       };
 
       const confirmed = await waitForCompletion();
-      console.log("⏱️ [UI] Backend confirmation that appointment completed:", confirmed);
+      logger.info('Backend confirmation - appointment completed', { confirmed });
 
-      console.log("✅ [UI] Appointment completed, invalidating and refetching queries");
+      logger.info('Appointment completed, queries invalidated');
 
       // Force immediate refetch
       await queryClient.invalidateQueries({
@@ -636,9 +637,9 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         description: "The video appointment has been marked as completed",
       });
 
-      console.log("✅ [UI] Queries refreshed, appointment should be removed from list");
+      logger.info('Queries refreshed after completion');
     } catch (error: any) {
-      console.error("❌ [UI] Error completing appointment:", error);
+      logger.error('Error completing appointment', error);
       toast({
         title: "Error",
         description: error.message || "Failed to complete appointment",
@@ -672,7 +673,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       });
 
       if (error) {
-        console.error("Error creating instant session:", error);
+        logger.error('Error creating instant session', error);
         let errorDescription = "Failed to create instant session";
 
         // Parse error response for better messaging
@@ -699,7 +700,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       });
 
       if (startError) {
-        console.error("Error starting session:", startError);
+        logger.error('Error starting session', startError);
         let errorDescription = "Failed to start the video session";
 
         // Parse error response for better messaging
@@ -737,7 +738,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       setSelectedPatientId("");
       setSelectedProviderId("");
     } catch (error: any) {
-      console.error("Error creating instant session:", error);
+      logger.error('Error creating instant session', error);
       toast({
         title: "Error",
         description: error.message || "Failed to create instant video session",

@@ -177,7 +177,7 @@ serve(async (req) => {
       const uniqueOrderIds = orderIds?.map(o => o.id) || [];
       
       if (uniqueOrderIds.length === 0) {
-        console.log('[get-orders-page] ℹ️ No orders found for doctor');
+        edgeLogger.info('[get-orders-page] No orders found for doctor');
         return new Response(
           JSON.stringify({
             orders: [],
@@ -191,7 +191,7 @@ serve(async (req) => {
         );
       }
       
-      console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for doctor`);
+      edgeLogger.info(`[get-orders-page] Found orders for doctor`, { count: uniqueOrderIds.length });
       query = query.in('id', uniqueOrderIds);
       
     } else if (roleNorm === 'provider') {
@@ -227,7 +227,7 @@ serve(async (req) => {
         );
       }
       
-      console.log(`[get-orders-page] 🔍 Provider filter: provider_id = ${providerRecord.id}`);
+      edgeLogger.info(`[get-orders-page] Provider filter applied`, { providerId: providerRecord.id });
       
       // Fetch order IDs using security definer function (bypasses expensive RLS)
       const { data: orderIds, error: orderIdsError } = await supabase
@@ -238,7 +238,7 @@ serve(async (req) => {
         });
       
       if (orderIdsError) {
-        console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
+        edgeLogger.error('[get-orders-page] Error fetching order IDs', orderIdsError);
         return new Response(
           JSON.stringify({ error: `Failed to fetch order IDs: ${parseErr(orderIdsError)}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -248,7 +248,7 @@ serve(async (req) => {
       const uniqueOrderIds = [...new Set(orderIds?.map((row: any) => row.order_id) || [])];
       
       if (uniqueOrderIds.length === 0) {
-        console.log('[get-orders-page] ℹ️ No orders found for provider');
+        edgeLogger.info('[get-orders-page] No orders found for provider');
         return new Response(
           JSON.stringify({
             orders: [],
@@ -262,11 +262,11 @@ serve(async (req) => {
         );
       }
       
-      console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} unique orders for provider`);
+      edgeLogger.info(`[get-orders-page] Found orders for provider`, { count: uniqueOrderIds.length });
       query = query.in('id', uniqueOrderIds);
       
     } else if (roleNorm === 'practice' || roleNorm === 'staff') {
-      console.log(`[get-orders-page] ${roleNorm === 'staff' ? 'Staff' : 'Practice'} filter: doctor_id = ${practiceId}`);
+      edgeLogger.info(`[get-orders-page] ${roleNorm === 'staff' ? 'Staff' : 'Practice'} filter`, { doctorId: practiceId });
       
       // Fetch order IDs using security definer function (bypasses expensive RLS)
       const { data: orderIds, error: orderIdsError } = await supabase
@@ -276,8 +276,8 @@ serve(async (req) => {
           limit_count: 2000
         });
       
-      if (orderIdsError) {
-        console.error('[get-orders-page] ❌ Error fetching order IDs:', parseErr(orderIdsError));
+        if (orderIdsError) {
+          edgeLogger.error('[get-orders-page] Error fetching order IDs', orderIdsError);
         return new Response(
           JSON.stringify({ error: `Failed to fetch order IDs: ${parseErr(orderIdsError)}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -285,9 +285,9 @@ serve(async (req) => {
       }
       
       const uniqueOrderIds = orderIds?.map((row: any) => row.id) || [];
-      
-      if (uniqueOrderIds.length === 0) {
-        console.log(`[get-orders-page] ℹ️ No orders found for ${roleNorm}`);
+        
+        if (uniqueOrderIds.length === 0) {
+          edgeLogger.info(`[get-orders-page] No orders found for ${roleNorm}`);
         return new Response(
           JSON.stringify({
             orders: [],
@@ -300,8 +300,8 @@ serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for ${roleNorm}`);
+        
+        edgeLogger.info(`[get-orders-page] Found orders for ${roleNorm}`, { count: uniqueOrderIds.length });
       query = query.in('id', uniqueOrderIds);
       
     } else if (roleNorm === 'pharmacy') {
@@ -335,8 +335,8 @@ serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      console.log(`[get-orders-page] 🔍 Pharmacy filter: assigned_pharmacy_id = ${pharmacyRecord.id}`);
+        
+        edgeLogger.info(`[get-orders-page] Pharmacy filter applied`, { assignedPharmacyId: pharmacyRecord.id });
       
       // Fetch order IDs using security definer function (bypasses expensive RLS)
       const { data: orderIds, error: orderIdsError } = await supabase
@@ -370,8 +370,8 @@ serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      console.log(`[get-orders-page] ✅ Found ${uniqueOrderIds.length} orders for pharmacy`);
+        
+        edgeLogger.info(`[get-orders-page] Found orders for pharmacy`, { count: uniqueOrderIds.length });
       query = query.in('id', uniqueOrderIds);
       
     } else if (roleNorm === 'downline') {
@@ -426,7 +426,7 @@ serve(async (req) => {
         );
       }
       
-      console.log(`[get-orders-page] ✅ Downline ${repData.id}: found ${practiceIds.length} practices`);
+      edgeLogger.info(`[get-orders-page] Downline practices found`, { repId: repData.id, practiceCount: practiceIds.length });
       query = query.in('doctor_id', practiceIds);
       
     } else if (roleNorm === 'topline') {
