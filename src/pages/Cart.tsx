@@ -113,7 +113,12 @@ const Cart = React.memo(function Cart() {
   const isEmpty = useMemo(() => cartLines.length === 0, [cartLines]);
 
   const patientGroups = useMemo(() => {
-    const groups: Array<{ patientName: string; lines: typeof cartLines }> = [];
+    const groups: Array<{ 
+      patientName: string; 
+      lines: typeof cartLines;
+      pharmacy_id: string;
+      shipping_speed: string;
+    }> = [];
     const groupMap = new Map();
     
     cartLines.forEach((line: any) => {
