@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[get-or-create-practice-room] New room created:', newRoom.room_key);
+    edgeLogger.info('New room created', { roomKey: newRoom.room_key });
 
     return new Response(
       JSON.stringify({

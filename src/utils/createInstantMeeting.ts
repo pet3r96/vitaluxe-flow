@@ -19,10 +19,7 @@ export async function createInstantMeeting(
   // Generate unique channel ID
   const channelId = normalizeChannel(`instant_${crypto.randomUUID()}`);
   
-  console.log('[createInstantMeeting] Creating instant meeting:', {
-    channelId,
-    providerId
-  });
+  logger.info('Creating instant meeting', { channelId, providerId });
 
   // Generate Agora tokens for the provider
   const { data: tokenData, error: tokenError } = await supabase.functions.invoke(
@@ -38,11 +35,11 @@ export async function createInstantMeeting(
   );
 
   if (tokenError || !tokenData) {
-    console.error('[createInstantMeeting] Token generation failed:', tokenError);
+    logger.error('Token generation failed for instant meeting', tokenError, { channelId });
     throw new Error('Failed to generate Agora tokens');
   }
 
-  console.log('[createInstantMeeting] ✅ Tokens generated:', {
+  logger.info('Agora tokens generated', {
     channelId,
     rtcTokenPreview: tokenData.rtcToken?.substring(0, 20) + '...',
     expiresAt: new Date(tokenData.expiresAt * 1000).toISOString()
@@ -53,7 +50,7 @@ export async function createInstantMeeting(
   const joinUrlProvider = `${baseUrl}/practice/video/${channelId}`;
   const joinUrlPatient = `${baseUrl}/patient/video/${channelId}`;
 
-  console.log('[createInstantMeeting] ✅ Instant meeting created:', {
+  logger.info('Instant meeting created successfully', {
     channelId,
     joinUrlProvider,
     joinUrlPatient

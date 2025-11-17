@@ -135,7 +135,10 @@ serve(async (req: Request) => {
     // Create EasyPost client
     const easyPostClient = createEasyPostClient();
 
-    console.log('Getting tracking for:', trackingCode, requestData.carrier ? `with carrier: ${requestData.carrier}` : '(auto-detect carrier)');
+    edgeLogger.info('Getting tracking', {
+      trackingCode,
+      carrier: requestData.carrier || 'auto-detect'
+    });
 
     // Get tracking information from EasyPost with optional carrier and auto-retry on carrier mismatch
     let tracking;
@@ -245,8 +248,8 @@ serve(async (req: Request) => {
       }
     }
 
-    console.log('[get-easypost-tracking] Successfully retrieved tracking, returning response');
-    
+    edgeLogger.info('Successfully retrieved tracking, returning response');
+
     return new Response(
       JSON.stringify({ 
         success: true,

@@ -582,7 +582,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (acceptanceError) {
-      console.error('Acceptance error:', acceptanceError);
+      edgeLogger.error('Acceptance error', acceptanceError);
       return new Response(
         JSON.stringify({
           error: 'Failed to record acceptance',

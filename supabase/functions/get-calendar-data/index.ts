@@ -228,7 +228,9 @@ Deno.serve(async (req) => {
     ]);
 
     const queryEndTime = performance.now();
-    console.log(`[get-calendar-data] Parallel queries completed in ${(queryEndTime - queryStartTime).toFixed(2)}ms`);
+    edgeLogger.info('Parallel queries completed', {
+      durationMs: (queryEndTime - queryStartTime).toFixed(2)
+    });
 
     const settings = settingsResult.data;
     const transformedProviders = providersData;
