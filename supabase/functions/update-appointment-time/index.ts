@@ -2,6 +2,7 @@ import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -16,7 +17,7 @@ Deno.serve(async (req) => {
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabaseClient, user.id, csrfToken);
     if (!valid) {
-      console.error('CSRF validation failed:', csrfError);
+      edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return errorResponse(csrfError || 'Invalid CSRF token', 403);
     }
 
@@ -106,7 +107,7 @@ Deno.serve(async (req) => {
 
     return successResponse({ appointment: updated });
   } catch (error: any) {
-    console.error('Update appointment time error:', error);
+    edgeLogger.error('Update appointment time error', error);
     return errorResponse(error.message, 400);
   }
 });

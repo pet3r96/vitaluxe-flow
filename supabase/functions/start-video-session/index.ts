@@ -286,9 +286,9 @@ Deno.serve(async (req) => {
             message: smsMessage
           }
         });
-        console.log('✅ SMS sent to patient');
+        edgeLogger.info('SMS sent to patient successfully');
       } catch (smsError) {
-        console.warn('⚠️ Failed to send SMS:', smsError);
+        edgeLogger.warn('Failed to send SMS to patient', smsError instanceof Error ? { error: smsError.message } : undefined);
       }
     }
 
@@ -301,7 +301,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error starting video session:', error);
+    edgeLogger.error('Error starting video session', error instanceof Error ? error : new Error(String(error)));
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

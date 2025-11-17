@@ -39,7 +39,12 @@ const handler = async (req: Request): Promise<Response> => {
     edgeLogger.info('[send-welcome-email] Parsing request body');
     const { userId, email, name, role, practiceId }: WelcomeEmailRequest = await req.json();
 
-    edgeLogger.info('[send-welcome-email] Request params', { userId, email, role, practiceId });
+    edgeLogger.info('[send-welcome-email] Request params', { 
+      userId, 
+      emailDomain: email.split('@')[1], 
+      role, 
+      practiceId 
+    });
 
     if (!userId || !email || !name || !role) {
       edgeLogger.error('[send-welcome-email] Missing required fields', { userId, email, name, role });
@@ -81,7 +86,10 @@ const handler = async (req: Request): Promise<Response> => {
         .eq('id', practiceId)
         .single();
       practiceInfo = practice;
-      edgeLogger.info('[send-welcome-email] Practice info', { practiceName: practice?.name || 'Not found' });
+      edgeLogger.info('[send-welcome-email] Practice info retrieved', { 
+        hasPractice: !!practice,
+        practiceId 
+      });
     }
 
     // Check if 2FA is enabled for the system

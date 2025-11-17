@@ -261,7 +261,10 @@ serve(async (req) => {
       if (fetchError.name === 'AbortError') {
         // Treat timeout as queued - code was likely sent but upstream slow
         const responseTime = Date.now() - twilioStartTime;
-        console.log('[Twilio] Attempt:', attemptId, '| Timeout after 12s, treating as queued');
+        edgeLogger.info('[send-twilio-sms] Twilio API timeout - treating as queued', {
+          attemptId,
+          timeoutMs: 12000
+        });
         
         await supabase.from('two_fa_audit_log').insert({
           attempt_id: attemptId,
@@ -275,8 +278,10 @@ serve(async (req) => {
           }
         });
 
-        const totalTime = Date.now() - startTime;
-        console.log('[Twilio] Attempt:', attemptId, '| Queued (timeout) | Total:', totalTime, 'ms');
+        edgeLogger.info('[send-twilio-sms] Code queued due to timeout', {
+          attemptId,
+          totalTimeMs: Date.now() - startTime
+        });
 
         return new Response(
           JSON.stringify({ 
@@ -293,7 +298,7 @@ serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error('Error in send-twilio-sms:', error);
+    edgeLogger.error('Error in send-twilio-sms', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
