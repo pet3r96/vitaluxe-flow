@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { PortalTerms } from '@/integrations/supabase/table-helpers';
 import type { Database } from "@/integrations/supabase/types";
 import { parseEdgeFunctionError } from "@/types/jsonb";
 import { Button } from "@/components/ui/button";
@@ -51,9 +52,8 @@ export default function AcceptTerms() {
       // Special handling for patients - they use a separate table
       if (effectiveRole === 'patient') {
         console.log('[AcceptTerms] Querying patient_portal_terms...');
-        const res = await supabase
-          .from('patient_portal_terms' as any)
-          .select<'*', PatientPortalTerms>('*')
+        const res = await PortalTerms()
+          .select('*')
           .order('version', { ascending: false })
           .limit(1)
           .maybeSingle();

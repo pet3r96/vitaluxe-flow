@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PharmacyRepAssign } from '@/integrations/supabase/table-helpers';
 import { EdgeFunctionResponse, getEdgeFunctionError } from "@/types/edgeFunction";
 import type { PharmacyRepAssignmentRow, PharmacyRepAssignmentInsert } from "@/types/manual-schema";
 import {
@@ -80,9 +81,8 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
   useEffect(() => {
     const fetchAssignments = async () => {
       if (pharmacy) {
-        const { data: assignments } = await supabase
-          .from("pharmacy_rep_assignments" as any)
-          .select<'topline_rep_id', PharmacyRepAssignmentRow>('topline_rep_id')
+        const { data: assignments } = await PharmacyRepAssign()
+          .select('topline_rep_id')
           .eq("pharmacy_id", pharmacy.id);
         
         const assignedReps = assignments?.map(a => a.topline_rep_id) || [];
@@ -224,8 +224,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             topline_rep_id: rep_id
           }));
           
-          const { error: assignError } = await supabase
-            .from("pharmacy_rep_assignments" as any)
+          const { error: assignError } = await PharmacyRepAssign()
             .insert(assignments);
           
           if (assignError) throw assignError;
@@ -235,8 +234,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
       // Handle scope assignments for existing pharmacy
       if (pharmacy) {
         // Delete existing assignments
-        await supabase
-          .from("pharmacy_rep_assignments" as any)
+        await PharmacyRepAssign()
           .delete()
           .eq("pharmacy_id", pharmacy.id);
         
@@ -247,8 +245,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             topline_rep_id: rep_id
           }));
           
-          const { error: assignError } = await supabase
-            .from("pharmacy_rep_assignments" as any)
+          const { error: assignError } = await PharmacyRepAssign()
             .insert(assignments);
           
           if (assignError) throw assignError;

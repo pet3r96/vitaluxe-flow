@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { UpgradePrompts } from '@/integrations/supabase/table-helpers';
 import type { PracticeSubscription, SubscriptionStatus as SubscriptionStatusType } from "@/types/subscriptions";
 import type { SubscriptionUpgradePrompt, SubscriptionUpgradePromptInsert, SubscriptionUpgradePromptUpdate } from "@/types/manual-schema";
 
@@ -102,9 +103,8 @@ export const shouldShowUpgradePrompt = async (practiceId: string): Promise<boole
   const hasSubscription = await hasActiveSubscription(practiceId);
   if (hasSubscription) return false;
   
-  const { data, error } = await supabase
-    .from('subscription_upgrade_prompts' as any)
-    .select<'last_shown_at, permanently_dismissed', Pick<SubscriptionUpgradePrompt, 'last_shown_at' | 'permanently_dismissed'>>('last_shown_at, permanently_dismissed')
+  const { data, error } = await UpgradePrompts()
+    .select('last_shown_at, permanently_dismissed')
     .eq('practice_id', practiceId)
     .maybeSingle();
     
@@ -125,24 +125,21 @@ export const shouldShowUpgradePrompt = async (practiceId: string): Promise<boole
 };
 
 export const updateUpgradePromptShown = async (practiceId: string): Promise<void> => {
-  const { data: existing } = await supabase
-    .from('subscription_upgrade_prompts' as any)
-    .select<'id, show_count', Pick<SubscriptionUpgradePrompt, 'id' | 'show_count'>>('id, show_count')
+  const { data: existing } = await UpgradePrompts()
+    .select('id, show_count')
     .eq('practice_id', practiceId)
     .maybeSingle();
     
   if (existing) {
-    await supabase
-      .from('subscription_upgrade_prompts' as any)
-      .update<SubscriptionUpgradePromptUpdate>({
+    await UpgradePrompts()
+      .update({
         last_shown_at: new Date().toISOString(),
         show_count: (existing.show_count || 0) + 1
       })
       .eq('id', existing.id);
   } else {
-    await supabase
-      .from('subscription_upgrade_prompts' as any)
-      .insert<SubscriptionUpgradePromptInsert>({
+    await UpgradePrompts()
+      .insert({
         practice_id: practiceId,
         last_shown_at: new Date().toISOString(),
         show_count: 1
@@ -151,21 +148,18 @@ export const updateUpgradePromptShown = async (practiceId: string): Promise<void
 };
 
 export const dismissUpgradePromptPermanently = async (practiceId: string): Promise<void> => {
-  const { data: existing } = await supabase
-    .from('subscription_upgrade_prompts' as any)
-    .select<'id', Pick<SubscriptionUpgradePrompt, 'id'>>('id')
+  const { data: existing } = await UpgradePrompts()
+    .select('id')
     .eq('practice_id', practiceId)
     .maybeSingle();
     
   if (existing) {
-    await supabase
-      .from('subscription_upgrade_prompts' as any)
-      .update<SubscriptionUpgradePromptUpdate>({ permanently_dismissed: true })
+    await UpgradePrompts()
+      .update({ permanently_dismissed: true })
       .eq('id', existing.id);
   } else {
-    await supabase
-      .from('subscription_upgrade_prompts' as any)
-      .insert<SubscriptionUpgradePromptInsert>({
+    await UpgradePrompts()
+      .insert({
         practice_id: practiceId,
         permanently_dismissed: true
       });

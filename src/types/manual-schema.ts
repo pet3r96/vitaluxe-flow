@@ -250,6 +250,46 @@ export interface PendingRepRequest {
   updated_at: string;
 }
 
+// Pending practice request
+export interface PendingPracticeRequest {
+  id: string;
+  practice_id: string;
+  status: 'pending' | 'approved' | 'rejected' | string;
+  created_at: string;
+  requested_by?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+}
+
+// Product rep assignment
+export interface ProductRepAssignment {
+  id: string;
+  product_id: string;
+  rep_id: string;
+  created_at: string;
+}
+
+// Patient activity log
+export interface PatientActivityLog {
+  id: string;
+  patient_account_id: string;
+  action: string;
+  created_at: string;
+  details?: unknown;
+  action_by?: string;
+  action_by_role?: string;
+}
+
+// Active session
+export interface ActiveSession {
+  id: string;
+  user_id: string;
+  started_at: string;
+  last_seen_at?: string | null;
+  context?: unknown;
+  session_type?: string;
+}
+
 // Shared document (extended from medical vault)
 export interface SharedDocument {
   id: string;

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { RepProductVis } from '@/integrations/supabase/table-helpers';
 import { useAuth } from "@/contexts/AuthContext";
 import type { RepProductVisibilityRow, RepProductVisibilityUpsert } from "@/types/manual-schema";
 import {
@@ -45,9 +46,9 @@ export const ToplineProductVisibilityManager = () => {
     queryKey: ["topline-rep-id", effectiveUserId],
     enabled: !!effectiveUserId && effectiveRole === "topline",
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_user_rep_id" as any, { _user_id: effectiveUserId });
+      const { data, error } = await supabase.rpc("get_user_rep_id", { _user_id: effectiveUserId }) as { data: string | null; error: any };
       if (error) throw error;
-      return data as string | null;
+      return data;
     },
   });
 
@@ -71,9 +72,8 @@ export const ToplineProductVisibilityManager = () => {
       if (productsError) throw productsError;
 
       // Fetch visibility settings for this topline
-      const { data: visibilitySettings, error: visError } = await supabase
-        .from("rep_product_visibility" as any)
-        .select<'product_id, visible', RepProductVisibilityRow>('product_id, visible')
+      const { data: visibilitySettings, error: visError } = await RepProductVis()
+        .select('product_id, visible')
         .eq("topline_rep_id", toplineRepId);
 
       if (visError) throw visError;
@@ -102,9 +102,8 @@ export const ToplineProductVisibilityManager = () => {
     mutationFn: async ({ productId, currentVisible }: { productId: string; currentVisible: boolean }) => {
       if (!toplineRepId) throw new Error("Rep ID not found");
 
-      const { error } = await supabase
-        .from("rep_product_visibility" as any)
-        .upsert<RepProductVisibilityUpsert>({
+      const { error } = await RepProductVis()
+        .upsert({
           topline_rep_id: toplineRepId,
           product_id: productId,
           visible: !currentVisible,
@@ -133,8 +132,7 @@ export const ToplineProductVisibilityManager = () => {
     setIsResetting(true);
     try {
       // Delete all visibility settings for this topline
-      const { error } = await supabase
-        .from("rep_product_visibility" as any)
+      const { error } = await RepProductVis()
         .delete()
         .eq("topline_rep_id", toplineRepId);
 
