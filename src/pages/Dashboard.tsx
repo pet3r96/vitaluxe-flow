@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Package, ShoppingCart, Users, DollarSign, Clock, Sparkles, Lock } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useDashboardQuery } from "@/hooks/useDashboardQuery";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -61,8 +61,8 @@ const Dashboard = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Batched dashboard stats with real-time updates
-  const { data: dashboardStats, isLoading: statsLoading } = useRealtimeQuery(
+  // Batched dashboard stats with optimized caching
+  const { data: dashboardStats, isLoading: statsLoading } = useDashboardQuery(
     ["dashboard-stats-batched", effectiveRole, effectiveUserId, String(isImpersonating)],
     async () => {
       const { data, error } = await supabase.functions.invoke('manage-dashboard', {
@@ -70,13 +70,11 @@ const Dashboard = () => {
       });
       
       if (error) throw error;
-      return data.data;
+      return data; // ✅ Fixed: return data directly, not data.data
     },
     {
-      staleTime: 30000, // 30 seconds
-      gcTime: 2 * 60 * 1000,
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
+      staleTime: 60000, // 60 seconds - matches Redis cache TTL
+      gcTime: 5 * 60 * 1000, // 5 minutes
     }
   );
 
