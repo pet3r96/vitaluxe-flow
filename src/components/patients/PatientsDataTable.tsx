@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Edit, UserPlus, CheckCircle, Lock, Eye, Trash2, Ban } from "lucide-react";
 import { useResponsive } from "@/hooks/use-mobile";
-import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
+import { MobileDataTable, MobileTableRowProps, MobileTableAction } from "@/components/responsive/MobileDataTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -355,21 +355,72 @@ export const PatientsDataTable = () => {
         )}
       </div>
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1000px]">
-          <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Portal Status</TableHead>
-              {isAdmin && <TableHead>Practice</TableHead>}
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      {isMobile ? (
+        <MobileDataTable 
+          rows={paginatedPatients?.map((patient: any) => {
+            const portalStatus = portalStatusMap?.get(patient.id);
+            const patientName = patient.name || 
+              (patient.first_name && patient.last_name 
+                ? `${patient.first_name} ${patient.last_name}`.trim() 
+                : patient.first_name || patient.last_name || (patient.email as string)?.split('@')[0] || 'Unknown');
+            
+            const baseActions: MobileTableAction[] = [
+              { label: 'View Chart', onClick: () => navigate(`/patients/${patient.id}`) }
+            ];
+            
+            if (!isAdmin) {
+              baseActions.push({ label: 'Edit', onClick: () => handleEditPatient(patient) });
+              
+              if (isSubscribed && !portalStatus?.has_portal_access) {
+                baseActions.push({ 
+                  label: 'Grant Portal Access', 
+                  onClick: () => handleGrantPortalAccess(patient.id as string) 
+                });
+              }
+              
+              if (patient.user_id) {
+                const isDisabled = patient.status === 'disabled';
+                baseActions.push({ 
+                  label: isDisabled ? 'Enable Account' : 'Disable Account',
+                  onClick: () => handleToggleAccountStatus(patient),
+                  variant: isDisabled ? 'default' : 'destructive'
+                });
+              }
+            }
+            
+            return {
+              title: patientName,
+              subtitle: formatPatientEmail(patient.email as string),
+              fields: [
+                { label: 'Phone', value: formatPhoneNumber(patient.phone as string) || 'N/A' },
+                { 
+                  label: 'Portal Status', 
+                  value: portalStatus?.portal_status || 'No Access',
+                  badge: true,
+                  badgeVariant: portalStatus?.has_portal_access ? 'default' : 'secondary'
+                },
+                ...(isAdmin ? [{ label: 'Practice', value: patient.practice?.name || 'N/A' }] : [])
+              ],
+              actions: baseActions
+            };
+          }) || []}
+        />
+      ) : (
+        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1000px]">
+            <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Portal Status</TableHead>
+                {isAdmin && <TableHead>Practice</TableHead>}
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 7 : 6} className="text-center">
@@ -548,10 +599,11 @@ export const PatientsDataTable = () => {
                 </TableRow>
               ))
             )}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+          </div>
         </div>
-      </div>
+      )}
 
       {filteredPatients && filteredPatients.length > 0 && (
         <DataTablePagination

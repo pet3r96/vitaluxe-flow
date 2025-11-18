@@ -418,24 +418,55 @@ export const RepPracticesDataTable = () => {
       </div>
 
       {/* Practices Table (Read-Only) */}
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1200px]">
-          <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Practice Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>NPI</TableHead>
-              <TableHead>License #</TableHead>
-              <TableHead>Company/Practice</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Providers</TableHead>
-              <TableHead>Assigned Rep</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      {isMobile ? (
+        <MobileDataTable 
+          rows={paginatedPractices?.map((practice) => ({
+            title: practice.name || practice.company || 'Unknown Practice',
+            subtitle: practice.email || 'No email',
+            fields: [
+              { label: 'Company', value: practice.company || 'N/A' },
+              { label: 'NPI', value: practice.npi || 'N/A' },
+              { label: 'License', value: practice.license_number || 'N/A' },
+              { label: 'Phone', value: practice.phone || 'N/A' },
+              { label: 'Providers', value: `${providerCounts?.[practice.id] || 0}` },
+              { label: 'Assigned Rep', value: getRepDisplay(practice.linked_topline_id) },
+              { 
+                label: 'Status', 
+                value: practice.active ? 'Active' : 'Inactive',
+                badge: true,
+                badgeVariant: practice.active ? 'default' : 'secondary'
+              }
+            ],
+            actions: [
+              { 
+                label: 'View Details', 
+                onClick: () => {
+                  setSelectedPractice(practice);
+                  setDetailsOpen(true);
+                }
+              }
+            ]
+          })) || []}
+        />
+      ) : (
+        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1200px]">
+            <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Practice Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>NPI</TableHead>
+                <TableHead>License #</TableHead>
+                <TableHead>Company/Practice</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Providers</TableHead>
+                <TableHead>Assigned Rep</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={10} className="text-center">
@@ -489,10 +520,11 @@ export const RepPracticesDataTable = () => {
                 </TableRow>
               ))
             )}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+          </div>
         </div>
-      </div>
+      )}
 
       {filteredPractices && filteredPractices.length > 0 && (
         <DataTablePagination
