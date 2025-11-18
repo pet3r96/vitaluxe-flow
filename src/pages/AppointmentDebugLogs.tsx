@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, Terminal, Info, CheckCircle2, XCircle } from "lucide-react";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 interface ConsoleLog {
   id: string;
@@ -14,6 +15,7 @@ interface ConsoleLog {
 }
 
 export default function AppointmentDebugLogs() {
+  usePagePerformance('AppointmentDebugLogs');
   const [logs, setLogs] = useState<ConsoleLog[]>([]);
 
   useEffect(() => {

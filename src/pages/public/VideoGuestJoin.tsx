@@ -5,8 +5,10 @@ import TelehealthRoomUnified from "@/components/video/TelehealthRoomUnified";
 import { PreCallTestPrompt } from "@/components/video/PreCallTestPrompt";
 import { Loader2 } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const VideoGuestJoin = () => {
+  usePagePerformance('VideoGuestJoin');
   const { token } = useParams();
   const navigate = useNavigate();
 

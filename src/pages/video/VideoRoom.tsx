@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import TelehealthRoomUnified from "@/components/video/TelehealthRoomUnified";
 import { PreCallTestPrompt } from "@/components/video/PreCallTestPrompt";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function VideoRoom() {
+  usePagePerformance('VideoRoom');
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
