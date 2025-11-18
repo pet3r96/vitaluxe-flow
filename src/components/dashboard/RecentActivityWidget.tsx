@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, FileText, Calendar, Package, CheckCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/lib/logger";
 import type { 
   ActivityItem, 
   RecentActivityWidgetProps,
@@ -183,12 +184,28 @@ export function RecentActivityWidget({ className, activities: externalActivities
       const appointments = appointmentsResult.data;
       
       // Get recent documents via RPC (provider_documents accessed via functions only)
-      const { data: documentsData } = await supabase.rpc('get_provider_documents', {
-        p_practice_id: effectivePracticeId
-      });
-      
-      // Map RPC result to our activity items (limit to 10 most recent)
-      const documents = (documentsData || []).slice(0, 10);
+      let documents: any[] = [];
+      try {
+        const { data: documentsData, error } = await supabase.rpc('get_provider_documents', {
+          p_practice_id: effectivePracticeId
+        });
+        
+        if (error) {
+          logger.warn('get_provider_documents RPC failed, skipping documents', {
+            error: error.message,
+            practiceId: effectivePracticeId
+          });
+        } else {
+          // Map RPC result to our activity items (limit to 10 most recent)
+          documents = (documentsData || []).slice(0, 10);
+        }
+      } catch (err: any) {
+        logger.error('Exception calling get_provider_documents', {
+          errorMessage: err?.message,
+          practiceId: effectivePracticeId
+        });
+        // Continue with empty documents array
+      }
 
       // Combine all activities
       const combined: ActivityItem[] = [];
