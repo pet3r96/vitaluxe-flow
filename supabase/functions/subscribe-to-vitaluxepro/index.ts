@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createAdminClient } from "../_shared/supabaseAdmin.ts";
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -31,10 +32,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     // Service role client for DB operations (bypasses RLS)
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabaseAdmin = createAdminClient();
 
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
