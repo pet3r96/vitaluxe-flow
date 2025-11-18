@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Search, Edit, UserPlus, AlertCircle } from "lucide-react";
+import { useResponsive } from "@/hooks/use-mobile";
+import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
 import { PharmacyDialog } from "./PharmacyDialog";
 import { PharmacyShippingRatesDialog } from "./PharmacyShippingRatesDialog";
 import { toast } from "sonner";
@@ -24,6 +26,7 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const PharmaciesDataTable = () => {
   const { effectiveRole, effectiveUserId, isImpersonating } = useAuth();
+  const { isMobile } = useResponsive();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPharmacy, setSelectedPharmacy] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);

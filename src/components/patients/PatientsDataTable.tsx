@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Edit, UserPlus, CheckCircle, Lock, Eye, Trash2, Ban } from "lucide-react";
+import { useResponsive } from "@/hooks/use-mobile";
+import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +45,7 @@ export const PatientsDataTable = () => {
   const { isSubscribed } = useSubscription();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { isMobile } = useResponsive();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
