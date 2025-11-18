@@ -3,7 +3,7 @@
 // Consolidates all guest validation flows into a single endpoint
 // ============================================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { createAgoraTokens } from '../_shared/agoraTokenService.ts';
 import { getClientIP } from '../_shared/rateLimiter.ts';

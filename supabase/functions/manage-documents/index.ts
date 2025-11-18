@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { S3Client, PutObjectCommand, GetObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.485.0";
 import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.485.0";
 import { corsHeaders } from '../_shared/cors.ts';
