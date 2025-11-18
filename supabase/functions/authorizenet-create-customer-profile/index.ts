@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
