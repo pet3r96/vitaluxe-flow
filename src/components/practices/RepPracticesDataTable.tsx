@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { logger } from "@/lib/logger";
+import { debounce } from "@/lib/performance";
 import {
   Table,
   TableBody,
@@ -24,6 +25,7 @@ import { AddPracticeRequestDialog } from "./AddPracticeRequestDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 export const RepPracticesDataTable = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
@@ -35,6 +37,8 @@ export const RepPracticesDataTable = () => {
   const [isRepairing, setIsRepairing] = useState(false);
   const autoHealAttempted = useRef(false);
   const queryClient = useQueryClient();
+
+  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   // Fetch practices based on role using linked_topline_id with real-time updates
   const { data: practices, isLoading, refetch } = useRealtimeQuery(
@@ -397,7 +401,7 @@ export const RepPracticesDataTable = () => {
           <Input
             placeholder="Search by name, email, NPI, license..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => debouncedSetSearch(e.target.value)}
             className="pl-9"
           />
         </div>
@@ -419,7 +423,10 @@ export const RepPracticesDataTable = () => {
 
       {/* Practices Table (Read-Only) */}
       {isMobile ? (
-        <MobileDataTable 
+        isLoading ? (
+          <TableSkeleton rows={5} columns={2} />
+        ) : (
+          <MobileDataTable
           rows={paginatedPractices?.map((practice) => ({
             title: practice.name || practice.company || 'Unknown Practice',
             subtitle: practice.email || 'No email',
@@ -448,6 +455,9 @@ export const RepPracticesDataTable = () => {
             ]
           })) || []}
         />
+        )
+      ) : isLoading ? (
+        <TableSkeleton rows={10} columns={10} />
       ) : (
         <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="min-w-[1200px]">
@@ -467,13 +477,7 @@ export const RepPracticesDataTable = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : filteredPractices?.length === 0 ? (
+            {filteredPractices?.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} className="text-center text-muted-foreground">
                   No practices found
