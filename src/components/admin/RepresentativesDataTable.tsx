@@ -286,13 +286,13 @@ export const RepresentativesDataTable = () => {
             <Table className="min-w-[1200px]">
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="h-12 px-6 font-semibold">Name</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold">Email</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold">Phone</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold">Role</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold">Assigned To</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold">Status</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold text-right">Actions</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold min-w-[160px]">Name</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold min-w-[220px]">Email</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold min-w-[140px]">Phone</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold min-w-[120px]">Role</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold min-w-[150px]">Assigned To</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold min-w-[120px]">Status</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold min-w-[140px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
