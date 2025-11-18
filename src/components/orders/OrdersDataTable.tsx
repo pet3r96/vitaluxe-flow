@@ -613,19 +613,39 @@ export const OrdersDataTable = () => {
                 <TableHead>Order Status</TableHead>
                 <TableHead>Payment Status</TableHead>
                 {effectiveRole !== "pharmacy" && <TableHead>Total Amount</TableHead>}
+                {(effectiveRole === "admin" || effectiveRole === "super_admin") && (
+                  <>
+                    <TableHead>Shipping Cost</TableHead>
+                    <TableHead>Assigned Pharmacy</TableHead>
+                  </>
+                )}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
+                  <TableCell colSpan={
+                    effectiveRole === "pharmacy"
+                      ? 10
+                      : effectiveRole === "admin" || effectiveRole === "super_admin"
+                      ? 13
+                      : 11
+                  } className="text-center">
                     {!effectiveRole || !effectiveUserId ? "Initializing..." : "Loading orders..."}
                   </TableCell>
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : (effectiveRole === "topline" || effectiveRole === "downline") ? 12 : 11} className="text-center">
+                  <TableCell colSpan={
+                    effectiveRole === "pharmacy"
+                      ? 10
+                      : effectiveRole === "admin" || effectiveRole === "super_admin"
+                      ? 13
+                      : (effectiveRole === "topline" || effectiveRole === "downline")
+                      ? 12
+                      : 11
+                  } className="text-center">
                     <div className="py-8 space-y-2">
                       <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
                       <p className="text-sm font-medium">Unable to load orders</p>
@@ -638,7 +658,15 @@ export const OrdersDataTable = () => {
                 </TableRow>
               ) : filteredOrders?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : (effectiveRole === "topline" || effectiveRole === "downline") ? 12 : 11} className="text-center">
+                  <TableCell colSpan={
+                    effectiveRole === "pharmacy"
+                      ? 10
+                      : effectiveRole === "admin" || effectiveRole === "super_admin"
+                      ? 13
+                      : (effectiveRole === "topline" || effectiveRole === "downline")
+                      ? 12
+                      : 11
+                  } className="text-center">
                     <div className="py-8 space-y-2 text-muted-foreground">
                       {effectiveRole === "downline" && queryMetadata.emptyReason === 'no_rep' ? (
                         <>
@@ -783,6 +811,39 @@ export const OrdersDataTable = () => {
                     {/* Total Amount (if not pharmacy) */}
                     {effectiveRole !== "pharmacy" && (
                       <TableCell>${order.total_amount}</TableCell>
+                    )}
+
+                    {/* Shipping Cost & Assigned Pharmacy (admin only) */}
+                    {(effectiveRole === "admin" || effectiveRole === "super_admin") && (
+                      <>
+                        <TableCell>
+                          {(() => {
+                            const totalShipping =
+                              order.order_lines?.reduce(
+                                (sum: number, line: any) => sum + (line.shipping_cost || 0),
+                                0
+                              ) || 0;
+
+                            return totalShipping > 0 ? `$${totalShipping.toFixed(2)}` : "N/A";
+                          })()}
+                        </TableCell>
+
+                        <TableCell>
+                          {(() => {
+                            const ids = Array.from(
+                              new Set(
+                                order.order_lines
+                                  ?.map((line: any) => line.assigned_pharmacy_id)
+                                  .filter(Boolean)
+                              )
+                            );
+
+                            if (ids.length === 0) return "N/A";
+                            if (ids.length === 1) return String(ids[0]);
+                            return `Multiple (${ids.length})`;
+                          })()}
+                        </TableCell>
+                      </>
                     )}
 
                     {/* Actions */}

@@ -574,7 +574,7 @@ serve(async (req) => {
     if (orderIds.length > 0) {
       const { data: lines, error: linesError } = await supabase
         .from('order_lines')
-        .select('id, order_id, status, patient_name, patient_id, shipping_speed, product_id, prescription_url')
+        .select('id, order_id, status, patient_name, patient_id, shipping_speed, shipping_cost, assigned_pharmacy_id, product_id, prescription_url')
         .in('order_id', orderIds);
       
       if (linesError) {
