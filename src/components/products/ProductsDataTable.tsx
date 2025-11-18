@@ -570,44 +570,83 @@ export const ProductsDataTable = () => {
         {(isProvider || isRep) && <Badge variant="secondary">Read Only</Badge>}
       </div>
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1600px]">
-          <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Image</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Dosage</TableHead>
-              {isAdmin && <TableHead>Base Price</TableHead>}
-              {isAdmin && <TableHead>Topline Price</TableHead>}
-              {isAdmin && <TableHead>Downline Price</TableHead>}
-              {isAdmin && <TableHead>Practice Price</TableHead>}
-              {isToplineRep && <TableHead>Topline Price</TableHead>}
-              {isToplineRep && <TableHead>Practice Price</TableHead>}
-              {isDownlineRep && <TableHead>Downline Price</TableHead>}
-              {isDownlineRep && <TableHead>Practice Price</TableHead>}
-              {isProvider && <TableHead>Practice Price</TableHead>}
-              {isAdmin && <TableHead>Pharmacy</TableHead>}
-              {isAdmin && <TableHead>Rx Required</TableHead>}
-              <TableHead>Active</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+      {/* Mobile View */}
+      {isMobile ? (
+        <div className="space-y-3">
+          {isLoading ? (
+            <TableSkeleton rows={5} />
+          ) : filteredProducts?.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              No products found
+            </div>
+          ) : (
+            paginatedProducts?.map((product) => (
+              <ProductMobileCard
+                key={product.id}
+                product={product}
+                onView={(product) => {
+                  setSelectedProduct(product);
+                  setIsEditing(false);
+                  setDialogOpen(true);
+                }}
+                onEdit={(product) => {
+                  setSelectedProduct(product);
+                  setIsEditing(true);
+                  setDialogOpen(true);
+                }}
+                onAddToCart={(product) => {
+                  setProductForCart(product);
+                  setPatientDialogOpen(true);
+                }}
+                onDelete={handleDeleteClick}
+                onToggleStatus={toggleProductStatus}
+                isAdmin={isAdmin}
+                isProvider={isProvider}
+                isRep={isRep}
+              />
+            ))
+          )}
+        </div>
+      ) : (
+        /* Desktop View */
+        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1600px]">
+            <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={isAdmin ? 9 : isRep ? 5 : 6} className="text-center">
-                  Loading...
-                </TableCell>
+                <TableHead>Image</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Dosage</TableHead>
+                {isAdmin && <TableHead>Base Price</TableHead>}
+                {isAdmin && <TableHead>Topline Price</TableHead>}
+                {isAdmin && <TableHead>Downline Price</TableHead>}
+                {isAdmin && <TableHead>Practice Price</TableHead>}
+                {isToplineRep && <TableHead>Topline Price</TableHead>}
+                {isToplineRep && <TableHead>Practice Price</TableHead>}
+                {isDownlineRep && <TableHead>Downline Price</TableHead>}
+                {isDownlineRep && <TableHead>Practice Price</TableHead>}
+                {isProvider && <TableHead>Practice Price</TableHead>}
+                {isAdmin && <TableHead>Pharmacy</TableHead>}
+                {isAdmin && <TableHead>Rx Required</TableHead>}
+                <TableHead>Active</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : filteredProducts?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 9 : isRep ? 5 : 6} className="text-center text-muted-foreground">
-                  No products found
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedProducts?.map((product) => (
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 9 : isRep ? 5 : 6} className="text-center">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : filteredProducts?.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 9 : isRep ? 5 : 6} className="text-center text-muted-foreground">
+                    No products found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedProducts?.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
                     {product.image_url ? (
@@ -727,10 +766,11 @@ export const ProductsDataTable = () => {
                 </TableRow>
               ))
             )}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+          </div>
         </div>
-      </div>
+      )}
 
       {filteredProducts && filteredProducts.length > 0 && (
         <DataTablePagination

@@ -60,3 +60,33 @@ export const clearPerformanceMetrics = () => {
     window.__perf = {};
   }
 };
+
+/**
+ * Aggregate performance data for analysis
+ */
+export const getPerformanceReport = () => {
+  const metrics = getPerformanceSummary();
+  const entries = Object.entries(metrics) as [string, number][];
+  
+  if (entries.length === 0) {
+    return {
+      totalMeasurements: 0,
+      averageLoadTime: 0,
+      slowestPage: null,
+      fastestPage: null,
+      allMetrics: {}
+    };
+  }
+  
+  const loadTimes = entries.map(([_, time]) => time);
+  const avg = loadTimes.reduce((a, b) => a + b, 0) / loadTimes.length;
+  const sorted = [...entries].sort((a, b) => b[1] - a[1]);
+  
+  return {
+    totalMeasurements: entries.length,
+    averageLoadTime: Math.round(avg),
+    slowestPage: sorted[0] ? { name: sorted[0][0], time: Math.round(sorted[0][1]) } : null,
+    fastestPage: sorted[sorted.length - 1] ? { name: sorted[sorted.length - 1][0], time: Math.round(sorted[sorted.length - 1][1]) } : null,
+    allMetrics: Object.fromEntries(entries.map(([name, time]) => [name, Math.round(time)]))
+  };
+};

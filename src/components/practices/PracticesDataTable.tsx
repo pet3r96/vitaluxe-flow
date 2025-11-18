@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { logger } from "@/lib/logger";
+import { useResponsive } from "@/hooks/use-mobile";
 import {
   Table,
   TableBody,
@@ -19,13 +20,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Search, Eye, Power, PowerOff, UserPlus, FileText, Package } from "lucide-react";
 import { AddPracticeDialog } from "./AddPracticeDialog";
 import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
+import { PracticeMobileCard } from "./PracticeMobileCard";
 import { toast } from "sonner";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { formatPhoneNumber } from "@/lib/validators";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 export const PracticesDataTable = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
+  const { isMobile } = useResponsive();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPractice, setSelectedPractice] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -354,9 +358,35 @@ export const PracticesDataTable = () => {
         </Button>
       </div>
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1600px]">
-          <Table>
+      {/* Mobile View */}
+      {isMobile ? (
+        <div className="space-y-3">
+          {isLoading ? (
+            <TableSkeleton rows={5} />
+          ) : filteredPractices?.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              No practices found
+            </div>
+          ) : (
+            paginatedPractices?.map((practice) => (
+              <PracticeMobileCard
+                key={practice.id}
+                practice={practice}
+                onViewDetails={(practice) => {
+                  setSelectedPractice(practice);
+                  setDetailsOpen(true);
+                }}
+                onToggleStatus={toggleAccountStatus}
+                canViewCredentials={canViewCredentials}
+              />
+            ))
+          )}
+        </div>
+      ) : (
+        /* Desktop View */
+        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1600px]">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Practice Name</TableHead>
@@ -463,9 +493,10 @@ export const PracticesDataTable = () => {
               ))
             )}
           </TableBody>
-        </Table>
+            </Table>
+          </div>
         </div>
-      </div>
+      )}
 
       {filteredPractices && filteredPractices.length > 0 && (
         <DataTablePagination

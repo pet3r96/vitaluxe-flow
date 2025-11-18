@@ -544,73 +544,127 @@ export const OrdersDataTable = () => {
         </Select>
       </div>
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1600px]">
+      {/* Mobile View */}
+      {isMobile ? (
+        <div className="space-y-3">
+          {isLoading ? (
+            <TableSkeleton rows={5} />
+          ) : error ? (
+            <div className="py-8 space-y-2 text-center">
+              <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
+              <p className="text-sm font-medium">Unable to load orders</p>
+              <p className="text-xs text-muted-foreground">Please refresh the page or contact support if the issue persists</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                Try Again
+              </Button>
+            </div>
+          ) : filteredOrders?.length === 0 ? (
+            <div className="py-8 space-y-2 text-muted-foreground text-center">
+              {effectiveRole === "downline" && queryMetadata.emptyReason === 'no_rep' ? (
+                <>
+                  <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+                  <p className="text-sm font-medium text-foreground">Account Setup Incomplete</p>
+                  <p className="text-xs">No representative record found for this account. Please contact admin to complete setup.</p>
+                </>
+              ) : effectiveRole === "downline" && queryMetadata.emptyReason === 'no_practices' ? (
+                <>
+                  <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+                  <p className="text-sm font-medium text-foreground">No Practices Assigned</p>
+                  <p className="text-xs">No practices are linked to your account yet. Contact your topline or admin to assign practices.</p>
+                </>
+              ) : effectiveRole === "downline" && queryMetadata.emptyReason === 'no_orders' ? (
+                <>
+                  <p className="text-sm font-medium text-foreground">No Orders Found</p>
+                  <p className="text-xs">No orders found for your {queryMetadata.practiceCount} assigned practice{queryMetadata.practiceCount > 1 ? 's' : ''}. Try adjusting your search or filters.</p>
+                </>
+              ) : (
+                <p className="text-sm">No orders found</p>
+              )}
+            </div>
+          ) : (
+            paginatedOrders?.map((order) => (
+              <OrderMobileCard
+                key={order.id}
+                order={order}
+                onViewDetails={(order) => {
+                  setSelectedOrder(order);
+                  setDetailsOpen(true);
+                }}
+                currentRepId={currentRepId}
+                effectiveRole={effectiveRole}
+              />
+            ))
+          )}
+        </div>
+      ) : (
+        /* Desktop View */
+        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1600px]">
           <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Patient Name</TableHead>
-              <TableHead>Fulfillment Type</TableHead>
-              <TableHead>Products</TableHead>
-              <TableHead>Shipping Speed</TableHead>
-              <TableHead>Shipping Status</TableHead>
-              <TableHead>Order Status</TableHead>
-              <TableHead>Payment Status</TableHead>
-              {effectiveRole !== "pharmacy" && <TableHead>Total Amount</TableHead>}
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
-                  {!effectiveRole || !effectiveUserId ? "Initializing..." : "Loading orders..."}
-                </TableCell>
+                <TableHead>Order ID</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Patient Name</TableHead>
+                <TableHead>Fulfillment Type</TableHead>
+                <TableHead>Products</TableHead>
+                <TableHead>Shipping Speed</TableHead>
+                <TableHead>Shipping Status</TableHead>
+                <TableHead>Order Status</TableHead>
+                <TableHead>Payment Status</TableHead>
+                {effectiveRole !== "pharmacy" && <TableHead>Total Amount</TableHead>}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : error ? (
-              <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : (effectiveRole === "topline" || effectiveRole === "downline") ? 12 : 11} className="text-center">
-                  <div className="py-8 space-y-2">
-                    <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
-                    <p className="text-sm font-medium">Unable to load orders</p>
-                    <p className="text-xs text-muted-foreground">Please refresh the page or contact support if the issue persists</p>
-                    <Button variant="outline" size="sm" onClick={() => refetch()}>
-                      Try Again
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : filteredOrders?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : (effectiveRole === "topline" || effectiveRole === "downline") ? 12 : 11} className="text-center">
-                  <div className="py-8 space-y-2 text-muted-foreground">
-                    {effectiveRole === "downline" && queryMetadata.emptyReason === 'no_rep' ? (
-                      <>
-                        <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
-                        <p className="text-sm font-medium text-foreground">Account Setup Incomplete</p>
-                        <p className="text-xs">No representative record found for this account. Please contact admin to complete setup.</p>
-                      </>
-                    ) : effectiveRole === "downline" && queryMetadata.emptyReason === 'no_practices' ? (
-                      <>
-                        <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
-                        <p className="text-sm font-medium text-foreground">No Practices Assigned</p>
-                        <p className="text-xs">No practices are linked to your account yet. Contact your topline or admin to assign practices.</p>
-                      </>
-                    ) : effectiveRole === "downline" && queryMetadata.emptyReason === 'no_orders' ? (
-                      <>
-                        <p className="text-sm font-medium text-foreground">No Orders Found</p>
-                        <p className="text-xs">No orders found for your {queryMetadata.practiceCount} assigned practice{queryMetadata.practiceCount > 1 ? 's' : ''}. Try adjusting your search or filters.</p>
-                      </>
-                    ) : (
-                      <p className="text-sm">No orders found</p>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedOrders?.map((order) => {
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : 11} className="text-center">
+                    {!effectiveRole || !effectiveUserId ? "Initializing..." : "Loading orders..."}
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : (effectiveRole === "topline" || effectiveRole === "downline") ? 12 : 11} className="text-center">
+                    <div className="py-8 space-y-2">
+                      <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
+                      <p className="text-sm font-medium">Unable to load orders</p>
+                      <p className="text-xs text-muted-foreground">Please refresh the page or contact support if the issue persists</p>
+                      <Button variant="outline" size="sm" onClick={() => refetch()}>
+                        Try Again
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredOrders?.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={effectiveRole === "pharmacy" ? 10 : (effectiveRole === "topline" || effectiveRole === "downline") ? 12 : 11} className="text-center">
+                    <div className="py-8 space-y-2 text-muted-foreground">
+                      {effectiveRole === "downline" && queryMetadata.emptyReason === 'no_rep' ? (
+                        <>
+                          <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+                          <p className="text-sm font-medium text-foreground">Account Setup Incomplete</p>
+                          <p className="text-xs">No representative record found for this account. Please contact admin to complete setup.</p>
+                        </>
+                      ) : effectiveRole === "downline" && queryMetadata.emptyReason === 'no_practices' ? (
+                        <>
+                          <AlertTriangle className="h-8 w-8 mx-auto text-amber-500" />
+                          <p className="text-sm font-medium text-foreground">No Practices Assigned</p>
+                          <p className="text-xs">No practices are linked to your account yet. Contact your topline or admin to assign practices.</p>
+                        </>
+                      ) : effectiveRole === "downline" && queryMetadata.emptyReason === 'no_orders' ? (
+                        <>
+                          <p className="text-sm font-medium text-foreground">No Orders Found</p>
+                          <p className="text-xs">No orders found for your {queryMetadata.practiceCount} assigned practice{queryMetadata.practiceCount > 1 ? 's' : ''}. Try adjusting your search or filters.</p>
+                        </>
+                      ) : (
+                        <p className="text-sm">No orders found</p>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedOrders?.map((order) => {
                 const firstOrderLine = order.order_lines?.[0];
                 const patientId = firstOrderLine?.patient_id;
                 const patientName = firstOrderLine?.patient_name || "N/A";
@@ -808,10 +862,11 @@ export const OrdersDataTable = () => {
                 );
               })
             )}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+          </div>
         </div>
-      </div>
+      )}
 
       {filteredOrders && filteredOrders.length > 0 && (
         <DataTablePagination
