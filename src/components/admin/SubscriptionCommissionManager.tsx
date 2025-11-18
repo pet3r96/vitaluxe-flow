@@ -254,7 +254,7 @@ export default function SubscriptionCommissionManager() {
                                 Mark as Paid
                               </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle>Mark Commission as Paid</DialogTitle>
                               </DialogHeader>

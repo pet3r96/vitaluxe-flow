@@ -799,7 +799,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
 
         {/* Instant Session Dialog */}
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create Instant Video Session</DialogTitle>
               <DialogDescription>Start an immediate video consultation with a patient</DialogDescription>
@@ -944,7 +944,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
                   Create Session with Patient
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create Instant Video Session</DialogTitle>
                   <DialogDescription>Start an immediate video consultation with a patient</DialogDescription>
