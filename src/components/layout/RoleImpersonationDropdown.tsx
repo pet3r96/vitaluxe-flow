@@ -65,10 +65,38 @@ export function RoleImpersonationDropdown() {
         staff: [],
       };
 
+      // Role priority: higher priority roles take precedence
+      const rolePriority: Record<string, number> = {
+        'super_admin': 1,
+        'admin': 2,
+        'doctor': 3,
+        'provider': 4,
+        'pharmacy': 5,
+        'topline': 6,
+        'downline': 7,
+        'staff': 8,
+        'patient': 9,
+      };
+
+      // Track each user's highest priority role to prevent duplicates
+      const userRoleMap = new Map<string, string>();
+
       rolesData?.forEach((roleItem: any) => {
-        const profile = profileMap.get(roleItem.user_id);
-        if (profile && grouped[roleItem.role]) {
-          grouped[roleItem.role].push({
+        const currentPriority = rolePriority[roleItem.role] || 999;
+        const existingRole = userRoleMap.get(roleItem.user_id);
+        const existingPriority = existingRole ? (rolePriority[existingRole] || 999) : 999;
+        
+        // Only update if this role has higher priority (lower number)
+        if (currentPriority < existingPriority) {
+          userRoleMap.set(roleItem.user_id, roleItem.role);
+        }
+      });
+
+      // Group users by their determined single role
+      userRoleMap.forEach((role, userId) => {
+        const profile = profileMap.get(userId);
+        if (profile && grouped[role]) {
+          grouped[role].push({
             id: profile.id,
             name: profile.name,
             email: profile.email,
