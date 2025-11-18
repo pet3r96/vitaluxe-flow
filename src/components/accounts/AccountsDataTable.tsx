@@ -3,7 +3,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useResponsive } from "@/hooks/use-mobile";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { debounce } from "@/lib/performance";
 import {
   Table,
@@ -48,7 +47,6 @@ export const AccountsDataTable = () => {
   const { toast } = useToast();
   const { effectiveRole } = useAuth();
   const { isMobile } = useResponsive();
-  const parentRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
@@ -342,14 +340,6 @@ export const AccountsDataTable = () => {
 
   const paginatedAccounts = (filteredAccounts?.slice(startIndex, endIndex)) || [];
 
-  // Virtualization for desktop table
-  const rowVirtualizer = useVirtualizer({
-    count: paginatedAccounts.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 53,
-    overscan: 10,
-  });
-
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
       admin: "bg-accent text-accent-foreground",
@@ -464,9 +454,10 @@ export const AccountsDataTable = () => {
             emptyMessage="No accounts found"
           />
         ) : (
-          // Desktop Table View with Virtualization
-          <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
-            <Table className="min-w-[1200px] table-fixed">
+          // Desktop Table View
+          <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="min-w-[1200px]">
+            <Table className="table-fixed">
               <colgroup>
                 <col style={{ width: '160px' }} />
                 <col style={{ width: '220px' }} />
@@ -485,7 +476,7 @@ export const AccountsDataTable = () => {
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+              <TableBody>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center">
@@ -499,20 +490,8 @@ export const AccountsDataTable = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                    const account = paginatedAccounts[virtualRow.index];
-                    return (
-                      <TableRow 
-                        key={account.id}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: `${virtualRow.size}px`,
-                          transform: `translateY(${virtualRow.start}px)`
-                        }}
-                      >
+                  paginatedAccounts?.map((account) => (
+                      <TableRow key={account.id}>
                   <TableCell className="font-medium">{getDisplayName(account)}</TableCell>
                   <TableCell className="text-muted-foreground">{account.email}</TableCell>
                   <TableCell className="lg:whitespace-nowrap">
@@ -580,11 +559,11 @@ export const AccountsDataTable = () => {
                     </div>
                       </TableCell>
                     </TableRow>
-                    );
-                  })
+                  ))
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
         )}
       </div>

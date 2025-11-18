@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { usePatients } from "@/hooks/usePatients";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import type { Database } from "@/integrations/supabase/types";
 import {
   Table,
@@ -49,7 +48,6 @@ export const PatientsDataTable = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { isMobile } = useResponsive();
-  const parentRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -83,14 +81,6 @@ export const PatientsDataTable = () => {
   });
 
   const paginatedPatients = filteredPatients?.slice(startIndex, endIndex);
-
-  // Virtualization for desktop table
-  const rowVirtualizer = useVirtualizer({
-    count: paginatedPatients?.length || 0,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 53,
-    overscan: 10,
-  });
 
   const handleAddPatient = useCallback(() => {
     setSelectedPatient(null);
@@ -420,8 +410,9 @@ export const PatientsDataTable = () => {
           }) || []}
         />
       ) : (
-        <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
-          <Table className="min-w-[1000px] table-fixed">
+        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1000px]">
+          <Table className="table-fixed">
             <colgroup>
               <col style={{ width: '160px' }} />
               <col style={{ width: '220px' }} />
@@ -442,7 +433,7 @@ export const PatientsDataTable = () => {
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+            <TableBody>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 7 : 6} className="text-center">
@@ -456,20 +447,8 @@ export const PatientsDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const patient: any = paginatedPatients[virtualRow.index];
-                return (
-                  <TableRow 
-                    key={patient.id as string}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: `${virtualRow.size}px`,
-                      transform: `translateY(${virtualRow.start}px)`
-                    }}
-                  >
+              paginatedPatients?.map((patient: any) => (
+                  <TableRow key={patient.id as string}>
                   <TableCell className="font-medium">
                     {patient.name || 
                       (patient.first_name && patient.last_name 
@@ -637,11 +616,11 @@ export const PatientsDataTable = () => {
                     </div>
                   </TableCell>
                 </TableRow>
-                );
-              })
+              ))
             )}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
