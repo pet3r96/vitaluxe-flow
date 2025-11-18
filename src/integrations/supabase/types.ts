@@ -3210,6 +3210,54 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_metrics: {
+        Row: {
+          connection_type: string | null
+          created_at: string | null
+          id: string
+          load_time_ms: number
+          metric_type: string
+          metric_value: number | null
+          page_name: string
+          timestamp: string
+          user_agent: string | null
+          user_id: string | null
+          user_role: string | null
+          viewport_height: number | null
+          viewport_width: number | null
+        }
+        Insert: {
+          connection_type?: string | null
+          created_at?: string | null
+          id?: string
+          load_time_ms: number
+          metric_type: string
+          metric_value?: number | null
+          page_name: string
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+          user_role?: string | null
+          viewport_height?: number | null
+          viewport_width?: number | null
+        }
+        Update: {
+          connection_type?: string | null
+          created_at?: string | null
+          id?: string
+          load_time_ms?: number
+          metric_type?: string
+          metric_value?: number | null
+          page_name?: string
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+          user_role?: string | null
+          viewport_height?: number | null
+          viewport_width?: number | null
+        }
+        Relationships: []
+      }
       pharmacies: {
         Row: {
           active: boolean | null

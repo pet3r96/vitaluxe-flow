@@ -21,8 +21,16 @@ import React from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { count, mark, time, timeEnd } from "@/diag";
 import { logger } from "@/lib/logger";
+import { measurePageLoad } from "@/lib/performanceMonitor";
 
 const Cart = React.memo(function Cart() {
+  const perfRef = useRef<{ end: () => number } | null>(null);
+  
+  // Initialize performance monitoring only once
+  if (!perfRef.current) {
+    perfRef.current = measurePageLoad('Cart');
+  }
+
   count('Cart:render');
   time('Cart-Render');
   logger.info('Cart component render started');

@@ -12,8 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const Profile = () => {
+  usePagePerformance('Profile');
   const { effectiveRole, effectiveUserId } = useAuth();
   const navigate = useNavigate();
   const [isProvider, setIsProvider] = useState<boolean>(false);

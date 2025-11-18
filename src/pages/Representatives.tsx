@@ -1,7 +1,10 @@
 import { RepresentativesDataTable } from "@/components/admin/RepresentativesDataTable";
 import { ResponsivePage } from "@/components/layout/ResponsivePage";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const Representatives = () => {
+  usePagePerformance('Representatives');
+
   return (
     <ResponsivePage
       title="Representatives"

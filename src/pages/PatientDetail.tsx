@@ -35,8 +35,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "@/hooks/use-toast";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function PatientDetail() {
+  usePagePerformance('PatientDetail');
   const { patientId } = useParams();
   const navigate = useNavigate();
   const { effectivePracticeId } = useAuth();

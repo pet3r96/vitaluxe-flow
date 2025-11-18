@@ -4,10 +4,19 @@ import { usePracticeRxPrivileges } from "@/hooks/usePracticeRxPrivileges";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Info } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { measurePageLoad } from "@/lib/performanceMonitor";
 
 const Providers = () => {
+  const perf = useRef(measurePageLoad('Providers')).current;
   const { effectiveRole, isProviderAccount, isStaffAccount } = useAuth();
   const { canOrderRx, hasProviders, providerCount, providersWithNpiCount, isLoading } = usePracticeRxPrivileges();
+
+  useEffect(() => {
+    return () => {
+      perf.end();
+    };
+  }, [perf]);
 
   // Only practices and staff (not provider accounts) can access this page
   if ((effectiveRole !== 'doctor' && effectiveRole !== 'staff') || isProviderAccount) {

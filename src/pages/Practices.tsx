@@ -3,9 +3,18 @@ import { PracticesDataTable } from "@/components/practices/PracticesDataTable";
 import { RepPracticesDataTable } from "@/components/practices/RepPracticesDataTable";
 import { RepPendingPracticesTable } from "@/components/practices/RepPendingPracticesTable";
 import { Separator } from "@/components/ui/separator";
+import { useEffect, useRef } from "react";
+import { measurePageLoad } from "@/lib/performanceMonitor";
 
 const Practices = () => {
+  const perf = useRef(measurePageLoad('Practices')).current;
   const { effectiveRole } = useAuth();
+
+  useEffect(() => {
+    return () => {
+      perf.end();
+    };
+  }, [perf]);
   
   const isRep = effectiveRole === "topline" || effectiveRole === "downline";
   
