@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { createAdminClient, createAuthClient } from "../_shared/supabaseAdmin.ts";
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -40,15 +40,11 @@ interface CreateProfileRequest {
   try {
     const requestData: CreateProfileRequest = await req.json();
     
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+    const supabase = createAuthClient(authHeader);
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
