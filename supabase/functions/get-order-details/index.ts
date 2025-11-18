@@ -45,7 +45,23 @@ serve(async (req) => {
     const { data, error } = await adminClient
       .from("orders")
       .select(`
-        *,
+        id,
+        created_at,
+        total_amount,
+        subtotal_before_discount,
+        discount_code,
+        discount_percentage,
+        discount_amount,
+        shipping_total,
+        merchant_fee_amount,
+        merchant_fee_percentage,
+        payment_status,
+        status,
+        doctor_id,
+        practice_id,
+        report_notes,
+        payment_method_id,
+        ship_to,
         order_lines (
           id,
           quantity,

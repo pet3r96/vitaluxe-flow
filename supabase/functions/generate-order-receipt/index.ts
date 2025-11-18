@@ -120,9 +120,18 @@ serve(async (req) => {
       .single();
 
     if (orderError || !order) {
-      edgeLogger.error('Order fetch error', orderError);
+      edgeLogger.error('[generate-order-receipt] Error fetching order', {
+        error: orderError,
+        orderId: order_id
+      });
       throw new Error('Order not found');
     }
+
+    edgeLogger.info('[generate-order-receipt] Order fetched successfully', { 
+      orderId: order.id,
+      hasSubtotal: !!order.subtotal_before_discount,
+      totalAmount: order.total_amount
+    });
 
     // Check authorization - user must be admin, practice owner, or staff of practice
     // Get user's profile to check practice ownership
