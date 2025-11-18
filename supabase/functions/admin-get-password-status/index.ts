@@ -43,10 +43,10 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('Admin requesting password status', { targetUserId: target_user_id });
 
-    // Use service role to read both user_password_status and profiles (bypasses RLS)
+    // Use service role to read user_password_status, profiles, and user_terms_acceptances (bypasses RLS)
     const supabaseService = createAdminClient();
     
-    const [statusResult, profileResult] = await Promise.all([
+    const [statusResult, profileResult, termsResult] = await Promise.all([
       supabaseService
         .from('user_password_status')
         .select('must_change_password')
@@ -56,6 +56,13 @@ Deno.serve(async (req) => {
         .from('profiles')
         .select('temp_password')
         .eq('id', target_user_id)
+        .maybeSingle(),
+      supabaseService
+        .from('user_terms_acceptances')
+        .select('id, terms_id, accepted_at')
+        .eq('user_id', target_user_id)
+        .order('accepted_at', { ascending: false })
+        .limit(1)
         .maybeSingle()
     ]);
 
@@ -75,9 +82,20 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (termsResult.error) {
+      edgeLogger.error('Error reading user_terms_acceptances', termsResult.error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to read terms acceptance status' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Check if user has temp_password flag set
     const hasTempPassword = profileResult.data?.temp_password || false;
     const mustChange = statusResult.data?.must_change_password || false;
+    
+    // Check if terms are accepted (presence of any acceptance record means accepted)
+    const termsAccepted = termsResult.data !== null;
 
     // If user has temp_password flag, they must change password regardless of other flags
     const finalMustChange = mustChange || hasTempPassword;
@@ -85,6 +103,7 @@ Deno.serve(async (req) => {
     const result = {
       success: true,
       must_change_password: finalMustChange,
+      terms_accepted: termsAccepted,
     };
 
     edgeLogger.info('Returning password status', { targetUserId: target_user_id });
