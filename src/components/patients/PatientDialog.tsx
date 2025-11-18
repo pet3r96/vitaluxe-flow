@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { validatePhone, validateEmail } from "@/lib/validators";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { logger } from "@/lib/logger";
+import { measureInteraction } from "@/lib/performanceMonitor";
 
 interface PatientDialogProps {
   open: boolean;
@@ -247,14 +248,17 @@ export const PatientDialog = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const perf = measureInteraction('patient-save');
     
     if (!formData.name.trim()) {
       toast.error("Patient name is required");
+      perf.end();
       return;
     }
 
     if (!formData.birth_date) {
       toast.error("Date of birth is required");
+      perf.end();
       return;
     }
 
@@ -445,11 +449,13 @@ export const PatientDialog = ({
       onSuccess();
       onOpenChange(false);
       resetForm();
+      perf.end();
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
         logger.error("Error saving patient", error);
       });
       toast.error(error.message || "Failed to save patient");
+      perf.end();
     } finally {
       setLoading(false);
     }

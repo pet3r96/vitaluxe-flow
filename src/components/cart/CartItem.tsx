@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ShippingSpeedSelector } from "./ShippingSpeedSelector";
 import { formatDistanceToNow } from "date-fns";
+import { measureInteraction } from "@/lib/performanceMonitor";
 
 interface CartItemProps {
   line: any;
@@ -16,6 +17,18 @@ export const CartItem = memo(({ line, onRemove, onShippingSpeedChange }: CartIte
   const product = line.products;
   const hasValidAddress = line.patient_address_validated;
   const isPracticeOrder = line.patient_name === "Practice Order";
+
+  const handleRemove = () => {
+    const perf = measureInteraction('cart-item-remove');
+    onRemove(line.id);
+    perf.end();
+  };
+
+  const handleShippingChange = (speed: string) => {
+    const perf = measureInteraction('cart-shipping-change');
+    onShippingSpeedChange(line.id, speed);
+    perf.end();
+  };
 
   return (
     <div className="space-y-4">
@@ -53,7 +66,7 @@ export const CartItem = memo(({ line, onRemove, onShippingSpeedChange }: CartIte
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onRemove(line.id)}
+                onClick={handleRemove}
                 className="text-destructive hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" />
@@ -95,7 +108,7 @@ export const CartItem = memo(({ line, onRemove, onShippingSpeedChange }: CartIte
       {line.assigned_pharmacy_id && (
         <ShippingSpeedSelector
           value={line.shipping_speed}
-          onChange={(speed) => onShippingSpeedChange(line.id, speed)}
+          onChange={handleShippingChange}
           patientName={line.patient_name}
           isLoading={false}
         />
