@@ -447,13 +447,10 @@ export const PatientsDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const patient: any = paginatedPatients[virtualRow.index];
-                return (
-                  <TableRow 
-                    key={patient.id as string}
-                    style={{
-                      position: 'absolute',
+              paginatedPatients.map((patient: any) => (
+                <TableRow 
+                  key={patient.id as string}
+                >
                       top: 0,
                       left: 0,
                       width: '100%',
