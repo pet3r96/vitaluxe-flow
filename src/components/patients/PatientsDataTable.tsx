@@ -420,10 +420,9 @@ export const PatientsDataTable = () => {
           }) || []}
         />
       ) : (
-        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="min-w-[1000px]">
-            <Table>
-            <TableHeader>
+        <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
+          <Table className="min-w-[1000px]">
+            <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
@@ -434,7 +433,7 @@ export const PatientsDataTable = () => {
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 7 : 6} className="text-center">
@@ -448,8 +447,20 @@ export const PatientsDataTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedPatients?.map((patient: any) => (
-                <TableRow key={patient.id as string}>
+              rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const patient: any = paginatedPatients[virtualRow.index];
+                return (
+                  <TableRow 
+                    key={patient.id as string}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`
+                    }}
+                  >
                   <TableCell className="font-medium">
                     {patient.name || 
                       (patient.first_name && patient.last_name 
@@ -611,11 +622,11 @@ export const PatientsDataTable = () => {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
             </TableBody>
           </Table>
-          </div>
         </div>
       )}
 

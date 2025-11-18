@@ -281,11 +281,10 @@ export const RepresentativesDataTable = () => {
             )}
           </div>
         ) : (
-          // Desktop Table View
-          <div className="overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <div className="min-w-[1200px]">
-              <Table>
-              <TableHeader>
+          // Desktop Table View with Virtualization
+          <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
+            <Table className="min-w-[1200px]">
+              <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="h-12 px-6 font-semibold">Name</TableHead>
                   <TableHead className="h-12 px-6 font-semibold">Email</TableHead>
@@ -296,7 +295,7 @@ export const RepresentativesDataTable = () => {
                   <TableHead className="h-12 px-6 font-semibold text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center h-32">
@@ -315,8 +314,21 @@ export const RepresentativesDataTable = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedReps?.map((rep) => (
-                    <TableRow key={rep.id} className="hover:bg-muted/5 transition-colors">
+                  rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const rep = paginatedReps[virtualRow.index];
+                    return (
+                      <TableRow 
+                        key={rep.id} 
+                        className="hover:bg-muted/5 transition-colors"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`
+                        }}
+                      >
                       <TableCell className="font-medium px-6 py-4">{rep.profiles?.name || "-"}</TableCell>
                       <TableCell className="px-6 py-4 text-muted-foreground">{rep.profiles?.email || "-"}</TableCell>
                       <TableCell className="px-6 py-4">
@@ -375,14 +387,14 @@ export const RepresentativesDataTable = () => {
                               <Power className="h-4 w-4 text-success" />
                             )}
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
-              </Table>
-            </div>
+            </Table>
           </div>
         )}
       </Card>
