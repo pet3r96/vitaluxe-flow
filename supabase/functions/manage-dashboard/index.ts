@@ -1,6 +1,7 @@
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { cacheFetch } from '../_shared/cache.ts';
 
 /**
  * Fetch timeseries data for a given metric type
@@ -502,24 +503,40 @@ Deno.serve(async (req) => {
         const prevStart = new Date(start.getTime() - duration);
         const prevEnd = start;
 
-        // Fetch current period data
-        const currentData = await fetchTimeseriesData(
-          supabase,
-          metricType,
-          startDate,
-          endDate,
-          effectiveRole,
-          effectiveUserId
+        // Fetch current period data with caching
+        const cacheKey = `dashboard:${effectiveRole}:${effectiveUserId}:${metricType}:${startDate}:${endDate}`;
+        const currentData = await cacheFetch(
+          cacheKey,
+          async () => {
+            edgeLogger.info('Cache miss - fetching timeseries data', { metricType, startDate, endDate });
+            return await fetchTimeseriesData(
+              supabase,
+              metricType,
+              startDate,
+              endDate,
+              effectiveRole,
+              effectiveUserId
+            );
+          },
+          60 // 60 seconds TTL
         );
 
-        // Fetch previous period data
-        const previousData = await fetchTimeseriesData(
-          supabase,
-          metricType,
-          prevStart.toISOString(),
-          prevEnd.toISOString(),
-          effectiveRole,
-          effectiveUserId
+        // Fetch previous period data with caching
+        const prevCacheKey = `dashboard:${effectiveRole}:${effectiveUserId}:${metricType}:${prevStart.toISOString()}:${prevEnd.toISOString()}`;
+        const previousData = await cacheFetch(
+          prevCacheKey,
+          async () => {
+            edgeLogger.info('Cache miss - fetching previous period data', { metricType });
+            return await fetchTimeseriesData(
+              supabase,
+              metricType,
+              prevStart.toISOString(),
+              prevEnd.toISOString(),
+              effectiveRole,
+              effectiveUserId
+            );
+          },
+          60 // 60 seconds TTL
         );
 
         edgeLogger.info('Timeseries response', { 
