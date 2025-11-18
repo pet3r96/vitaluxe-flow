@@ -318,7 +318,7 @@ Deno.serve(async (req) => {
         const targetUserId = isImpersonating && effectiveUserId ? effectiveUserId : userId;
 
         // ✅ Cache key based on role + user + impersonation state
-        const cacheKey = `dashboard_debug:${role}:${targetUserId}:${isImpersonating ? 'imp' : 'self'}:${Date.now()}`;
+        const cacheKey = `dashboard_debug:${role}:${targetUserId}:${isImpersonating ? 'imp' : 'self'}`;
         
         // ✅ Use cacheFetch with 60-second TTL
         const stats = await cacheFetch(
