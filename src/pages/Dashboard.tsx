@@ -32,7 +32,13 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
-  const perf = useRef(measurePageLoad('Dashboard')).current;
+  const perfRef = useRef<{ end: () => number } | null>(null);
+  
+  // Initialize performance monitoring only once
+  if (!perfRef.current) {
+    perfRef.current = measurePageLoad('Dashboard');
+  }
+  
   const { user, effectiveRole, effectiveUserId, isImpersonating, isProviderAccount, effectivePracticeId } = useAuth();
   const { isSubscribed, status, trialDaysRemaining } = useSubscription();
   const navigate = useNavigate();
@@ -90,9 +96,10 @@ const Dashboard = () => {
   const pendingRevenueLoading = statsLoading;
   const collectedRevenueLoading = statsLoading;
 
+  // Performance monitoring - end measurement when loading completes
   useEffect(() => {
-    if (!statsLoading) {
-      perf.end();
+    if (!statsLoading && perfRef.current) {
+      perfRef.current.end();
     }
   }, [statsLoading]);
 
