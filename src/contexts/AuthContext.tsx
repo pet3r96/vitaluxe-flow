@@ -974,8 +974,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // 5. Check user terms acceptance
         UserTermsAccept()
-          .select('id')
+          .select('id, terms_id, accepted_at')
           .eq('user_id', userId)
+          .order('accepted_at', { ascending: false })
+          .limit(1)
           .maybeSingle()
       ]);
 
@@ -1208,8 +1210,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('id', uid)
           .maybeSingle(),
         UserTermsAccept()
-          .select('id')
+          .select('id, terms_id, accepted_at')
           .eq('user_id', uid)
+          .order('accepted_at', { ascending: false })
+          .limit(1)
           .maybeSingle()
       ]);
 
