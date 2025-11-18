@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { createAdminClient } from "../_shared/supabaseAdmin.ts";
+import { createAdminClient, createAuthClient } from "../_shared/supabaseAdmin.ts";
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -15,15 +14,11 @@ serve(async (req) => {
 
   try {
     // Auth check with user's JWT
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
-    );
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+    const supabaseClient = createAuthClient(authHeader);
 
     const {
       data: { user },

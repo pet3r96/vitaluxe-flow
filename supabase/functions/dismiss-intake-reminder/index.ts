@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { createAdminClient } from "../_shared/supabaseAdmin.ts";
 import { edgeLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
@@ -19,16 +19,7 @@ serve(async (req) => {
 
   try {
     // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    const supabaseClient = createAdminClient();
 
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
