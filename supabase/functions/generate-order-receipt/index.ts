@@ -88,8 +88,8 @@ serve(async (req) => {
       }
     }
 
-    // Fetch order data
-    const { data: order, error: orderError } = await supabase
+    // Fetch order data using admin client to bypass RLS
+    const { data: order, error: orderError } = await adminClient
       .from('orders')
       .select(`
         id,

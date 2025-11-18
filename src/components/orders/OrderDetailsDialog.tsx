@@ -63,49 +63,23 @@ export const OrderDetailsDialog = ({
   // Prescription downloads restricted to practice staff, pharmacies, and admins (not reps)
   const canDownloadPrescription = ['doctor', 'provider', 'staff', 'pharmacy', 'admin'].includes(effectiveRole || '');
 
-  // Lazy-load full order details when dialog opens
+  // Lazy-load full order details when dialog opens using edge function
   const { data: fullOrderDetails } = useQuery({
     queryKey: ["order-full-details", order.id],
     queryFn: async () => {
       if (import.meta.env.DEV) time(`[OrderDetails] Load full data for ${order.id}`);
       
-      const { data, error } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          patient_accounts!inner (
-            id,
-            first_name,
-            last_name,
-            date_of_birth,
-            email,
-            phone
-          ),
-          order_lines (
-            *,
-            products (*)
-          ),
-          practice_payment_methods (
-            card_type,
-            card_last_five,
-            card_expiry
-          ),
-          profiles!orders_doctor_id_fkey (
-            name,
-            prescriber_name,
-            full_name,
-            email
-          )
-        `)
-        .eq("id", order.id)
-        .single();
-      
-      if (import.meta.env.DEV) timeEnd(`[OrderDetails] Load full data for ${order.id}`);
-      
+      const { data, error } = await supabase.functions.invoke('get-order-details', {
+        body: { orderId: order.id }
+      });
+
       if (error) {
-        logger.error('Failed to fetch full order details', error);
+        logger.error('[OrderDetails] Error fetching order details', error);
         throw error;
       }
+
+      if (import.meta.env.DEV) timeEnd(`[OrderDetails] Load full data for ${order.id}`);
+      
       return data;
     },
     enabled: open,
