@@ -376,7 +376,7 @@ export default function Checkout() {
                 await supabase.functions.invoke('handleNotifications', {
                   body: {
                     user_id: patientWithUser.user_id,
-                    type: 'order_placed',
+                    notification_type: 'order_placed',
                     title: 'Order Confirmed',
                     message: `Your order #${order.order_number} has been placed and will be shipped to you. Total: $${orderTotal.toFixed(2)}`,
                     metadata: {
