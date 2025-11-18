@@ -1,7 +1,46 @@
 /**
  * Performance monitoring utilities for tracking page load times and interaction speeds
- * Target: < 200ms for interactions, < 1.5s for page loads
+ * Target: < 200ms for interactions, < 400ms for page loads (desktop), < 700ms (mobile)
  */
+import { supabase } from '@/integrations/supabase/client';
+import { logger } from './logger';
+
+/**
+ * Send performance metric to database
+ */
+const sendToDatabase = async (pageName: string, duration: number, metricType: string) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Get user role if available
+    let userRole = null;
+    if (user?.id) {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      userRole = roleData?.role || null;
+    }
+    
+    await supabase.from('performance_metrics').insert({
+      page_name: pageName,
+      user_id: user?.id || null,
+      user_role: userRole,
+      load_time_ms: duration,
+      metric_type: metricType,
+      metric_value: duration,
+      user_agent: navigator.userAgent,
+      viewport_width: window.innerWidth,
+      viewport_height: window.innerHeight,
+      connection_type: (navigator as any).connection?.effectiveType || 'unknown',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    // Silently fail - don't disrupt user experience
+    logger.error('Failed to log performance metric', { pageName, error });
+  }
+};
 
 export const measurePageLoad = (pageName: string) => {
   const start = performance.now();
@@ -9,7 +48,13 @@ export const measurePageLoad = (pageName: string) => {
   return {
     end: () => {
       const duration = performance.now() - start;
-      console.log(`[Performance] ${pageName} loaded in ${duration.toFixed(2)}ms`);
+      
+      // Determine if load time is acceptable
+      const isSlow = duration > 400;
+      const logMethod = isSlow ? console.warn : console.log;
+      const icon = isSlow ? '🐌' : '⚡';
+      
+      logMethod(`${icon} [Performance] ${pageName} loaded in ${duration.toFixed(2)}ms`);
       
       // Track metrics globally
       if (typeof window !== 'undefined') {
@@ -18,6 +63,9 @@ export const measurePageLoad = (pageName: string) => {
         // @ts-ignore
         window.__perf[pageName] = duration;
       }
+      
+      // Send to database (async, non-blocking)
+      sendToDatabase(pageName, duration, 'page_load');
       
       return duration;
     }
@@ -31,11 +79,18 @@ export const measureInteraction = (actionName: string) => {
     end: () => {
       const duration = performance.now() - start;
       
-      if (duration > 200) {
-        console.warn(`[Performance] Slow interaction: ${actionName} took ${duration.toFixed(2)}ms (target: < 200ms)`);
+      const isSlow = duration > 200;
+      const logMethod = isSlow ? console.warn : console.log;
+      const icon = isSlow ? '⚠️' : '✅';
+      
+      if (isSlow) {
+        logMethod(`${icon} [Performance] Slow interaction: ${actionName} took ${duration.toFixed(2)}ms (target: < 200ms)`);
       } else {
-        console.log(`[Performance] ${actionName} completed in ${duration.toFixed(2)}ms`);
+        logMethod(`${icon} [Performance] ${actionName} completed in ${duration.toFixed(2)}ms`);
       }
+      
+      // Send to database (async, non-blocking)
+      sendToDatabase(actionName, duration, 'interaction');
       
       return duration;
     }

@@ -10,8 +10,10 @@ import type { RealtimePayload } from "@/types/realtime";
 import type { Database } from "@/integrations/supabase/types";
 import type { RepDashboardStats } from "@/types/edge-functions";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const RepDashboard = () => {
+  usePagePerformance('RepDashboard');
   const { user, effectiveRole, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
 

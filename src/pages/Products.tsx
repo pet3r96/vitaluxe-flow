@@ -7,8 +7,11 @@ import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ResponsivePage } from "@/components/layout/ResponsivePage";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { useEffect, useRef } from "react";
+import { measurePageLoad } from "@/lib/performanceMonitor";
 
 const Products = () => {
+  const perf = useRef(measurePageLoad('Products')).current;
   const { effectiveRole } = useAuth();
   const { canOrder, isLoading, isStaffAccount } = useStaffOrderingPrivileges();
   const isTopline = effectiveRole === "topline";
@@ -16,6 +19,12 @@ const Products = () => {
   
   // Only check staff privileges for actual staff role (not doctor/provider)
   const shouldCheckPrivileges = effectiveRole === 'staff';
+
+  useEffect(() => {
+    return () => {
+      perf.end();
+    };
+  }, [perf]);
 
   // Show loading skeleton while checking staff privileges
   if (shouldCheckPrivileges && isLoading && isStaffAccount) {

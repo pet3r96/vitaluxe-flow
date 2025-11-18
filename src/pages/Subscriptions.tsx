@@ -1,10 +1,13 @@
 import { lazy, Suspense } from "react";
 import { ResponsivePage } from "@/components/layout/ResponsivePage";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const SubscriptionManagement = lazy(() => import("@/components/admin/SubscriptionManagement").then(m => ({ default: m.SubscriptionManagement })));
 
 const Subscriptions = () => {
+  usePagePerformance('Subscriptions');
+  
   return (
     <ResponsivePage
       title="Subscriptions"
