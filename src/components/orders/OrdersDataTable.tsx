@@ -830,17 +830,34 @@ export const OrdersDataTable = () => {
 
                         <TableCell>
                           {(() => {
-                            const ids = Array.from(
-                              new Set(
+                            // Get unique pharmacy objects (not just IDs)
+                            const pharmacies = Array.from(
+                              new Map(
                                 order.order_lines
-                                  ?.map((line: any) => line.assigned_pharmacy_id)
-                                  .filter(Boolean)
-                              )
-                            );
+                                  ?.filter((line: any) => line.pharmacies)
+                                  .map((line: any) => [line.pharmacies.id, line.pharmacies])
+                              ).values()
+                            ) as Array<{ id: string; name: string }>;
 
-                            if (ids.length === 0) return "N/A";
-                            if (ids.length === 1) return String(ids[0]);
-                            return `Multiple (${ids.length})`;
+                            if (pharmacies.length === 0) return <span className="text-muted-foreground text-xs">N/A</span>;
+                            if (pharmacies.length === 1) return <span className="text-sm">{pharmacies[0].name}</span>;
+                            
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-xs cursor-help underline decoration-dotted">
+                                      Multiple ({pharmacies.length})
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-xs space-y-1">
+                                      {pharmacies.map((p) => <div key={p.id}>{p.name}</div>)}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
                           })()}
                         </TableCell>
                       </>
