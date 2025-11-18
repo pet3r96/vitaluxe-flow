@@ -82,7 +82,7 @@ export const PatientsDataTable = () => {
     itemsPerPage: 25
   });
 
-  const paginatedPatients = filteredPatients?.slice(startIndex, endIndex);
+  const paginatedPatients = filteredPatients?.slice(startIndex, endIndex) || [];
 
   // Virtualization for desktop table
   const rowVirtualizer = useVirtualizer({
