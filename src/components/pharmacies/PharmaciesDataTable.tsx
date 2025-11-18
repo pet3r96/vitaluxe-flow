@@ -18,6 +18,8 @@ import { Switch } from "@/components/ui/switch";
 import { Search, Edit, UserPlus, AlertCircle } from "lucide-react";
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { debounce } from "@/lib/performance";
 import { PharmacyDialog } from "./PharmacyDialog";
 import { PharmacyShippingRatesDialog } from "./PharmacyShippingRatesDialog";
 import { toast } from "sonner";
@@ -33,6 +35,8 @@ export const PharmaciesDataTable = () => {
   const [shippingRatesDialogOpen, setShippingRatesDialogOpen] = useState(false);
   const [selectedPharmacyForRates, setSelectedPharmacyForRates] = useState<any>(null);
   const [fixingPharmacyId, setFixingPharmacyId] = useState<string | null>(null);
+
+  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   // Only real non-impersonating admins bypass visibility filtering
   const viewingAsAdmin = effectiveRole === "admin" && !isImpersonating;
@@ -163,7 +167,7 @@ export const PharmaciesDataTable = () => {
           <Input
             placeholder="Search pharmacies..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => debouncedSetSearch(e.target.value)}
             className="pl-9 w-full"
           />
         </div>

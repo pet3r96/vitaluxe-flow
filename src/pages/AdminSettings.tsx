@@ -15,10 +15,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
-import { FactoryResetManager } from "@/components/admin/FactoryResetManager";
 import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
 import { UsageBillingDashboard } from "@/components/admin/UsageBillingDashboard";
 import { SubscriptionDiagnostics } from "@/components/admin/SubscriptionDiagnostics";
+import { lazy, Suspense } from "react";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+
+const FactoryResetManager = lazy(() => import("@/components/admin/FactoryResetManager").then(m => ({ default: m.FactoryResetManager })));
 
 const AdminSettings = () => {
   return (
@@ -255,7 +258,9 @@ const AdminSettings = () => {
         </TabsContent>
 
         <TabsContent value="danger-zone" className="space-y-4">
-          <FactoryResetManager />
+          <Suspense fallback={<TableSkeleton rows={5} columns={3} />}>
+            <FactoryResetManager />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>
