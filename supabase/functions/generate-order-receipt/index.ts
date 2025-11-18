@@ -135,13 +135,13 @@ serve(async (req) => {
 
     // Check authorization - user must be admin, practice owner, or staff of practice
     // Get user's profile to check practice ownership
-    const { data: userProfile } = await supabase
+    const { data: userProfile } = await adminClient
       .from('profiles')
       .select('id')
       .eq('user_id', userIdToQuery)
       .maybeSingle();
 
-    const { data: userRole } = await supabase
+    const { data: userRole } = await adminClient
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
@@ -154,7 +154,7 @@ serve(async (req) => {
     // Check if user is staff of this practice
     let isStaffOfPractice = false;
     if (!isAdmin && !isPracticeOwner) {
-      const { data: staffData } = await supabase
+      const { data: staffData } = await adminClient
         .from('providers')
         .select('practice_id')
         .eq('user_id', userIdToQuery)
