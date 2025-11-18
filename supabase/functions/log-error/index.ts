@@ -1,5 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { createAdminClient } from "../_shared/supabaseAdmin.ts";
+import { createAdminClient, createAuthClient } from "../_shared/supabaseAdmin.ts";
 import { validateLogErrorRequest } from "../_shared/requestValidators.ts";
 import { edgeLogger } from "../_shared/logger.ts";
 
@@ -38,15 +37,11 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
-    );
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+    const supabaseClient = createAuthClient(authHeader);
 
     // Admin client (service role) to bypass RLS for inserts
     const adminClient = createAdminClient();
