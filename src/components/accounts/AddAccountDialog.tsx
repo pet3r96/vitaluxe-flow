@@ -328,7 +328,7 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto"
         onInteractOutside={(e) => {
           const target = e.target as HTMLElement;
           if (target.closest('.pac-container')) {
