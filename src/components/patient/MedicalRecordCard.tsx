@@ -20,8 +20,8 @@ export function MedicalRecordCard({ title, icon: Icon, items, emptyMessage }: Me
       <CardContent>
         {items && items.length > 0 ? (
           <ul className="space-y-2">
-            {items.map((item, index) => (
-              <li key={index} className="flex items-center gap-2">
+            {items.map((item) => (
+              <li key={item} className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary" />
                 <span>{item}</span>
               </li>

@@ -265,7 +265,7 @@ export function RecentActivityWidget({ className, activities: externalActivities
               const Icon = activity.icon;
               return (
                 <div 
-                  key={index} 
+                  key={`${activity.type}-${activity.time}-${index}`} 
                   className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-br from-teal-50/50 to-teal-100/30 dark:from-teal-950/20 dark:to-teal-900/10 hover:scale-[1.01] transition-transform duration-200"
                 >
                   <Icon className="h-5 w-5 mt-0.5 text-teal-600 dark:text-teal-400" />

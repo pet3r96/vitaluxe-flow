@@ -84,9 +84,9 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {features.map((feature, index) => (
+            {features.map((feature) => (
               <div
-                key={index}
+                key={feature.title}
                 className="flex gap-3 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
               >
                 <div className="flex-shrink-0">

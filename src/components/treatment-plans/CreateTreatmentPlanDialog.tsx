@@ -45,6 +45,7 @@ const formSchema = z.object({
 });
 
 interface Goal {
+  id: string;
   description: string;
   is_specific: boolean;
   is_measurable: boolean;
@@ -70,7 +71,15 @@ export function CreateTreatmentPlanDialog({
   const createPlan = useCreateTreatmentPlan();
   
   const [goals, setGoals] = useState<Goal[]>([
-    { description: "", is_specific: false, is_measurable: false, is_achievable: false, is_relevant: false, is_time_bound: false }
+    { 
+      id: crypto.randomUUID(),
+      description: "", 
+      is_specific: false, 
+      is_measurable: false, 
+      is_achievable: false, 
+      is_relevant: false, 
+      is_time_bound: false 
+    }
   ]);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -126,11 +135,27 @@ export function CreateTreatmentPlanDialog({
 
     onOpenChange(false);
     form.reset();
-    setGoals([{ description: "", is_specific: false, is_measurable: false, is_achievable: false, is_relevant: false, is_time_bound: false }]);
+    setGoals([{ 
+      id: crypto.randomUUID(),
+      description: "", 
+      is_specific: false, 
+      is_measurable: false, 
+      is_achievable: false, 
+      is_relevant: false, 
+      is_time_bound: false 
+    }]);
   };
 
   const addGoal = () => {
-    setGoals([...goals, { description: "", is_specific: false, is_measurable: false, is_achievable: false, is_relevant: false, is_time_bound: false }]);
+    setGoals([...goals, { 
+      id: crypto.randomUUID(),
+      description: "", 
+      is_specific: false, 
+      is_measurable: false, 
+      is_achievable: false, 
+      is_relevant: false, 
+      is_time_bound: false 
+    }]);
   };
 
   const removeGoal = (index: number) => {
@@ -302,7 +327,7 @@ export function CreateTreatmentPlanDialog({
               </div>
 
               {goals.map((goal, index) => (
-                <div key={index} className="p-4 border rounded-lg space-y-3">
+                <div key={goal.id} className="p-4 border rounded-lg space-y-3">
                   <div className="flex items-start gap-2">
                     <GripVertical className="h-5 w-5 text-muted-foreground mt-2 flex-shrink-0" />
                     <div className="flex-1 space-y-3">

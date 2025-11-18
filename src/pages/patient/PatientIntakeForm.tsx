@@ -58,6 +58,7 @@ const intakeSchema = z.object({
 type IntakeFormData = z.infer<typeof intakeSchema>;
 
 interface MedicationEntry {
+  id: string;
   name: string;
   dosage: string;
   frequency: string;
@@ -65,24 +66,28 @@ interface MedicationEntry {
 }
 
 interface AllergyEntry {
+  id: string;
   name: string;
   reaction: string;
   severity: string;
 }
 
 interface ConditionEntry {
+  id: string;
   name: string;
   diagnosed_date: string;
   status: string;
 }
 
 interface SurgeryEntry {
+  id: string;
   type: string;
   date: string;
   notes: string;
 }
 
 interface ImmunizationEntry {
+  id: string;
   vaccine_name: string;
   date_administered: string;
 }
@@ -125,11 +130,11 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   const navigate = useNavigate();
   const { effectiveUserId, effectiveRole } = useAuth();
   const [submitting, setSubmitting] = useState(false);
-  const [medications, setMedications] = useState<MedicationEntry[]>([{ name: "", dosage: "", frequency: "" }]);
-  const [allergies, setAllergies] = useState<AllergyEntry[]>([{ name: "", reaction: "", severity: "" }]);
-  const [conditions, setConditions] = useState<ConditionEntry[]>([{ name: "", diagnosed_date: "", status: "active" }]);
-  const [surgeries, setSurgeries] = useState<SurgeryEntry[]>([{ type: "", date: "", notes: "" }]);
-  const [immunizations, setImmunizations] = useState<ImmunizationEntry[]>([{ vaccine_name: "", date_administered: "" }]);
+  const [medications, setMedications] = useState<MedicationEntry[]>([{ id: crypto.randomUUID(), name: "", dosage: "", frequency: "" }]);
+  const [allergies, setAllergies] = useState<AllergyEntry[]>([{ id: crypto.randomUUID(), name: "", reaction: "", severity: "" }]);
+  const [conditions, setConditions] = useState<ConditionEntry[]>([{ id: crypto.randomUUID(), name: "", diagnosed_date: "", status: "active" }]);
+  const [surgeries, setSurgeries] = useState<SurgeryEntry[]>([{ id: crypto.randomUUID(), type: "", date: "", notes: "" }]);
+  const [immunizations, setImmunizations] = useState<ImmunizationEntry[]>([{ id: crypto.randomUUID(), vaccine_name: "", date_administered: "" }]);
   
   // "None" checkboxes for medical history sections
   const [hasNoMedications, setHasNoMedications] = useState(false);
@@ -323,6 +328,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   useEffect(() => {
     if (existingMedications && existingMedications.length > 0) {
       const medList = existingMedications.map((med: any) => ({
+        id: crypto.randomUUID(),
         name: (med as any).medication_name || '',
         dosage: (med as any).dosage || '',
         frequency: (med as any).frequency || '',
@@ -335,6 +341,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   useEffect(() => {
     if (existingAllergies && existingAllergies.length > 0) {
       const allergyList = existingAllergies.map((allergy: any) => ({
+        id: crypto.randomUUID(),
         name: (allergy as any).allergen_name || '',
         reaction: (allergy as any).reaction_type || '',
         severity: (allergy as any).severity || '',
@@ -347,6 +354,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   useEffect(() => {
     if (existingConditions && existingConditions.length > 0) {
       const conditionList = existingConditions.map((condition: any) => ({
+        id: crypto.randomUUID(),
         name: (condition as any).condition_name || '',
         diagnosed_date: (condition as any).date_diagnosed || '',
         status: 'active', // Default status for intake form
@@ -359,6 +367,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
   useEffect(() => {
     if (existingSurgeries && existingSurgeries.length > 0) {
       const surgeryList = existingSurgeries.map((surgery: any) => ({
+        id: crypto.randomUUID(),
         type: (surgery as any).surgery_type || '',
         date: (surgery as any).surgery_date || '',
         notes: (surgery as any).notes || '',
@@ -384,6 +393,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         }
         
         return {
+          id: crypto.randomUUID(),
           vaccine_name: (imm as any).vaccine_name || '',
           date_administered: dateFormatted,
         };
@@ -1393,7 +1403,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                       if (checked) {
                         setMedications([]);
                       } else {
-                        setMedications([{ name: "", dosage: "", frequency: "" }]);
+                        setMedications([{ id: crypto.randomUUID(), name: "", dosage: "", frequency: "" }]);
                       }
                     }}
                   />
@@ -1411,7 +1421,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
               {!hasNoMedications && (
                 <>
               {medications.map((med, index) => (
-                <div key={index} className="space-y-2">
+                <div key={med.id} className="space-y-2">
                   <div className="flex flex-col md:flex-row gap-2 items-start">
                     <div className="flex-1 w-full">
                       <AutocompleteInput
@@ -1484,7 +1494,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setMedications([...medications, { name: "", dosage: "", frequency: "" }])}
+                  onClick={() => setMedications([...medications, { id: crypto.randomUUID(), name: "", dosage: "", frequency: "" }])}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Another Medication
                 </Button>
@@ -1516,7 +1526,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                       if (checked) {
                         setAllergies([]);
                       } else {
-                        setAllergies([{ name: "", reaction: "", severity: "" }]);
+                        setAllergies([{ id: crypto.randomUUID(), name: "", reaction: "", severity: "" }]);
                       }
                     }}
                   />
@@ -1534,7 +1544,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
               {!hasNoAllergies && (
                 <>
               {allergies.map((allergy, index) => (
-                <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
+                <div key={allergy.id} className="flex flex-col md:flex-row gap-2 items-start">
                   <div className="flex-1 w-full">
                     <AutocompleteInput
                       placeholder="Search allergen name"
@@ -1589,7 +1599,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setAllergies([...allergies, { name: "", reaction: "", severity: "" }])}
+                  onClick={() => setAllergies([...allergies, { id: crypto.randomUUID(), name: "", reaction: "", severity: "" }])}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Another Allergy
                 </Button>
@@ -1621,7 +1631,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                       if (checked) {
                         setConditions([]);
                       } else {
-                        setConditions([{ name: "", diagnosed_date: "", status: "active" }]);
+                        setConditions([{ id: crypto.randomUUID(), name: "", diagnosed_date: "", status: "active" }]);
                       }
                     }}
                   />
@@ -1639,7 +1649,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
               {!hasNoConditions && (
                 <>
               {conditions.map((condition, index) => (
-                <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
+                <div key={condition.id} className="flex flex-col md:flex-row gap-2 items-start">
                   <div className="flex-1 w-full">
                     <AutocompleteInput
                       placeholder="Search condition name"
@@ -1695,7 +1705,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setConditions([...conditions, { name: "", diagnosed_date: "", status: "" }])}
+                  onClick={() => setConditions([...conditions, { id: crypto.randomUUID(), name: "", diagnosed_date: "", status: "" }])}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Another Condition
                 </Button>
@@ -1727,7 +1737,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                       if (checked) {
                         setSurgeries([]);
                       } else {
-                        setSurgeries([{ type: "", date: "", notes: "" }]);
+                        setSurgeries([{ id: crypto.randomUUID(), type: "", date: "", notes: "" }]);
                       }
                     }}
                   />
@@ -1745,7 +1755,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
               {!hasNoSurgeries && (
                 <>
               {surgeries.map((surgery, index) => (
-                <div key={index} className="space-y-2">
+                <div key={surgery.id} className="space-y-2">
                   <div className="flex flex-col md:flex-row gap-2 items-start">
                     <div className="flex-1 w-full">
                       <AutocompleteInput
@@ -1795,7 +1805,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setSurgeries([...surgeries, { type: "", date: "", notes: "" }])}
+                  onClick={() => setSurgeries([...surgeries, { id: crypto.randomUUID(), type: "", date: "", notes: "" }])}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Another Surgery
                 </Button>
@@ -1827,7 +1837,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                       if (checked) {
                         setImmunizations([]);
                       } else {
-                        setImmunizations([{ vaccine_name: "", date_administered: "" }]);
+                        setImmunizations([{ id: crypto.randomUUID(), vaccine_name: "", date_administered: "" }]);
                       }
                     }}
                   />
@@ -1844,14 +1854,14 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
               
               {!hasNoImmunizations && (
                 <>
-                  {immunizations.map((imm, index) => {
-                    logger.info(`[Immunization ${index}] Rendering`, { vaccine: imm.vaccine_name, date: imm.date_administered });
+                  {immunizations.map((immunization, index) => {
+                    logger.info(`[Immunization ${index}] Rendering`, { vaccine: immunization.vaccine_name, date: immunization.date_administered });
                     return (
-                      <div key={index} className="flex flex-col md:flex-row gap-2 items-start">
+                      <div key={immunization.id} className="flex flex-col md:flex-row gap-2 items-start">
                       <div className="flex-1 w-full">
                         <AutocompleteInput
                           placeholder="Search vaccine name"
-                          value={imm.vaccine_name}
+                          value={immunization.vaccine_name}
                           onChange={(value) => {
                             const newImms = [...immunizations];
                             newImms[index].vaccine_name = value;
@@ -1864,7 +1874,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                         type="date"
                         className="flex-1 w-full"
                         placeholder="MM/DD/YYYY"
-                        value={imm.date_administered || ''}
+                        value={immunization.date_administered || ''}
                         onChange={(e) => {
                           const newImms = [...immunizations];
                           newImms[index].date_administered = e.target.value;
@@ -1886,7 +1896,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setImmunizations([...immunizations, { vaccine_name: "", date_administered: "" }])}
+                    onClick={() => setImmunizations([...immunizations, { id: crypto.randomUUID(), vaccine_name: "", date_administered: "" }])}
                   >
                     <Plus className="h-4 w-4 mr-2" /> Add Another Immunization
                   </Button>

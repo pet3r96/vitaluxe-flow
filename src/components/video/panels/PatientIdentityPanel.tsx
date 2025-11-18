@@ -83,8 +83,8 @@ export const PatientIdentityPanel = ({
                   Allergies
                 </p>
                 <div className="space-y-1">
-                  {patient.allergies.map((allergy, index) => (
-                    <div key={index} className="text-xs text-red-600 dark:text-red-300">
+                  {patient.allergies.map((allergy) => (
+                    <div key={allergy.allergen} className="text-xs text-red-600 dark:text-red-300">
                       {allergy.allergen}
                       {allergy.severity && (
                         <span className="ml-1 text-red-500">({allergy.severity})</span>
