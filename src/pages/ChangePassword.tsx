@@ -12,8 +12,10 @@ import { toast } from "sonner";
 import { Eye, EyeOff, CheckCircle2, XCircle, Lock, Info } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function ChangePassword() {
+  usePagePerformance('ChangePassword');
   const { user, isImpersonating, impersonatedUserId, impersonatedUserName, clearImpersonation, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

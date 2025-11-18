@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import type { TicketTabState } from "@/types/domain/support";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 interface SupportTicket {
   id: string;
@@ -31,6 +32,7 @@ interface SupportTicket {
 }
 
 export default function SupportTickets() {
+  usePagePerformance('SupportTickets');
   const { effectiveRole, effectivePracticeId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TicketTabState>("all");

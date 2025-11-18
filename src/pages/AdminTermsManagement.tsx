@@ -18,6 +18,7 @@ import { Download, Save, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 type AppRole = 'doctor' | 'provider' | 'topline' | 'downline' | 'pharmacy' | 'subscription' | 'patient' | 'staff';
 
@@ -69,6 +70,7 @@ interface AttestationData {
 }
 
 export default function AdminTermsManagement() {
+  usePagePerformance('AdminTermsManagement');
   const [activeTab, setActiveTab] = useState('editor');
   const [activeRole, setActiveRole] = useState<AppRole>('doctor');
   const [terms, setTerms] = useState<TermsData | null>(null);

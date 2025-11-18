@@ -16,8 +16,10 @@ import { Package, Truck, MapPin, Edit, CheckCircle2, AlertCircle, ArrowLeft, Arr
 import { DeliveryAddressEditor } from "@/components/orders/DeliveryAddressEditor";
 import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function DeliveryConfirmation() {
+  usePagePerformance('DeliveryConfirmation');
   const navigate = useNavigate();
   const location = useLocation();
   const { user, effectiveUserId, effectivePracticeId, effectiveRole, isProviderAccount, isStaffAccount: isStaff } = useAuth();

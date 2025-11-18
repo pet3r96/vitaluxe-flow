@@ -16,8 +16,10 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function AcceptTerms() {
+  usePagePerformance('AcceptTerms');
   const { user, effectiveRole, effectiveUserId, isImpersonating, impersonatedUserName, checkPasswordStatus } = useAuth();
   const navigate = useNavigate();
   

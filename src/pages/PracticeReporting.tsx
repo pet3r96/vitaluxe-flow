@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 import { DateRangeFilter } from "@/components/reporting/DateRangeFilter";
 import { PerformanceDashboard } from "@/components/reporting/PerformanceDashboard";
 import { EndOfDayReports } from "@/components/reporting/EndOfDayReports";
 import { SubscriptionGuard } from "@/components/subscription/SubscriptionGuard";
 
 export default function PracticeReporting() {
+  usePagePerformance('PracticeReporting');
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(),
     to: new Date(),

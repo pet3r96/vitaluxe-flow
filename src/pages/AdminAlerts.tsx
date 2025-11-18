@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,6 +28,7 @@ interface AdminAlert {
 }
 
 const AdminAlerts = () => {
+  usePagePerformance('AdminAlerts');
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [resolvedFilter, setResolvedFilter] = useState<string>("unresolved");

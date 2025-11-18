@@ -20,10 +20,12 @@ import { UsageBillingDashboard } from "@/components/admin/UsageBillingDashboard"
 import { SubscriptionDiagnostics } from "@/components/admin/SubscriptionDiagnostics";
 import { lazy, Suspense } from "react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const FactoryResetManager = lazy(() => import("@/components/admin/FactoryResetManager").then(m => ({ default: m.FactoryResetManager })));
 
 const AdminSettings = () => {
+  usePagePerformance('AdminSettings');
   return (
     <div className="space-y-6">
       <div>

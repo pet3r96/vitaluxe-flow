@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { LifeBuoy, MessageSquare, Search, Mail, Phone, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { CreateSupportTicketDialog } from "@/components/support/CreateSupportTicketDialog";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 interface PatientMessage {
   id: string;
@@ -22,6 +23,7 @@ interface PatientMessage {
 }
 
 const Support = () => {
+  usePagePerformance('Support');
   const { effectiveRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 

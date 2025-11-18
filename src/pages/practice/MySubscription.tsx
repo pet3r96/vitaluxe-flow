@@ -12,8 +12,10 @@ import { PaymentMethodManager } from "@/components/subscription/PaymentMethodMan
 import { InvoiceList } from "@/components/subscription/InvoiceList";
 import { SubscriptionActionsCard } from "@/components/subscription/SubscriptionActionsCard";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function MySubscription() {
+  usePagePerformance('MySubscription');
   const { effectiveRole, isProviderAccount, effectivePracticeId, user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);

@@ -16,8 +16,10 @@ import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-
 import { validatePhone } from "@/lib/validators";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { SignedAgreementSection } from "@/components/profile/SignedAgreementSection";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function PatientProfile() {
+  usePagePerformance('PatientProfile');
   const { effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);

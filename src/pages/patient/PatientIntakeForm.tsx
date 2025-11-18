@@ -22,6 +22,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus, X } from "lucide-react";
 import { logMedicalVaultChange } from "@/hooks/useAuditLogs";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const intakeSchema = z.object({
   date_of_birth: z.string().min(1, "Date of birth is required"),
@@ -120,6 +121,7 @@ function isPharmacyRecord(record: import("@/types/vault/records").TypedVaultReco
 }
 
 export default function PatientIntakeForm({ targetPatientAccountId }: PatientIntakeFormProps = {}) {
+  usePagePerformance('PatientIntakeForm');
   const navigate = useNavigate();
   const { effectiveUserId, effectiveRole } = useAuth();
   const [submitting, setSubmitting] = useState(false);

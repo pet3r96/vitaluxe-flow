@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const Index = () => {
+  usePagePerformance('Index');
   return (
     <div className="space-y-8">
       {/* Hero Section */}

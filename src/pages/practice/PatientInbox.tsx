@@ -17,8 +17,10 @@ import { cn } from "@/lib/utils";
 import { PriorityBadge } from "@/components/internal-chat/PriorityBadge";
 import { ThreadView } from "@/components/internal-chat/ThreadView";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function PatientInbox() {
+  usePagePerformance('PatientInbox');
   const queryClient = useQueryClient();
   const [selectedMessage, setSelectedMessage] = useState<import("@/types/manual-schema").PatientMessageWithRelations | null>(null);
   const [replyText, setReplyText] = useState("");

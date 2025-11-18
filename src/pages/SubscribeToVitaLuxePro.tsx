@@ -19,8 +19,10 @@ import logoDark from "@/assets/vitaluxe-logo-dark-bg.png";
 import { TrialExpiredDialog } from "@/components/subscription/TrialExpiredDialog";
 import { PaymentWithTermsDialog } from "@/components/subscription/PaymentWithTermsDialog";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function SubscribeToVitaLuxePro() {
+  usePagePerformance('SubscribeToVitaLuxePro');
   const { user, effectiveRole } = useAuth();
   const { isSubscribed, loading: subscriptionLoading, status, refreshSubscription, gracePeriodEndsAt } = useSubscription();
   const navigate = useNavigate();

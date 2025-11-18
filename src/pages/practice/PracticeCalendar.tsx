@@ -32,8 +32,10 @@ import { Menu } from "lucide-react";
 import { MobileCalendarFAB } from "@/components/calendar/MobileCalendarFAB";
 import { usePracticeProviders, useProvidersAndStaff } from "@/hooks/useProvidersAndStaff";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function PracticeCalendar() {
+  usePagePerformance('PracticeCalendar');
   const navigate = useNavigate();
   const { user, effectivePracticeId, isProviderAccount, effectiveRole, effectiveUserId } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());

@@ -14,8 +14,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { realtimeManager } from "@/lib/realtimeManager";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function PatientMessages() {
+  usePagePerformance('PatientMessages');
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [showNewMessage, setShowNewMessage] = useState(false);
   const [filterTab, setFilterTab] = useState<'active' | 'resolved'>('active');

@@ -13,9 +13,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PatientVirtualWaitingRoom } from "@/components/video/PatientVirtualWaitingRoom";
 import { usePatientDashboard } from "@/hooks/usePatientDashboard";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 
 export default function PatientDashboard() {
+  usePagePerformance('PatientDashboard');
   const navigate = useNavigate();
   const [practiceSubscription, setPracticeSubscription] = useState<any>(null);
   const { effectiveUserId, effectiveRole } = useAuth();

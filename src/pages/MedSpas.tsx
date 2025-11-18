@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, MapPin, Phone, Mail, Plus } from "lucide-react";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function MedSpas() {
+  usePagePerformance('MedSpas');
   const { data: medSpas, isLoading } = useQuery({
     queryKey: ["med-spas"],
     queryFn: async () => {

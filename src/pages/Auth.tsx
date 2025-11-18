@@ -25,8 +25,10 @@ import { ErrorAlertDialog } from "@/components/ui/error-alert-dialog";
 import { hasAuthErrorCode } from "@/types/errors";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const Auth = () => {
+  usePagePerformance('Auth');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);

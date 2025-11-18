@@ -1,6 +1,7 @@
 import { ImpersonationLogsView } from "@/components/admin/ImpersonationLogsView";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 import AdminProfitReports from "./AdminProfitReports";
 import RepProfitReports from "./RepProfitReports";
 import PracticeProfitReports from "./PracticeProfitReports";
@@ -9,6 +10,7 @@ import PracticeDevelopmentFeeManager from "@/components/admin/PracticeDevelopmen
 import SubscriptionCommissionManager from "@/components/admin/SubscriptionCommissionManager";
 
 const Reports = () => {
+  usePagePerformance('Reports');
   const { userRole, effectiveRole, isImpersonating, isProviderAccount, isStaffAccount } = useAuth();
 
   // Restrict access for provider/staff accounts

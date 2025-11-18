@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function PracticePatientMedicalVault() {
+  usePagePerformance('PracticePatientMedicalVault');
   const { patientId } = useParams();
   const navigate = useNavigate();
 

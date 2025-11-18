@@ -13,6 +13,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Tag, RefreshCw, AlertCircle, Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const AdminProfitReports = () => {
+  usePagePerformance('AdminProfitReports');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [rxFilter, setRxFilter] = useState<"all" | "non-rx" | "rx-only">("all");

@@ -24,8 +24,10 @@ import { useAuditLogs } from "@/hooks/useAuditLogs";
 import { AuditLogDialog } from "@/components/medical-vault/dialogs/AuditLogDialog";
 import { generateAuditReportPDF } from "@/lib/auditReportPdfGenerator";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function PatientMedicalVault() {
+  usePagePerformance('PatientMedicalVault');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);

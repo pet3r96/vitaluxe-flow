@@ -19,8 +19,10 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RepSubscriptionReferrals from "@/components/reports/RepSubscriptionReferrals";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const RepProfitReports = () => {
+  usePagePerformance('RepProfitReports');
   const { effectiveRole, effectiveUserId } = useAuth();
   const [earningFilter, setEarningFilter] = useState<"all" | "commission" | "practice_dev_fee">(
     effectiveRole === 'topline' ? "practice_dev_fee" : "all"

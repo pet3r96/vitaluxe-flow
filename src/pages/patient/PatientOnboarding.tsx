@@ -9,8 +9,10 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2 } from "lucide-react";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function PatientOnboarding() {
+  usePagePerformance('PatientOnboarding');
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);

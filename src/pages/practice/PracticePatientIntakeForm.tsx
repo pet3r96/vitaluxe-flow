@@ -9,12 +9,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 /**
  * Practice user wrapper for patient intake form
  * Allows doctors, staff, and providers to complete intake on behalf of patients
  */
 export default function PracticePatientIntakeForm() {
+  usePagePerformance('PracticePatientIntakeForm');
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const { user, effectiveRole, effectivePracticeId } = useAuth();
