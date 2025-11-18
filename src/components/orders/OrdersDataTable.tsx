@@ -1,8 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useResponsive } from "@/hooks/useResponsive";
 import {
   Table,
   TableBody,
@@ -34,10 +36,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { OrderQueryMetadata } from "@/types/domain/orders";
 import type { Order } from "@/types/orders";
 import { count, mark, time, timeEnd } from "@/diag";
+import { OrderMobileCard } from "./OrderMobileCard";
+import { OrderTableRow } from "./OrderTableRow";
+import { OrderStatusFilter } from "./OrderStatusFilter";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { measurePageLoad } from "@/lib/performanceMonitor";
 
 export const OrdersDataTable = () => {
   count('OrdersDataTable:render');
+  const perf = useRef(measurePageLoad('OrdersDataTable')).current;
   const { effectiveRole, effectiveUserId, effectivePracticeId, user, session } = useAuth();
+  const { isMobile, isTablet, isDesktop } = useResponsive();
+  const parentRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -351,6 +361,21 @@ export const OrdersDataTable = () => {
   });
 
   const paginatedOrders = filteredOrders?.slice(startIndex, endIndex);
+
+  // Virtualization for desktop with 50+ rows
+  const rowVirtualizer = useVirtualizer({
+    count: paginatedOrders?.length || 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 60,
+    overscan: 10,
+    enabled: isDesktop && (paginatedOrders?.length || 0) > 50,
+  });
+
+  useEffect(() => {
+    if (!isLoading) {
+      perf.end();
+    }
+  }, [isLoading]);
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {

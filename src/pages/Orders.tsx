@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { OrdersDataTable } from "@/components/orders/OrdersDataTable";
 import { ResponsivePage } from "@/components/layout/ResponsivePage";
 import { CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { measurePageLoad } from "@/lib/performanceMonitor";
 
-// Orders page component
 const Orders = () => {
+  const perf = useRef(measurePageLoad('OrdersPage')).current;
   const location = useLocation();
   const navigate = useNavigate();
   const [showBanner, setShowBanner] = useState(false);
@@ -14,6 +15,10 @@ const Orders = () => {
     orderNumber: string;
     orderCount: number;
   } | null>(null);
+
+  useEffect(() => {
+    perf.end();
+  }, []);
 
   useEffect(() => {
     // Check if we were redirected from checkout with success state

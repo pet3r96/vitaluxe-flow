@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useResponsive } from "@/hooks/useResponsive";
 import {
   Table,
   TableBody,
@@ -22,6 +24,10 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
 import { isValidStateCode } from "@/lib/addressUtils";
 import { logger } from "@/lib/logger";
+import { ProductMobileCard } from "./ProductMobileCard";
+import { ProductTableRow } from "./ProductTableRow";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { measurePageLoad } from "@/lib/performanceMonitor";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,8 +40,11 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const ProductsDataTable = () => {
+  const perf = useRef(measurePageLoad('ProductsDataTable')).current;
   const { effectiveRole, effectiveUserId, effectivePracticeId, isProviderAccount } = useAuth();
   const queryClient = useQueryClient();
+  const { isMobile, isTablet, isDesktop } = useResponsive();
+  const parentRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
