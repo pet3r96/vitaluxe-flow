@@ -429,7 +429,7 @@ export const PatientsDataTable = () => {
                 <TableHead className="w-auto lg:w-[140px]">Phone</TableHead>
                 <TableHead className="w-auto lg:w-[280px]">Address</TableHead>
                 <TableHead className="w-auto lg:w-[140px]">Portal Status</TableHead>
-                {isAdmin && <TableHead className="w-auto lg:w-[150px]">Practice</TableHead>}
+                {isAdmin && <TableHead className="w-auto lg:w-[160px]">Practice</TableHead>}
                 <TableHead className="w-auto lg:w-[180px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -493,7 +493,7 @@ export const PatientsDataTable = () => {
                     />
                   </TableCell>
                   {isAdmin && (
-                    <TableCell className="w-auto lg:w-[150px]">
+                    <TableCell className="w-auto lg:w-[160px]">
                       {patient.practice?.name || "-"}
                     </TableCell>
                   )}
