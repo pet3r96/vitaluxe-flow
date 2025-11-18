@@ -469,12 +469,12 @@ export const AccountsDataTable = () => {
             <Table className="min-w-[1200px]">
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Parent</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-auto lg:w-[160px]">Name</TableHead>
+                  <TableHead className="w-auto lg:w-[220px]">Email</TableHead>
+                  <TableHead className="w-auto lg:w-[140px]">Role</TableHead>
+                  <TableHead className="w-auto lg:w-[160px]">Parent</TableHead>
+                  <TableHead className="w-auto lg:w-[140px]">Status</TableHead>
+                  <TableHead className="w-auto lg:w-[180px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
@@ -505,14 +505,14 @@ export const AccountsDataTable = () => {
                           transform: `translateY(${virtualRow.start}px)`
                         }}
                       >
-                  <TableCell className="font-medium">{getDisplayName(account)}</TableCell>
-                  <TableCell>{account.email}</TableCell>
-                  <TableCell>
+                  <TableCell className="w-auto lg:w-[160px] font-medium">{getDisplayName(account)}</TableCell>
+                  <TableCell className="w-auto lg:w-[220px]">{account.email}</TableCell>
+                  <TableCell className="w-auto lg:w-[140px]">
                     <Badge className={getRoleBadgeColor(getDisplayRole(account))}>
                       {getDisplayRole(account)}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="w-auto lg:w-[160px]">
                     {(account.user_roles?.[0]?.role === 'downline' || getDisplayRole(account) === 'practice') ? (
                       account.linked_topline_display?.name ? (
                         <span className="text-sm">{account.linked_topline_display.name}</span>
@@ -529,12 +529,12 @@ export const AccountsDataTable = () => {
                       "-"
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="w-auto lg:w-[140px]">
                     <Badge variant={account.active ? "default" : "secondary"}>
                       {account.active ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="w-auto lg:w-[180px] text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         variant="ghost"
