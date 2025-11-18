@@ -1,9 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGenerateReceiptRequest } from '../_shared/requestValidators.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -32,7 +31,6 @@ serve(async (req) => {
     });
 
     const receiptPromise = (async () => {
-      const { createAuthClient } = await import('../_shared/supabaseAdmin.ts');
       const supabase = createAuthClient(authHeader);
 
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -556,9 +554,7 @@ serve(async (req) => {
     
     // Log error to audit logs
     try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      const supabase = createAdminClient();
       
       await supabase.functions.invoke('log-error', {
         body: {
