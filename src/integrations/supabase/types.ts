@@ -290,6 +290,54 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs_archive: {
+        Row: {
+          action_type: string
+          archived_at: string | null
+          correlation_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_role: string | null
+        }
+        Insert: {
+          action_type: string
+          archived_at?: string | null
+          correlation_id?: string | null
+          created_at: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          action_type?: string
+          archived_at?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       calendar_sync_tokens: {
         Row: {
           created_at: string
