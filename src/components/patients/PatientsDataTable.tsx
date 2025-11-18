@@ -425,21 +425,21 @@ export const PatientsDataTable = () => {
             <colgroup>
               <col style={{ width: '160px' }} />
               <col style={{ width: '220px' }} />
-              <col style={{ width: '140px' }} />
+              <col style={{ width: '130px' }} />
               <col style={{ width: '280px' }} />
-              <col style={{ width: '140px' }} />
+              <col style={{ width: '150px' }} />
               {isAdmin && <col style={{ width: '160px' }} />}
-              <col style={{ width: '180px' }} />
+              <col style={{ width: '120px' }} />
             </colgroup>
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="w-auto lg:w-[160px]">Name</TableHead>
-                <TableHead className="w-auto lg:w-[220px]">Email</TableHead>
-                <TableHead className="w-auto lg:w-[140px]">Phone</TableHead>
-                <TableHead className="w-auto lg:w-[280px]">Address</TableHead>
-                <TableHead className="w-auto lg:w-[140px]">Portal Status</TableHead>
-                {isAdmin && <TableHead className="w-auto lg:w-[160px]">Practice</TableHead>}
-                <TableHead className="w-auto lg:w-[180px] text-right">Actions</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Portal Status</TableHead>
+                {isAdmin && <TableHead>Practice</TableHead>}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
@@ -470,15 +470,15 @@ export const PatientsDataTable = () => {
                       transform: `translateY(${virtualRow.start}px)`
                     }}
                   >
-                  <TableCell className="w-auto lg:w-[160px] font-medium">
+                  <TableCell className="font-medium">
                     {patient.name || 
                       (patient.first_name && patient.last_name 
                         ? `${patient.first_name} ${patient.last_name}`.trim() 
                         : patient.first_name || patient.last_name || (patient.email as string)?.split('@')[0] || 'Unknown')}
                   </TableCell>
-                  <TableCell className="w-auto lg:w-[220px] text-muted-foreground">{formatPatientEmail(patient.email as string)}</TableCell>
-                  <TableCell className="w-auto lg:w-[140px] lg:whitespace-nowrap">{formatPhoneNumber(patient.phone as string)}</TableCell>
-                  <TableCell className="w-auto lg:w-[280px] truncate">
+                  <TableCell className="text-muted-foreground">{formatPatientEmail(patient.email as string)}</TableCell>
+                  <TableCell className="lg:whitespace-nowrap">{formatPhoneNumber(patient.phone as string)}</TableCell>
+                  <TableCell className="truncate">
                     {(() => {
                       if (patient.address_formatted) return patient.address_formatted as string;
                       
@@ -500,7 +500,7 @@ export const PatientsDataTable = () => {
                       return addressParts.join(' ');
                     })()}
                   </TableCell>
-                  <TableCell className="w-auto lg:w-[140px] lg:whitespace-nowrap">
+                  <TableCell className="lg:whitespace-nowrap">
                     <PatientPortalStatusBadge 
                       userId={patient.user_id as string | null}
                       lastLoginAt={patient.last_login_at as string | null}
@@ -508,11 +508,11 @@ export const PatientsDataTable = () => {
                     />
                   </TableCell>
                   {isAdmin && (
-                    <TableCell className="w-auto lg:w-[160px]">
+                    <TableCell>
                       {patient.practice?.name || "-"}
                     </TableCell>
                   )}
-                  <TableCell className="w-auto lg:w-[180px] lg:whitespace-nowrap text-right">
+                  <TableCell className="lg:whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-2">
                       <TooltipProvider>
                         <Tooltip>
