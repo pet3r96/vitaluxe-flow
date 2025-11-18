@@ -5,7 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ResponsivePage } from "@/components/layout/ResponsivePage";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 const Products = () => {
   const { effectiveRole } = useAuth();
@@ -19,66 +20,48 @@ const Products = () => {
   // Show loading skeleton while checking staff privileges
   if (shouldCheckPrivileges && isLoading && isStaffAccount) {
     return (
-      <div className="patient-container">
-        <div className="mb-8">
-          <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Loading...
-          </p>
-        </div>
-        <Skeleton className="h-[400px] w-full" />
-      </div>
+      <ResponsivePage
+        title="Product Management"
+        subtitle="Loading..."
+      >
+        <TableSkeleton />
+      </ResponsivePage>
     );
   }
 
   // Staff without ordering privileges cannot access products
   if (shouldCheckPrivileges && isStaffAccount && !canOrder) {
     return (
-      <div className="patient-container">
-        <div className="mb-8">
-           <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Access restricted
-          </p>
-        </div>
+      <ResponsivePage
+        title="Product Management"
+        subtitle="Access restricted"
+      >
         <Alert>
           <AlertDescription>
             You don't have permission to access products or place orders. Please contact your practice administrator to request ordering privileges.
           </AlertDescription>
         </Alert>
-      </div>
+      </ResponsivePage>
     );
   }
 
   if (isPharmacy) {
     return (
-      <div className="patient-container">
-        <div className="mb-8">
-           <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">
-            My Products
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            View products assigned to your pharmacy
-          </p>
-        </div>
-
+      <ResponsivePage
+        title="My Products"
+        subtitle="View products assigned to your pharmacy"
+      >
         <PharmacyProductsGrid />
-      </div>
+      </ResponsivePage>
     );
   }
 
   if (isTopline) {
     return (
-      <div className="patient-container">
-        <div className="mb-8">
-           <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">
-            Product Management
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Manage products and control visibility for your network
-          </p>
-        </div>
-
+      <ResponsivePage
+        title="Product Management"
+        subtitle="Manage products and control visibility for your network"
+      >
         <Tabs defaultValue="products" className="w-full">
           <TabsList>
             <TabsTrigger value="products">Product Catalog</TabsTrigger>
@@ -91,21 +74,17 @@ const Products = () => {
             <ToplineProductVisibilityManager />
           </TabsContent>
         </Tabs>
-      </div>
+      </ResponsivePage>
     );
   }
 
   return (
-    <div className="patient-container">
-      <div className="mb-8">
-        <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">Product Management</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage products, pricing tiers, and inventory
-        </p>
-      </div>
-
+    <ResponsivePage
+      title="Product Management"
+      subtitle="Manage products, pricing tiers, and inventory"
+    >
       <ProductsGrid />
-    </div>
+    </ResponsivePage>
   );
 };
 

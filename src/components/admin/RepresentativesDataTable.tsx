@@ -19,6 +19,8 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { AddRepresentativeDialog } from "./AddRepresentativeDialog";
 import { RepDetailsDialog } from "./RepDetailsDialog";
+import { useResponsive } from "@/hooks/use-mobile";
+import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
 
 const formatPhoneNumber = (phone: string | null | undefined) => {
   if (!phone) return "Not Set";
@@ -35,6 +37,7 @@ export const RepresentativesDataTable = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { isMobile } = useResponsive();
 
   // Fetch all reps with profile data and topline assignments
   const { data: reps, isLoading, refetch } = useQuery({
@@ -226,9 +229,48 @@ export const RepresentativesDataTable = () => {
             {filteredReps?.length || 0} total • {stats.activeTopline} topline • {stats.activeDownline} downline
           </p>
         </div>
-        <div className="overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="min-w-[1200px]">
-            <Table>
+
+        {isMobile ? (
+          // Mobile Card View
+          <div className="p-4">
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            ) : !filteredReps || filteredReps.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No representatives found</p>
+              </div>
+            ) : (
+              <MobileDataTable
+                rows={paginatedReps?.map((rep): MobileTableRowProps => ({
+                  title: rep.profiles?.name || "-",
+                  subtitle: rep.profiles?.email || "-",
+                  fields: [
+                    { label: "Phone", value: "Not Set" },
+                    { label: "Role", value: rep.role === 'topline' ? 'Topline' : 'Downline', badge: true, badgeVariant: rep.role === 'topline' ? 'default' : 'secondary' },
+                    { label: "Assigned To", value: rep.topline_rep?.profiles?.name || "-" },
+                    { label: "Status", value: rep.profiles?.active ? "Active" : "Inactive", badge: true, badgeVariant: rep.profiles?.active ? 'default' : 'secondary' }
+                  ],
+                  actions: [
+                    { label: "View Details", onClick: () => { setSelectedRep(rep); setDetailsOpen(true); } },
+                    { 
+                      label: rep.profiles?.active ? "Deactivate" : "Activate", 
+                      onClick: () => toggleStatusMutation.mutate({ 
+                        profileId: rep.profiles!.id, 
+                        currentStatus: rep.profiles!.active 
+                      }) 
+                    }
+                  ]
+                })) || []}
+                emptyMessage="No representatives found"
+              />
+            )}
+          </div>
+        ) : (
+          // Desktop Table View
+          <div className="overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="min-w-[1200px]">
+              <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="h-12 px-6 font-semibold">Name</TableHead>
@@ -325,9 +367,10 @@ export const RepresentativesDataTable = () => {
                   ))
                 )}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           </div>
-        </div>
+        )}
       </Card>
 
       {/* Pagination Component */}
