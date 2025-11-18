@@ -8,8 +8,9 @@ import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { logger } from "@/lib/logger";
+import { measurePageLoad, measureInteraction } from "@/lib/performanceMonitor";
 import { PRO_MONTHLY_PRICE_STR, TRIAL_DESCRIPTION } from "@/lib/pricing";
 import { TodayAppointmentsWidget } from "@/components/dashboard/TodayAppointmentsWidget";
 import { MessagesAndChatWidget } from "@/components/dashboard/MessagesAndChatWidget";
@@ -31,6 +32,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Dashboard component with real-time stats (desktop version)
 const Dashboard = () => {
+  const perf = useRef(measurePageLoad('Dashboard')).current;
   const { user, effectiveRole, effectiveUserId, isImpersonating, isProviderAccount, effectivePracticeId } = useAuth();
   const { isSubscribed, status, trialDaysRemaining } = useSubscription();
   const navigate = useNavigate();
@@ -87,6 +89,12 @@ const Dashboard = () => {
   const usersLoading = statsLoading;
   const pendingRevenueLoading = statsLoading;
   const collectedRevenueLoading = statsLoading;
+
+  useEffect(() => {
+    if (!statsLoading) {
+      perf.end();
+    }
+  }, [statsLoading]);
 
   // Pharmacy-specific batched stats
   const { data: pharmacyStats, isLoading: loadingPharmacy } = usePharmacyDashboard(
