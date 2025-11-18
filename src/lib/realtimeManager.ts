@@ -122,7 +122,7 @@ class RealtimeManager implements IRealtimeManager {
         if (status === 'SUBSCRIBED') {
           logger.info(`Successfully subscribed to ${table} realtime updates`);
         } else if (status === 'CHANNEL_ERROR') {
-          logger.error(`Failed to subscribe to ${table} realtime updates`);
+          logger.warn(`Realtime subscription unavailable for ${table} - using fallback`);
         } else if (status === 'TIMED_OUT') {
           logger.warn(`Realtime subscription timed out for ${table}`);
         }
