@@ -35,9 +35,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AddAccountDialog } from "./AddAccountDialog";
 import { AccountDetailsDialog } from "./AccountDetailsDialog";
+import { AccountMobileCard } from "./AccountMobileCard";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { useAuth } from "@/contexts/AuthContext";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { MobileDataTable } from "@/components/responsive/MobileDataTable";
 
 export const AccountsDataTable = () => {
   const { toast } = useToast();
@@ -348,11 +351,11 @@ export const AccountsDataTable = () => {
 
   // Don't run queries until auth is ready
   if (!effectiveRole) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">Verifying authentication...</div>
-      </div>
-    );
+    return <TableSkeleton rows={10} columns={5} />;
+  }
+
+  if (isLoading) {
+    return <TableSkeleton rows={10} columns={5} />;
   }
 
   return (
@@ -392,14 +395,62 @@ export const AccountsDataTable = () => {
 
       <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
         {isMobile ? (
-          // Mobile Card View
-          <div className="divide-y divide-border">
-            {isLoading ? (
-              <div className="p-8 text-center text-muted-foreground">Loading...</div>
-            ) : filteredAccounts?.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">No accounts found</div>
-            ) : (
-              paginatedAccounts?.map((account) => (
+          // Mobile Card View using MobileDataTable
+          <MobileDataTable
+            rows={paginatedAccounts?.map(account => ({
+              title: getDisplayName(account),
+              subtitle: account.email,
+              fields: [
+                {
+                  label: "Role",
+                  value: getDisplayRole(account),
+                  badge: true,
+                  badgeVariant: "default"
+                },
+                {
+                  label: "Status",
+                  value: account.active ? "Active" : "Inactive",
+                  badge: true,
+                  badgeVariant: account.active ? "default" : "secondary"
+                },
+                {
+                  label: "Created",
+                  value: new Date(account.created_at).toLocaleDateString()
+                },
+                ...(account.parent ? [{
+                  label: "Parent",
+                  value: account.parent.name || account.parent.email
+                }] : []),
+                ...(account.linked_topline_display?.name || account.linked_topline?.name ? [{
+                  label: "Linked Topline",
+                  value: account.linked_topline_display?.name || account.linked_topline?.name
+                }] : [])
+              ],
+              actions: [
+                {
+                  label: "View Details",
+                  onClick: () => {
+                    setSelectedAccount(account);
+                    setDetailsOpen(true);
+                  }
+                },
+                {
+                  label: account.active ? "Deactivate" : "Activate",
+                  onClick: () => handleStatusToggle(account)
+                },
+                {
+                  label: "Delete",
+                  onClick: () => {
+                    setAccountToDelete(account);
+                    setDeleteDialogOpen(true);
+                  },
+                  variant: "destructive" as const
+                }
+              ]
+            })) || []}
+            emptyMessage="No accounts found"
+          />
+        ) : (
                 <Card key={account.id} className="border-0 rounded-none shadow-none">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
