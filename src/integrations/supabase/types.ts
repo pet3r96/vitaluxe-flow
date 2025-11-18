@@ -1011,15 +1011,10 @@ export type Database = {
           action_type: string | null
           archived_at: string | null
           change_summary: string | null
-          changed_by_role: string | null
           changed_by_user_id: string | null
           created_at: string | null
           entity_id: string | null
-          entity_name: string | null
-          entity_type: string | null
           id: string
-          new_data: Json | null
-          old_data: Json | null
           original_log_id: string | null
           patient_account_id: string | null
         }
@@ -1027,15 +1022,10 @@ export type Database = {
           action_type?: string | null
           archived_at?: string | null
           change_summary?: string | null
-          changed_by_role?: string | null
           changed_by_user_id?: string | null
           created_at?: string | null
           entity_id?: string | null
-          entity_name?: string | null
-          entity_type?: string | null
           id?: string
-          new_data?: Json | null
-          old_data?: Json | null
           original_log_id?: string | null
           patient_account_id?: string | null
         }
@@ -1043,15 +1033,10 @@ export type Database = {
           action_type?: string | null
           archived_at?: string | null
           change_summary?: string | null
-          changed_by_role?: string | null
           changed_by_user_id?: string | null
           created_at?: string | null
           entity_id?: string | null
-          entity_name?: string | null
-          entity_type?: string | null
           id?: string
-          new_data?: Json | null
-          old_data?: Json | null
           original_log_id?: string | null
           patient_account_id?: string | null
         }
@@ -5029,57 +5014,6 @@ export type Database = {
           policy_count?: number | null
           rls_enabled?: boolean | null
           table_name?: string | null
-        }
-        Relationships: []
-      }
-      shipping_audit_logs_archive: {
-        Row: {
-          archived_at: string | null
-          change_description: string | null
-          created_at: string | null
-          id: string
-          new_carrier: string | null
-          new_status: string | null
-          new_tracking_number: string | null
-          old_carrier: string | null
-          old_status: string | null
-          old_tracking_number: string | null
-          order_line_id: string | null
-          original_log_id: string | null
-          updated_by: string | null
-          updated_by_role: string | null
-        }
-        Insert: {
-          archived_at?: string | null
-          change_description?: string | null
-          created_at?: string | null
-          id?: string
-          new_carrier?: string | null
-          new_status?: string | null
-          new_tracking_number?: string | null
-          old_carrier?: string | null
-          old_status?: string | null
-          old_tracking_number?: string | null
-          order_line_id?: string | null
-          original_log_id?: string | null
-          updated_by?: string | null
-          updated_by_role?: string | null
-        }
-        Update: {
-          archived_at?: string | null
-          change_description?: string | null
-          created_at?: string | null
-          id?: string
-          new_carrier?: string | null
-          new_status?: string | null
-          new_tracking_number?: string | null
-          old_carrier?: string | null
-          old_status?: string | null
-          old_tracking_number?: string | null
-          order_line_id?: string | null
-          original_log_id?: string | null
-          updated_by?: string | null
-          updated_by_role?: string | null
         }
         Relationships: []
       }
