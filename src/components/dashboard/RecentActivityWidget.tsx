@@ -102,63 +102,70 @@ export function RecentActivityWidget({ className, activities: externalActivities
         }));
       }
 
-      // Admin: show threads the admin created or participates in
-      if (effectiveRole === 'admin') {
-        // Use two separate queries to avoid nested relation issues with or()
-        const [createdThreadsResult, participantThreadsResult] = await Promise.all([
-          // Threads created by admin
+      // Admin: show system-wide activity
+      if (effectiveRole === 'admin' || effectiveRole === 'super_admin') {
+        const [ordersResult, appointmentsResult, messagesResult] = await Promise.all([
+          // Recent orders (system-wide)
           supabase
-            .from('message_threads')
-            .select('id, subject, updated_at, thread_type')
-            .eq('created_by', effectiveUserId)
-            .order('updated_at', { ascending: false })
+            .from("orders")
+            .select("id, status, updated_at, profiles!orders_doctor_id_fkey(name)")
+            .order("created_at", { ascending: false })
             .limit(10),
           
-          // Threads where admin is participant - using internal_message_recipients
+          // Recent appointments (system-wide)
           supabase
-            .from('internal_message_recipients')
-            .select(`
-              message_id,
-              internal_messages!inner(
-                id,
-                subject,
-                updated_at,
-                message_type
-              )
-            `)
-            .eq('recipient_id', effectiveUserId)
+            .from("patient_appointments")
+            .select("id, status, start_time, patient_accounts(first_name, last_name)")
+            .order("created_at", { ascending: false })
+            .limit(10),
+          
+          // Recent message threads (system-wide)
+          supabase
+            .from("message_threads")
+            .select("id, subject, thread_type, updated_at")
+            .order("updated_at", { ascending: false })
             .limit(10)
         ]);
 
-        // Combine and deduplicate threads
-        const threadMap = new Map();
-        
-        // Add created threads
-        createdThreadsResult.data?.forEach((thread: any) => {
-          threadMap.set(thread.id, thread);
-        });
-        
-        // Add participant threads
-        participantThreadsResult.data?.forEach((pt: any) => {
-          const thread = pt.message_threads;
-          if (thread && !threadMap.has(thread.id)) {
-            threadMap.set(thread.id, thread);
-          }
+        const combined: ActivityItem[] = [];
+
+        // Add orders
+        ordersResult.data?.forEach((order: any) => {
+          combined.push({
+            type: 'order',
+            icon: Package,
+            description: `Order ${order.status} - ${order.profiles?.name || 'Unknown'}`,
+            time: order.updated_at,
+          });
         });
 
-        // Sort by updated_at and take top 5
-        const allThreads = Array.from(threadMap.values())
-          .sort((a: any, b: any) => 
-            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-          )
+        // Add appointments
+        appointmentsResult.data?.forEach((apt: any) => {
+          const patientName = apt.patient_accounts 
+            ? `${apt.patient_accounts.first_name} ${apt.patient_accounts.last_name}`
+            : 'Unknown Patient';
+          combined.push({
+            type: 'appointment',
+            icon: Calendar,
+            description: `Appointment ${apt.status} - ${patientName}`,
+            time: apt.start_time,
+          });
+        });
+
+        // Add message threads
+        messagesResult.data?.forEach((thread: any) => {
+          combined.push({
+            type: 'message',
+            icon: FileText,
+            description: `${thread.thread_type === 'support' ? 'Support' : 'Order Issue'}: ${thread.subject}`,
+            time: thread.updated_at,
+          });
+        });
+
+        // Sort by time and return top 5
+        return combined
+          .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
           .slice(0, 5);
-
-        return allThreads.map((t: any) => ({
-          type: 'message',
-          icon: FileText,
-          description: `${t.thread_type === 'support' ? 'Support' : 'Order Issue'}: ${t.subject}`,
-          time: t.updated_at,
-        }));
       }
 
       // For practices, get their orders
