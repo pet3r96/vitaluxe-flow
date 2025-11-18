@@ -3,7 +3,7 @@
 // Consolidates all guest validation flows into a single endpoint
 // ============================================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { createAgoraTokens } from '../_shared/agoraTokenService.ts';
 import { getClientIP } from '../_shared/rateLimiter.ts';
@@ -35,9 +35,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createAdminClient();
 
     switch (action) {
       case 'validate-video-token': {
