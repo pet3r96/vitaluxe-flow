@@ -53,6 +53,27 @@ export const OrderDetailsDialog = ({
   const [patientFallbackData, setPatientFallbackData] = useState<Map<string, any>>(new Map());
   const [regeneratedPrescriptionUrls, setRegeneratedPrescriptionUrls] = useState<Map<string, string>>(new Map());
   const [regeneratingUrls, setRegeneratingUrls] = useState(false);
+  const [notesModified, setNotesModified] = useState(false);
+  const [pendingNotes, setPendingNotes] = useState<string | null>(null);
+
+  // Auto-save notes if modified before closing
+  const saveNotesIfModified = async () => {
+    if (!notesModified || !pendingNotes || !orderData) return;
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ report_notes: pendingNotes })
+        .eq('id', orderData.id);
+
+      if (error) throw error;
+      
+      setNotesModified(false);
+      setPendingNotes(null);
+    } catch (error) {
+      logger.error('Error auto-saving notes:', error);
+    }
+  };
 
   // Determine if user can view PHI (HIPAA compliance)
   const canViewPHI = ['doctor', 'provider', 'staff', 'pharmacy', 'admin'].includes(effectiveRole || '');
@@ -470,8 +491,16 @@ export const OrderDetailsDialog = ({
     return false;
   };
 
+  const handleDialogClose = async (open: boolean) => {
+    if (!open) {
+      // Auto-save notes if modified before closing
+      await saveNotesIfModified();
+    }
+    onOpenChange(open);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start justify-between">
@@ -512,6 +541,10 @@ export const OrderDetailsDialog = ({
             doctorId={order.doctor_id}
             practiceId={order.order_lines?.[0]?.providers?.practice_id}
             onSuccess={onSuccess}
+            onNotesChange={(notes) => {
+              setNotesModified(true);
+              setPendingNotes(notes);
+            }}
           />
 
           <div className="grid grid-cols-2 gap-4">

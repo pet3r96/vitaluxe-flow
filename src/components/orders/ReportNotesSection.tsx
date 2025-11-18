@@ -13,6 +13,7 @@ interface ReportNotesSectionProps {
   doctorId: string;
   practiceId?: string;
   onSuccess: () => void;
+  onNotesChange?: (notes: string) => void;
 }
 
 export const ReportNotesSection = ({
@@ -21,6 +22,7 @@ export const ReportNotesSection = ({
   doctorId,
   practiceId,
   onSuccess,
+  onNotesChange,
 }: ReportNotesSectionProps) => {
   const [notes, setNotes] = useState(initialNotes || "");
   const [isEditing, setIsEditing] = useState(false);
@@ -100,7 +102,10 @@ export const ReportNotesSection = ({
         <div className="space-y-3">
           <Textarea
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            onChange={(e) => {
+              setNotes(e.target.value);
+              onNotesChange?.(e.target.value);
+            }}
             placeholder="Enter internal notes, summaries, or reporting details..."
             rows={6}
             className="resize-none"

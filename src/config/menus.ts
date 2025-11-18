@@ -38,6 +38,7 @@ export interface MenuItem {
   isPro?: boolean;
   hideForStaff?: boolean;
   hideForProvider?: boolean;
+  hideForAdmin?: boolean;
 }
 
 export interface MenuSection {
@@ -78,7 +79,7 @@ export const menus: MenuConfig = {
       items: [
         { label: "Orders", href: "/orders", icon: ShoppingCart },
         { label: "Support Tickets", href: "/support-tickets", icon: LifeBuoy },
-        { label: "Patient Chat", href: "/support", icon: MessageSquare },
+        { label: "Patient Chat", href: "/support", icon: MessageSquare, hideForAdmin: true },
         { label: "Reports", href: "/reports", icon: FileText },
         { label: "Rep Productivity", href: "/rep-productivity", icon: BarChart3 },
         { label: "Product Catalog", href: "/products", icon: Package },

@@ -110,6 +110,11 @@ export function AdminSidebar() {
 
           // Direct link sections (no parent)
           if (!section.isParent) {
+            // Filter out items with hideForAdmin
+            const filteredItems = section.items.filter(item => !item.hideForAdmin);
+            
+            if (filteredItems.length === 0) return null;
+            
             return (
               <SidebarGroup key={section.title}>
                 {!isCollapsed && (
@@ -119,7 +124,7 @@ export function AdminSidebar() {
                 )}
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {section.items.map((item) => {
+                    {filteredItems.map((item) => {
                       const Icon = item.icon;
                       return (
                         <SidebarMenuItem key={item.href}>
