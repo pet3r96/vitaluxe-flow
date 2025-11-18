@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -41,7 +40,6 @@ export const RepresentativesDataTable = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const { isMobile } = useResponsive();
-  const parentRef = useRef<HTMLDivElement>(null);
 
   const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
@@ -135,14 +133,6 @@ export const RepresentativesDataTable = () => {
 
   // Slice data for current page
   const paginatedReps = filteredReps?.slice(startIndex, endIndex);
-
-  // Virtualization for desktop table
-  const rowVirtualizer = useVirtualizer({
-    count: paginatedReps?.length || 0,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 53,
-    overscan: 10,
-  });
 
   // Calculate stats
   const stats = {
@@ -281,9 +271,10 @@ export const RepresentativesDataTable = () => {
             )}
           </div>
         ) : (
-          // Desktop Table View with Virtualization
-          <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
-            <Table className="min-w-[1200px] table-fixed">
+          // Desktop Table View
+          <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="min-w-[1200px]">
+            <Table className="table-fixed">
               <colgroup>
                 <col style={{ width: '160px' }} />
                 <col style={{ width: '220px' }} />
@@ -304,7 +295,7 @@ export const RepresentativesDataTable = () => {
                   <TableHead className="h-12 px-6 font-semibold text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+              <TableBody>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center h-32">
@@ -323,20 +314,10 @@ export const RepresentativesDataTable = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                    const rep = paginatedReps[virtualRow.index];
-                    return (
+                  paginatedReps?.map((rep) => (
                       <TableRow 
                         key={rep.id} 
                         className="hover:bg-muted/5 transition-colors"
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: `${virtualRow.size}px`,
-                          transform: `translateY(${virtualRow.start}px)`
-                        }}
                       >
                       <TableCell className="font-medium px-6 py-4">{rep.profiles?.name || "-"}</TableCell>
                       <TableCell className="px-6 py-4 text-muted-foreground">{rep.profiles?.email || "-"}</TableCell>
@@ -399,11 +380,11 @@ export const RepresentativesDataTable = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                    );
-                  })
+                  ))
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
         )}
       </Card>
