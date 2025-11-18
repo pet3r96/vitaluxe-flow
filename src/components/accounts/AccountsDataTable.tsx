@@ -436,7 +436,7 @@ export const AccountsDataTable = () => {
                 },
                 {
                   label: account.active ? "Deactivate" : "Activate",
-                  onClick: () => handleStatusToggle(account)
+                  onClick: () => toggleAccountStatus(account.id, account.active)
                 },
                 {
                   label: "Delete",
@@ -451,89 +451,8 @@ export const AccountsDataTable = () => {
             emptyMessage="No accounts found"
           />
         ) : (
-                <Card key={account.id} className="border-0 rounded-none shadow-none">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1 flex-1 min-w-0">
-                        <div className="font-medium text-base truncate">{getDisplayName(account)}</div>
-                        <div className="text-sm text-muted-foreground truncate">{account.email}</div>
-                      </div>
-                      <Badge className={getRoleBadgeColor(getDisplayRole(account))}>
-                        {getDisplayRole(account)}
-                      </Badge>
-                    </div>
-                    
-                    {((account.user_roles?.[0]?.role === 'downline' || getDisplayRole(account) === 'practice') && 
-                      (account.linked_topline_display?.name || account.linked_topline?.name)) ||
-                      account.parent ||
-                      account.practice_association ? (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Parent: </span>
-                        <span className="text-foreground">
-                          {(account.user_roles?.[0]?.role === 'downline' || getDisplayRole(account) === 'practice') ? (
-                            account.linked_topline_display?.name || account.linked_topline?.name || "-"
-                          ) : account.parent ? (
-                            account.parent.name
-                          ) : account.practice_association ? (
-                            account.practice_association.name
-                          ) : (
-                            "-"
-                          )}
-                        </span>
-                      </div>
-                    ) : null}
-                    
-                    <div className="flex items-center justify-between pt-2">
-                      <Badge variant={account.active ? "default" : "secondary"}>
-                        {account.active ? "Active" : "Inactive"}
-                      </Badge>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedAccount(account);
-                            setDetailsOpen(true);
-                          }}
-                          className="h-9 w-9 p-0"
-                          title="View Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleAccountStatus(account.id, account.active)}
-                          className="h-9 w-9 p-0"
-                          title={account.active ? "Disable Account" : "Enable Account"}
-                        >
-                          {account.active ? (
-                            <PowerOff className="h-4 w-4 text-orange-500" />
-                          ) : (
-                            <Power className="h-4 w-4 text-green-500" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClick(account)}
-                          disabled={cleanupMutation.isPending}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 p-0"
-                          title="Delete Account"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        ) : (
-          // Desktop/Tablet Table View
-          <div className="min-w-[1200px]">
-            <Table>
+          // Desktop Table View
+          <Table className="min-w-[1200px]">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -631,7 +550,6 @@ export const AccountsDataTable = () => {
             )}
           </TableBody>
         </Table>
-        </div>
         )}
       </div>
 
