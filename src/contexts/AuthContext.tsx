@@ -458,10 +458,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   const { data: userRoles } = await supabase
                     .from('user_roles')
                     .select('role')
-                    .eq('user_id', session.user.id)
-                    .maybeSingle();
+                    .eq('user_id', session.user.id);
 
-                  if (userRoles?.role === 'doctor') {
+                  if (userRoles?.some(r => r.role === 'doctor')) {
                     // Check if subscription exists
                     const { data: existingSub } = await supabase
                       .from('practice_subscriptions')
@@ -1183,10 +1182,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: userRoleData } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', uid)
-        .maybeSingle();
+        .eq('user_id', uid);
       
-      const isAdminUser = userRoleData?.role === 'admin';
+      const isAdminUser = userRoleData?.some(r => r.role === 'admin' || r.role === 'super_admin');
       
       // ADMIN BYPASS: Always allow admin through even if status records missing
       if (isAdminUser) {
