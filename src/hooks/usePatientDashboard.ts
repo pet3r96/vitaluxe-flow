@@ -76,6 +76,7 @@ export function usePatientDashboard(effectiveUserId: string | null, effectiveRol
         'get-patient-dashboard-data',
         {
           method: 'POST',
+          body: { effectiveUserId }
         }
       );
 
