@@ -176,11 +176,11 @@ export function AdminSidebar() {
                       >
                         {SectionIcon && <SectionIcon className="h-5 w-5" />}
                       </SidebarMenuButton>
-                      <FlyoutMenu
-                        items={section.items}
-                        isVisible={hoveredParent === section.title}
-                        onItemClick={() => setHoveredParent(null)}
-                      />
+              <FlyoutMenu
+                items={section.items.filter(item => !item.hideForAdmin)}
+                isVisible={hoveredParent === section.title}
+                onItemClick={() => setHoveredParent(null)}
+              />
                     </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarGroupContent>
@@ -217,10 +217,12 @@ export function AdminSidebar() {
                 <CollapsibleContent>
                   <SidebarGroupContent>
                     <SidebarMenu className="pl-4">
-                      {section.items.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <SidebarMenuItem key={item.href}>
+                      {section.items
+                        .filter(item => !item.hideForAdmin)
+                        .map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <SidebarMenuItem key={item.href}>
                             <SidebarMenuButton asChild>
                               <NavLink
                                 to={item.href}
