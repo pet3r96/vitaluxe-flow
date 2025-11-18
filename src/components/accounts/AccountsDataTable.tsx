@@ -469,12 +469,12 @@ export const AccountsDataTable = () => {
             <Table className="min-w-[1200px]">
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Parent</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="min-w-[160px]">Name</TableHead>
+                  <TableHead className="min-w-[220px]">Email</TableHead>
+                  <TableHead className="min-w-[140px]">Role</TableHead>
+                  <TableHead className="min-w-[160px]">Parent</TableHead>
+                  <TableHead className="min-w-[120px]">Status</TableHead>
+                  <TableHead className="min-w-[180px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
