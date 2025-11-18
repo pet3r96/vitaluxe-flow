@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Edit, UserPlus, CheckCircle, Lock, Eye, Trash2, Ban } from "lucide-react";
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable, MobileTableRowProps, MobileTableAction } from "@/components/responsive/MobileDataTable";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { debounce } from "@/lib/performance";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +53,8 @@ export const PatientsDataTable = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [disableDialogOpen, setDisableDialogOpen] = useState(false);
   const [patientToToggle, setPatientToToggle] = useState<any>(null);
+
+  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   // Use service layer hook for fetching patients
   const { data: patients, isLoading, refetch } = usePatients();
@@ -343,7 +347,7 @@ export const PatientsDataTable = () => {
           <Input
             placeholder="Search patients..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => debouncedSetSearch(e.target.value)}
             className="pl-9"
           />
         </div>

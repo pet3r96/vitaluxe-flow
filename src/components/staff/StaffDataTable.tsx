@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Search, Eye, UserPlus } from "lucide-react";
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { debounce } from "@/lib/performance";
 import { AddStaffDialog } from "./AddStaffDialog";
 import { StaffDetailsDialog } from "./StaffDetailsDialog";
 import { toast } from "sonner";
@@ -32,6 +34,8 @@ export const StaffDataTable = () => {
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+
+  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   const { data: staff, isLoading, refetch } = useQuery({
     queryKey: ["staff", effectiveUserId, effectiveRole, effectivePracticeId],
@@ -120,7 +124,7 @@ export const StaffDataTable = () => {
   const paginatedStaff = filteredStaff?.slice(startIndex, endIndex);
 
   if (isLoading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading staff...</div>;
+    return <TableSkeleton rows={10} columns={6} />;
   }
 
   return (
@@ -131,7 +135,7 @@ export const StaffDataTable = () => {
           <Input
             placeholder="Search staff..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => debouncedSetSearch(e.target.value)}
             className="pl-9"
           />
         </div>

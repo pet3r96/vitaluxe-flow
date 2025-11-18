@@ -21,6 +21,8 @@ import { AddRepresentativeDialog } from "./AddRepresentativeDialog";
 import { RepDetailsDialog } from "./RepDetailsDialog";
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { debounce } from "@/lib/performance";
 
 const formatPhoneNumber = (phone: string | null | undefined) => {
   if (!phone) return "Not Set";
@@ -38,6 +40,8 @@ export const RepresentativesDataTable = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const { isMobile } = useResponsive();
+
+  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   // Fetch all reps with profile data and topline assignments
   const { data: reps, isLoading, refetch } = useQuery({
@@ -208,11 +212,11 @@ export const RepresentativesDataTable = () => {
           <Input
             placeholder="Search by name, email, or role..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => debouncedSetSearch(e.target.value)}
             className="pl-12 h-11 glass-card border-border/50"
           />
         </div>
-        <Button 
+        <Button
           onClick={() => setAddDialogOpen(true)}
           className="accent-gold-primary h-11 px-6 shadow-hover"
         >

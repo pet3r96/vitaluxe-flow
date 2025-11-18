@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Search, Eye, UserPlus } from "lucide-react";
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { debounce } from "@/lib/performance";
 import { AddProviderDialog } from "./AddProviderDialog";
 import { ProviderDetailsDialog } from "./ProviderDetailsDialog";
 import { toast } from "sonner";
@@ -34,6 +36,8 @@ export const ProvidersDataTable = () => {
   const [selectedProvider, setSelectedProvider] = useState<any>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+
+  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   // Check if user can view credentials
   const canViewCredentials = effectiveRole && ['admin', 'doctor', 'provider', 'pharmacy'].includes(effectiveRole);
@@ -143,7 +147,7 @@ export const ProvidersDataTable = () => {
   // No longer need credential access logging - encryption removed
 
   if (isLoading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading providers...</div>;
+    return <TableSkeleton rows={10} columns={6} />;
   }
 
   return (
@@ -154,7 +158,7 @@ export const ProvidersDataTable = () => {
           <Input
             placeholder="Search providers..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => debouncedSetSearch(e.target.value)}
             className="pl-9"
           />
         </div>
