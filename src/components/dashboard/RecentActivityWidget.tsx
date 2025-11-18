@@ -104,68 +104,94 @@ export function RecentActivityWidget({ className, activities: externalActivities
 
       // Admin: show system-wide activity
       if (effectiveRole === 'admin' || effectiveRole === 'super_admin') {
-        const [ordersResult, appointmentsResult, messagesResult] = await Promise.all([
-          // Recent orders (system-wide)
-          supabase
-            .from("orders")
-            .select("id, status, updated_at, profiles!orders_doctor_id_fkey(name)")
-            .order("created_at", { ascending: false })
-            .limit(10),
-          
-          // Recent appointments (system-wide)
-          supabase
-            .from("patient_appointments")
-            .select("id, status, start_time, patient_accounts(first_name, last_name)")
-            .order("created_at", { ascending: false })
-            .limit(10),
-          
-          // Recent message threads (system-wide)
-          supabase
-            .from("message_threads")
-            .select("id, subject, thread_type, updated_at")
-            .order("updated_at", { ascending: false })
-            .limit(10)
-        ]);
+        try {
+          const [ordersResult, appointmentsResult, messagesResult] = await Promise.all([
+            // Recent orders (system-wide)
+            supabase
+              .from("orders")
+              .select("id, status, updated_at, profiles!orders_doctor_id_fkey(name)")
+              .order("created_at", { ascending: false })
+              .limit(10),
+            
+            // Recent appointments (system-wide)
+            supabase
+              .from("patient_appointments")
+              .select("id, status, start_time, patient_accounts(first_name, last_name)")
+              .order("created_at", { ascending: false })
+              .limit(10),
+            
+            // Recent message threads (system-wide)
+            supabase
+              .from("message_threads")
+              .select("id, subject, thread_type, updated_at")
+              .order("updated_at", { ascending: false })
+              .limit(10)
+          ]);
 
-        const combined: ActivityItem[] = [];
+          if (ordersResult.error) {
+            console.warn("Admin orders query failed in RecentActivityWidget", {
+              error: ordersResult.error.message,
+            });
+          }
 
-        // Add orders
-        ordersResult.data?.forEach((order: any) => {
-          combined.push({
-            type: 'order',
-            icon: Package,
-            description: `Order ${order.status} - ${order.profiles?.name || 'Unknown'}`,
-            time: order.updated_at,
+          if (appointmentsResult.error) {
+            console.warn("Admin appointments query failed in RecentActivityWidget", {
+              error: appointmentsResult.error.message,
+            });
+          }
+
+          if (messagesResult.error) {
+            console.warn("Admin messages query failed in RecentActivityWidget", {
+              error: messagesResult.error.message,
+            });
+          }
+
+          const combined: ActivityItem[] = [];
+
+          // Add orders
+          ordersResult.data?.forEach((order: any) => {
+            combined.push({
+              type: 'order',
+              icon: Package,
+              description: `Order ${order.status} - ${order.profiles?.name || 'Unknown'}`,
+              time: order.updated_at,
+            });
           });
-        });
 
-        // Add appointments
-        appointmentsResult.data?.forEach((apt: any) => {
-          const patientName = apt.patient_accounts 
-            ? `${apt.patient_accounts.first_name} ${apt.patient_accounts.last_name}`
-            : 'Unknown Patient';
-          combined.push({
-            type: 'appointment',
-            icon: Calendar,
-            description: `Appointment ${apt.status} - ${patientName}`,
-            time: apt.start_time,
+          // Add appointments
+          appointmentsResult.data?.forEach((apt: any) => {
+            const patientName = apt.patient_accounts 
+              ? `${apt.patient_accounts.first_name} ${apt.patient_accounts.last_name}`
+              : 'Unknown Patient';
+            combined.push({
+              type: 'appointment',
+              icon: Calendar,
+              description: `Appointment ${apt.status} - ${patientName}`,
+              time: apt.start_time,
+            });
           });
-        });
 
-        // Add message threads
-        messagesResult.data?.forEach((thread: any) => {
-          combined.push({
-            type: 'message',
-            icon: FileText,
-            description: `${thread.thread_type === 'support' ? 'Support' : 'Order Issue'}: ${thread.subject}`,
-            time: thread.updated_at,
+          // Add message threads
+          messagesResult.data?.forEach((thread: any) => {
+            combined.push({
+              type: 'message',
+              icon: FileText,
+              description: `${thread.thread_type === 'support' ? 'Support' : 'Message'}: ${thread.subject}`,
+              time: thread.updated_at,
+            });
           });
-        });
 
-        // Sort by time and return top 5
-        return combined
-          .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-          .slice(0, 5);
+          // Sort by time and return top 5
+          return combined
+            .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+            .slice(0, 5);
+        } catch (err: any) {
+          console.error("Admin system-wide activity fetch failed", {
+            errorMessage: err?.message,
+            errorStack: err?.stack,
+          });
+          return [];
+        }
       }
 
       // For practices, get their orders
