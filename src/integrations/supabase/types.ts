@@ -3773,7 +3773,7 @@ export type Database = {
             foreignKeyName: "practice_development_fee_invoices_topline_rep_id_fkey"
             columns: ["topline_rep_id"]
             isOneToOne: false
-            referencedRelation: "rep_productivity_summary"
+            referencedRelation: "rep_productivity_view"
             referencedColumns: ["rep_id"]
           },
           {
@@ -3827,7 +3827,7 @@ export type Database = {
             foreignKeyName: "practice_development_fees_topline_rep_id_fkey"
             columns: ["topline_rep_id"]
             isOneToOne: false
-            referencedRelation: "rep_productivity_summary"
+            referencedRelation: "rep_productivity_view"
             referencedColumns: ["rep_id"]
           },
           {
@@ -5058,7 +5058,7 @@ export type Database = {
             foreignKeyName: "reps_assigned_topline_id_fkey"
             columns: ["assigned_topline_id"]
             isOneToOne: false
-            referencedRelation: "rep_productivity_summary"
+            referencedRelation: "rep_productivity_view"
             referencedColumns: ["rep_id"]
           },
           {
@@ -6630,7 +6630,7 @@ export type Database = {
           },
         ]
       }
-      rep_productivity_summary: {
+      rep_productivity_view: {
         Row: {
           avg_order_value: number | null
           downline_count: number | null
