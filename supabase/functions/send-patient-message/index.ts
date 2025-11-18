@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sendMessageSchema, validateInput } from '../_shared/zodSchemas.ts';
 import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
@@ -32,10 +32,7 @@ Deno.serve(async (req) => {
     }
 
     // Create service role client for auth and all operations
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseAdmin = createAdminClient();
 
     // Verify user authentication
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
