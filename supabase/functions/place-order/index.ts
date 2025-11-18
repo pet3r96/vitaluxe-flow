@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { cacheDelPattern } from '../_shared/cache.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -551,6 +552,21 @@ serve(async (req) => {
 
     const executionTimeSeconds = (Date.now() - startTime) / 1000;
     edgeLogger.info('Order placement completed', { executionTime: executionTimeSeconds, orderCount: createdOrders.length, failedPayments: failedPayments.length });
+
+    // Invalidate caches after successful order placement
+    if (createdOrders.length > 0) {
+      try {
+        await Promise.all([
+          cacheDelPattern('dashboard:*'),
+          cacheDelPattern('top_products:*'),
+          cacheDelPattern('pharmacy_dashboard:*'),
+        ]);
+        edgeLogger.info('Cache invalidated after order placement');
+      } catch (cacheError) {
+        edgeLogger.error('Failed to invalidate cache', cacheError);
+        // Non-fatal - order was placed successfully
+      }
+    }
 
     return new Response(
       JSON.stringify({
