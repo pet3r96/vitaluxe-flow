@@ -3,7 +3,7 @@
 // Determines if user joins existing live session or creates new one
 // ============================================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { createAgoraTokens } from '../_shared/agoraTokenService.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
@@ -26,12 +26,8 @@ Deno.serve(async (req) => {
     edgeLogger.info('Resolve practice room join request received');
 
     // Get Supabase client (use service role for impersonation checks)
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const authHeader = req.headers.get('Authorization')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const supabase = createAdminClient();
 
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();

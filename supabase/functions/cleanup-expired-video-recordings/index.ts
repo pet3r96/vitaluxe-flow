@@ -1,8 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -37,7 +34,7 @@ Deno.serve(async (req) => {
     edgeLogger.info('Found expired recordings to clean up', { count: expiredSessions.length });
 
     // Update sessions to remove recording URLs
-    const sessionIds = expiredSessions.map(s => s.id);
+    const sessionIds = expiredSessions.map((s: any) => s.id);
     
     const { error: updateError } = await supabase
       .from('video_sessions')
@@ -55,7 +52,7 @@ Deno.serve(async (req) => {
     }
 
     // Log cleanup events
-    const logEntries = expiredSessions.map(session => ({
+    const logEntries = expiredSessions.map((session: any) => ({
       session_id: session.id,
       event_type: 'recording_cleanup',
       user_type: 'system',
