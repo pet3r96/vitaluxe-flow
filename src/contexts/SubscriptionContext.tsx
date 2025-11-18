@@ -86,7 +86,19 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         
         if (error) {
           logger.error('[SubscriptionContext] Edge function error', error);
-          throw error;
+          
+          // ✅ Set a safe fallback instead of throwing
+          setSubscriptionStatus({
+            isSubscribed: false,
+            status: null,
+            trialEndsAt: null,
+            currentPeriodEnd: null,
+            trialDaysRemaining: null,
+            gracePeriodEndsAt: null,
+          });
+          
+          setLoading(false);
+          return;
         }
         
         if (data) {
@@ -105,6 +117,16 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       logger.error('Error fetching subscription status', error);
+      
+      // ✅ Fallback subscription state on unexpected error
+      setSubscriptionStatus({
+        isSubscribed: false,
+        status: null,
+        trialEndsAt: null,
+        currentPeriodEnd: null,
+        trialDaysRemaining: null,
+        gracePeriodEndsAt: null,
+      });
     } finally {
       setLoading(false);
     }
