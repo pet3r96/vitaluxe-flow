@@ -424,13 +424,13 @@ export const PatientsDataTable = () => {
           <Table className="min-w-[1100px]">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="w-[150px]">Name</TableHead>
-                <TableHead className="w-[200px]">Email</TableHead>
-                <TableHead className="w-[130px]">Phone</TableHead>
-                <TableHead className="w-[280px]">Address</TableHead>
-                <TableHead className="w-[150px]">Portal Status</TableHead>
-                {isAdmin && <TableHead className="w-[150px]">Practice</TableHead>}
-                <TableHead className="w-[120px] text-right">Actions</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Portal Status</TableHead>
+                {isAdmin && <TableHead>Practice</TableHead>}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
