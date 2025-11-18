@@ -89,7 +89,7 @@ serve(async (req) => {
     }
 
     // Fetch order data using admin client to bypass RLS
-    const { data: order, error: orderError } = await adminClient
+    let { data: order, error: orderError } = await adminClient
       .from('orders')
       .select(`
         id,
@@ -103,18 +103,7 @@ serve(async (req) => {
         merchant_fee_amount,
         merchant_fee_percentage,
         status,
-        doctor_id,
-        profiles (
-          id,
-          name,
-          email,
-          phone,
-          address_street,
-          address_city,
-          address_state,
-          address_zip,
-          company
-        )
+        doctor_id
       `)
       .eq('id', order_id)
       .single();
@@ -127,10 +116,30 @@ serve(async (req) => {
       throw new Error('Order not found');
     }
 
+    // Fetch doctor profile separately using admin client
+    const { data: doctorProfile, error: profileError } = await adminClient
+      .from('profiles')
+      .select('id, name, email, phone, address_street, address_city, address_state, address_zip, company')
+      .eq('id', order.doctor_id)
+      .single();
+
+    if (profileError) {
+      edgeLogger.warn('[generate-order-receipt] Error fetching doctor profile', {
+        error: profileError,
+        doctorId: order.doctor_id
+      });
+    }
+
+    // Attach profile to order object for compatibility with the rest of the function
+    order = {
+      ...order,
+      profiles: doctorProfile || null
+    } as any;
+
     edgeLogger.info('[generate-order-receipt] Order fetched successfully', { 
-      orderId: order.id,
-      hasSubtotal: !!order.subtotal_before_discount,
-      totalAmount: order.total_amount
+      orderId: order!.id,
+      hasSubtotal: !!order!.subtotal_before_discount,
+      totalAmount: order!.total_amount
     });
 
     // Check authorization - user must be admin, practice owner, or staff of practice
@@ -149,7 +158,7 @@ serve(async (req) => {
 
     const isAdmin = userRole?.role === 'admin';
     // Fix: Compare user's profile ID with order.doctor_id (both are profile IDs)
-    const isPracticeOwner = userProfile?.id === order.doctor_id;
+    const isPracticeOwner = userProfile?.id === order!.doctor_id;
     
     // Check if user is staff of this practice
     let isStaffOfPractice = false;
@@ -161,14 +170,14 @@ serve(async (req) => {
         .eq('active', true)
         .maybeSingle();
       
-      isStaffOfPractice = staffData?.practice_id === order.doctor_id;
+      isStaffOfPractice = staffData?.practice_id === order!.doctor_id;
     }
 
     if (!isAdmin && !isPracticeOwner && !isStaffOfPractice) {
       edgeLogger.error('Unauthorized access attempt', {
         userId: user.id,
         orderId: order_id,
-        practiceId: order.doctor_id
+        practiceId: order!.doctor_id
       });
       return errorResponse('You don\'t have permission to access this receipt', 403);
     }
@@ -260,7 +269,7 @@ serve(async (req) => {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
 
-    const orderDate = new Date(order.created_at).toLocaleDateString('en-US', {
+    const orderDate = new Date(order!.created_at).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -268,9 +277,9 @@ serve(async (req) => {
 
     doc.text(`Date: ${orderDate}`, 20, yPos);
     yPos += 6;
-    doc.text(`Invoice #: ${order.id.slice(0, 8).toUpperCase()}`, 20, yPos);
+    doc.text(`Invoice #: ${order!.id.slice(0, 8).toUpperCase()}`, 20, yPos);
     yPos += 6;
-    doc.text(`Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}`, 20, yPos);
+    doc.text(`Status: ${order!.status.charAt(0).toUpperCase() + order!.status.slice(1)}`, 20, yPos);
     yPos += 15;
 
     // Bill To section
@@ -279,7 +288,7 @@ serve(async (req) => {
     yPos += 6;
 
     doc.setFont('helvetica', 'normal');
-    const practice = Array.isArray(order.profiles) ? order.profiles[0] : order.profiles;
+    const practice = Array.isArray((order as any).profiles) ? (order as any).profiles[0] : (order as any).profiles;
     if (practice) {
       doc.text(practice.name || 'N/A', 20, yPos);
       yPos += 5;
@@ -401,32 +410,32 @@ serve(async (req) => {
     // Subtotal
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    const displaySubtotal = order.subtotal_before_discount || subtotal;
+    const displaySubtotal = order!.subtotal_before_discount || subtotal;
     doc.text('Subtotal:', pageWidth - 100, yPos);
     doc.text(`$${displaySubtotal.toFixed(2)}`, colX.total, yPos, { align: 'right' });
 
     yPos += 6;
 
     // Discount (if applicable)
-    if (order.discount_percentage && order.discount_percentage > 0) {
+    if (order!.discount_percentage && order!.discount_percentage > 0) {
       doc.setTextColor(0, 128, 0);
-      doc.text(`Discount (${order.discount_code} - ${order.discount_percentage}%):`, pageWidth - 100, yPos);
-      doc.text(`-$${order.discount_amount.toFixed(2)}`, colX.total, yPos, { align: 'right' });
+      doc.text(`Discount (${order!.discount_code} - ${order!.discount_percentage}%):`, pageWidth - 100, yPos);
+      doc.text(`-$${order!.discount_amount!.toFixed(2)}`, colX.total, yPos, { align: 'right' });
       doc.setTextColor(0, 0, 0);
       yPos += 6;
     }
 
     // Shipping & Handling
-    if (order.shipping_total && order.shipping_total > 0) {
+    if (order!.shipping_total && order!.shipping_total > 0) {
       doc.text('Shipping & Handling:', pageWidth - 100, yPos);
-      doc.text(`$${order.shipping_total.toFixed(2)}`, colX.total, yPos, { align: 'right' });
+      doc.text(`$${order!.shipping_total.toFixed(2)}`, colX.total, yPos, { align: 'right' });
       yPos += 6;
     }
 
     // Merchant Processing Fee (if applicable)
-    if (order.merchant_fee_amount && order.merchant_fee_amount > 0) {
-      doc.text(`Merchant Processing Fee (${order.merchant_fee_percentage}%):`, pageWidth - 100, yPos);
-      doc.text(`$${order.merchant_fee_amount.toFixed(2)}`, colX.total, yPos, { align: 'right' });
+    if (order!.merchant_fee_amount && order!.merchant_fee_amount > 0) {
+      doc.text(`Merchant Processing Fee (${order!.merchant_fee_percentage}%):`, pageWidth - 100, yPos);
+      doc.text(`$${order!.merchant_fee_amount.toFixed(2)}`, colX.total, yPos, { align: 'right' });
       yPos += 6;
     }
 
@@ -436,15 +445,15 @@ serve(async (req) => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('TOTAL:', pageWidth - 100, yPos);
-    doc.text(`$${order.total_amount.toFixed(2)}`, colX.total, yPos, { align: 'right' });
+    doc.text(`$${order!.total_amount.toFixed(2)}`, colX.total, yPos, { align: 'right' });
 
     // Savings note
-    if (order.discount_percentage && order.discount_percentage > 0) {
+    if (order!.discount_percentage && order!.discount_percentage > 0) {
       yPos += 10;
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(9);
       doc.setTextColor(0, 128, 0);
-      doc.text(`You saved $${order.discount_amount.toFixed(2)} with code ${order.discount_code}!`, 
+      doc.text(`You saved $${order!.discount_amount!.toFixed(2)} with code ${order!.discount_code}!`, 
         pageWidth / 2, yPos, { align: 'center' });
       doc.setTextColor(0, 0, 0);
     }
@@ -460,8 +469,8 @@ serve(async (req) => {
     // Generate PDF buffer
     const pdfBuffer = doc.output('arraybuffer');
     const pdfData = new Uint8Array(pdfBuffer);
-    const fileName = `receipt_${order.id}_${Date.now()}.pdf`;
-    const filePath = `${order.doctor_id}/${fileName}`;
+    const fileName = `receipt_${order!.id}_${Date.now()}.pdf`;
+    const filePath = `${order!.doctor_id}/${fileName}`;
 
     // Try uploading to S3 first, fallback to Supabase Storage
     let receiptUrl = '';
@@ -477,8 +486,8 @@ serve(async (req) => {
           metadata: {
             document_type: 'receipt',
             phi: 'false',
-            order_id: order.id,
-            practice_id: order.doctor_id
+            order_id: order!.id,
+            practice_id: order!.doctor_id
           }
         }
       });
