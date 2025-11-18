@@ -4024,6 +4024,7 @@ export type Database = {
       }
       practice_subscriptions: {
         Row: {
+          assigned_rep_id: string | null
           cancel_at_period_end: boolean | null
           cancelled_at: string | null
           created_at: string
@@ -4043,6 +4044,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_rep_id?: string | null
           cancel_at_period_end?: boolean | null
           cancelled_at?: string | null
           created_at?: string
@@ -4062,6 +4064,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_rep_id?: string | null
           cancel_at_period_end?: boolean | null
           cancelled_at?: string | null
           created_at?: string
@@ -4081,6 +4084,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "practice_subscriptions_assigned_rep_id_fkey"
+            columns: ["assigned_rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "practice_subscriptions_assigned_rep_id_fkey"
+            columns: ["assigned_rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "practice_subscriptions_practice_id_fkey"
             columns: ["practice_id"]
@@ -7455,10 +7472,12 @@ export type Database = {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
       }
-      recompute_order_profits: {
-        Args: { p_order_ids?: string[]; p_status_filter?: string[] }
-        Returns: Json
-      }
+      recompute_order_profits:
+        | {
+            Args: { p_order_ids?: string[]; p_status_filter?: string[] }
+            Returns: Json
+          }
+        | { Args: { p_status_filter?: string[] }; Returns: Json }
       refresh_rep_productivity_summary: { Args: never; Returns: undefined }
       refresh_rls_policy_export: { Args: never; Returns: undefined }
       refresh_security_events_summary: { Args: never; Returns: undefined }
