@@ -63,6 +63,18 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Redirect non-admin users who haven't accepted terms (after password change)
   useEffect(() => {
     if (!initializing && user && !mustChangePassword && effectiveRole && passwordStatusChecked) {
+      import('@/lib/logger').then(({ logger }) => {
+        logger.info('[TermsDebug - ProtectedRoute]', {
+          termsAccepted,
+          effectiveRole,
+          effectiveUserId,
+          mustChangePassword,
+          passwordStatusChecked,
+          currentPath: location.pathname,
+          willRedirect: !termsAccepted && effectiveRole !== 'admin' && location.pathname !== '/accept-terms'
+        });
+      });
+      
       if (
         !termsAccepted &&
         effectiveRole !== 'admin' &&

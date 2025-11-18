@@ -1066,9 +1066,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
+      // Determine effective user ID for terms check
+      let effectiveUserIdForTerms = userId;
+      let isCurrentlyImpersonating = false;
+      
+      // Check if we loaded impersonation data
+      if (role === 'admin' && canImpersonate) {
+        try {
+          const { data: { session: authSession } } = await supabase.auth.getSession();
+          const token = authSession?.access_token;
+          let sessionData: any;
+          if (token) {
+            ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+              headers: { Authorization: `Bearer ${token}` }
+            }));
+          } else {
+            ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation'));
+          }
+          
+          if (sessionData?.session?.impersonated_user_id) {
+            effectiveUserIdForTerms = sessionData.session.impersonated_user_id;
+            isCurrentlyImpersonating = true;
+            logger.info('Impersonation active, will check terms for impersonated user', {
+              realUserId: userId,
+              impersonatedUserId: effectiveUserIdForTerms
+            });
+          }
+        } catch (e) {
+          logger.error('Error checking impersonation for terms', e);
+        }
+      }
+
+      // Get terms check result for effective user
+      let termsCheckResult;
+      if (isCurrentlyImpersonating && effectiveUserIdForTerms !== userId) {
+        // Impersonating: make fresh query for impersonated user's terms
+        termsCheckResult = await UserTermsAccept()
+          .select('id, terms_id, accepted_at')
+          .eq('user_id', effectiveUserIdForTerms)
+          .order('accepted_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+      } else {
+        // Not impersonating: use existing query result
+        termsCheckResult = patientTermsResult.status === 'fulfilled' 
+          ? patientTermsResult.value 
+          : { data: null, error: null };
+      }
+
       // Process password status and terms - ADMIN BYPASS for resilience
-      if (role === 'admin') {
-        // Admins ALWAYS exempt, regardless of database value
+      if (role === 'admin' && !isCurrentlyImpersonating) {
+        // Admins NOT impersonating ALWAYS exempt, regardless of database value
         setMustChangePassword(false);
         setTermsAccepted(true);
         logger.info('Admin bypass: password and terms requirements skipped');
@@ -1079,11 +1127,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           : null;
         const mustChange = pwdData?.must_change_password || false;
         
-        const hasUserTerms = patientTermsResult.status === 'fulfilled' && patientTermsResult.value.data !== null;
+        const hasUserTerms = termsCheckResult.data !== null;
         
         setMustChangePassword(mustChange);
         setTermsAccepted(hasUserTerms);
-        logger.info('Non-admin status check', { mustChange, hasUserTerms });
+        logger.info('[TermsDebug] Terms acceptance check', {
+          effectiveUserIdForTerms,
+          realUserId: userId,
+          isImpersonating: isCurrentlyImpersonating,
+          hasUserTerms,
+          acceptedAt: termsCheckResult.data?.accepted_at
+        });
       }
       // ALWAYS set this to true, even if checks fail
       setPasswordStatusChecked(true);
@@ -1116,7 +1170,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const roleToCheck = roleOverride || effectiveRole;
     const uid = userIdOverride || effectiveUserId || user?.id || null;
 
-    logger.info('checkPasswordStatus start', { roleToCheck, hasUid: !!uid, isImpersonating });
+    logger.info('[TermsDebug - checkPasswordStatus]', {
+      roleToCheck,
+      uid,
+      realUserId: user?.id,
+      impersonatedUserId: impersonatedUserId,
+      effectiveUserId,
+      isImpersonating,
+      path: 'checkPasswordStatus'
+    });
 
     // Admins (not impersonating) are always exempt
     if (roleToCheck === 'admin' && !isImpersonating) {
@@ -1169,6 +1231,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logger.info('admin-get-password-status result:', data);
         const mustChange = data.must_change_password || false;
         const termsAccept = data.terms_accepted || false;
+        
+        logger.info('[TermsDebug - EdgeFunctionResult]', {
+          realUserId: user?.id,
+          impersonatedUserId: uid,
+          effectiveUserId,
+          termsAccept,
+          mustChange,
+          path: 'admin-get-password-status'
+        });
         
         setMustChangePassword(mustChange);
         setTermsAccepted(termsAccept);
@@ -1236,6 +1307,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setMustChangePassword(finalMustChange);
       setTermsAccepted(termsAccept);
       setPasswordStatusChecked(true);
+      
+      logger.info('[TermsDebug - DirectQuery]', {
+        realUserId: user?.id,
+        effectiveUserId: uid,
+        termsAccept,
+        finalMustChange,
+        acceptedAt: userTermsResult.data?.accepted_at,
+        path: 'directQuery'
+      });
 
       logger.info('checkPasswordStatus done', { finalMustChange, termsAccept, hasTempPassword });
       return { mustChangePassword: finalMustChange, termsAccepted: termsAccept };
