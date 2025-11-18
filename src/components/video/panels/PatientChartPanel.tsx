@@ -107,7 +107,7 @@ export const PatientChartPanel = ({
                   {chart.conditions && chart.conditions.length > 0 ? (
                     <div className="space-y-2">
                       {chart.conditions.slice(0, 3).map((condition, index: number) => (
-                        <div key={index} className="p-2 rounded bg-muted/50 text-sm">
+                        <div key={condition.condition_name || `condition-${index}`} className="p-2 rounded bg-muted/50 text-sm">
                           {condition.condition_name}
                         </div>
                       ))}
@@ -122,7 +122,7 @@ export const PatientChartPanel = ({
                   {chart.medications && chart.medications.length > 0 ? (
                     <div className="space-y-2">
                       {chart.medications.slice(0, 3).map((med, index: number) => (
-                        <div key={index} className="p-2 rounded bg-muted/50">
+                        <div key={med.medication_name || `med-${index}`} className="p-2 rounded bg-muted/50">
                           <p className="text-sm font-medium">{med.medication_name}</p>
                           <p className="text-xs text-muted-foreground">{med.dosage}</p>
                         </div>

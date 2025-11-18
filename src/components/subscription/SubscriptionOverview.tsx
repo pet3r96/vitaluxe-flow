@@ -89,8 +89,8 @@ export function SubscriptionOverview({ subscription }: SubscriptionOverviewProps
         <div>
           <h4 className="text-sm font-semibold mb-3">Included Features:</h4>
           <ul className="grid gap-2">
-            {features.map((feature, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm">
+            {features.map((feature) => (
+              <li key={feature} className="flex items-start gap-2 text-sm">
                 <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                 <span>{feature}</span>
               </li>

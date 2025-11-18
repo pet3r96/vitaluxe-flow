@@ -428,7 +428,7 @@ export const ShipmentTrackingCard = ({
                     {trackingEvents && trackingEvents.length > 0 ? (
                       <div className="space-y-3">
                         {trackingEvents.map((event, index) => (
-                          <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                          <div key={`${event.datetime || event.event_time || event.created_at}-${index}`} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                             <div className="flex-shrink-0 mt-1">
                               {getStatusIcon(event.status)}
                             </div>

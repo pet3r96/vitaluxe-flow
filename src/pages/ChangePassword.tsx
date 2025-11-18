@@ -397,8 +397,8 @@ export default function ChangePassword() {
               <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                 <h4 className="font-semibold text-sm">Password Requirements:</h4>
                 <div className="space-y-2">
-                  {validation.requirements.map((req, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
+                  {validation.requirements.map((req) => (
+                    <div key={req.label} className="flex items-center gap-2 text-sm">
                       {req.met ? (
                         <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
                       ) : (

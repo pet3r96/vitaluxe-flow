@@ -86,8 +86,8 @@ export function PasswordStrengthIndicator({
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">Requirements:</p>
           <div className="space-y-1">
-            {validation.requirements.map((req, index) => (
-              <div key={index} className="flex items-center gap-2 text-sm">
+            {validation.requirements.map((req) => (
+              <div key={req.label} className="flex items-center gap-2 text-sm">
                 {req.met ? (
                   <Check className="h-4 w-4 text-green-600" />
                 ) : (

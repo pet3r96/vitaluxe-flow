@@ -87,7 +87,7 @@ export function DataTablePagination({
 
           <div className="hidden sm:flex gap-1">
             {pageNumbers.map((page, index) => (
-            <PaginationItem key={index}>
+            <PaginationItem key={`page-${page}-${index}`}>
               {page === "ellipsis" ? (
                 <PaginationEllipsis />
               ) : (

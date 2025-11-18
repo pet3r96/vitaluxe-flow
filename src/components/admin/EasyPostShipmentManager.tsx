@@ -285,7 +285,7 @@ export const EasyPostShipmentManager = ({ showHeader = true }: { showHeader?: bo
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                       {trackingResult.tracking.events.map((event: any, index: number) => (
                         <div 
-                          key={index} 
+                          key={`${event.datetime || event.created_at}-${index}`} 
                           className="p-3 border rounded-md bg-muted/30"
                         >
                           <div className="flex items-start justify-between">
