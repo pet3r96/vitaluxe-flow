@@ -621,6 +621,48 @@ export type Database = {
         }
         Relationships: []
       }
+      error_logs_archive: {
+        Row: {
+          archived_at: string | null
+          created_at: string | null
+          details: Json | null
+          error_message: string | null
+          error_stack: string | null
+          id: string
+          original_log_id: string | null
+          practice_id: string | null
+          severity: string | null
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string | null
+          details?: Json | null
+          error_message?: string | null
+          error_stack?: string | null
+          id?: string
+          original_log_id?: string | null
+          practice_id?: string | null
+          severity?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string | null
+          details?: Json | null
+          error_message?: string | null
+          error_stack?: string | null
+          id?: string
+          original_log_id?: string | null
+          practice_id?: string | null
+          severity?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       function_rate_limits: {
         Row: {
           created_at: string
@@ -915,6 +957,57 @@ export type Database = {
             referencedColumns: ["patient_id"]
           },
         ]
+      }
+      medical_vault_audit_logs_archive: {
+        Row: {
+          action_type: string | null
+          archived_at: string | null
+          change_summary: string | null
+          changed_by_role: string | null
+          changed_by_user_id: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          original_log_id: string | null
+          patient_account_id: string | null
+        }
+        Insert: {
+          action_type?: string | null
+          archived_at?: string | null
+          change_summary?: string | null
+          changed_by_role?: string | null
+          changed_by_user_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          original_log_id?: string | null
+          patient_account_id?: string | null
+        }
+        Update: {
+          action_type?: string | null
+          archived_at?: string | null
+          change_summary?: string | null
+          changed_by_role?: string | null
+          changed_by_user_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          original_log_id?: string | null
+          patient_account_id?: string | null
+        }
+        Relationships: []
       }
       medical_vault_share_links: {
         Row: {
@@ -4891,6 +4984,57 @@ export type Database = {
         }
         Relationships: []
       }
+      shipping_audit_logs_archive: {
+        Row: {
+          archived_at: string | null
+          change_description: string | null
+          created_at: string | null
+          id: string
+          new_carrier: string | null
+          new_status: string | null
+          new_tracking_number: string | null
+          old_carrier: string | null
+          old_status: string | null
+          old_tracking_number: string | null
+          order_line_id: string | null
+          original_log_id: string | null
+          updated_by: string | null
+          updated_by_role: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          change_description?: string | null
+          created_at?: string | null
+          id?: string
+          new_carrier?: string | null
+          new_status?: string | null
+          new_tracking_number?: string | null
+          old_carrier?: string | null
+          old_status?: string | null
+          old_tracking_number?: string | null
+          order_line_id?: string | null
+          original_log_id?: string | null
+          updated_by?: string | null
+          updated_by_role?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          change_description?: string | null
+          created_at?: string | null
+          id?: string
+          new_carrier?: string | null
+          new_status?: string | null
+          new_tracking_number?: string | null
+          old_carrier?: string | null
+          old_status?: string | null
+          old_tracking_number?: string | null
+          order_line_id?: string | null
+          original_log_id?: string | null
+          updated_by?: string | null
+          updated_by_role?: string | null
+        }
+        Relationships: []
+      }
       sms_codes: {
         Row: {
           attempt_count: number | null
@@ -6623,6 +6767,7 @@ export type Database = {
       }
     }
     Functions: {
+      archive_all_logs: { Args: never; Returns: Json }
       archive_old_audit_logs: { Args: never; Returns: number }
       calculate_practice_video_bill: {
         Args: {
