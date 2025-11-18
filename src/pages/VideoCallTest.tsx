@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Volume2,
 } from "lucide-react";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 type TestStatus = "pending" | "testing" | "passed" | "failed" | "warning";
 
@@ -30,6 +31,7 @@ interface TestResult {
 }
 
 export default function VideoCallTest() {
+  usePagePerformance('VideoCallTest');
   const navigate = useNavigate();
   const videoRef = useRef<HTMLDivElement>(null);
   const localTrackRef = useRef<any>(null);

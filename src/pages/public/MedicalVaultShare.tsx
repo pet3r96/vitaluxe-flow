@@ -5,10 +5,12 @@ import { generateMedicalVaultPDF } from "@/lib/medicalVaultPdfGenerator";
 import { Loader2, AlertCircle, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 type ErrorType = 'invalid_token' | 'already_used' | 'expired' | 'revoked' | 'internal_error' | null;
 
 export default function MedicalVaultShare() {
+  usePagePerformance('MedicalVaultShare');
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ErrorType>(null);

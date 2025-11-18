@@ -6,10 +6,12 @@ import AgoraRTC, {
   ILocalAudioTrack
 } from "agora-rtc-sdk-ng";
 import { supabase } from "@/integrations/supabase/client";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const APP_ID = import.meta.env.VITE_AGORA_APP_ID;
 
 export default function AgoraDebugSuite() {
+  usePagePerformance('AgoraDebugSuite');
   const [sessionId, setSessionId] = useState("");
   const [channelName, setChannelName] = useState("");
   const [tokenData, setTokenData] = useState<any>(null);
