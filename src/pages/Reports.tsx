@@ -8,6 +8,7 @@ import PracticeProfitReports from "./PracticeProfitReports";
 import ToplinePaymentManager from "@/components/admin/ToplinePaymentManager";
 import PracticeDevelopmentFeeManager from "@/components/admin/PracticeDevelopmentFeeManager";
 import SubscriptionCommissionManager from "@/components/admin/SubscriptionCommissionManager";
+import { AdminDataRefreshButton } from "@/components/reports/AdminDataRefreshButton";
 
 const Reports = () => {
   usePagePerformance('Reports');
@@ -33,13 +34,22 @@ const Reports = () => {
 
   if (showAdminReport) {
     return (
-      <Tabs defaultValue="profit-reports" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="profit-reports">Profit Reports</TabsTrigger>
-          <TabsTrigger value="rep-payments">Rep Payments</TabsTrigger>
-          <TabsTrigger value="development-fees">Practice Development Fees</TabsTrigger>
-          <TabsTrigger value="subscription-commissions">Subscription Commissions</TabsTrigger>
-        </TabsList>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Admin Reports</h1>
+            <p className="text-muted-foreground">Comprehensive analytics and financial reporting</p>
+          </div>
+          <AdminDataRefreshButton />
+        </div>
+        
+        <Tabs defaultValue="profit-reports" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="profit-reports">Profit Reports</TabsTrigger>
+            <TabsTrigger value="rep-payments">Rep Payments</TabsTrigger>
+            <TabsTrigger value="development-fees">Practice Development Fees</TabsTrigger>
+            <TabsTrigger value="subscription-commissions">Subscription Commissions</TabsTrigger>
+          </TabsList>
         
         <TabsContent value="profit-reports">
           <AdminProfitReports />
@@ -57,6 +67,7 @@ const Reports = () => {
           <SubscriptionCommissionManager />
         </TabsContent>
       </Tabs>
+      </div>
     );
   }
 
