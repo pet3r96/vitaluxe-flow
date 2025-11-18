@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createAdminClient, createAuthClient } from "../_shared/supabaseAdmin.ts";
+import { createAdminClient } from "../_shared/supabaseAdmin.ts";
 import { cacheFetch } from "../_shared/cache.ts";
 
 const corsHeaders = {
@@ -17,9 +17,14 @@ serve(async (req) => {
     if (!authHeader) {
       throw new Error('No authorization header');
     }
-    
+
     // Use auth client to authenticate requesting user
-    const supabaseAuth = createAuthClient(authHeader);
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.39.3");
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
 
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
     if (userError || !user) {
