@@ -62,7 +62,9 @@ serve(async (req) => {
           .eq('user_id', effectiveUserId)
           .single();
 
-        if (accountError) throw accountError;
+        if (accountError || !patientAccount) {
+          throw new Error('Patient account not found');
+        }
 
         // Get appointments count
         const { count: appointmentsCount, error: appointmentsError } = await supabase
