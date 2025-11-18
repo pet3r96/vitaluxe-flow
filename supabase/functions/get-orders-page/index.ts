@@ -614,6 +614,40 @@ serve(async (req) => {
       } catch (e) {
         edgeLogger.error('[get-orders-page] Hydration exception', e instanceof Error ? e : new Error(String(e)));
       }
+
+      // Hydrate pharmacies using service role
+      try {
+        const pharmacyIds = [
+          ...new Set(
+            (orderLinesData || [])
+              .filter((l: any) => l.assigned_pharmacy_id)
+              .map((l: any) => l.assigned_pharmacy_id)
+          ),
+        ];
+
+        if (pharmacyIds.length > 0) {
+          edgeLogger.info(`[get-orders-page] Hydrating pharmacies`, { pharmacyCount: pharmacyIds.length });
+          const { data: pharmacies, error: pharmErr } = await admin
+            .from('pharmacies')
+            .select('id, name')
+            .in('id', pharmacyIds);
+
+          if (pharmErr) {
+            edgeLogger.error('[get-orders-page] Pharmacy hydration error', pharmErr);
+          } else {
+            const pharmacyMap = new Map((pharmacies || []).map((p: any) => [p.id, p]));
+            orderLinesData = (orderLinesData || []).map((line: any) => ({
+              ...line,
+              pharmacies: line.assigned_pharmacy_id
+                ? pharmacyMap.get(line.assigned_pharmacy_id) || null
+                : null,
+            }));
+            edgeLogger.info(`[get-orders-page] Pharmacies hydrated`, { count: pharmacies?.length || 0 });
+          }
+        }
+      } catch (e) {
+        edgeLogger.error('[get-orders-page] Pharmacy hydration exception', e instanceof Error ? e : new Error(String(e)));
+      }
     }
 
     // Attach order_lines to orders
