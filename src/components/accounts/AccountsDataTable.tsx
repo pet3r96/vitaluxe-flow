@@ -340,7 +340,7 @@ export const AccountsDataTable = () => {
     itemsPerPage: 25
   });
 
-  const paginatedAccounts = filteredAccounts?.slice(startIndex, endIndex);
+  const paginatedAccounts = (filteredAccounts?.slice(startIndex, endIndex)) || [];
 
   // Virtualization for desktop table
   const rowVirtualizer = useVirtualizer({
