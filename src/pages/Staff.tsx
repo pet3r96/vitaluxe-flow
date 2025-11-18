@@ -1,5 +1,6 @@
 import { StaffDataTable } from "@/components/staff/StaffDataTable";
 import { useAuth } from "@/contexts/AuthContext";
+import { ResponsivePage } from "@/components/layout/ResponsivePage";
 
 const Staff = () => {
   const { effectiveRole, isProviderAccount, isStaffAccount } = useAuth();
@@ -14,15 +15,12 @@ const Staff = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">My Staff</h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-2">
-          Manage staff members for your practice
-        </p>
-      </div>
+    <ResponsivePage
+      title="My Staff"
+      subtitle="Manage staff members for your practice"
+    >
       <StaffDataTable />
-    </div>
+    </ResponsivePage>
   );
 };
 
