@@ -248,6 +248,7 @@ export type Database = {
       audit_logs: {
         Row: {
           action_type: string
+          correlation_id: string | null
           created_at: string
           details: Json | null
           entity_id: string | null
@@ -261,6 +262,7 @@ export type Database = {
         }
         Insert: {
           action_type: string
+          correlation_id?: string | null
           created_at?: string
           details?: Json | null
           entity_id?: string | null
@@ -274,6 +276,7 @@ export type Database = {
         }
         Update: {
           action_type?: string
+          correlation_id?: string | null
           created_at?: string
           details?: Json | null
           entity_id?: string | null

@@ -14,10 +14,19 @@ type LogLevel = 'info' | 'warn' | 'error';
 
 interface LogContext {
   [key: string]: any;
+  correlationId?: string;
 }
 
 class Logger {
   private isDevelopment = import.meta.env.DEV;
+  private isLoggingContext = false;
+
+  /**
+   * Generate a correlation ID for tracking related log entries
+   */
+  generateCorrelationId(): string {
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  }
 
   /**
    * Sanitize data before logging to remove PHI/PII
@@ -97,6 +106,12 @@ class Logger {
    * Send log to backend error tracking system
    */
   private async sendToBackend(level: LogLevel, message: string, context?: LogContext) {
+    // Prevent recursive logging
+    if (this.isLoggingContext) {
+      return;
+    }
+
+    this.isLoggingContext = true;
     try {
       // Serialize context to prevent [object Object] errors
       const serializedContext = this.serializeContext(this.sanitize(context || {}));
@@ -111,6 +126,7 @@ class Logger {
             url: window.location.href,
             browser: navigator.userAgent,
             timestamp: new Date().toISOString(),
+            correlationId: context?.correlationId || null,
             ...serializedContext
           }
         }
@@ -120,6 +136,8 @@ class Logger {
       if (this.isDevelopment) {
         console.error('[Logger] Failed to send to backend:', err);
       }
+    } finally {
+      this.isLoggingContext = false;
     }
   }
 
