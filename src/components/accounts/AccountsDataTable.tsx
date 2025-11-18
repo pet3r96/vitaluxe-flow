@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useResponsive } from "@/hooks/use-mobile";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { debounce } from "@/lib/performance";
 import {
   Table,
@@ -47,6 +48,7 @@ export const AccountsDataTable = () => {
   const { toast } = useToast();
   const { effectiveRole } = useAuth();
   const { isMobile } = useResponsive();
+  const parentRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
@@ -340,6 +342,14 @@ export const AccountsDataTable = () => {
 
   const paginatedAccounts = filteredAccounts?.slice(startIndex, endIndex);
 
+  // Virtualization for desktop table
+  const rowVirtualizer = useVirtualizer({
+    count: paginatedAccounts.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 53,
+    overscan: 10,
+  });
+
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
       admin: "bg-accent text-accent-foreground",
@@ -454,34 +464,47 @@ export const AccountsDataTable = () => {
             emptyMessage="No accounts found"
           />
         ) : (
-          // Desktop Table View
-          <Table className="min-w-[1200px]">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Parent</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : filteredAccounts?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  No accounts found
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedAccounts?.map((account) => (
-                <TableRow key={account.id}>
+          // Desktop Table View with Virtualization
+          <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
+            <Table className="min-w-[1200px]">
+              <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Parent</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center">
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredAccounts?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      No accounts found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const account = paginatedAccounts[virtualRow.index];
+                    return (
+                      <TableRow 
+                        key={account.id}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`
+                        }}
+                      >
                   <TableCell className="font-medium">{getDisplayName(account)}</TableCell>
                   <TableCell>{account.email}</TableCell>
                   <TableCell>
@@ -547,12 +570,14 @@ export const AccountsDataTable = () => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                      </TableCell>
+                    </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
 

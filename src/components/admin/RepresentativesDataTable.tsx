@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -40,6 +41,7 @@ export const RepresentativesDataTable = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const { isMobile } = useResponsive();
+  const parentRef = useRef<HTMLDivElement>(null);
 
   const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
@@ -133,6 +135,14 @@ export const RepresentativesDataTable = () => {
 
   // Slice data for current page
   const paginatedReps = filteredReps?.slice(startIndex, endIndex);
+
+  // Virtualization for desktop table
+  const rowVirtualizer = useVirtualizer({
+    count: paginatedReps?.length || 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 53,
+    overscan: 10,
+  });
 
   // Calculate stats
   const stats = {
