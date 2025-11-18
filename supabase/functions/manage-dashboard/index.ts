@@ -429,6 +429,186 @@ Deno.serve(async (req) => {
               })()
             );
 
+            // Pending Orders Count
+            promises.push(
+              (async () => {
+                let count = 0;
+                
+                if (role === 'doctor') {
+                  const { count: pendingCount } = await supabase
+                    .from('orders')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('doctor_id', targetUserId)
+                    .in('status', ['pending', 'processing'])
+                    .neq('payment_status', 'payment_failed')
+                    .gte('created_at', thirtyDaysAgoISO);
+                  count = pendingCount || 0;
+                } else if (role === 'provider') {
+                  const { data: providerData } = await supabase
+                    .from('providers')
+                    .select('id')
+                    .eq('user_id', targetUserId)
+                    .single();
+                  
+                  if (providerData) {
+                    const { data: orderLines } = await supabase
+                      .from('order_lines')
+                      .select('orders!inner(id, status, payment_status, created_at)')
+                      .eq('provider_id', providerData.id)
+                      .in('orders.status', ['pending', 'processing'])
+                      .neq('orders.payment_status', 'payment_failed')
+                      .gte('orders.created_at', thirtyDaysAgoISO);
+                    
+                    const uniqueOrders = new Set(orderLines?.map((ol: any) => ol.orders.id) || []);
+                    count = uniqueOrders.size;
+                  }
+                }
+                
+                statsData.pendingOrdersCount = count;
+              })()
+            );
+
+            // Users Count (admin only)
+            promises.push(
+              (async () => {
+                let count = 0;
+                
+                if (role === 'admin' && !isImpersonating) {
+                  const { count: userCount } = await supabase
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .gte('created_at', thirtyDaysAgoISO);
+                  count = userCount || 0;
+                }
+                
+                statsData.usersCount = count;
+              })()
+            );
+
+            // Pending Revenue
+            promises.push(
+              (async () => {
+                let revenue = 0;
+                
+                if (role === 'doctor') {
+                  const { data } = await supabase
+                    .from('orders')
+                    .select('total_amount')
+                    .eq('doctor_id', targetUserId)
+                    .in('payment_status', ['pending', 'processing'])
+                    .neq('status', 'cancelled')
+                    .gte('created_at', thirtyDaysAgoISO);
+                  revenue = data?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+                } else if (role === 'provider') {
+                  const { data: providerData } = await supabase
+                    .from('providers')
+                    .select('id')
+                    .eq('user_id', targetUserId)
+                    .single();
+                  
+                  if (providerData) {
+                    const { data: orderLines } = await supabase
+                      .from('order_lines')
+                      .select('orders!inner(total_amount, payment_status, status, created_at), price')
+                      .eq('provider_id', providerData.id)
+                      .in('orders.payment_status', ['pending', 'processing'])
+                      .neq('orders.status', 'cancelled')
+                      .gte('orders.created_at', thirtyDaysAgoISO);
+                    revenue = orderLines?.reduce((sum, ol) => sum + (ol.price || 0), 0) || 0;
+                  }
+                } else if (role === 'pharmacy') {
+                  const { data: pharmacyData } = await supabase
+                    .from('pharmacies')
+                    .select('id')
+                    .eq('user_id', targetUserId)
+                    .maybeSingle();
+                  
+                  if (pharmacyData) {
+                    const { data: orderLines } = await supabase
+                      .from('order_lines')
+                      .select('orders!inner(payment_status, status, created_at), price')
+                      .eq('assigned_pharmacy_id', pharmacyData.id)
+                      .in('orders.payment_status', ['pending', 'processing'])
+                      .neq('orders.status', 'cancelled')
+                      .gte('orders.created_at', thirtyDaysAgoISO);
+                    revenue = orderLines?.reduce((sum, ol) => sum + (ol.price || 0), 0) || 0;
+                  }
+                } else if (role === 'admin') {
+                  const { data } = await supabase
+                    .from('orders')
+                    .select('total_amount')
+                    .in('payment_status', ['pending', 'processing'])
+                    .neq('status', 'cancelled')
+                    .gte('created_at', thirtyDaysAgoISO);
+                  revenue = data?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+                }
+                
+                statsData.pendingRevenue = revenue;
+              })()
+            );
+
+            // Collected Revenue
+            promises.push(
+              (async () => {
+                let revenue = 0;
+                
+                if (role === 'doctor') {
+                  const { data } = await supabase
+                    .from('orders')
+                    .select('total_amount')
+                    .eq('doctor_id', targetUserId)
+                    .in('payment_status', ['paid', 'partially_refunded'])
+                    .neq('status', 'cancelled')
+                    .gte('created_at', thirtyDaysAgoISO);
+                  revenue = data?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+                } else if (role === 'provider') {
+                  const { data: providerData } = await supabase
+                    .from('providers')
+                    .select('id')
+                    .eq('user_id', targetUserId)
+                    .single();
+                  
+                  if (providerData) {
+                    const { data: orderLines } = await supabase
+                      .from('order_lines')
+                      .select('orders!inner(payment_status, status, created_at), price')
+                      .eq('provider_id', providerData.id)
+                      .in('orders.payment_status', ['paid', 'partially_refunded'])
+                      .neq('orders.status', 'cancelled')
+                      .gte('orders.created_at', thirtyDaysAgoISO);
+                    revenue = orderLines?.reduce((sum, ol) => sum + (ol.price || 0), 0) || 0;
+                  }
+                } else if (role === 'pharmacy') {
+                  const { data: pharmacyData } = await supabase
+                    .from('pharmacies')
+                    .select('id')
+                    .eq('user_id', targetUserId)
+                    .maybeSingle();
+                  
+                  if (pharmacyData) {
+                    const { data: orderLines } = await supabase
+                      .from('order_lines')
+                      .select('orders!inner(payment_status, status, created_at), price')
+                      .eq('assigned_pharmacy_id', pharmacyData.id)
+                      .in('orders.payment_status', ['paid', 'partially_refunded'])
+                      .neq('orders.status', 'cancelled')
+                      .gte('orders.created_at', thirtyDaysAgoISO);
+                    revenue = orderLines?.reduce((sum, ol) => sum + (ol.price || 0), 0) || 0;
+                  }
+                } else if (role === 'admin') {
+                  const { data } = await supabase
+                    .from('orders')
+                    .select('total_amount')
+                    .in('payment_status', ['paid', 'partially_refunded'])
+                    .neq('status', 'cancelled')
+                    .gte('created_at', thirtyDaysAgoISO);
+                  revenue = data?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+                }
+                
+                statsData.collectedRevenue = revenue;
+              })()
+            );
+
             await Promise.all(promises);
             
             edgeLogger.info('Dashboard stats fetched', statsData);
