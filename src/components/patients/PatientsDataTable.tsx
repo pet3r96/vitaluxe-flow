@@ -421,7 +421,7 @@ export const PatientsDataTable = () => {
         />
       ) : (
         <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
-          <Table className="table-fixed min-w-[1200px]">
+          <Table className="min-w-[1100px]">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 <TableHead className="w-[150px]">Name</TableHead>
