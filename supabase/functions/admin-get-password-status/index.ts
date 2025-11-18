@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     const [statusResult, profileResult] = await Promise.all([
       supabaseService
         .from('user_password_status')
-        .select('must_change_password, terms_accepted')
+        .select('must_change_password')
         .eq('user_id', target_user_id)
         .maybeSingle(),
       supabaseService
@@ -78,7 +78,6 @@ Deno.serve(async (req) => {
     // Check if user has temp_password flag set
     const hasTempPassword = profileResult.data?.temp_password || false;
     const mustChange = statusResult.data?.must_change_password || false;
-    const termsAccept = statusResult.data?.terms_accepted || false;
 
     // If user has temp_password flag, they must change password regardless of other flags
     const finalMustChange = mustChange || hasTempPassword;
@@ -86,7 +85,6 @@ Deno.serve(async (req) => {
     const result = {
       success: true,
       must_change_password: finalMustChange,
-      terms_accepted: termsAccept,
     };
 
     edgeLogger.info('Returning password status', { targetUserId: target_user_id });
