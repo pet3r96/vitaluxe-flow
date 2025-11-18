@@ -3773,6 +3773,13 @@ export type Database = {
             foreignKeyName: "practice_development_fee_invoices_topline_rep_id_fkey"
             columns: ["topline_rep_id"]
             isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "practice_development_fee_invoices_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
             referencedRelation: "reps"
             referencedColumns: ["id"]
           },
@@ -3816,6 +3823,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "practice_development_fees_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
           {
             foreignKeyName: "practice_development_fees_topline_rep_id_fkey"
             columns: ["topline_rep_id"]
@@ -5040,6 +5054,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reps_assigned_topline_id_fkey"
+            columns: ["assigned_topline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_summary"
+            referencedColumns: ["rep_id"]
+          },
           {
             foreignKeyName: "reps_assigned_topline_id_fkey"
             columns: ["assigned_topline_id"]
@@ -6604,6 +6625,39 @@ export type Database = {
             foreignKeyName: "profiles_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rep_productivity_summary: {
+        Row: {
+          avg_order_value: number | null
+          downline_count: number | null
+          non_rx_orders: number | null
+          practice_count: number | null
+          rep_email: string | null
+          rep_id: string | null
+          rep_name: string | null
+          rep_role: Database["public"]["Enums"]["app_role"] | null
+          rx_orders: number | null
+          total_commissions: number | null
+          total_orders: number | null
+          total_revenue: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },

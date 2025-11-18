@@ -18,8 +18,10 @@ serve(async (req) => {
 
     const adminClient = createAdminClient();
 
-    // Call the database function to recompute all order profits
-    const { data, error } = await adminClient.rpc('recompute_order_profits');
+    // Call the database function to recompute all order profits with ALL statuses
+    const { data, error } = await adminClient.rpc('recompute_order_profits', {
+      p_status_filter: ['pending', 'processing', 'shipped', 'delivered', 'completed']
+    });
 
     if (error) {
       edgeLogger.error('[admin-recompute-profits] Recomputation error', { error });
