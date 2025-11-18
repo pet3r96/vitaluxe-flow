@@ -177,22 +177,60 @@ export const PharmaciesDataTable = () => {
         </Button>
       </div>
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1200px]">
-          <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Contact Email</TableHead>
-              <TableHead>Account Status</TableHead>
-              <TableHead>Shipping Rates</TableHead>
-              <TableHead>States Serviced</TableHead>
-              <TableHead>Priority Map</TableHead>
-              <TableHead>Active</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      {isMobile ? (
+        <MobileDataTable 
+          rows={paginatedPharmacies?.map((pharmacy) => ({
+            title: pharmacy.name,
+            subtitle: pharmacy.contact_email,
+            fields: [
+              { 
+                label: 'Account Status', 
+                value: !pharmacy.user_id ? 'No Account' : 'Active',
+                badge: true,
+                badgeVariant: !pharmacy.user_id ? 'destructive' : 'default'
+              },
+              { 
+                label: 'States Serviced', 
+                value: pharmacy.states_serviced?.length 
+                  ? `${pharmacy.states_serviced.length} states` 
+                  : 'None configured'
+              },
+              { 
+                label: 'Active', 
+                value: pharmacy.active ? 'Yes' : 'No',
+                badge: true,
+                badgeVariant: pharmacy.active ? 'default' : 'secondary'
+              }
+            ],
+            actions: [
+              { label: 'View Shipping Rates', onClick: () => {
+                setSelectedPharmacyForRates(pharmacy);
+                setShippingRatesDialogOpen(true);
+              }},
+              { label: 'Edit', onClick: () => {
+                setSelectedPharmacy(pharmacy);
+                setDialogOpen(true);
+              }}
+            ]
+          })) || []}
+        />
+      ) : (
+        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1200px]">
+            <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Contact Email</TableHead>
+                <TableHead>Account Status</TableHead>
+                <TableHead>Shipping Rates</TableHead>
+                <TableHead>States Serviced</TableHead>
+                <TableHead>Priority Map</TableHead>
+                <TableHead>Active</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center">
@@ -312,10 +350,11 @@ export const PharmaciesDataTable = () => {
                 </TableRow>
               ))
             )}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+          </div>
         </div>
-      </div>
+      )}
 
       {filteredPharmacies && filteredPharmacies.length > 0 && (
         <DataTablePagination

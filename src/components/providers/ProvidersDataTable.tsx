@@ -164,20 +164,58 @@ export const ProvidersDataTable = () => {
         </Button>
       </div>
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1200px]">
-          <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Full Name</TableHead>
-              <TableHead>Prescriber Name</TableHead>
-              <TableHead>Practice</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      {isMobile ? (
+        <MobileDataTable 
+          rows={paginatedProviders?.map((provider) => {
+            const displayName = getProviderDisplayName(provider);
+            const hasDuplicate = paginatedProviders.filter(
+              (p) => getProviderDisplayName(p) === displayName
+            ).length > 1;
+            const nameWithSuffix = hasDuplicate && provider.profiles?.email
+              ? `${displayName} (${provider.profiles.email.split('@')[0]})`
+              : displayName;
+            
+            return {
+              title: nameWithSuffix,
+              subtitle: provider.profiles?.email || 'N/A',
+              fields: [
+                { label: 'Prescriber Name', value: provider.profiles?.prescriber_name || 'Not Set' },
+                { label: 'Practice', value: provider.practice?.name || provider.practice?.company || 'N/A' },
+                { label: 'License', value: provider.license_number || 'N/A' },
+                { 
+                  label: 'Status', 
+                  value: provider.active ? 'Active' : 'Inactive',
+                  badge: true,
+                  badgeVariant: provider.active ? 'default' : 'secondary'
+                }
+              ],
+              actions: [
+                { 
+                  label: 'View Details', 
+                  onClick: () => {
+                    setSelectedProvider(provider);
+                    setDetailsDialogOpen(true);
+                  }
+                }
+              ]
+            };
+          }) || []}
+        />
+      ) : (
+        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1200px]">
+            <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Full Name</TableHead>
+                <TableHead>Prescriber Name</TableHead>
+                <TableHead>Practice</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
             {filteredProviders && filteredProviders.length > 0 ? (
               paginatedProviders?.map((provider) => {
                 const displayName = getProviderDisplayName(provider);
@@ -230,10 +268,11 @@ export const ProvidersDataTable = () => {
                 </TableCell>
               </TableRow>
             )}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+          </div>
         </div>
-      </div>
+      )}
 
       {filteredProviders && filteredProviders.length > 0 && (
         <DataTablePagination
