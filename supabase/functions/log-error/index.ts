@@ -1,4 +1,5 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createAdminClient } from "../_shared/supabaseAdmin.ts";
 import { validateLogErrorRequest } from "../_shared/requestValidators.ts";
 import { edgeLogger } from "../_shared/logger.ts";
 
@@ -48,10 +49,7 @@ Deno.serve(async (req) => {
     );
 
     // Admin client (service role) to bypass RLS for inserts
-    const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const adminClient = createAdminClient();
 
     // Extract validated data
     const { action_type, entity_type, details } = requestData;
