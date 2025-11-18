@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Eye, UserPlus } from "lucide-react";
+import { useResponsive } from "@/hooks/use-mobile";
+import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
 import { AddProviderDialog } from "./AddProviderDialog";
 import { ProviderDetailsDialog } from "./ProviderDetailsDialog";
 import { toast } from "sonner";
@@ -27,6 +29,7 @@ import { getProviderDisplayName } from "@/utils/providerNameUtils";
 
 export const ProvidersDataTable = () => {
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
+  const { isMobile } = useResponsive();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<any>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);

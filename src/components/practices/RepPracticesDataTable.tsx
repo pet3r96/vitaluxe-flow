@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, Eye, UserPlus, RefreshCw } from "lucide-react";
+import { useResponsive } from "@/hooks/use-mobile";
+import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
 import { PracticeDetailsDialog } from "./PracticeDetailsDialog";
 import { AddPracticeRequestDialog } from "./AddPracticeRequestDialog";
 import { usePagination } from "@/hooks/usePagination";
@@ -25,6 +27,7 @@ import { toast } from "sonner";
 
 export const RepPracticesDataTable = () => {
   const { effectiveRole, effectiveUserId } = useAuth();
+  const { isMobile } = useResponsive();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPractice, setSelectedPractice] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);

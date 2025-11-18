@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Eye, UserPlus } from "lucide-react";
+import { useResponsive } from "@/hooks/use-mobile";
+import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
 import { AddStaffDialog } from "./AddStaffDialog";
 import { StaffDetailsDialog } from "./StaffDetailsDialog";
 import { toast } from "sonner";
@@ -25,6 +27,7 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export const StaffDataTable = () => {
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
+  const { isMobile } = useResponsive();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -138,9 +141,39 @@ export const StaffDataTable = () => {
         </Button>
       </div>
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1000px]">
-          <Table>
+      {isMobile ? (
+        // Mobile Card View
+        <div className="space-y-2 p-4">
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading staff...</div>
+          ) : !filteredStaff || filteredStaff.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No staff members found</div>
+          ) : (
+            <MobileDataTable
+              rows={paginatedStaff?.map((staffMember): MobileTableRowProps => ({
+                title: staffMember.profiles?.full_name || staffMember.profiles?.name || 'Unknown',
+                subtitle: staffMember.profiles?.email || 'N/A',
+                fields: [
+                  { label: "Practice", value: staffMember.practice?.name || staffMember.practice?.company || '-' },
+                  { label: "Phone", value: staffMember.profiles?.phone || 'N/A' },
+                  { label: "Role", value: staffMember.role_type, badge: true, badgeVariant: 'outline' },
+                  { label: "Ordering", value: staffMember.can_order ? "Allowed" : "Restricted", badge: true, badgeVariant: staffMember.can_order ? 'default' : 'secondary' },
+                  { label: "Status", value: staffMember.active ? "Active" : "Inactive", badge: true, badgeVariant: staffMember.active ? 'default' : 'secondary' }
+                ],
+                actions: [
+                  { label: "View Details", onClick: () => { setSelectedStaff(staffMember); setDetailsDialogOpen(true); } },
+                  { label: staffMember.active ? "Deactivate" : "Activate", onClick: () => toggleStatus(staffMember.user_id, staffMember.active) }
+                ]
+              })) || []}
+              emptyMessage="No staff members found"
+            />
+          )}
+        </div>
+      ) : (
+        // Desktop Table View
+        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-w-[1000px]">
+            <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Full Name</TableHead>
@@ -203,8 +236,9 @@ export const StaffDataTable = () => {
             )}
           </TableBody>
         </Table>
+          </div>
         </div>
-      </div>
+      )}
 
       {filteredStaff && filteredStaff.length > 0 && (
         <DataTablePagination
