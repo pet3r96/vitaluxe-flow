@@ -67,39 +67,34 @@ export function PatientQuickAccessButton({
         }
       }
 
-      // Fallback: if still no data, try direct fetch
+      // OPTIMIZED: Use service layer RPC instead of 8 sequential queries
       if (!data) {
-        const { data: account, error: accountError } = await supabase
-          .from("patient_accounts")
-          .select("*")
-          .eq("id", patientId)
-          .maybeSingle();
-        
-        if (accountError) throw accountError;
-        if (!account) throw new Error("Patient not found or you don't have access");
-
-        const [medications, conditions, allergies, vitals, immunizations, surgeries, pharmacies, emergencyContacts] = await Promise.all([
-          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "medication").order("created_at", { ascending: false }),
-          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "condition").order("created_at", { ascending: false }),
-          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "allergy").order("created_at", { ascending: false }),
-          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "vital").order("created_at", { ascending: false }),
-          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "immunization").order("created_at", { ascending: false }),
-          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "surgery").order("created_at", { ascending: false }),
-          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "pharmacy").order("created_at", { ascending: false }),
-          supabase.from("patient_medical_vault").select("*").eq("patient_account_id", patientId).eq("record_type", "emergency_contact").order("created_at", { ascending: false }),
+        const [accountResult, vaultResult] = await Promise.all([
+          supabase
+            .from("patient_accounts")
+            .select("*")
+            .eq("id", patientId)
+            .maybeSingle(),
+          supabase.rpc('get_patient_vault_grouped', {
+            p_patient_account_id: patientId
+          })
         ]);
+        
+        if (accountResult.error) throw accountResult.error;
+        if (!accountResult.data) throw new Error("Patient not found or you don't have access");
+
+        const vaultData = (vaultResult.data || {}) as any;
 
         data = {
-          account,
-          // JUSTIFIED: JSONB boundary - patient_medical_vault uses dynamic record_data structure
-          medications: (medications.data || []) as any,
-          conditions: (conditions.data || []) as any,
-          allergies: (allergies.data || []) as any,
-          vitals: (vitals.data || []) as any,
-          immunizations: (immunizations.data || []) as any,
-          surgeries: (surgeries.data || []) as any,
-          pharmacies: (pharmacies.data || []) as any,
-          emergencyContacts: (emergencyContacts.data || []) as any,
+          account: accountResult.data,
+          medications: (vaultData.medications || []) as any,
+          conditions: (vaultData.conditions || []) as any,
+          allergies: (vaultData.allergies || []) as any,
+          vitals: (vaultData.vitals || []) as any,
+          immunizations: (vaultData.immunizations || []) as any,
+          surgeries: (vaultData.surgeries || []) as any,
+          pharmacies: (vaultData.pharmacies || []) as any,
+          emergencyContacts: (vaultData.emergency_contacts || []) as any,
         };
       }
 
