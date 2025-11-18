@@ -421,7 +421,16 @@ export const PatientsDataTable = () => {
         />
       ) : (
         <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
-          <Table className="min-w-[1000px]">
+          <Table className="min-w-[1000px] table-fixed">
+            <colgroup>
+              <col style={{ width: '160px' }} />
+              <col style={{ width: '220px' }} />
+              <col style={{ width: '140px' }} />
+              <col style={{ width: '280px' }} />
+              <col style={{ width: '140px' }} />
+              {isAdmin && <col style={{ width: '160px' }} />}
+              <col style={{ width: '180px' }} />
+            </colgroup>
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 <TableHead className="w-auto lg:w-[160px]">Name</TableHead>
@@ -468,7 +477,7 @@ export const PatientsDataTable = () => {
                         : patient.first_name || patient.last_name || (patient.email as string)?.split('@')[0] || 'Unknown')}
                   </TableCell>
                   <TableCell className="w-auto lg:w-[220px] text-muted-foreground">{formatPatientEmail(patient.email as string)}</TableCell>
-                  <TableCell className="w-auto lg:w-[140px]">{formatPhoneNumber(patient.phone as string)}</TableCell>
+                  <TableCell className="w-auto lg:w-[140px] lg:whitespace-nowrap">{formatPhoneNumber(patient.phone as string)}</TableCell>
                   <TableCell className="w-auto lg:w-[280px] truncate">
                     {(() => {
                       if (patient.address_formatted) return patient.address_formatted as string;
@@ -482,13 +491,19 @@ export const PatientsDataTable = () => {
                         return '-';
                       }
                       
-                      return `${street}${city ? ', ' + city : ''}${state ? ', ' + state : ''}${zip ? ' ' + zip : ''}`.trim();
+                      const addressParts = [
+                        street,
+                        city && state ? `${city}, ${state}` : city || state,
+                        zip
+                      ].filter(Boolean);
+                      
+                      return addressParts.join(' ');
                     })()}
                   </TableCell>
-                  <TableCell className="w-auto lg:w-[140px]">
-                    <PatientPortalStatusBadge
-                      userId={patient.user_id as string}
-                      lastLoginAt={patient.last_login_at as string}
+                  <TableCell className="w-auto lg:w-[140px] lg:whitespace-nowrap">
+                    <PatientPortalStatusBadge 
+                      userId={patient.user_id as string | null}
+                      lastLoginAt={patient.last_login_at as string | null}
                       status={patient.status as string}
                     />
                   </TableCell>
@@ -497,7 +512,7 @@ export const PatientsDataTable = () => {
                       {patient.practice?.name || "-"}
                     </TableCell>
                   )}
-                  <TableCell className="w-auto lg:w-[180px] text-right">
+                  <TableCell className="w-auto lg:w-[180px] lg:whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-2">
                       <TooltipProvider>
                         <Tooltip>

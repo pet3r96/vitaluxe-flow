@@ -283,7 +283,16 @@ export const RepresentativesDataTable = () => {
         ) : (
           // Desktop Table View with Virtualization
           <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
-            <Table className="min-w-[1200px]">
+            <Table className="min-w-[1200px] table-fixed">
+              <colgroup>
+                <col style={{ width: '160px' }} />
+                <col style={{ width: '220px' }} />
+                <col style={{ width: '140px' }} />
+                <col style={{ width: '140px' }} />
+                <col style={{ width: '160px' }} />
+                <col style={{ width: '140px' }} />
+                <col style={{ width: '180px' }} />
+              </colgroup>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="w-auto lg:w-[160px] h-12 px-6 font-semibold">Name</TableHead>
@@ -331,14 +340,14 @@ export const RepresentativesDataTable = () => {
                       >
                       <TableCell className="w-auto lg:w-[160px] font-medium px-6 py-4">{rep.profiles?.name || "-"}</TableCell>
                       <TableCell className="w-auto lg:w-[220px] px-6 py-4 text-muted-foreground">{rep.profiles?.email || "-"}</TableCell>
-                      <TableCell className="w-auto lg:w-[140px] px-6 py-4">
+                      <TableCell className="w-auto lg:w-[140px] lg:whitespace-nowrap px-6 py-4">
                         {twoFAPhones?.[rep.user_id] ? (
                           <span className="font-mono text-sm">{formatPhoneNumber(twoFAPhones[rep.user_id])}</span>
                         ) : (
                           <span className="text-muted-foreground text-sm">Not Set</span>
                         )}
                       </TableCell>
-                      <TableCell className="w-auto lg:w-[140px] px-6 py-4">
+                      <TableCell className="w-auto lg:w-[140px] lg:whitespace-nowrap px-6 py-4">
                         <span className={rep.role === "topline" ? "accent-gold-light" : "accent-success"}>
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border">
                             {rep.role === "topline" ? "Topline" : "Downline"}
@@ -348,18 +357,18 @@ export const RepresentativesDataTable = () => {
                       <TableCell className="w-auto lg:w-[160px] px-6 py-4 text-muted-foreground text-sm">
                         {rep.role === "downline" && rep.topline_rep?.profiles?.name 
                           ? rep.topline_rep.profiles.name 
-                          : rep.role === "topline" 
+                          : rep.role === "topline"
                           ? "—" 
                           : "Unassigned"}
                       </TableCell>
-                      <TableCell className="w-auto lg:w-[140px] px-6 py-4">
+                      <TableCell className="w-auto lg:w-[140px] lg:whitespace-nowrap px-6 py-4">
                         <span className={rep.profiles?.active ? "accent-success" : "bg-muted/20 text-muted border-border"}>
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border">
                             {rep.profiles?.active ? "Active" : "Inactive"}
                           </span>
                         </span>
                       </TableCell>
-                      <TableCell className="w-auto lg:w-[180px] px-6 py-4 text-right">
+                      <TableCell className="w-auto lg:w-[180px] lg:whitespace-nowrap px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
