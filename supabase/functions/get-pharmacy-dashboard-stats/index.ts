@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createAdminClient } from "../_shared/supabaseAdmin.ts";
 import { cacheFetch } from "../_shared/cache.ts";
 
 const corsHeaders = {
@@ -18,13 +18,15 @@ serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    const supabase = createClient(
+    // Use auth client to authenticate requesting user
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.39.3");
+    const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
     if (userError || !user) {
       throw new Error('Unauthorized');
     }
@@ -35,7 +37,7 @@ serve(async (req) => {
     }
 
     // Check if user is admin or accessing their own data
-    const { data: userRoles } = await supabase
+    const { data: userRoles } = await supabaseAuth
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id);
@@ -46,6 +48,9 @@ serve(async (req) => {
     if (!isAdmin && user.id !== effectiveUserId) {
       throw new Error('Unauthorized: Cannot access other user data');
     }
+
+    // Use admin client for actual queries to bypass RLS
+    const supabase = createAdminClient();
 
     const cacheKey = `pharmacy_dashboard:${effectiveUserId}`;
     
