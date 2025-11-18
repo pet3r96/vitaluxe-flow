@@ -7457,10 +7457,7 @@ export type Database = {
       }
       recompute_order_profits: {
         Args: { p_order_ids?: string[]; p_status_filter?: string[] }
-        Returns: {
-          message: string
-          recomputed_count: number
-        }[]
+        Returns: Json
       }
       refresh_rep_productivity_summary: { Args: never; Returns: undefined }
       refresh_rls_policy_export: { Args: never; Returns: undefined }
