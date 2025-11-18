@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -31,20 +31,7 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    
-    if (!supabaseUrl || !supabaseKey) {
-      edgeLogger.error('patient-practice-context Missing Supabase envs');
-      return new Response(
-        JSON.stringify({ error: 'Server misconfiguration' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    const supabase = createAuthClient(authHeader);
 
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
@@ -70,7 +57,7 @@ serve(async (req) => {
     };
 
     // Use service role client for consistent access
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = createAdminClient();
 
     // 1. Get patient account to find practice_id
     edgeLogger.info('patient-practice-context Fetching patient account for user', { userId });

@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -23,11 +23,7 @@ Deno.serve(async (req) => {
     }
 
     // Use service role client for all operations (including impersonation checks)
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const supabase = createAdminClient();
 
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();

@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -52,20 +52,7 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-    
-    if (!supabaseUrl || !supabaseKey) {
-      edgeLogger.error('[get-orders-page] Missing Supabase envs', new Error('Config error'));
-      return new Response(
-        JSON.stringify({ error: 'Server misconfiguration' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    const supabase = createAuthClient(authHeader);
 
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
@@ -603,7 +590,7 @@ serve(async (req) => {
         if (!supabaseUrlAdmin || !serviceKey) {
           edgeLogger.warn('[get-orders-page] Service role envs missing, skipping product hydration');
         } else {
-          const admin = createClient(supabaseUrlAdmin, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+          const admin = createAdminClient();
           const productIds = [...new Set((orderLinesData || []).map((l: any) => l.product_id).filter(Boolean))];
           edgeLogger.info(`[get-orders-page] Hydrating products`, { productCount: productIds.length });
           if (productIds.length > 0) {

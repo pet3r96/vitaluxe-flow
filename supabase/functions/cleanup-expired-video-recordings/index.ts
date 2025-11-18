@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createAdminClient();
 
     // Find sessions with expired recordings
     const { data: expiredSessions, error: fetchError } = await supabase
