@@ -292,7 +292,7 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'summary': {
-        // From get-dashboard-stats
+        // From get-dashboard-stats with Redis caching
         const supabase = createAdminClient();
         const authHeader = req.headers.get('Authorization');
         
@@ -317,110 +317,125 @@ Deno.serve(async (req) => {
         const { role, isImpersonating, effectiveUserId } = body;
         const targetUserId = isImpersonating && effectiveUserId ? effectiveUserId : userId;
 
-        const stats: Record<string, number> = {
-          ordersCount: 0,
-          productsCount: 0,
-          pendingOrdersCount: 0,
-          usersCount: 0,
-          pendingRevenue: 0,
-          collectedRevenue: 0,
-        };
-
-        const promises: Promise<void>[] = [];
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
-
-        // Orders Count
-        promises.push(
-          (async () => {
-            let count = 0;
+        // ✅ Cache key based on role + user + impersonation state
+        const cacheKey = `dashboard_summary:${role}:${targetUserId}:${isImpersonating ? 'imp' : 'self'}`;
+        
+        // ✅ Use cacheFetch with 60-second TTL
+        const stats = await cacheFetch(
+          cacheKey,
+          async () => {
+            edgeLogger.info('Cache miss - fetching dashboard stats', { role, targetUserId });
             
-            if (role === 'doctor') {
-              const { count: orderCount } = await supabase
-                .from('orders')
-                .select('*', { count: 'exact', head: true })
-                .neq('status', 'cancelled')
-                .neq('payment_status', 'payment_failed')
-                .eq('doctor_id', targetUserId)
-                .gte('created_at', thirtyDaysAgoISO);
-              count = orderCount || 0;
-            } else if (role === 'provider') {
-              const { data: providerData } = await supabase
-                .from('providers')
-                .select('id')
-                .eq('user_id', targetUserId)
-                .single();
-              
-              if (providerData) {
-                const { data, error } = await supabase
-                  .rpc('count_provider_orders', {
-                    p_provider_id: providerData.id
-                  });
+            const statsData: Record<string, number> = {
+              ordersCount: 0,
+              productsCount: 0,
+              pendingOrdersCount: 0,
+              usersCount: 0,
+              pendingRevenue: 0,
+              collectedRevenue: 0,
+            };
+
+            const promises: Promise<void>[] = [];
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+
+            // Orders Count
+            promises.push(
+              (async () => {
+                let count = 0;
                 
-                if (!error) count = data || 0;
-              }
-            } else if (role === 'pharmacy') {
-              const { data: pharmacyData } = await supabase
-                .from('pharmacies')
-                .select('id')
-                .eq('user_id', targetUserId)
-                .maybeSingle();
-              
-              if (pharmacyData) {
-                const { data, error } = await supabase
-                  .rpc('count_pharmacy_orders', {
-                    p_pharmacy_id: pharmacyData.id
-                  });
+                if (role === 'doctor') {
+                  const { count: orderCount } = await supabase
+                    .from('orders')
+                    .select('*', { count: 'exact', head: true })
+                    .neq('status', 'cancelled')
+                    .neq('payment_status', 'payment_failed')
+                    .eq('doctor_id', targetUserId)
+                    .gte('created_at', thirtyDaysAgoISO);
+                  count = orderCount || 0;
+                } else if (role === 'provider') {
+                  const { data: providerData } = await supabase
+                    .from('providers')
+                    .select('id')
+                    .eq('user_id', targetUserId)
+                    .single();
+                  
+                  if (providerData) {
+                    const { data, error } = await supabase
+                      .rpc('count_provider_orders', {
+                        p_provider_id: providerData.id
+                      });
+                    
+                    if (!error) count = data || 0;
+                  }
+                } else if (role === 'pharmacy') {
+                  const { data: pharmacyData } = await supabase
+                    .from('pharmacies')
+                    .select('id')
+                    .eq('user_id', targetUserId)
+                    .maybeSingle();
+                  
+                  if (pharmacyData) {
+                    const { data, error } = await supabase
+                      .rpc('count_pharmacy_orders', {
+                        p_pharmacy_id: pharmacyData.id
+                      });
+                    
+                    if (!error) count = data || 0;
+                  }
+                } else if (role === 'admin') {
+                  const { count: orderCount } = await supabase
+                    .from('orders')
+                    .select('*', { count: 'exact', head: true })
+                    .neq('status', 'cancelled')
+                    .neq('payment_status', 'payment_failed')
+                    .gte('created_at', thirtyDaysAgoISO);
+                  count = orderCount || 0;
+                }
                 
-                if (!error) count = data || 0;
-              }
-            } else if (role === 'admin') {
-              const { count: orderCount } = await supabase
-                .from('orders')
-                .select('*', { count: 'exact', head: true })
-                .neq('status', 'cancelled')
-                .neq('payment_status', 'payment_failed')
-                .gte('created_at', thirtyDaysAgoISO);
-              count = orderCount || 0;
-            }
-            
-            stats.ordersCount = count;
-          })()
-        );
+                statsData.ordersCount = count;
+              })()
+            );
 
-        // Products Count
-        promises.push(
-          (async () => {
-            let count = 0;
-            
-            if (role === 'pharmacy') {
-              const { data: pharmacyData } = await supabase
-                .from('pharmacies')
-                .select('id')
-                .eq('user_id', targetUserId)
-                .maybeSingle();
-              
-              if (pharmacyData) {
-                const { count: productCount } = await supabase
-                  .from('product_pharmacies')
-                  .select('*', { count: 'exact', head: true })
-                  .eq('pharmacy_id', pharmacyData.id);
-                count = productCount || 0;
-              }
-            } else if ((role === 'admin' || role === 'staff') && !isImpersonating) {
-              const { count: productCount } = await supabase
-                .from('products')
-                .select('*', { count: 'exact', head: true })
-                .eq('active', true);
-              count = productCount || 0;
-            }
-            
-            stats.productsCount = count;
-          })()
-        );
+            // Products Count
+            promises.push(
+              (async () => {
+                let count = 0;
+                
+                if (role === 'pharmacy') {
+                  const { data: pharmacyData } = await supabase
+                    .from('pharmacies')
+                    .select('id')
+                    .eq('user_id', targetUserId)
+                    .maybeSingle();
+                  
+                  if (pharmacyData) {
+                    const { count: productCount } = await supabase
+                      .from('product_pharmacies')
+                      .select('*', { count: 'exact', head: true })
+                      .eq('pharmacy_id', pharmacyData.id);
+                    count = productCount || 0;
+                  }
+                } else if ((role === 'admin' || role === 'staff') && !isImpersonating) {
+                  const { count: productCount } = await supabase
+                    .from('products')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('active', true);
+                  count = productCount || 0;
+                }
+                
+                statsData.productsCount = count;
+              })()
+            );
 
-        await Promise.all(promises);
+            await Promise.all(promises);
+            
+            edgeLogger.info('Dashboard stats fetched', statsData);
+            return statsData;
+          },
+          60 // 60 second cache TTL
+        );
 
         return new Response(
           JSON.stringify(stats),
