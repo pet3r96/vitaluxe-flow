@@ -1,9 +1,13 @@
-import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { cacheFetch } from "../_shared/cache.ts";
-import { corsHeaders } from '../_shared/cors.ts';
-import { errorResponse } from '../_shared/responses.ts';
 
-Deno.serve(async (req) => {
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -11,15 +15,18 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return errorResponse('Missing authorization header', 401);
+      throw new Error('No authorization header');
     }
 
-    const supabase = createAuthClient(authHeader);
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error('Auth error:', userError);
-      return errorResponse('Unauthorized', 401);
+      throw new Error('Unauthorized');
     }
 
     const { effectiveUserId } = await req.json();
@@ -52,6 +59,9 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in get-visible-products:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return errorResponse(errorMessage, 500);
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });

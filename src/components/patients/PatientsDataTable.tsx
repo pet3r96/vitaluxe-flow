@@ -82,7 +82,7 @@ export const PatientsDataTable = () => {
     itemsPerPage: 25
   });
 
-  const paginatedPatients = filteredPatients?.slice(startIndex, endIndex) || [];
+  const paginatedPatients = filteredPatients?.slice(startIndex, endIndex);
 
   // Virtualization for desktop table
   const rowVirtualizer = useVirtualizer({
@@ -421,16 +421,16 @@ export const PatientsDataTable = () => {
         />
       ) : (
         <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
-          <Table className="min-w-[1200px]">
+          <Table className="min-w-[1000px]">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="w-auto lg:w-[160px]">Name</TableHead>
-                <TableHead className="w-auto lg:w-[220px]">Email</TableHead>
-                <TableHead className="w-auto lg:w-[140px]">Phone</TableHead>
-                <TableHead className="w-auto lg:w-[280px]">Address</TableHead>
-                <TableHead className="w-auto lg:w-[140px]">Portal Status</TableHead>
-                {isAdmin && <TableHead className="w-auto lg:w-[150px]">Practice</TableHead>}
-                <TableHead className="w-auto lg:w-[180px] text-right">Actions</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Portal Status</TableHead>
+                {isAdmin && <TableHead>Practice</TableHead>}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
@@ -461,40 +461,43 @@ export const PatientsDataTable = () => {
                       transform: `translateY(${virtualRow.start}px)`
                     }}
                   >
-                  <TableCell className="font-medium w-auto lg:w-[160px]">
+                  <TableCell className="font-medium">
                     {patient.name || 
                       (patient.first_name && patient.last_name 
                         ? `${patient.first_name} ${patient.last_name}`.trim() 
                         : patient.first_name || patient.last_name || (patient.email as string)?.split('@')[0] || 'Unknown')}
                   </TableCell>
-                  <TableCell className="text-muted-foreground w-auto lg:w-[220px]">{formatPatientEmail(patient.email as string)}</TableCell>
-                  <TableCell className="w-auto lg:w-[140px]">{formatPhoneNumber(patient.phone as string)}</TableCell>
-                  <TableCell className="w-auto lg:w-[280px]">
+                  <TableCell className="text-muted-foreground">{formatPatientEmail(patient.email as string)}</TableCell>
+                  <TableCell>{formatPhoneNumber(patient.phone as string)}</TableCell>
+                  <TableCell className="max-w-xs truncate">
                     {(() => {
                       if (patient.address_formatted) return patient.address_formatted as string;
                       
-                      const street = patient.address_street as string || patient.address as string || '';
-                      const city = patient.address_city as string || patient.city as string || '';
-                      const state = patient.address_state as string || patient.state as string || '';
-                      const zip = patient.address_zip as string || patient.zip_code as string || '';
+                      const street = patient.address_street || patient.address || '';
+                      const city = patient.address_city || patient.city || '';
+                      const state = patient.address_state || patient.state || '';
+                      const zip = patient.address_zip || patient.zip_code || '';
                       
-                      if (!street && !city && !state && !zip) return '-';
+                      if (!street && !city && !state && !zip) {
+                        return <span className="text-muted-foreground italic">No address on file</span>;
+                      }
                       
                       return `${street}${city ? ', ' + city : ''}${state ? ', ' + state : ''}${zip ? ' ' + zip : ''}`.trim();
                     })()}
                   </TableCell>
-                  <TableCell className="w-auto lg:w-[140px]">
+                  <TableCell>
                     <PatientPortalStatusBadge
                       userId={patient.user_id as string}
                       lastLoginAt={patient.last_login_at as string}
+                      status={patient.status as string}
                     />
                   </TableCell>
                   {isAdmin && (
-                    <TableCell className="w-auto lg:w-[150px]">
+                    <TableCell>
                       {patient.practice?.name || "-"}
                     </TableCell>
                   )}
-                  <TableCell className="text-right w-auto lg:w-[180px]">
+                  <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <TooltipProvider>
                         <Tooltip>
