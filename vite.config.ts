@@ -36,20 +36,37 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Disable manual chunking - let Vite handle it automatically
-    // This avoids React context issues from improper chunk splitting
     target: 'esnext',
-    chunkSizeWarningLimit: 500,
+    chunkSizeWarningLimit: 600,
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: false, // Keep console for debugging
+        drop_console: false,
         drop_debugger: mode === 'production',
         pure_funcs: [],
         passes: 1,
       },
       mangle: {
         safari10: true,
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'query-vendor': ['@tanstack/react-query'],
+          'supabase-vendor': ['@supabase/supabase-js'],
+          'ui-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tabs',
+          ],
+          'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'chart-vendor': ['recharts', 'chart.js', 'react-chartjs-2'],
+        },
       },
     },
   },

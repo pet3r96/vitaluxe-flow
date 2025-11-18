@@ -1,16 +1,14 @@
 import { SubscriptionManagement } from "@/components/admin/SubscriptionManagement";
+import { ResponsivePage } from "@/components/layout/ResponsivePage";
 
 const Subscriptions = () => {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Subscriptions</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage practice subscriptions, custom pricing, and sales rep commissions
-        </p>
-      </div>
+    <ResponsivePage
+      title="Subscriptions"
+      subtitle="Manage practice subscriptions, custom pricing, and sales rep commissions"
+    >
       <SubscriptionManagement />
-    </div>
+    </ResponsivePage>
   );
 };
 

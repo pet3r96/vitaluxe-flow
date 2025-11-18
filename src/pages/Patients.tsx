@@ -1,19 +1,14 @@
 import { PatientsDataTable } from "@/components/patients/PatientsDataTable";
+import { ResponsivePage } from "@/components/layout/ResponsivePage";
 
 const Patients = () => {
   return (
-    <div className="patient-container">
-      <div className="mb-8">
-        <h1 className="text-left text-3xl sm:text-4xl font-bold gold-text-gradient">Patients</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage your patient information and records
-        </p>
-      </div>
-
-      <div className="mt-6">
-        <PatientsDataTable />
-      </div>
-    </div>
+    <ResponsivePage
+      title="Patients"
+      subtitle="Manage your patient information and records"
+    >
+      <PatientsDataTable />
+    </ResponsivePage>
   );
 };
 
