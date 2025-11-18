@@ -20,8 +20,10 @@ import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const InternalChat = () => {
+  usePagePerformance('InternalChat');
   const { effectiveUserId, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();

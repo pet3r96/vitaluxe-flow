@@ -1,7 +1,9 @@
 import { DocumentsTab } from "@/components/documents/DocumentsTab";
 import { FileText } from "lucide-react";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function DocumentCenter() {
+  usePagePerformance('DocumentCenter');
   return (
     <div className="patient-container">
       <div className="mb-8">

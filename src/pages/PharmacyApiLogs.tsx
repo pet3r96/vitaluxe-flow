@@ -15,8 +15,10 @@ import { Calendar as CalendarIcon, Download, RefreshCw, CheckCircle, XCircle, Al
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { PharmacyOrderTransmissionWithRelations } from "@/types/domain/pharmacy";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const PharmacyApiLogs = () => {
+  usePagePerformance('PharmacyApiLogs');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");

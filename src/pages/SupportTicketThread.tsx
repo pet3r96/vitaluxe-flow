@@ -18,8 +18,10 @@ import {
 import { ArrowLeft, Send, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function SupportTicketThread() {
+  usePagePerformance('SupportTicketThread');
   const { ticketId } = useParams();
   const navigate = useNavigate();
   const { user, effectiveRole } = useAuth();

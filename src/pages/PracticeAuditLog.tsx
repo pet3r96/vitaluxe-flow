@@ -16,6 +16,7 @@ import { Search, Shield, Power, PowerOff } from "lucide-react";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 interface AuditLog {
   id: string;
@@ -36,6 +37,7 @@ interface AuditLog {
 }
 
 const PracticeAuditLog = () => {
+  usePagePerformance('PracticeAuditLog');
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: auditLogs, isLoading } = useQuery({

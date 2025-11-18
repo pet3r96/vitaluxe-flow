@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, UserPlus, Mail, Phone } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function Downlines() {
+  usePagePerformance('Downlines');
   const { user } = useAuth();
 
   const { data: downlines, isLoading } = useQuery({

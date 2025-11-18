@@ -21,6 +21,7 @@ import { usePatientPracticeSubscription } from "@/hooks/usePatientPracticeSubscr
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Lock } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 interface UnifiedDocument {
   id: string;
@@ -44,6 +45,7 @@ interface UnifiedDocument {
 const ITEMS_PER_PAGE = 25;
 
 export default function PatientDocuments() {
+  usePagePerformance('PatientDocuments');
   const { user, effectiveUserId } = useAuth();
   const queryClient = useQueryClient();
   const { isSubscribed: practiceHasSubscription, practiceName, loading: subscriptionLoading } = usePatientPracticeSubscription();

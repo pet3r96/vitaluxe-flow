@@ -18,9 +18,11 @@ import { Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function PatientAppointments() {
-  const { 
+  usePagePerformance('PatientAppointments');
+  const {
     isSubscribed: practiceHasSubscription, 
     practiceName,
     loading: subscriptionLoading,

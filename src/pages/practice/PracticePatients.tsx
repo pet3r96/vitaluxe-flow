@@ -11,8 +11,10 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatPatientEmail } from "@/lib/email/emailValidation";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function PracticePatients() {
+  usePagePerformance('PracticePatients');
   const { user, effectivePracticeId } = useAuth();
   const [search, setSearch] = useState("");
   const [bulkInviteDialogOpen, setBulkInviteDialogOpen] = useState(false);

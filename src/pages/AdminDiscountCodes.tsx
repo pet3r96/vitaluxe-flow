@@ -27,6 +27,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const AdminDiscountCodes = () => {
+  usePagePerformance('AdminDiscountCodes');
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCode, setSelectedCode] = useState<Database['public']['Tables']['discount_codes']['Row'] | null>(null);
   const [showDialog, setShowDialog] = useState(false);

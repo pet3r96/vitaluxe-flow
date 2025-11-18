@@ -8,8 +8,10 @@ import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { DollarSign, Clock, CheckCircle } from "lucide-react";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const PracticeProfitReports = () => {
+  usePagePerformance('PracticeProfitReports');
   const { effectiveRole, effectiveUserId } = useAuth();
 
   // Only doctors (practices) can access this report

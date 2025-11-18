@@ -5,8 +5,10 @@ import { AddRepRequestDialog } from "@/components/admin/AddRepRequestDialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { UserPlus } from "lucide-react";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 export default function MyDownlines() {
+  usePagePerformance('MyDownlines');
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
 
   return (

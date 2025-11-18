@@ -1,8 +1,10 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { logger } from "@/lib/logger";
+import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const NotFound = () => {
+  usePagePerformance('NotFound');
   const location = useLocation();
 
   useEffect(() => {
