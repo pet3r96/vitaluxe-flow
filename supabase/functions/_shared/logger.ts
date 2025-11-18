@@ -16,9 +16,19 @@ type LogLevel = 'info' | 'warn' | 'error';
 
 interface LogContext {
   [key: string]: unknown;
+  correlationId?: string;
 }
 
 class EdgeLogger {
+  private isLoggingContext = false;
+
+  /**
+   * Generate a correlation ID for tracking related log entries
+   */
+  generateCorrelationId(): string {
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  }
+
   /**
    * Sanitize data before logging to remove PHI/PII
    */
@@ -76,15 +86,30 @@ class EdgeLogger {
    * Format log entry as JSON for structured logging
    */
   private formatLog(level: LogLevel, message: string, context?: LogContext): string {
-    const sanitized = context ? this.sanitize(context) : {};
-    const serialized = this.serializeContext(sanitized);
-    
-    return JSON.stringify({
-      level,
-      message,
-      timestamp: new Date().toISOString(),
-      ...serialized
-    });
+    // Prevent recursive logging
+    if (this.isLoggingContext) {
+      return JSON.stringify({
+        level: 'warn',
+        message: 'Recursive logging prevented',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    this.isLoggingContext = true;
+    try {
+      const sanitized = context ? this.sanitize(context) : {};
+      const serialized = this.serializeContext(sanitized);
+      
+      return JSON.stringify({
+        level,
+        message,
+        timestamp: new Date().toISOString(),
+        correlationId: context?.correlationId || null,
+        ...serialized
+      });
+    } finally {
+      this.isLoggingContext = false;
+    }
   }
 
   /**
