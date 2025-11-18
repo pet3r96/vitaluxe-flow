@@ -65,16 +65,91 @@ const Dashboard = () => {
   const { data: dashboardStats, isLoading: statsLoading } = useDashboardQuery(
     ["dashboard-stats-batched", effectiveRole, effectiveUserId, String(isImpersonating)],
     async () => {
-      const { data, error } = await supabase.functions.invoke('manage-dashboard', {
-        body: { action: 'summary', role: effectiveRole, isImpersonating, effectiveUserId }
-      });
-      
-      if (error) throw error;
-      return data; // ✅ Fixed: return data directly, not data.data
+      try {
+        logger.info("Calling manage-dashboard edge function", {
+          role: effectiveRole,
+          isImpersonating,
+          effectiveUserId,
+        });
+
+        const { data, error } = await supabase.functions.invoke('manage-dashboard', {
+          body: { action: 'summary', role: effectiveRole, isImpersonating, effectiveUserId }
+        });
+
+        if (error) {
+          // Log the error but DO NOT throw
+          logger.error("manage-dashboard returned error", {
+            role: effectiveRole,
+            isImpersonating,
+            effectiveUserId,
+            errorMessage: error.message,
+            errorName: error.name,
+            errorDetails: JSON.stringify(error),
+          });
+
+          // Return safe fallback object
+          return {
+            ordersCount: 0,
+            productsCount: 0,
+            pendingOrdersCount: 0,
+            usersCount: 0,
+            pendingRevenue: 0,
+            collectedRevenue: 0,
+          };
+        }
+
+        logger.info("manage-dashboard success", {
+          role: effectiveRole,
+          isImpersonating,
+          effectiveUserId,
+          hasData: !!data,
+          dataKeys: data ? Object.keys(data) : [],
+        });
+
+        // Handle null/undefined data
+        if (!data) {
+          logger.warn("manage-dashboard returned null/undefined data", {
+            role: effectiveRole,
+            isImpersonating,
+            effectiveUserId,
+          });
+          
+          return {
+            ordersCount: 0,
+            productsCount: 0,
+            pendingOrdersCount: 0,
+            usersCount: 0,
+            pendingRevenue: 0,
+            collectedRevenue: 0,
+          };
+        }
+
+        return data;
+      } catch (err: any) {
+        // Final safety net: log and return fallback, DO NOT throw
+        logger.error("Exception calling manage-dashboard", {
+          role: effectiveRole,
+          isImpersonating,
+          effectiveUserId,
+          errorMessage: err?.message,
+          errorName: err?.name,
+          errorStack: err?.stack,
+        });
+
+        return {
+          ordersCount: 0,
+          productsCount: 0,
+          pendingOrdersCount: 0,
+          usersCount: 0,
+          pendingRevenue: 0,
+          collectedRevenue: 0,
+        };
+      }
     },
     {
       staleTime: 60000, // 60 seconds - matches Redis cache TTL
       gcTime: 5 * 60 * 1000, // 5 minutes
+      retry: false, // Disable retries to prevent error spam
     }
   );
 
