@@ -32,19 +32,34 @@ export async function fetchProducts(params: ProductQueryParams) {
 
   // Apply visibility filtering (only admins not impersonating bypass)
   if (!viewingAsAdmin) {
-    const { data: visibleProductsData } = await supabase.rpc(
-      "get_visible_products_for_effective_user",
-      { p_effective_user_id: effectiveUserId }
-    );
+    try {
+      // Use cached edge function for product visibility
+      const { data: cachedData, error: fnError } = await supabase.functions.invoke(
+        'get-visible-products',
+        { body: { effectiveUserId } }
+      );
 
-    const visibleProductIds = visibleProductsData?.map((p: any) => p.id) || [];
-    
-    if (visibleProductIds.length > 0) {
-      query = query.in("id", visibleProductIds);
-    } else {
-      // Fallback: rely on RLS to return permitted products for this user/practice
-      // Do not early-return empty to avoid false negatives when RPC is misconfigured
-      logger.warn('No visible product IDs from RPC, falling back to RLS-only select');
+      if (fnError) {
+        logger.warn('Cached product visibility failed, falling back to direct RPC', fnError);
+        // Fallback to direct RPC
+        const { data: visibleProductsData } = await supabase.rpc(
+          "get_visible_products_for_effective_user",
+          { p_effective_user_id: effectiveUserId }
+        );
+        const visibleProductIds = visibleProductsData?.map((p: any) => p.id) || [];
+        if (visibleProductIds.length > 0) {
+          query = query.in("id", visibleProductIds);
+        }
+      } else {
+        const visibleProductIds = cachedData?.visibleProducts?.map((p: any) => p.id) || [];
+        if (visibleProductIds.length > 0) {
+          query = query.in("id", visibleProductIds);
+        } else {
+          logger.warn('No visible product IDs from cached function, relying on RLS');
+        }
+      }
+    } catch (error) {
+      logger.warn('Product visibility fetch error, falling back to RLS', error);
     }
   }
 
