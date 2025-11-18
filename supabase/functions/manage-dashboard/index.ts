@@ -318,7 +318,7 @@ Deno.serve(async (req) => {
         const targetUserId = isImpersonating && effectiveUserId ? effectiveUserId : userId;
 
         // ✅ Cache key based on role + user + impersonation state
-        const cacheKey = `dashboard_summary:${role}:${targetUserId}:${isImpersonating ? 'imp' : 'self'}`;
+        const cacheKey = `dashboard_debug:${role}:${targetUserId}:${isImpersonating ? 'imp' : 'self'}:${Date.now()}`;
         
         // ✅ Use cacheFetch with 60-second TTL
         const stats = await cacheFetch(
@@ -462,6 +462,14 @@ Deno.serve(async (req) => {
                     const uniqueOrders = new Set(orderLines?.map((ol: any) => ol.orders.id) || []);
                     count = uniqueOrders.size;
                   }
+                } else if (role === 'admin') {
+                  const { count: pendingCount } = await supabase
+                    .from('orders')
+                    .select('*', { count: 'exact', head: true })
+                    .in('status', ['pending', 'processing'])
+                    .neq('payment_status', 'payment_failed')
+                    .gte('created_at', thirtyDaysAgoISO);
+                  count = pendingCount || 0;
                 }
                 
                 statsData.pendingOrdersCount = count;
@@ -473,7 +481,7 @@ Deno.serve(async (req) => {
               (async () => {
                 let count = 0;
                 
-                if (role === 'admin' && !isImpersonating) {
+                if (role === 'admin') {
                   const { count: userCount } = await supabase
                     .from('profiles')
                     .select('*', { count: 'exact', head: true })
@@ -611,7 +619,12 @@ Deno.serve(async (req) => {
 
             await Promise.all(promises);
             
-            edgeLogger.info('Dashboard stats fetched', statsData);
+            edgeLogger.info('[manage-dashboard summary stats]', { 
+              role, 
+              targetUserId, 
+              isImpersonating,
+              statsData 
+            });
             return statsData;
           },
           60 // 60 second cache TTL
