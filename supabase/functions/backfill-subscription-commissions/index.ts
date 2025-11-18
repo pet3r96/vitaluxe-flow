@@ -53,6 +53,12 @@ serve(async (req) => {
         continue;
       }
 
+      // Skip if no commission percentage set
+      if (!subscription.rep_commission_percentage || subscription.rep_commission_percentage <= 0) {
+        skippedCount++;
+        continue;
+      }
+
       // Check if commission already exists
       const { data: existing } = await adminClient
         .from('rep_subscription_commissions')
