@@ -424,13 +424,13 @@ export const PatientsDataTable = () => {
           <Table className="min-w-[1200px]">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="min-w-[160px]">Name</TableHead>
-                <TableHead className="min-w-[220px]">Email</TableHead>
-                <TableHead className="min-w-[140px]">Phone</TableHead>
-                <TableHead className="min-w-[280px]">Address</TableHead>
-                <TableHead className="min-w-[140px]">Portal Status</TableHead>
-                {isAdmin && <TableHead className="min-w-[150px]">Practice</TableHead>}
-                <TableHead className="min-w-[140px] text-right">Actions</TableHead>
+                <TableHead className="w-auto lg:w-[160px]">Name</TableHead>
+                <TableHead className="w-auto lg:w-[220px]">Email</TableHead>
+                <TableHead className="w-auto lg:w-[140px]">Phone</TableHead>
+                <TableHead className="w-auto lg:w-[280px]">Address</TableHead>
+                <TableHead className="w-auto lg:w-[140px]">Portal Status</TableHead>
+                {isAdmin && <TableHead className="w-auto lg:w-[150px]">Practice</TableHead>}
+                <TableHead className="w-auto lg:w-[180px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
@@ -461,15 +461,15 @@ export const PatientsDataTable = () => {
                       transform: `translateY(${virtualRow.start}px)`
                     }}
                   >
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium w-auto lg:w-[160px]">
                     {patient.name || 
                       (patient.first_name && patient.last_name 
                         ? `${patient.first_name} ${patient.last_name}`.trim() 
                         : patient.first_name || patient.last_name || (patient.email as string)?.split('@')[0] || 'Unknown')}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{formatPatientEmail(patient.email as string)}</TableCell>
-                  <TableCell>{formatPhoneNumber(patient.phone as string)}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-muted-foreground w-auto lg:w-[220px]">{formatPatientEmail(patient.email as string)}</TableCell>
+                  <TableCell className="w-auto lg:w-[140px]">{formatPhoneNumber(patient.phone as string)}</TableCell>
+                  <TableCell className="w-auto lg:w-[280px]">
                     {(() => {
                       if (patient.address_formatted) return patient.address_formatted as string;
                       
@@ -483,18 +483,18 @@ export const PatientsDataTable = () => {
                       return `${street}${city ? ', ' + city : ''}${state ? ', ' + state : ''}${zip ? ' ' + zip : ''}`.trim();
                     })()}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="w-auto lg:w-[140px]">
                     <PatientPortalStatusBadge
                       userId={patient.user_id as string}
                       lastLoginAt={patient.last_login_at as string}
                     />
                   </TableCell>
                   {isAdmin && (
-                    <TableCell>
+                    <TableCell className="w-auto lg:w-[150px]">
                       {patient.practice?.name || "-"}
                     </TableCell>
                   )}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right w-auto lg:w-[180px]">
                     <div className="flex items-center justify-end gap-2">
                       <TooltipProvider>
                         <Tooltip>

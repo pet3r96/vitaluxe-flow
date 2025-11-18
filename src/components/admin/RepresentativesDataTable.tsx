@@ -286,13 +286,13 @@ export const RepresentativesDataTable = () => {
             <Table className="min-w-[1200px]">
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="h-12 px-6 font-semibold min-w-[160px]">Name</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold min-w-[220px]">Email</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold min-w-[140px]">Phone</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold min-w-[120px]">Role</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold min-w-[150px]">Assigned To</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold min-w-[120px]">Status</TableHead>
-                  <TableHead className="h-12 px-6 font-semibold min-w-[140px] text-right">Actions</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold w-auto lg:w-[160px]">Name</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold w-auto lg:w-[220px]">Email</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold w-auto lg:w-[140px]">Phone</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold w-auto lg:w-[140px]">Role</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold w-auto lg:w-[160px]">Assigned To</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold w-auto lg:w-[140px]">Status</TableHead>
+                  <TableHead className="h-12 px-6 font-semibold w-auto lg:w-[180px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
@@ -329,37 +329,37 @@ export const RepresentativesDataTable = () => {
                           transform: `translateY(${virtualRow.start}px)`
                         }}
                       >
-                      <TableCell className="font-medium px-6 py-4">{rep.profiles?.name || "-"}</TableCell>
-                      <TableCell className="px-6 py-4 text-muted-foreground">{rep.profiles?.email || "-"}</TableCell>
-                      <TableCell className="px-6 py-4">
+                      <TableCell className="font-medium px-6 py-4 w-auto lg:w-[160px]">{rep.profiles?.name || "-"}</TableCell>
+                      <TableCell className="px-6 py-4 text-muted-foreground w-auto lg:w-[220px]">{rep.profiles?.email || "-"}</TableCell>
+                      <TableCell className="px-6 py-4 w-auto lg:w-[140px]">
                         {twoFAPhones?.[rep.user_id] ? (
                           <span className="font-mono text-sm">{formatPhoneNumber(twoFAPhones[rep.user_id])}</span>
                         ) : (
                           <span className="text-muted-foreground text-sm">Not Set</span>
                         )}
                       </TableCell>
-                      <TableCell className="px-6 py-4">
+                      <TableCell className="px-6 py-4 w-auto lg:w-[140px]">
                         <span className={rep.role === "topline" ? "accent-gold-light" : "accent-success"}>
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border">
                             {rep.role === "topline" ? "Topline" : "Downline"}
                           </span>
                         </span>
                       </TableCell>
-                      <TableCell className="px-6 py-4 text-muted-foreground text-sm">
+                      <TableCell className="px-6 py-4 text-muted-foreground text-sm w-auto lg:w-[160px]">
                         {rep.role === "downline" && rep.topline_rep?.profiles?.name 
                           ? rep.topline_rep.profiles.name 
                           : rep.role === "topline" 
                           ? "—" 
                           : "Unassigned"}
                       </TableCell>
-                      <TableCell className="px-6 py-4">
+                      <TableCell className="px-6 py-4 w-auto lg:w-[140px]">
                         <span className={rep.profiles?.active ? "accent-success" : "bg-muted/20 text-muted border-border"}>
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border">
                             {rep.profiles?.active ? "Active" : "Inactive"}
                           </span>
                         </span>
                       </TableCell>
-                      <TableCell className="px-6 py-4 text-right">
+                      <TableCell className="px-6 py-4 text-right w-auto lg:w-[180px]">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
