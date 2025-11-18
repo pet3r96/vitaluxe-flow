@@ -82,6 +82,11 @@ export function usePatientDashboard(effectiveUserId: string | null, effectiveRol
 
       if (error) {
         logger.error('[usePatientDashboard] Error', error);
+        // Handle case where patient account doesn't exist (e.g., admin user)
+        if (error.message?.includes('Patient account not found')) {
+          logger.warn('[usePatientDashboard] No patient account found');
+          throw error; // Let the component handle this gracefully
+        }
         throw error;
       }
 
