@@ -421,16 +421,16 @@ export const PatientsDataTable = () => {
         />
       ) : (
         <div ref={parentRef} className="rounded-md border overflow-auto" style={{ height: '600px' }}>
-          <Table className="min-w-[1000px]">
+          <Table className="table-fixed min-w-[1200px]">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Portal Status</TableHead>
-                {isAdmin && <TableHead>Practice</TableHead>}
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="w-[150px]">Name</TableHead>
+                <TableHead className="w-[200px]">Email</TableHead>
+                <TableHead className="w-[130px]">Phone</TableHead>
+                <TableHead className="w-[280px]">Address</TableHead>
+                <TableHead className="w-[150px]">Portal Status</TableHead>
+                {isAdmin && <TableHead className="w-[150px]">Practice</TableHead>}
+                <TableHead className="w-[120px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
@@ -461,15 +461,15 @@ export const PatientsDataTable = () => {
                       transform: `translateY(${virtualRow.start}px)`
                     }}
                   >
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium w-[150px] truncate">
                     {patient.name || 
                       (patient.first_name && patient.last_name 
                         ? `${patient.first_name} ${patient.last_name}`.trim() 
                         : patient.first_name || patient.last_name || (patient.email as string)?.split('@')[0] || 'Unknown')}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{formatPatientEmail(patient.email as string)}</TableCell>
-                  <TableCell>{formatPhoneNumber(patient.phone as string)}</TableCell>
-                  <TableCell className="max-w-xs truncate">
+                  <TableCell className="text-muted-foreground w-[200px] truncate">{formatPatientEmail(patient.email as string)}</TableCell>
+                  <TableCell className="w-[130px]">{formatPhoneNumber(patient.phone as string)}</TableCell>
+                  <TableCell className="w-[280px]">
                     {(() => {
                       if (patient.address_formatted) return patient.address_formatted as string;
                       
@@ -485,7 +485,7 @@ export const PatientsDataTable = () => {
                       return `${street}${city ? ', ' + city : ''}${state ? ', ' + state : ''}${zip ? ' ' + zip : ''}`.trim();
                     })()}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="w-[150px]">
                     <PatientPortalStatusBadge
                       userId={patient.user_id as string}
                       lastLoginAt={patient.last_login_at as string}
@@ -493,11 +493,11 @@ export const PatientsDataTable = () => {
                     />
                   </TableCell>
                   {isAdmin && (
-                    <TableCell>
+                    <TableCell className="w-[150px]">
                       {patient.practice?.name || "-"}
                     </TableCell>
                   )}
-                  <TableCell className="text-right">
+                  <TableCell className="w-[120px] text-right">
                     <div className="flex items-center justify-end gap-2">
                       <TooltipProvider>
                         <Tooltip>
