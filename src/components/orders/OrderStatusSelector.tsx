@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, AlertTriangle } from "lucide-react";
+import { measureInteraction } from "@/lib/performanceMonitor";
 import type { Order } from "@/types/orders";
 
 interface OrderStatusSelectorProps {
@@ -54,6 +55,7 @@ export const OrderStatusSelector = ({ order, onSuccess }: OrderStatusSelectorPro
 
   const updateStatusMutation = useMutation({
     mutationFn: async () => {
+      const perf = measureInteraction('order-status-update');
       const { data, error } = await supabase.functions.invoke("update-order-status", {
         body: {
           orderId: order.id,
@@ -61,6 +63,7 @@ export const OrderStatusSelector = ({ order, onSuccess }: OrderStatusSelectorPro
           changeReason: changeReason || null,
         },
       });
+      perf.end();
       if (error) throw error;
       return data;
     },
