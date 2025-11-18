@@ -14,6 +14,9 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
     
     // Use auth client to authenticate requesting user
     const supabaseAuth = createAuthClient(authHeader);
