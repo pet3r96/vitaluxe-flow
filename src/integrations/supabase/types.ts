@@ -573,6 +573,13 @@ export type Database = {
             foreignKeyName: "cart_lines_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_top_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -1612,6 +1619,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_patients_with_portal_status"
             referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "order_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_products"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "order_lines_product_id_fkey"
@@ -4202,6 +4216,13 @@ export type Database = {
             foreignKeyName: "product_pharmacies_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_top_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_pharmacies_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -4239,6 +4260,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_pricing_tiers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "mv_top_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_pricing_tiers_product_id_fkey"
             columns: ["product_id"]
@@ -6352,6 +6380,13 @@ export type Database = {
             foreignKeyName: "cart_lines_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_top_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -6363,6 +6398,16 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mv_top_products: {
+        Row: {
+          avg_price: number | null
+          id: string | null
+          name: string | null
+          total_revenue: number | null
+          total_sales: number | null
+        }
+        Relationships: []
       }
       patient_account_health: {
         Row: {
@@ -6818,6 +6863,10 @@ export type Database = {
       cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
       cleanup_expired_sms_attempts: { Args: never; Returns: undefined }
       cleanup_expired_sms_codes: { Args: never; Returns: undefined }
+      count_doctor_orders: {
+        Args: { p_doctor_id: string; p_since?: string }
+        Returns: number
+      }
       count_pharmacy_orders: {
         Args: { p_pharmacy_id: string }
         Returns: number
@@ -7087,6 +7136,10 @@ export type Database = {
           uploader_role: string
         }[]
       }
+      get_patient_vault_grouped: {
+        Args: { p_patient_account_id: string }
+        Returns: Json
+      }
       get_practice_assignable_users: {
         Args: { p_practice_id: string }
         Returns: {
@@ -7103,6 +7156,42 @@ export type Database = {
           end_time: string
           is_closed: boolean
           start_time: string
+        }[]
+      }
+      get_practice_patients: {
+        Args: { p_practice_id: string }
+        Returns: {
+          address: string
+          address_city: string
+          address_formatted: string
+          address_state: string
+          address_street: string
+          address_verification_source: string
+          address_verification_status: string
+          address_zip: string
+          allergies: string
+          birth_date: string
+          city: string
+          created_at: string
+          date_of_birth: string
+          email: string
+          first_name: string
+          gender_at_birth: string
+          id: string
+          last_login_at: string
+          last_name: string
+          name: string
+          notes: string
+          phone: string
+          practice_city: string
+          practice_id: string
+          practice_name: string
+          practice_state: string
+          provider_id: string
+          state: string
+          status: string
+          user_id: string
+          zip_code: string
         }[]
       }
       get_practice_team_members: {
@@ -7274,6 +7363,7 @@ export type Database = {
       refresh_rep_productivity_summary: { Args: never; Returns: undefined }
       refresh_rls_policy_export: { Args: never; Returns: undefined }
       refresh_security_events_summary: { Args: never; Returns: undefined }
+      refresh_top_products: { Args: never; Returns: undefined }
       refresh_video_usage_by_practice: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
