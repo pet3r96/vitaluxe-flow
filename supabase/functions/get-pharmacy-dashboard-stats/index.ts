@@ -34,6 +34,19 @@ serve(async (req) => {
       throw new Error('effectiveUserId is required');
     }
 
+    // Check if user is admin or accessing their own data
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+    
+    const isAdmin = userRoles?.some(r => r.role === 'admin' || r.role === 'super_admin');
+    
+    // Allow if admin (for impersonation) or if accessing own data
+    if (!isAdmin && user.id !== effectiveUserId) {
+      throw new Error('Unauthorized: Cannot access other user data');
+    }
+
     const cacheKey = `pharmacy_dashboard:${effectiveUserId}`;
     
     const dashboardData = await cacheFetch(
