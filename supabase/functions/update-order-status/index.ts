@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { cacheDelPattern } from '../_shared/cache.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -153,6 +154,18 @@ serve(async (req) => {
     }
 
     edgeLogger.info('Order status updated', { orderId, oldStatus, newStatus });
+
+    // Invalidate caches after status update
+    try {
+      await Promise.all([
+        cacheDelPattern('dashboard:*'),
+        cacheDelPattern('pharmacy_dashboard:*'),
+      ]);
+      edgeLogger.info('Cache invalidated after status update');
+    } catch (cacheError) {
+      edgeLogger.error('Failed to invalidate cache', cacheError);
+      // Non-fatal - status was updated successfully
+    }
 
     return new Response(
       JSON.stringify({ 
