@@ -97,7 +97,7 @@ const handleSave = async () => {
   if (document.source === 'provider_assigned') {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cannot Edit Document</DialogTitle>
           </DialogHeader>

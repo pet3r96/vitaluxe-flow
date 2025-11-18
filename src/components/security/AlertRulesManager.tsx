@@ -105,7 +105,7 @@ export const AlertRulesManager = () => {
                 New Rule
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create Alert Rule</DialogTitle>
               </DialogHeader>

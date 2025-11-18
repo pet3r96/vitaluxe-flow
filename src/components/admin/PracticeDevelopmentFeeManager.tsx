@@ -618,7 +618,7 @@ export default function PracticeDevelopmentFeeManager() {
 
       {/* Fee Configuration Dialog */}
       <Dialog open={isFeeDialogOpen} onOpenChange={setIsFeeDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedRep ? `Set Fee for ${selectedRep.name}` : "Set Fee"}
@@ -671,7 +671,7 @@ export default function PracticeDevelopmentFeeManager() {
 
       {/* Mark as Paid Dialog */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Mark Invoice as Paid</DialogTitle>
           </DialogHeader>
@@ -726,7 +726,7 @@ export default function PracticeDevelopmentFeeManager() {
 
       {/* Void Invoice Dialog */}
       <Dialog open={isVoidDialogOpen} onOpenChange={setIsVoidDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Void Invoice</DialogTitle>
           </DialogHeader>

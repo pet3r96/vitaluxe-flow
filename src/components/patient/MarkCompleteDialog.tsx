@@ -33,7 +33,7 @@ export function MarkCompleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Mark Conversation as Complete</DialogTitle>
           <DialogDescription>
