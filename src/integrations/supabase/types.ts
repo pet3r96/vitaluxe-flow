@@ -7476,6 +7476,21 @@ export type Database = {
         | "support_message"
         | "security_alert"
         | "admin_action_required"
+        | "order_placed"
+        | "order_update"
+        | "appointment_booked"
+        | "appointment_reminder"
+        | "appointment_update"
+        | "subscription_reminder"
+        | "subscription_activated"
+        | "subscription_suspended"
+        | "subscription_renewed"
+        | "subscription_alert"
+        | "payment_received"
+        | "payment_failed"
+        | "document_uploaded_by_patient"
+        | "patient_message_received"
+        | "new_patient_message"
       order_status:
         | "pending"
         | "filled"
@@ -7691,6 +7706,21 @@ export const Constants = {
         "support_message",
         "security_alert",
         "admin_action_required",
+        "order_placed",
+        "order_update",
+        "appointment_booked",
+        "appointment_reminder",
+        "appointment_update",
+        "subscription_reminder",
+        "subscription_activated",
+        "subscription_suspended",
+        "subscription_renewed",
+        "subscription_alert",
+        "payment_received",
+        "payment_failed",
+        "document_uploaded_by_patient",
+        "patient_message_received",
+        "new_patient_message",
       ],
       order_status: [
         "pending",
