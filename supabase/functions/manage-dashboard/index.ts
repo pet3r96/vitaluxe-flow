@@ -131,9 +131,37 @@ async function fetchOrdersTimeseries(
     const result = orderLines?.map((ol: any) => ({ created_at: ol.orders.created_at, value: 1 })) || [];
     edgeLogger.info('Orders timeseries result for pharmacy', { count: result.length });
     return result;
+  } else if (effectiveRole === 'staff') {
+    // Staff: Get their practice_id, then fetch orders for that practice
+    const { data: staffData, error: staffError } = await supabase
+      .from('practice_staff')
+      .select('practice_id')
+      .eq('user_id', effectiveUserId)
+      .eq('active', true)
+      .single();
+    
+    if (staffError) edgeLogger.error('Staff lookup failed', staffError);
+    if (!staffData) {
+      edgeLogger.warn('No staff record found for user');
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select('created_at')
+      .eq('doctor_id', staffData.practice_id)
+      .neq('status', 'cancelled')
+      .neq('payment_status', 'payment_failed')
+      .gte('created_at', startDate)
+      .lte('created_at', endDate);
+    
+    if (error) edgeLogger.error('Orders query failed for staff', error);
+    const result = data?.map((d: any) => ({ created_at: d.created_at, value: 1 })) || [];
+    edgeLogger.info('Orders timeseries result for staff', { count: result.length });
+    return result;
   }
   
-  // Admin/staff - all orders
+  // Admin - all orders
   const { data, error } = await supabase
     .from('orders')
     .select('created_at')
@@ -384,6 +412,25 @@ Deno.serve(async (req) => {
                     
                     if (!error) count = data || 0;
                   }
+                } else if (role === 'staff') {
+                  // Staff: Get their practice_id, then count orders for that practice
+                  const { data: staffData } = await supabase
+                    .from('practice_staff')
+                    .select('practice_id')
+                    .eq('user_id', targetUserId)
+                    .eq('active', true)
+                    .single();
+                  
+                  if (staffData?.practice_id) {
+                    const { count: orderCount } = await supabase
+                      .from('orders')
+                      .select('*', { count: 'exact', head: true })
+                      .neq('status', 'cancelled')
+                      .neq('payment_status', 'payment_failed')
+                      .eq('doctor_id', staffData.practice_id)
+                      .gte('created_at', thirtyDaysAgoISO);
+                    count = orderCount || 0;
+                  }
                 } else if (role === 'admin') {
                   const { count: orderCount } = await supabase
                     .from('orders')
@@ -461,6 +508,24 @@ Deno.serve(async (req) => {
                     
                     const uniqueOrders = new Set(orderLines?.map((ol: any) => ol.orders.id) || []);
                     count = uniqueOrders.size;
+                  }
+                } else if (role === 'staff') {
+                  const { data: staffData } = await supabase
+                    .from('practice_staff')
+                    .select('practice_id')
+                    .eq('user_id', targetUserId)
+                    .eq('active', true)
+                    .single();
+                  
+                  if (staffData?.practice_id) {
+                    const { count: pendingCount } = await supabase
+                      .from('orders')
+                      .select('*', { count: 'exact', head: true })
+                      .eq('doctor_id', staffData.practice_id)
+                      .in('status', ['pending', 'processing'])
+                      .neq('payment_status', 'payment_failed')
+                      .gte('created_at', thirtyDaysAgoISO);
+                    count = pendingCount || 0;
                   }
                 } else if (role === 'admin') {
                   const { count: pendingCount } = await supabase
@@ -541,6 +606,24 @@ Deno.serve(async (req) => {
                       .gte('orders.created_at', thirtyDaysAgoISO);
                     revenue = orderLines?.reduce((sum, ol) => sum + (ol.price || 0), 0) || 0;
                   }
+                } else if (role === 'staff') {
+                  const { data: staffData } = await supabase
+                    .from('practice_staff')
+                    .select('practice_id')
+                    .eq('user_id', targetUserId)
+                    .eq('active', true)
+                    .single();
+                  
+                  if (staffData?.practice_id) {
+                    const { data } = await supabase
+                      .from('orders')
+                      .select('total_amount')
+                      .eq('doctor_id', staffData.practice_id)
+                      .in('payment_status', ['pending', 'processing'])
+                      .neq('status', 'cancelled')
+                      .gte('created_at', thirtyDaysAgoISO);
+                    revenue = data?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+                  }
                 } else if (role === 'admin') {
                   const { data } = await supabase
                     .from('orders')
@@ -602,6 +685,24 @@ Deno.serve(async (req) => {
                       .neq('orders.status', 'cancelled')
                       .gte('orders.created_at', thirtyDaysAgoISO);
                     revenue = orderLines?.reduce((sum, ol) => sum + (ol.price || 0), 0) || 0;
+                  }
+                } else if (role === 'staff') {
+                  const { data: staffData } = await supabase
+                    .from('practice_staff')
+                    .select('practice_id')
+                    .eq('user_id', targetUserId)
+                    .eq('active', true)
+                    .single();
+                  
+                  if (staffData?.practice_id) {
+                    const { data } = await supabase
+                      .from('orders')
+                      .select('total_amount')
+                      .eq('doctor_id', staffData.practice_id)
+                      .in('payment_status', ['paid', 'partially_refunded'])
+                      .neq('status', 'cancelled')
+                      .gte('created_at', thirtyDaysAgoISO);
+                    revenue = data?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
                   }
                 } else if (role === 'admin') {
                   const { data } = await supabase
