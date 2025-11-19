@@ -1983,6 +1983,39 @@ export type Database = {
           },
         ]
       }
+      orphan_storage_files: {
+        Row: {
+          bucket_id: string
+          file_size: number | null
+          id: string
+          logged_at: string | null
+          mime_type: string | null
+          reason: string | null
+          storage_created_at: string | null
+          storage_path: string
+        }
+        Insert: {
+          bucket_id: string
+          file_size?: number | null
+          id?: string
+          logged_at?: string | null
+          mime_type?: string | null
+          reason?: string | null
+          storage_created_at?: string | null
+          storage_path: string
+        }
+        Update: {
+          bucket_id?: string
+          file_size?: number | null
+          id?: string
+          logged_at?: string | null
+          mime_type?: string | null
+          reason?: string | null
+          storage_created_at?: string | null
+          storage_path?: string
+        }
+        Relationships: []
+      }
       patient_accounts: {
         Row: {
           address: string | null
