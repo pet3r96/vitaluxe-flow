@@ -5098,6 +5098,62 @@ export type Database = {
         }
         Relationships: []
       }
+      rep_product_visibility: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          topline_rep_id: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          topline_rep_id: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          topline_rep_id?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rep_product_visibility_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_product_visibility_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_product_visibility_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "rep_product_visibility_topline_rep_id_fkey"
+            columns: ["topline_rep_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rep_subscription_commissions: {
         Row: {
           billing_month: string
