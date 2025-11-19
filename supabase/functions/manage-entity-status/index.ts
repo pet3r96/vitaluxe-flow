@@ -26,6 +26,10 @@ Deno.serve(async (req) => {
     const supabaseClient = createAuthClient(authHeader);
     const supabaseAdmin = createAdminClient();
 
+    // PHASE 3: IP filtering for admin function
+    const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status');
+    if (ipCheckResponse) return ipCheckResponse;
+
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
     if (authError || !user) {

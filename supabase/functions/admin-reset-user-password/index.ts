@@ -7,6 +7,7 @@ import { requireAdmin } from '../_shared/roleChecker.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
+import { validatePasswordStrength } from '../_shared/passwordValidator.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -65,6 +66,23 @@ serve(async (req) => {
 
     if (!targetUserId || !newPassword) {
       throw new Error('targetUserId and newPassword are required');
+    }
+
+    // PHASE 3: Backend password strength validation
+    const pwValidation = validatePasswordStrength(newPassword);
+    if (!pwValidation.valid) {
+      edgeLogger.warn('Weak password rejected in admin reset', { 
+        targetUserId, 
+        errors: pwValidation.errors,
+        adminId: user.id
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Password does not meet security requirements',
+          details: pwValidation.errors
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     edgeLogger.info('Admin resetting password', { targetUserId });

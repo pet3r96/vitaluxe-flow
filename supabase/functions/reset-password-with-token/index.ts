@@ -4,6 +4,7 @@ import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 import { resetPasswordSchema } from '../_shared/zodSchemas.ts';
+import { validatePasswordStrength } from '../_shared/passwordValidator.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,11 +57,19 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Validate password strength (minimum requirements)
-    if (newPassword.length < 8) {
+    // PHASE 3: Backend password strength validation
+    const pwValidation = validatePasswordStrength(newPassword);
+    if (!pwValidation.valid) {
+      edgeLogger.warn('Weak password rejected in reset', { 
+        errors: pwValidation.errors,
+        ipAddress
+      });
       return new Response(
-        JSON.stringify({ error: "Password must be at least 8 characters long" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ 
+          error: 'Password does not meet security requirements',
+          details: pwValidation.errors
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

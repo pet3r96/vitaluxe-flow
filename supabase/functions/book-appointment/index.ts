@@ -1,10 +1,12 @@
 import { corsHeaders } from '../_shared/cors.ts';
-import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { bookAppointmentSchema, validateInput } from '../_shared/zodSchemas.ts';
 import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 const normalizePhoneToE164 = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
@@ -16,11 +18,32 @@ const normalizePhoneToE164 = (phone: string): string => {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+  const startTime = Date.now();
+  const ipAddress = getClientIP(req);
+
   try {
     const supabaseClient = createAuthClient(req.headers.get('Authorization'));
+    const supabaseAdmin = createAdminClient();
 
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
+
+    // PHASE 3: Rate limiting (20 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      ipAddress,
+      'book-appointment',
+      { maxRequests: 20, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { function: 'book-appointment', ipAddress });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Check for active impersonation session
     const { data: impersonationSession } = await supabaseClient
@@ -52,6 +75,19 @@ Deno.serve(async (req) => {
 
     if (patientError || !patientAccount) {
       throw new Error('Patient account not found. Please contact your healthcare provider.');
+    }
+
+    // PHASE 3: ID validation (verify practice access)
+    const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
+      supabaseAdmin,
+      user.id,
+      'practice',
+      patientAccount.practice_id
+    );
+
+    if (!ownsResource) {
+      edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, practiceId: patientAccount.practice_id });
+      throw new Error(idError || 'Access denied to this practice');
     }
 
     // Use clientDateTimeIso if provided (client-side timezone), otherwise fallback to server-side construction

@@ -3,6 +3,9 @@ import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { cacheDelPattern } from '../_shared/cache.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
+import { validateInput, updateOrderStatusSchema } from '../_shared/zodSchemas.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +18,7 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
-  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  const ipAddress = getClientIP(req);
 
   try {
     const supabaseClient = createAuthClient(req.headers.get('Authorization'));
@@ -30,6 +33,23 @@ serve(async (req) => {
       });
     }
 
+    // PHASE 3: Rate limiting (30 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      ipAddress,
+      'update-order-status',
+      { maxRequests: 30, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { function: 'update-order-status', ipAddress });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Validate CSRF token
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
     const { valid, error: csrfError } = await validateCSRFToken(supabaseClient, user.id, csrfToken);
@@ -41,13 +61,34 @@ serve(async (req) => {
       );
     }
 
-    const { orderId, newStatus, changeReason } = await req.json();
+    const body = await req.json();
+    
+    // PHASE 3: Schema validation
+    const validation = validateInput(updateOrderStatusSchema, body);
+    if (!validation.success) {
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    if (!orderId || !newStatus) {
-      return new Response(JSON.stringify({ error: 'Missing orderId or newStatus' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const { order_id: orderId, status: newStatus, notes: changeReason } = validation.data;
+
+    // PHASE 3: ID validation (tenant isolation)
+    const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
+      supabaseAdmin,
+      user.id,
+      'order',
+      orderId
+    );
+
+    if (!ownsResource) {
+      edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, orderId });
+      return new Response(
+        JSON.stringify({ error: idError || 'Access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     edgeLogger.info('Status change request', { hasOrderId: !!orderId, newStatus });

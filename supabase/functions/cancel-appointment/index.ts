@@ -5,6 +5,8 @@ import { generateNotificationEmailHTML, generateNotificationEmailText } from '..
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateInput, cancelAppointmentSchema } from '../_shared/zodSchemas.ts';
 
 const normalizePhoneToE164 = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
@@ -16,6 +18,9 @@ const normalizePhoneToE164 = (phone: string): string => {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+  const startTime = Date.now();
+  const ipAddress = getClientIP(req);
+
   try {
     const supabaseClient = createAuthClient(req.headers.get('Authorization'));
 
@@ -25,15 +30,44 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // PHASE 3: Rate limiting (20 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      ipAddress,
+      'cancel-appointment',
+      { maxRequests: 20, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { function: 'cancel-appointment', ipAddress });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = await req.json();
+
+    // PHASE 3: Schema validation
+    const validation = validateInput(cancelAppointmentSchema, body);
+    if (!validation.success) {
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { appointmentId, csrf_token } = validation.data;
+
     // Validate CSRF token
-    const csrfToken = req.headers.get('x-csrf-token') || undefined;
-    const { valid, error: csrfError } = await validateCSRFToken(supabaseAdmin, user.id, csrfToken);
+    const { valid, error: csrfError } = await validateCSRFToken(supabaseAdmin, user.id, csrf_token);
     if (!valid) {
       edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return errorResponse(csrfError || 'Invalid CSRF token', 403);
     }
 
-    const { appointmentId } = await req.json();
     edgeLogger.info('Starting cancellation', { appointmentId });
 
     // Check for active impersonation session
