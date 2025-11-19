@@ -102,49 +102,73 @@ serve(async (req) => {
       );
     }
 
-    // Validate cart belongs to user
+    // Validate cart belongs to user or user has appropriate access
     const { data: cart, error: cartError } = await supabaseAdmin
       .from('cart')
       .select('doctor_id')
       .eq('id', cartLines.cart_id)
       .single();
 
-    // Check for impersonation session
-    const { data: impersonation } = await supabaseAdmin
-      .from('active_impersonation_sessions')
-      .select('impersonated_user_id')
-      .eq('admin_user_id', user.id)
-      .maybeSingle();
+    if (cartError || !cart) {
+      edgeLogger.error('Cart not found', cartError, { userId: user.id, cartId: cartLines.cart_id });
+      return new Response(
+        JSON.stringify({ error: 'Cart not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    const effectiveUserId = impersonation?.impersonated_user_id || user.id;
+    // PHASE 1: Check if user is super_admin or admin (highest priority)
+    const { data: userRoles } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
 
-    if (cartError || !cart || cart.doctor_id !== effectiveUserId) {
-      // Check if user is staff with access to this practice
-      const { data: cartOwnerProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('practice_id')
-        .eq('id', cart?.doctor_id)
+    const roles = userRoles?.map(r => r.role) || [];
+    const isSuperAdminOrAdmin = roles.includes('super_admin') || roles.includes('admin');
+
+    if (isSuperAdminOrAdmin) {
+      edgeLogger.info('Admin access granted', { userId: user.id, roles });
+      // Continue to update logic
+    } else {
+      // PHASE 2: Check for impersonation session
+      const { data: impersonation } = await supabaseAdmin
+        .from('active_impersonation_sessions')
+        .select('impersonated_user_id')
+        .eq('admin_user_id', user.id)
         .maybeSingle();
 
-      const { data: staffAccess } = await supabaseAdmin
-        .from('profiles')
-        .select('id, role')
-        .eq('id', user.id)
-        .eq('practice_id', cartOwnerProfile?.practice_id)
-        .in('role', ['staff', 'admin'])
-        .maybeSingle();
+      const effectiveUserId = impersonation?.impersonated_user_id || user.id;
 
-      if (!staffAccess) {
-        edgeLogger.error('ID validation failed - cart access denied', undefined, { 
-          userId: user.id, 
-          effectiveUserId,
-          cartId: cartLines.cart_id,
-          cartOwnerId: cart?.doctor_id
-        });
-        return new Response(
-          JSON.stringify({ error: 'Access denied' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      // PHASE 3: Check if user is cart owner
+      if (cart.doctor_id === effectiveUserId) {
+        edgeLogger.info('Cart owner access granted', { userId: user.id, effectiveUserId });
+        // Continue to update logic
+      } else {
+        // PHASE 4: Check if user is staff with can_order permission
+        const { data: staffAccess } = await supabaseAdmin
+          .from('practice_staff')
+          .select('id, role_type, can_order')
+          .eq('user_id', user.id)
+          .eq('practice_id', cart.doctor_id)
+          .eq('active', true)
+          .eq('can_order', true)
+          .maybeSingle();
+
+        if (!staffAccess) {
+          edgeLogger.error('ID validation failed - cart access denied', undefined, { 
+            userId: user.id, 
+            effectiveUserId,
+            cartId: cartLines.cart_id,
+            cartOwnerId: cart.doctor_id,
+            roles: roles
+          });
+          return new Response(
+            JSON.stringify({ error: 'Access denied' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        edgeLogger.info('Staff access granted', { userId: user.id, staffRole: staffAccess.role_type });
       }
     }
 
