@@ -52,16 +52,12 @@ serve(async (req) => {
 
     edgeLogger.info('Status change request', { hasOrderId: !!orderId, newStatus });
 
-    // Get user's role for audit logging
-    const { data: roleData } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const userRole = roleData?.role || 'unknown';
-    const isAdmin = roleData && ['admin', 'super_admin'].includes(roleData.role);
-    const isPharmacy = roleData && roleData.role === 'pharmacy';
+    // PHASE 2: Use centralized role checker
+    const { hasRole, getUserRoles } = await import('../_shared/roleChecker.ts');
+    const isAdmin = await hasRole(supabaseAdmin, user.id, ['admin', 'super_admin']);
+    const isPharmacy = await hasRole(supabaseAdmin, user.id, ['pharmacy']);
+    const userRoles = await getUserRoles(supabaseAdmin, user.id);
+    const userRole = userRoles[0] || 'unknown';
 
     // Get the order to check permissions
     const { data: orderData, error: orderError } = await supabaseClient

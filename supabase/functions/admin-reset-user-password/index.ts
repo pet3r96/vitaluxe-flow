@@ -37,15 +37,9 @@ serve(async (req) => {
     }
 
     // PHASE 2: Use centralized role checker
-    const { data: roles, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
-
-    if (roleError || !roles || !roles.some(r => ['admin', 'super_admin'].includes(r.role))) {
-      edgeLogger.error('Role check failed', roleError);
-      throw new Error('Unauthorized: Admin access required');
-    }
+    // PHASE 2: Use centralized role checker
+    const { requireAdmin } = await import('../_shared/roleChecker.ts');
+    await requireAdmin(supabaseClient, user.id, 'Admin access required');
 
     const { targetUserId, newPassword } = await req.json();
 

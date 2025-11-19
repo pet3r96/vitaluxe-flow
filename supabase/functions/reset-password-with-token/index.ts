@@ -190,6 +190,30 @@ const handler = async (req: Request): Promise<Response> => {
     const userEmail = userData?.user?.email;
     edgeLogger.info('[reset-password-with-token] Returning success with email', { emailDomain: userEmail?.split('@')[1] });
     
+    // PHASE 2: Audit logging
+    await supabaseAdmin.from('audit_logs').insert({
+      action_type: 'password_reset',
+      user_id: resetToken.user_id,
+      entity_type: 'password_reset_token',
+      entity_id: resetToken.id,
+      ip_address: ipAddress,
+      user_email: userEmail,
+      details: {
+        tokenSource,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    // PHASE 2: Structured logging
+    edgeLogger.logOperation({
+      user_id: resetToken.user_id,
+      ip_address: ipAddress,
+      operation: 'reset_password_with_token',
+      success: true,
+      duration_ms: Date.now() - startTime,
+      metadata: { tokenSource }
+    });
+    
     return new Response(
       JSON.stringify({ 
         success: true, 
