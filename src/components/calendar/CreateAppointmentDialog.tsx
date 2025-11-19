@@ -93,7 +93,6 @@ export function CreateAppointmentDialog({
       appointmentDate: format(walkInDate, 'yyyy-MM-dd'),
       startTime: format(walkInDate, 'HH:mm'),
       duration: isWalkIn ? "15" : "30",
-      appointmentType: isWalkIn ? "walk_in" : "consultation",
       visitType: defaultVisitType || "in_person",
       serviceType: "",
       serviceDescription: "",
@@ -527,22 +526,6 @@ export function CreateAppointmentDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="appointmentType">Appointment Type</Label>
-            <Select value={watch("appointmentType")} onValueChange={(value) => setValue("appointmentType", value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="walk_in">Walk-in</SelectItem>
-                <SelectItem value="consultation">Consultation</SelectItem>
-                <SelectItem value="follow_up">Follow-up</SelectItem>
-                <SelectItem value="procedure">Procedure</SelectItem>
-                <SelectItem value="initial">Initial Visit</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="roomId">
