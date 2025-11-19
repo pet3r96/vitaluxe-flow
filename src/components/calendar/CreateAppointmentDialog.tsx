@@ -49,6 +49,21 @@ export function CreateAppointmentDialog({
   isProviderAccount = false,
   defaultVisitType,
 }: CreateAppointmentDialogProps) {
+  
+  // Helper function to derive appointment_type from service type name
+  const deriveAppointmentType = (serviceTypeName: string | undefined): string => {
+    if (!serviceTypeName) return 'other';
+    
+    const nameLower = serviceTypeName.toLowerCase();
+    
+    if (nameLower.includes('consultation')) return 'consultation';
+    if (nameLower.includes('follow-up') || nameLower.includes('follow up')) return 'follow_up';
+    if (nameLower.includes('treatment') || nameLower.includes('procedure')) return 'procedure';
+    if (nameLower.includes('video') || nameLower.includes('telehealth')) return 'telehealth';
+    if (nameLower.includes('walk-in') || nameLower.includes('walk in')) return 'walk_in';
+    
+    return 'other';
+  };
   const queryClient = useQueryClient();
   const { effectiveUserId } = useAuth();
   const [selectedPatientId, setSelectedPatientId] = useState(defaultPatientId || "");
@@ -179,6 +194,12 @@ export function CreateAppointmentDialog({
       const startDateTime = new Date(`${values.appointmentDate}T${values.startTime}`);
       const endDateTime = new Date(startDateTime.getTime() + parseInt(values.duration) * 60000);
 
+      // Look up the selected service type to get its name
+      const selectedServiceType = serviceTypes?.find(st => st.id === values.serviceType);
+      const appointmentType = isWalkIn 
+        ? 'walk_in' 
+        : deriveAppointmentType(selectedServiceType?.name);
+
       const { data, error } = await supabase
         .from('patient_appointments')
         .insert({
@@ -188,7 +209,7 @@ export function CreateAppointmentDialog({
           room_id: values.roomId && values.roomId !== 'none' ? values.roomId : null,
           start_time: startDateTime.toISOString(),
           end_time: endDateTime.toISOString(),
-          appointment_type: values.visitType,
+          appointment_type: appointmentType,
           visit_type: values.visitType,
           service_type: values.serviceType || null,
           service_description: values.serviceDescription,
