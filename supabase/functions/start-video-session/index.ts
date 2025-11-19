@@ -1,16 +1,22 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
-  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  const ipAddress = getClientIP(req);
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // PHASE 3: Request size validation
+    const sizeValidation = validateRequestSize(req, 'start-video-session', corsHeaders);
+    if (sizeValidation) return sizeValidation;
+
     const supabase = createAdminClient();
     
     // Authenticate user
@@ -30,6 +36,23 @@ Deno.serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
+    }
+
+    // PHASE 3: Rate limiting (20 video sessions per hour per practice)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabase,
+      user.id,
+      'start-video-session',
+      { maxRequests: 20, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { userId: user.id, function: 'start-video-session' });
+      return new Response(
+        JSON.stringify({ error: 'Too many video sessions started. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { sessionId } = await req.json();

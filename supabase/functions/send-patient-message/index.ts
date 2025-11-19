@@ -4,6 +4,8 @@ import { sendMessageSchema, validateInput } from '../_shared/zodSchemas.ts';
 import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 // Helper to normalize phone to E.164
 function normalizePhoneToE164(phone: string): string {
@@ -16,11 +18,15 @@ function normalizePhoneToE164(phone: string): string {
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
-  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  const ipAddress = getClientIP(req);
   
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
+    // PHASE 3: Request size validation
+    const sizeValidation = validateRequestSize(req, 'send-patient-message', corsHeaders);
+    if (sizeValidation) return sizeValidation;
+
     edgeLogger.info('send-patient-message invoked', { ipAddress });
     
     const authHeader = req.headers.get('Authorization') || '';
@@ -52,6 +58,23 @@ Deno.serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // PHASE 3: Rate limiting (30 messages per hour per user)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      user.id,
+      'send-patient-message',
+      { maxRequests: 30, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { userId: user.id, function: 'send-patient-message' });
+      return new Response(
+        JSON.stringify({ error: 'Too many messages sent. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     edgeLogger.info('User authenticated for send message');

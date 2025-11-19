@@ -5,6 +5,8 @@ import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { requireAdmin } from '../_shared/roleChecker.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,9 +14,12 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
-  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  const ipAddress = getClientIP(req);
 
   try {
+    // PHASE 3: Request size validation
+    const sizeValidation = validateRequestSize(req, 'admin-reset-user-password', corsHeaders);
+    if (sizeValidation) return sizeValidation;
     const supabase = createAuthClient(req.headers.get('Authorization'));
     const supabaseClient = createAdminClient();
 
@@ -37,9 +42,24 @@ serve(async (req) => {
     }
 
     // PHASE 2: Use centralized role checker
-    // PHASE 2: Use centralized role checker
-    const { requireAdmin } = await import('../_shared/roleChecker.ts');
     await requireAdmin(supabaseClient, user.id, 'Admin access required');
+
+    // PHASE 3: Rate limiting (10 password resets per hour per admin)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseClient,
+      user.id,
+      'admin-reset-user-password',
+      { maxRequests: 10, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { adminId: user.id, function: 'admin-reset-user-password' });
+      return new Response(
+        JSON.stringify({ error: 'Too many password reset attempts. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { targetUserId, newPassword } = await req.json();
 

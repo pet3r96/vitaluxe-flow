@@ -2,6 +2,8 @@ import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,17 +21,40 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const ipAddress = getClientIP(req);
+
   try {
+    // PHASE 3: Request size validation
+    const sizeValidation = validateRequestSize(req, 'authorizenet-charge-payment', corsHeaders);
+    if (sizeValidation) return sizeValidation;
+
     const { order_id, payment_method_id, amount }: ChargeRequest = await req.json();
     
     const supabase = createAuthClient(req.headers.get('Authorization'));
     const supabaseAdmin = createAdminClient();
 
+    // PHASE 3: Rate limiting (5 charges per hour per user)
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      user.id,
+      'authorizenet-charge-payment',
+      { maxRequests: 5, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { userId: user.id, function: 'authorizenet-charge-payment' });
+      return new Response(
+        JSON.stringify({ error: 'Too many payment attempts. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
