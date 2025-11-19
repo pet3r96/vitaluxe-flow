@@ -109,15 +109,43 @@ serve(async (req) => {
       .eq('id', cartLines.cart_id)
       .single();
 
-    if (cartError || !cart || cart.doctor_id !== user.id) {
-      edgeLogger.error('ID validation failed - cart access denied', undefined, { 
-        userId: user.id, 
-        cartId: cartLines.cart_id 
-      });
-      return new Response(
-        JSON.stringify({ error: 'Access denied' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Check for impersonation session
+    const { data: impersonation } = await supabaseAdmin
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .maybeSingle();
+
+    const effectiveUserId = impersonation?.impersonated_user_id || user.id;
+
+    if (cartError || !cart || cart.doctor_id !== effectiveUserId) {
+      // Check if user is staff with access to this practice
+      const { data: cartOwnerProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('practice_id')
+        .eq('id', cart?.doctor_id)
+        .maybeSingle();
+
+      const { data: staffAccess } = await supabaseAdmin
+        .from('profiles')
+        .select('id, role')
+        .eq('id', user.id)
+        .eq('practice_id', cartOwnerProfile?.practice_id)
+        .in('role', ['staff', 'admin'])
+        .maybeSingle();
+
+      if (!staffAccess) {
+        edgeLogger.error('ID validation failed - cart access denied', undefined, { 
+          userId: user.id, 
+          effectiveUserId,
+          cartId: cartLines.cart_id,
+          cartOwnerId: cart?.doctor_id
+        });
+        return new Response(
+          JSON.stringify({ error: 'Access denied' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Update shipping speed ONLY for lines where it differs (idempotent)
