@@ -86,10 +86,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [twoFAEnforcementEnabled, setTwoFAEnforcementEnabled] = useState<boolean>(true);
   const [showIntakeDialog, setShowIntakeDialog] = useState(false);
   
-  // Hard 30-minute session timeout with activity refresh
-  const HARD_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-  const REFRESH_THRESHOLD_MS = 2 * 60 * 1000; // Refresh if < 2 minutes remaining (aggressive timeout detection)
-  const MAX_SESSION_MS = 120 * 60 * 1000; // 2 hours maximum
+  // Hard 8-hour session timeout with activity refresh (PHASE 2 requirement)
+  const HARD_SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000; // 8 hours (Phase 2 security requirement)
+  const REFRESH_THRESHOLD_MS = 15 * 60 * 1000; // Refresh if < 15 minutes remaining
+  const MAX_SESSION_MS = 8 * 60 * 60 * 1000; // 8 hours maximum (hard cutoff)
   const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes of inactivity triggers logout
   const getSessionExpKey = (userId: string) => `vitaluxe_session_exp_${userId}`;
   const getSessionStartKey = (userId: string) => `vitaluxe_session_start_${userId}`;

@@ -592,6 +592,30 @@ export type Database = {
           },
         ]
       }
+      cert_rotation_schedule: {
+        Row: {
+          cert_name: string
+          created_at: string | null
+          id: string
+          last_rotated_at: string
+          rotation_interval_days: number
+        }
+        Insert: {
+          cert_name: string
+          created_at?: string | null
+          id?: string
+          last_rotated_at?: string
+          rotation_interval_days?: number
+        }
+        Update: {
+          cert_name?: string
+          created_at?: string | null
+          id?: string
+          last_rotated_at?: string
+          rotation_interval_days?: number
+        }
+        Relationships: []
+      }
       checkout_attestation: {
         Row: {
           checkbox_text: string
