@@ -30,6 +30,35 @@ class EdgeLogger {
   }
 
   /**
+   * Enhanced operation logging with full metadata
+   * PHASE 2 WEEK 3: Structured logging
+   */
+  logOperation(params: {
+    user_id?: string;
+    ip_address?: string;
+    operation: string;
+    success: boolean;
+    duration_ms: number;
+    metadata?: Record<string, unknown>;
+  }): void {
+    const entry = {
+      operation: params.operation,
+      success: params.success,
+      duration_ms: params.duration_ms,
+      user_id: params.user_id || '[anonymous]',
+      ip_address: params.ip_address || '[unknown]',
+      timestamp: new Date().toISOString(),
+      ...params.metadata,
+    };
+
+    if (params.success) {
+      this.info(`Operation completed: ${params.operation}`, entry);
+    } else {
+      this.warn(`Operation failed: ${params.operation}`, entry);
+    }
+  }
+
+  /**
    * Sanitize data before logging to remove PHI/PII
    */
   private sanitize(data: LogContext): LogContext {
