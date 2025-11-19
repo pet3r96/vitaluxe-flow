@@ -61,9 +61,10 @@ const InternalChat = () => {
         return data?.practice_id;
       } else if (effectiveRole === 'staff') {
         const { data } = await supabase
-          .from('providers')
+          .from('practice_staff')
           .select('practice_id')
           .eq('user_id', effectiveUserId)
+          .eq('active', true)
           .single();
         return data?.practice_id;
       }

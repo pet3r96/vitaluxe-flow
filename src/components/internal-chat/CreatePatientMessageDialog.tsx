@@ -38,12 +38,20 @@ export function CreatePatientMessageDialog({
   const { data: patients = [], isLoading: isLoadingPatients, refetch: refetchPatients } = useQuery({
     queryKey: ['practice-patients-portal', practiceId],
     queryFn: async () => {
+      logger.info('[CreatePatientMessageDialog] Fetching patients for practice:', { practiceId });
+      
       const { data, error } = await supabase
         .from('v_patients_with_portal_status')
         .select('patient_id, name, email, phone, has_portal_access, patient_account_id, practice_id')
         .eq('practice_id', practiceId)
         .order('name');
-      if (error) throw error;
+      
+      if (error) {
+        logger.error('[CreatePatientMessageDialog] Error fetching patients:', error);
+        throw error;
+      }
+      
+      logger.info('[CreatePatientMessageDialog] Patients fetched:', { count: data?.length || 0 });
       return data || [];
     },
     enabled: open && !!practiceId
@@ -144,17 +152,17 @@ export function CreatePatientMessageDialog({
                   setSelectedPatient(patient || null);
                 }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a patient" />
+                <SelectTrigger disabled={patients.length === 0}>
+                  <SelectValue placeholder={patients.length === 0 ? "No patients available" : "Select a patient"} />
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingPatients ? (
                     <div className="text-sm text-muted-foreground text-center py-4">
                       Loading patients...
                     </div>
-                  ) : patients.length === 0 ? (
+                   ) : patients.length === 0 ? (
                     <div className="text-sm text-muted-foreground text-center py-4">
-                      No patients found
+                      No patients found. Please add patients to your practice first.
                     </div>
                   ) : (
                     patients.map((patient: any) => (
