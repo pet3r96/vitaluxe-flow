@@ -106,7 +106,7 @@ export function CreateSupportTicketDialog() {
           console.log('[CreateSupportTicket] Filtering by doctor_id:', user.id);
         } else if (effectiveRole === "staff" || effectiveRole === "provider") {
           const { data: staffData, error: staffError } = await supabase
-            .from("providers")
+            .from("practice_staff")
             .select("practice_id")
             .eq("user_id", user.id)
             .eq("active", true)
@@ -188,9 +188,9 @@ export function CreateSupportTicketDialog() {
         if (effectiveRole === "doctor") {
           ticketData.practice_id = user.id;
         } else {
-          // Staff users use unified providers table
+          // Staff users use practice_staff table
           const { data: staffData } = await supabase
-            .from("providers")
+            .from("practice_staff")
             .select("practice_id")
             .eq("user_id", user.id)
             .eq("active", true)

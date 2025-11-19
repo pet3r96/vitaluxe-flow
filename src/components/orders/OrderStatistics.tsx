@@ -7,6 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 export const OrderStatistics = () => {
   const { effectiveRole, effectiveUserId, effectivePracticeId } = useAuth();
 
+  // Only show order statistics for admin, reps, and pharmacy
+  if (!["admin", "topline", "downline", "pharmacy"].includes(effectiveRole)) {
+    return null;
+  }
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ["order-statistics", effectiveRole, effectiveUserId, effectivePracticeId],
     queryFn: async () => {
