@@ -112,6 +112,102 @@ export const detectBruteForceSchema = z.object({
   ip_address: z.string().max(45).optional().nullable(),
 });
 
+// PHASE 3: Expanded schemas for additional edge functions
+export const startVideoSessionSchema = z.object({
+  practice_id: z.string().uuid('Invalid practice ID'),
+  channel_name: z.string().trim().min(1).max(64),
+  provider_id: z.string().uuid('Invalid provider ID').optional(),
+  patient_id: z.string().uuid('Invalid patient ID').optional(),
+  session_type: z.enum(['consultation', 'follow_up', 'emergency']).optional(),
+});
+
+export const joinVideoSessionSchema = z.object({
+  session_id: z.string().uuid('Invalid session ID'),
+  user_id: z.string().uuid('Invalid user ID'),
+  role: z.enum(['host', 'participant']).optional(),
+});
+
+export const createPatientPortalAccountSchema = z.object({
+  email: z.string().trim().email('Invalid email address').max(255),
+  patient_name: z.string().trim().min(1, 'Patient name is required').max(200),
+  phone: z.string().trim().regex(/^\+?1?\d{10,15}$/, 'Invalid phone number'),
+  date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  practice_id: z.string().uuid('Invalid practice ID'),
+});
+
+export const createPrescriptionSchema = z.object({
+  patient_id: z.string().uuid('Invalid patient ID'),
+  provider_id: z.string().uuid('Invalid provider ID'),
+  practice_id: z.string().uuid('Invalid practice ID'),
+  medication_name: z.string().trim().min(1).max(200),
+  dosage: z.string().trim().min(1).max(100),
+  quantity: z.number().int().positive(),
+  refills: z.number().int().min(0).max(12),
+  instructions: z.string().trim().max(1000).optional(),
+});
+
+export const generatePrescriptionPdfSchema = z.object({
+  prescription_id: z.string().uuid('Invalid prescription ID'),
+  include_patient_info: z.boolean().optional(),
+  include_provider_signature: z.boolean().optional(),
+});
+
+export const pharmacyOrderActionSchema = z.object({
+  order_id: z.string().uuid('Invalid order ID'),
+  action: z.enum(['accept', 'reject', 'ship', 'deliver'], {
+    errorMap: () => ({ message: 'Invalid action' })
+  }),
+  tracking_number: z.string().trim().max(100).optional(),
+  notes: z.string().trim().max(500).optional(),
+});
+
+export const routeOrderToPharmacySchema = z.object({
+  order_id: z.string().uuid('Invalid order ID'),
+  pharmacy_id: z.string().uuid('Invalid pharmacy ID'),
+  priority: z.number().int().min(1).max(10).optional(),
+  urgent: z.boolean().optional(),
+});
+
+export const resetPasswordWithTokenSchema = z.object({
+  token: z.string().trim().min(1, 'Reset token is required'),
+  new_password: z.string().min(12, 'Password must be at least 12 characters').max(128),
+  confirm_password: z.string().min(12).max(128),
+}).refine(data => data.new_password === data.confirm_password, {
+  message: 'Passwords do not match',
+  path: ['confirm_password'],
+});
+
+export const verify2FASchema = z.object({
+  attemptId: z.string().uuid('Invalid attempt ID'),
+  code: z.string().regex(/^\d{6}$/, 'Code must be 6 digits'),
+  phoneNumber: z.string().trim().regex(/^\+?1?\d{10,15}$/, 'Invalid phone number'),
+});
+
+export const send2FASchema = z.object({
+  phone: z.string().trim().regex(/^\+?1?\d{10,15}$/, 'Invalid phone number'),
+  userId: z.string().uuid('Invalid user ID').optional(),
+});
+
+export const updateOrderStatusSchema = z.object({
+  order_id: z.string().uuid('Invalid order ID'),
+  status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'], {
+    errorMap: () => ({ message: 'Invalid order status' })
+  }),
+  notes: z.string().trim().max(500).optional(),
+  tracking_number: z.string().trim().max(100).optional(),
+});
+
+export const manageEntityStatusSchema = z.object({
+  entity_type: z.enum(['practice', 'provider', 'pharmacy', 'patient'], {
+    errorMap: () => ({ message: 'Invalid entity type' })
+  }),
+  entity_id: z.string().uuid('Invalid entity ID'),
+  status: z.enum(['active', 'inactive', 'suspended', 'deleted'], {
+    errorMap: () => ({ message: 'Invalid status' })
+  }),
+  reason: z.string().trim().max(500).optional(),
+});
+
 // Helper function to safely parse and validate
 export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; errors: string[] } {
   const result = schema.safeParse(data);

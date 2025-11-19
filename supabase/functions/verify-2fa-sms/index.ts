@@ -3,6 +3,8 @@ import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 // Helper to hash codes securely
 async function hashCode(code: string): Promise<string> {
@@ -27,6 +29,28 @@ serve(async (req) => {
   
   try {
     const supabase = createAdminClient();
+
+    // PHASE 3: Request size validation
+    const sizeCheckResponse = validateRequestSize(req, 'verify-2fa-sms', corsHeaders);
+    if (sizeCheckResponse) return sizeCheckResponse;
+
+    // PHASE 3: Rate limiting (10 attempts per 15 min per IP)
+    const limiter = new RateLimiter();
+    const clientIP = getClientIP(req);
+    const { allowed } = await limiter.checkLimit(
+      supabase,
+      clientIP,
+      'verify-2fa-sms',
+      { maxRequests: 10, windowSeconds: 900 }
+    );
+
+    if (!allowed) {
+      edgeLogger.warn('2FA verification rate limit exceeded', { clientIP });
+      return new Response(
+        JSON.stringify({ success: false, error: 'Too many verification attempts. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
