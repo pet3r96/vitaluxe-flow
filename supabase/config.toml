@@ -415,3 +415,6 @@ verify_jwt = true
 
 [functions.update-shipping-speed]
 verify_jwt = true
+
+[functions.get-practice-rooms]
+verify_jwt = true
