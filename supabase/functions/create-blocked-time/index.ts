@@ -95,14 +95,33 @@ Deno.serve(async (req) => {
       .select()
       .single();
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      edgeLogger.error('Failed to insert blocked time', {
+        error: insertError.message,
+        code: insertError.code,
+        details: insertError.details,
+        hint: insertError.hint,
+        practiceId,
+        blockType,
+        providerId,
+        userId: user.id
+      });
+      throw insertError;
+    }
 
     return successResponse({ 
       blockedTime,
       conflictingAppointments: conflicts || []
     });
   } catch (error: any) {
-    edgeLogger.error('Error creating blocked time', error);
-    return errorResponse(error.message, 400);
+    edgeLogger.error('Error creating blocked time', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      name: error.name,
+      stack: error.stack
+    });
+    return errorResponse(error.message || 'Failed to create blocked time', 400);
   }
 });

@@ -26,10 +26,6 @@ Deno.serve(async (req) => {
     const supabaseClient = createAuthClient(authHeader);
     const supabaseAdmin = createAdminClient();
 
-    // PHASE 3: IP filtering for admin function
-    const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status');
-    if (ipCheckResponse) return ipCheckResponse;
-
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
     if (authError || !user) {
@@ -79,6 +75,12 @@ Deno.serve(async (req) => {
             JSON.stringify({ error: 'Only practices or admins can manage provider status' }),
             { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
+        }
+
+        // Enforce IP check for non-practice owners
+        if (!isDoctor) {
+          const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status:provider-status');
+          if (ipCheckResponse) return ipCheckResponse;
         }
 
         let providerQuery = supabaseClient
@@ -158,6 +160,12 @@ Deno.serve(async (req) => {
             JSON.stringify({ error: 'Forbidden: Only admins and practice owners can manage staff' }),
             { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
+        }
+
+        // Enforce IP check for non-practice owners
+        if (!isDoctor) {
+          const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status:staff-status');
+          if (ipCheckResponse) return ipCheckResponse;
         }
 
         const updateData: any = { updated_at: new Date().toISOString() };
@@ -262,6 +270,10 @@ Deno.serve(async (req) => {
             { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
+
+        // Enforce IP check for admin-only operations
+        const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status:status-configs');
+        if (ipCheckResponse) return ipCheckResponse;
 
         let result;
 
