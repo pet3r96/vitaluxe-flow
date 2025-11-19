@@ -111,8 +111,8 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
         <div className="flex flex-wrap gap-2 items-center">
           <span className="text-sm text-muted-foreground">Selected:</span>
           {selectedPatients.map(patient => (
-            <Badge key={patient.id} variant="secondary" className="gap-1">
-              {patient.name}
+            <Badge key={patient.id} variant="secondary" className="gap-1 flex items-center">
+              <span className="text-sm">{patient.name || 'Unknown Patient'}</span>
               <button
                 type="button"
                 onClick={() => removePatient(patient.id)}
@@ -162,8 +162,8 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
                     checked={isSelected}
                     onCheckedChange={() => togglePatient(patient.id)}
                   />
-                  <span>
-                    {patient.name}
+                  <span className="text-sm font-medium">
+                    {patient.name || 'Unknown Patient'}
                   </span>
                 </CommandItem>
               );
