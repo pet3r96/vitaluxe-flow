@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { cacheDelPattern } from '../_shared/cache.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
+import { placeOrderSchema } from '../_shared/zodSchemas.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,10 +26,14 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
-  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  const ipAddress = getClientIP(req);
   edgeLogger.info("Starting order placement", { ipAddress });
 
   try {
+    // PHASE 3: Request size validation
+    const sizeValidation = validateRequestSize(req, 'place-order', corsHeaders);
+    if (sizeValidation) return sizeValidation;
+
     // Client for auth verification (with user JWT)
     const supabaseClient = createAuthClient(req.headers.get("Authorization"));
 

@@ -1,0 +1,219 @@
+# =====================================================
+# PHASE 3: API LOAD TEST CONFIGURATION
+# =====================================================
+# Tool: Artillery.io (https://www.artillery.io/)
+# Install: npm install -g artillery
+# Run: artillery run load-tests/api-load-test.yml
+# =====================================================
+
+config:
+  target: "https://qbtsfajshnrwwlfzkeog.supabase.co/functions/v1"
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 10
+      name: "Warm-up (10 req/sec)"
+    
+    # Ramp-up phase
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 100
+      name: "Ramp-up (10 → 100 req/sec)"
+    
+    # Sustained load phase
+    - duration: 300
+      arrivalRate: 200
+      name: "Peak load (200 req/sec)"
+    
+    # Ramp-down phase
+    - duration: 60
+      arrivalRate: 200
+      rampTo: 10
+      name: "Ramp-down (200 → 10 req/sec)"
+
+  processor: "./load-test-functions.js"
+  
+  # Success criteria
+  ensure:
+    maxErrorRate: 1  # Max 1% error rate
+    p95: 2000        # 95th percentile < 2000ms
+    p99: 5000        # 99th percentile < 5000ms
+
+  # Environment variables
+  variables:
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidHNmYWpzaG5yd3dsZnprZW9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5OTQxMTEsImV4cCI6MjA3NTU3MDExMX0.dqoXG339wvLXWT-uphEjdslgxZD12DBwyrfaFi4NOro"
+
+  # HTTP defaults
+  http:
+    timeout: 10
+
+  # Plugins
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+scenarios:
+  # =====================================================
+  # Scenario 1: Order Placement Flow (Critical Path)
+  # =====================================================
+  - name: "Order Placement Flow"
+    weight: 40
+    flow:
+      - post:
+          url: "/get-visible-products"
+          headers:
+            Authorization: "Bearer {{ anonKey }}"
+            Content-Type: "application/json"
+          json:
+            practice_id: "{{ $randomUUID() }}"
+          capture:
+            - json: "$.products[0].id"
+              as: "productId"
+          expect:
+            - statusCode: 200
+            - contentType: json
+
+      - post:
+          url: "/manage-cart"
+          headers:
+            Authorization: "Bearer {{ anonKey }}"
+            Content-Type: "application/json"
+          json:
+            action: "add"
+            product_id: "{{ productId }}"
+            quantity: 1
+          expect:
+            - statusCode: 200
+
+      - post:
+          url: "/get-cart"
+          headers:
+            Authorization: "Bearer {{ anonKey }}"
+            Content-Type: "application/json"
+          expect:
+            - statusCode: 200
+            - contentType: json
+
+  # =====================================================
+  # Scenario 2: Video Session Management
+  # =====================================================
+  - name: "Video Session Management"
+    weight: 20
+    flow:
+      - post:
+          url: "/start-video-session"
+          headers:
+            Authorization: "Bearer {{ $randomString(50) }}"  # Mock JWT
+            Content-Type: "application/json"
+          json:
+            provider_id: "{{ $randomUUID() }}"
+            patient_id: "{{ $randomUUID() }}"
+            appointment_id: "{{ $randomUUID() }}"
+          capture:
+            - json: "$.session_id"
+              as: "sessionId"
+            - json: "$.channel_name"
+              as: "channelName"
+          expect:
+            - statusCode: [200, 401]  # May fail auth, that's OK for load test
+
+      - post:
+          url: "/join-video-session"
+          headers:
+            Authorization: "Bearer {{ $randomString(50) }}"
+            Content-Type: "application/json"
+          json:
+            session_id: "{{ sessionId }}"
+            channel_name: "{{ channelName }}"
+            user_role: "patient"
+          expect:
+            - statusCode: [200, 401, 404]
+
+  # =====================================================
+  # Scenario 3: Patient Dashboard Data Retrieval
+  # =====================================================
+  - name: "Patient Dashboard"
+    weight: 15
+    flow:
+      - post:
+          url: "/get-patient-dashboard-data"
+          headers:
+            Authorization: "Bearer {{ $randomString(50) }}"
+            Content-Type: "application/json"
+          expect:
+            - statusCode: [200, 401]
+            - contentType: json
+
+  # =====================================================
+  # Scenario 4: Order Status Updates (Pharmacy Flow)
+  # =====================================================
+  - name: "Order Status Updates"
+    weight: 15
+    flow:
+      - post:
+          url: "/update-order-status"
+          headers:
+            Authorization: "Bearer {{ $randomString(50) }}"
+            Content-Type: "application/json"
+          json:
+            order_id: "{{ $randomUUID() }}"
+            status: "processing"
+            notes: "Load test update"
+          expect:
+            - statusCode: [200, 401, 404]
+
+      - post:
+          url: "/pharmacy-order-action"
+          headers:
+            Authorization: "Bearer {{ $randomString(50) }}"
+            Content-Type: "application/json"
+          json:
+            action: "accept"
+            order_id: "{{ $randomUUID() }}"
+          expect:
+            - statusCode: [200, 401, 404]
+
+  # =====================================================
+  # Scenario 5: Document Generation (PDF Creation)
+  # =====================================================
+  - name: "Document Generation"
+    weight: 5
+    flow:
+      - post:
+          url: "/generate-prescription-pdf"
+          headers:
+            Authorization: "Bearer {{ $randomString(50) }}"
+            Content-Type: "application/json"
+          json:
+            prescription_id: "{{ $randomUUID() }}"
+            patient_name: "Load Test Patient"
+            medication: "Test Medication"
+          expect:
+            - statusCode: [200, 401, 404]
+            - hasProperty: url
+
+  # =====================================================
+  # Scenario 6: 2FA SMS Sending (Rate Limited Function)
+  # =====================================================
+  - name: "2FA SMS Sending"
+    weight: 5
+    flow:
+      - post:
+          url: "/send-2fa-sms"
+          headers:
+            Authorization: "Bearer {{ $randomString(50) }}"
+            Content-Type: "application/json"
+          json:
+            phone_number: "+1{{ $randomInt(2000000000, 9999999999) }}"
+          expect:
+            - statusCode: [200, 401, 429]  # 429 = rate limited (expected)
+
+# =====================================================
+# ARTILLERY OUTPUT METRICS
+# =====================================================
+# After running, check:
+# - http.response_time.p95 < 2000ms (95th percentile)
+# - http.response_time.p99 < 5000ms (99th percentile)
+# - http.codes.200 / http.requests > 0.99 (>99% success rate)
+# - errors.ETIMEDOUT = 0 (no timeouts)
+# =====================================================

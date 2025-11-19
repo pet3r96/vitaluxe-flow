@@ -5,6 +5,9 @@ import { generateSecurePassword } from '../_shared/passwordGenerator.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { hasRole } from '../_shared/roleChecker.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
+import { createPatientPortalAccountSchema } from '../_shared/zodSchemas.ts';
 
 interface CreatePortalAccountRequest {
   patientId: string;
@@ -13,8 +16,31 @@ interface CreatePortalAccountRequest {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+  const ipAddress = getClientIP(req);
+
   try {
+    // PHASE 3: Request size validation
+    const sizeValidation = validateRequestSize(req, 'create-patient-portal-account', corsHeaders);
+    if (sizeValidation) return sizeValidation;
+
     const supabaseAdmin = createAdminClient();
+
+    // PHASE 3: Rate limiting (3 attempts per hour per IP to prevent abuse)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      ipAddress,
+      'create-patient-portal-account',
+      { maxRequests: 3, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { ipAddress, function: 'create-patient-portal-account' });
+      return new Response(
+        JSON.stringify({ error: 'Too many account creation attempts. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get authenticated user
     const authHeader = req.headers.get('Authorization');
