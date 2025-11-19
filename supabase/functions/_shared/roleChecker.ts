@@ -15,8 +15,10 @@
  * ```
  */
 
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createClient } from "npm:@supabase/supabase-js@2.74.0";
 import { edgeLogger } from './logger.ts';
+
+type SupabaseClient = ReturnType<typeof createClient>;
 
 /**
  * Check if a user has any of the specified roles
@@ -27,7 +29,7 @@ import { edgeLogger } from './logger.ts';
  * @returns Promise<boolean> - true if user has any of the allowed roles
  */
 export async function hasRole(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string,
   allowedRoles: string[]
 ): Promise<boolean> {
@@ -51,7 +53,7 @@ export async function hasRole(
     }
 
     // Check if user has any of the allowed roles
-    return roles.some(r => allowedRoles.includes(r.role));
+    return roles.some((r: any) => allowedRoles.includes(r.role));
   } catch (error) {
     edgeLogger.error('Role check exception', error as Error, { userId, allowedRoles });
     return false;
@@ -68,7 +70,7 @@ export async function hasRole(
  * @throws Error if user doesn't have required role
  */
 export async function requireRole(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string,
   allowedRoles: string[],
   errorMessage = 'Insufficient permissions'
@@ -93,7 +95,7 @@ export async function requireRole(
  * @returns Promise<string[]> - Array of role names
  */
 export async function getUserRoles(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string
 ): Promise<string[]> {
   if (!userId) {
@@ -111,7 +113,7 @@ export async function getUserRoles(
       return [];
     }
 
-    return roles?.map(r => r.role) || [];
+    return roles?.map((r: any) => r.role) || [];
   } catch (error) {
     edgeLogger.error('Exception fetching user roles', error as Error, { userId });
     return [];
@@ -126,7 +128,7 @@ export async function getUserRoles(
  * @returns Promise<boolean> - true if user is admin
  */
 export async function isAdmin(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string
 ): Promise<boolean> {
   return await hasRole(supabase, userId, ['admin', 'super_admin']);
@@ -141,7 +143,7 @@ export async function isAdmin(
  * @throws Error if user is not admin
  */
 export async function requireAdmin(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string,
   errorMessage = 'Admin access required'
 ): Promise<void> {

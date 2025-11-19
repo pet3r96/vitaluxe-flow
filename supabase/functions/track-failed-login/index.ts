@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  const startTime = Date.now();
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -120,6 +121,28 @@ serve(async (req) => {
       });
       edgeLogger.info('Created new failed login attempt record', { email });
     }
+
+    // PHASE 2: Enhanced audit trail with login_failed event
+    await supabaseClient.from('audit_logs').insert({
+      action_type: 'login_failed',
+      user_email: email,
+      ip_address: ip || 'unknown',
+      user_agent: user_agent,
+      details: { 
+        success: false,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    // PHASE 2: Structured logging
+    edgeLogger.logOperation({
+      user_id: undefined,
+      ip_address: ip || 'unknown',
+      operation: 'track_failed_login',
+      success: true,
+      duration_ms: Date.now() - startTime,
+      metadata: { email }
+    });
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

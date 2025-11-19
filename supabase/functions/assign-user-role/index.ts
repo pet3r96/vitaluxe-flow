@@ -578,6 +578,25 @@ serve(async (req) => {
       }
     }
 
+    // PHASE 2: Log role_changed audit event
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+    await supabaseAdmin.from('audit_logs').insert({
+      action_type: 'role_changed',
+      user_id: callerUserId || 'system',
+      entity_type: 'user_roles',
+      entity_id: userId,
+      ip_address: ipAddress,
+      user_email: signupData.email,
+      details: {
+        new_user_id: userId,
+        new_user_email: signupData.email,
+        new_role: signupData.role,
+        created_by: callerUserId || 'self_signup',
+        is_self_signup: signupData.isSelfSignup || false,
+        timestamp: new Date().toISOString()
+      }
+    });
+
     // Upload contract if provided
     let contractUrl = null;
     if (signupData.contractFile) {
