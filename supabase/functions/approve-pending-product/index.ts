@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { validateApprovePendingProductRequest } from '../_shared/requestValidators.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { requireAdmin } from '../_shared/roleChecker.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -21,16 +22,7 @@ Deno.serve(async (req) => {
     }
 
     // Verify admin role
-    const { data: roleData } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single();
-
-    if (!roleData) {
-      throw new Error('Admin access required');
-    }
+    await requireAdmin(supabaseAdmin, user.id);
 
     // Validate CSRF token
     const csrfToken = req.headers.get('x-csrf-token');

@@ -7,6 +7,7 @@ import { validateCreateAccountRequest } from '../_shared/requestValidators.ts';
 import { RateLimiter, RATE_LIMITS, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { hasRole, isAdmin as checkIsAdmin } from '../_shared/roleChecker.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -277,24 +278,14 @@ serve(async (req) => {
         }
         
         // Check if caller is an admin
-        const { data: callerRoles } = await supabaseAdmin
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', callerUserId);
-        
-        isAdminCaller = callerRoles?.some(r => r.role === 'admin') || false;
+        isAdminCaller = await checkIsAdmin(supabaseAdmin, callerUserId);
       }
     }
 
     // Authorization check for non-admin roles creating practices
     if (callerUserId && signupData.role === 'doctor') {
-      const { data: callerRoles } = await supabaseAdmin
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', callerUserId);
-
-      const hasRepRole = callerRoles?.some(r => r.role === 'topline' || r.role === 'downline');
-      const isAdmin = callerRoles?.some(r => r.role === 'admin');
+      const hasRepRole = await hasRole(supabaseAdmin, callerUserId, ['topline', 'downline']);
+      const isAdmin = await checkIsAdmin(supabaseAdmin, callerUserId);
 
       // If caller is a rep (not admin), ensure they're only assigning practices to themselves
       if (hasRepRole && !isAdmin) {

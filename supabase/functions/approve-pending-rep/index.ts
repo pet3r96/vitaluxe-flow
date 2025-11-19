@@ -5,6 +5,7 @@ import { validatePhone, generateSecurePassword } from '../_shared/validators.ts'
 import { validateApprovePendingRepRequest } from '../_shared/requestValidators.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { requireAdmin } from '../_shared/roleChecker.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,16 +56,7 @@ serve(async (req) => {
     }
 
     // Verify admin role
-    const { data: adminRole } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle();
-
-    if (!adminRole) {
-      throw new Error('Unauthorized - Admin access required');
-    }
+    await requireAdmin(supabaseAdmin, user.id, 'Unauthorized - Admin access required');
 
     // Validate CSRF token
     const csrfToken = req.headers.get('x-csrf-token') || undefined;

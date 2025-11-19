@@ -1,5 +1,6 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { requireAdmin } from '../_shared/roleChecker.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -117,14 +118,10 @@ Deno.serve(async (req) => {
     edgeLogger.info('User authenticated');
 
     // Admin-only check
-    const { data: roleCheck, error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single();
-
-    if (roleError || !roleCheck) {
+    try {
+      await requireAdmin(supabaseAdmin, user.id);
+    } catch (err) {
+      const error = err as Error;
       edgeLogger.error('Access denied - admin role required');
       return new Response(
         JSON.stringify({ 

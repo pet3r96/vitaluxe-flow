@@ -1,6 +1,7 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { validateManageProductTypeRequest } from '../_shared/requestValidators.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { requireAdmin } from '../_shared/roleChecker.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,16 +42,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { data: userRole } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single();
-
-    if (!userRole) {
+    try {
+      await requireAdmin(supabaseClient, user.id);
+    } catch (err) {
+      const error = err as Error;
       return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
+        JSON.stringify({ error: error.message }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

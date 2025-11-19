@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { requireAdmin } from '../_shared/roleChecker.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,15 +42,11 @@ serve(async (req) => {
     }
 
     // Verify admin role
-    const { data: roleData, error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single();
-
-    if (roleError || !roleData) {
-      edgeLogger.error('Admin check failed', roleError);
+    try {
+      await requireAdmin(supabaseAdmin, user.id);
+    } catch (err) {
+      const error = err as Error;
+      edgeLogger.error('Admin check failed', error);
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

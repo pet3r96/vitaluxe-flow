@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { generateSecurePassword } from '../_shared/passwordGenerator.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { hasRole } from '../_shared/roleChecker.ts';
 
 interface CreatePortalAccountRequest {
   patientId: string;
@@ -98,10 +99,10 @@ Deno.serve(async (req) => {
 
     // Determine effective practice ID for subscription check
     let effectivePracticeId: string | null = null;
-    const isAdminRole = roles.some(r => r.role === 'admin');
-    const isDoctorRole = roles.some(r => r.role === 'doctor');
-    const isProviderRole = roles.some(r => r.role === 'provider');
-    const isStaffRole = roles.some(r => r.role === 'staff');
+    const isAdminRole = await hasRole(supabaseAdmin, effectiveUserId, ['admin']);
+    const isDoctorRole = await hasRole(supabaseAdmin, effectiveUserId, ['doctor']);
+    const isProviderRole = await hasRole(supabaseAdmin, effectiveUserId, ['provider']);
+    const isStaffRole = await hasRole(supabaseAdmin, effectiveUserId, ['staff']);
 
     // CRITICAL: For admins not impersonating, immediately fetch patient's practice
     if (isAdminRole && !isImpersonating) {

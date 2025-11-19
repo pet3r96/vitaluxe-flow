@@ -1,6 +1,7 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { isAdmin as checkIsAdmin } from '../_shared/roleChecker.ts';
 
 edgeLogger.info('[practice-context] Function loaded');
 
@@ -121,14 +122,9 @@ Deno.serve(async (req) => {
 
     // 5. Check if admin with no specific practice link
     if (!practiceId) {
-      const { data: adminRole } = await supabaseAdmin
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
+      const isAdmin = await checkIsAdmin(supabaseAdmin, user.id);
 
-      if (adminRole) {
+      if (isAdmin) {
         roleContext = 'admin';
         edgeLogger.info('User is admin with no specific practice');
         return new Response(

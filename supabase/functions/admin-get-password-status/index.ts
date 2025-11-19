@@ -2,6 +2,7 @@ import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { requireAdmin } from '../_shared/roleChecker.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -24,16 +25,12 @@ Deno.serve(async (req) => {
     }
 
     // Verify caller is admin
-    const { data: roles, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle();
-
-    if (roleError || !roles) {
-      edgeLogger.error('Admin check failed', roleError);
-      return errorResponse('Forbidden: admin role required', 403);
+    try {
+      await requireAdmin(supabaseClient, user.id, 'Forbidden: admin role required');
+    } catch (err) {
+      const error = err as Error;
+      edgeLogger.error('Admin check failed', error);
+      return errorResponse(error.message, 403);
     }
 
     const { target_user_id } = await req.json();
