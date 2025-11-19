@@ -43,6 +43,7 @@ export interface CalendarRoom {
   practice_id: string;
   capacity?: number;
   is_active?: boolean;
+  color?: string | null;
 }
 
 // Patient information within appointments

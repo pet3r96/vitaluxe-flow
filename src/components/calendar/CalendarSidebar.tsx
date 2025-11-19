@@ -287,7 +287,7 @@ export function CalendarSidebar({
                   {roomsExpanded && (
                     <div className="space-y-2">
                       {rooms.map((room) => (
-                        <div key={room.id} className="flex items-center gap-2">
+                        <div key={room.id} className="flex items-center gap-2 group">
                           <Checkbox
                             id={`room-${room.id}`}
                             checked={selectedRooms.includes(room.id)}
@@ -295,9 +295,15 @@ export function CalendarSidebar({
                           />
                           <label
                             htmlFor={`room-${room.id}`}
-                            className="text-sm flex-1 cursor-pointer"
+                            className="flex items-center gap-2 flex-1 cursor-pointer"
                           >
-                            {room.name}
+                            <div 
+                              className="w-3 h-3 rounded-full shrink-0 ring-1 ring-black/10"
+                              style={{ backgroundColor: room.color || '#9ca3af' }}
+                            />
+                            <span className="text-sm font-medium flex-1">
+                              {room.name}
+                            </span>
                           </label>
                         </div>
                       ))}
