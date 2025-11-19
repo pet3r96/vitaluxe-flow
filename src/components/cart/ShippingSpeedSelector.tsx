@@ -10,6 +10,7 @@ interface ShippingSpeedSelectorProps {
   patientName: string;
   enabledOptions?: Array<'ground' | '2day' | 'overnight'>;
   isLoading?: boolean;
+  rates?: Record<string, number>;
 }
 
 export const ShippingSpeedSelector = ({ 
@@ -18,7 +19,8 @@ export const ShippingSpeedSelector = ({
   disabled = false,
   patientName,
   enabledOptions,
-  isLoading = false
+  isLoading = false,
+  rates
 }: ShippingSpeedSelectorProps) => {
   const hasAutoSelectedRef = useRef(false);
   
@@ -27,6 +29,12 @@ export const ShippingSpeedSelector = ({
     { value: '2day' as const, icon: Clock, label: '2-Day Shipping', desc: '(2 business days)', iconColor: 'text-blue-500' },
     { value: 'overnight' as const, icon: Zap, label: 'Overnight Shipping', desc: '(Next business day)', iconColor: 'text-yellow-500' }
   ];
+
+  // Helper function to format rate
+  const formatRate = (speed: string) => {
+    if (!rates || !rates[speed]) return '';
+    return ` - $${rates[speed].toFixed(2)}`;
+  };
 
   const visibleOptions = enabledOptions 
     ? allOptions.filter(opt => enabledOptions.includes(opt.value))
@@ -93,7 +101,7 @@ export const ShippingSpeedSelector = ({
               <div className="h-2 w-2 rounded-full bg-primary" />
             </div>
             <Icon className={`h-4 w-4 ${option.iconColor}`} />
-            <span className="font-medium">{option.label}</span>
+            <span className="font-medium">{option.label}{formatRate(option.value)}</span>
             <span className="text-sm text-muted-foreground">{option.desc}</span>
           </span>
           <span className="text-sm font-semibold text-primary">Selected</span>
@@ -124,7 +132,10 @@ export const ShippingSpeedSelector = ({
                 className="flex-1 cursor-pointer flex items-center gap-2"
               >
                 <Icon className={`h-4 w-4 ${option.iconColor}`} />
-                {option.label} {option.desc}
+                <div>
+                  <div className="font-medium">{option.label}{formatRate(option.value)}</div>
+                  <div className="text-xs text-muted-foreground">{option.desc}</div>
+                </div>
               </Label>
             </div>
           );
