@@ -1680,7 +1680,43 @@ export type Database = {
           topline_profit?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "order_profits_downline_id_fkey"
+            columns: ["downline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "order_profits_downline_id_fkey"
+            columns: ["downline_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_profits_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_profits_topline_id_fkey"
+            columns: ["topline_id"]
+            isOneToOne: false
+            referencedRelation: "rep_productivity_view"
+            referencedColumns: ["rep_id"]
+          },
+          {
+            foreignKeyName: "order_profits_topline_id_fkey"
+            columns: ["topline_id"]
+            isOneToOne: false
+            referencedRelation: "reps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_status_configs: {
         Row: {
