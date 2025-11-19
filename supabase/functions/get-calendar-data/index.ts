@@ -1,4 +1,4 @@
-import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
@@ -14,6 +14,9 @@ Deno.serve(async (req) => {
       edgeLogger.error('[get-calendar-data] Auth error', authError);
       return errorResponse('Not authenticated', 401);
     }
+
+    // Create admin client for RLS-bypassing queries
+    const supabaseAdmin = createAdminClient();
 
     const { practiceId, startDate, endDate, providers, rooms, statuses, effectiveProviderUserId } = await req.json();
 
@@ -208,8 +211,8 @@ Deno.serve(async (req) => {
         }
       })(),
 
-      // Get all rooms for the practice
-      supabaseClient
+      // Get all rooms for the practice (using admin to bypass RLS)
+      supabaseAdmin
         .from('practice_rooms')
         .select('*')
         .eq('practice_id', practiceId)
