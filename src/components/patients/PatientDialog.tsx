@@ -347,7 +347,7 @@ export const PatientDialog = ({
         }));
 
         // Build the exact query key that PatientsDataTable uses
-        const patientsKey = ["patients", effectiveRole, effectivePracticeId];
+        const patientsKey = ["practice-patients", effectivePracticeId];
         
         // 1. Cancel any outgoing refetches (so they don't overwrite our optimistic update)
         await queryClient.cancelQueries({ queryKey: patientsKey });
@@ -419,7 +419,7 @@ export const PatientDialog = ({
           queryClient.invalidateQueries({ queryKey: patientsKey });
           queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
           queryClient.invalidateQueries({ queryKey: ["patient-portal-status", effectivePracticeId] });
-          queryClient.invalidateQueries({ queryKey: ["patients"], exact: false });
+          queryClient.invalidateQueries({ queryKey: ["practice-patients"], exact: false });
           
           toast.success("✅ Patient updated successfully");
         } catch (error) {
@@ -441,7 +441,7 @@ export const PatientDialog = ({
           }]);
 
         if (error) throw error;
-        queryClient.invalidateQueries({ queryKey: ["patients"] });
+        queryClient.invalidateQueries({ queryKey: ["practice-patients"] });
         queryClient.invalidateQueries({ queryKey: ["patient-portal-status"] });
         toast.success("✅ Patient added successfully");
       }

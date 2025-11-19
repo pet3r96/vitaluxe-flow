@@ -28,7 +28,7 @@ export function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersPro
   const { effectivePracticeId } = useAuth();
 
   const { data: patients } = useQuery({
-    queryKey: ["patients-filter", effectivePracticeId],
+    queryKey: ["practice-patients", effectivePracticeId],
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       const { data, error } = await supabase

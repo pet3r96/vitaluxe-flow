@@ -21,7 +21,7 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: patients, isLoading, error: queryError } = useQuery({
-    queryKey: ["patients-select", effectivePracticeId],
+    queryKey: ["practice-patients", effectivePracticeId],
     queryFn: async () => {
       if (!effectivePracticeId) return [];
       logger.info("Fetching patients for practice", { practiceId: effectivePracticeId });
@@ -58,7 +58,7 @@ export function MultiPatientSelect({ selectedPatientIds, onSelectedChange }: Mul
           filter: `practice_id=eq.${effectivePracticeId}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["patients-select", effectivePracticeId] });
+          queryClient.invalidateQueries({ queryKey: ["practice-patients", effectivePracticeId] });
         }
       )
       .subscribe();

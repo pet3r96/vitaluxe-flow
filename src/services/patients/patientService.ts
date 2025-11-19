@@ -22,7 +22,7 @@ export async function fetchPatients(params: PatientQueryParams) {
   logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
   
   // Check in-memory cache first
-  const cacheKey = `patients:${effectivePracticeId || 'all'}`;
+  const cacheKey = `practice-patients:${effectivePracticeId || 'all'}`;
   const cached = patientListCache.get(cacheKey);
   
   if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {

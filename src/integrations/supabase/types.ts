@@ -1603,6 +1603,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "order_lines_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_order_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "order_lines_original_order_line_id_fkey"
             columns: ["original_order_line_id"]
             isOneToOne: false
@@ -1730,6 +1737,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "order_profits_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_order_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "order_profits_topline_id_fkey"
             columns: ["topline_id"]
             isOneToOne: false
@@ -1843,6 +1857,13 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_order_summary"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
@@ -1861,6 +1882,7 @@ export type Database = {
           id: string
           merchant_fee_amount: number | null
           merchant_fee_percentage: number | null
+          patient_id: string | null
           payment_method_id: string | null
           payment_method_used: string | null
           payment_status: string | null
@@ -1894,6 +1916,7 @@ export type Database = {
           id?: string
           merchant_fee_amount?: number | null
           merchant_fee_percentage?: number | null
+          patient_id?: string | null
           payment_method_id?: string | null
           payment_method_used?: string | null
           payment_status?: string | null
@@ -1927,6 +1950,7 @@ export type Database = {
           id?: string
           merchant_fee_amount?: number | null
           merchant_fee_percentage?: number | null
+          patient_id?: string | null
           payment_method_id?: string | null
           payment_method_used?: string | null
           payment_status?: string | null
@@ -1959,6 +1983,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_account_health"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "orders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "orders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "orders_payment_method_id_fkey"
@@ -3707,6 +3766,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pharmacy_order_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_order_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pharmacy_order_jobs_order_line_id_fkey"
             columns: ["order_line_id"]
             isOneToOne: true
@@ -3789,6 +3855,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_order_transmissions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_order_summary"
             referencedColumns: ["id"]
           },
           {
@@ -7345,6 +7418,85 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      v_order_summary: {
+        Row: {
+          created_at: string | null
+          doctor_id: string | null
+          id: string | null
+          patient_email: string | null
+          patient_id: string | null
+          patient_name: string | null
+          payment_status: string | null
+          practice_id: string | null
+          status: string | null
+          total_amount: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_account_health"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "orders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "orders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "orders_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_patients_with_portal_status: {
         Row: {

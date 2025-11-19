@@ -159,7 +159,7 @@ export default function PatientInbox() {
 
   // Fetch unique patients for filter
   const { data: patients = [] } = useQuery({
-    queryKey: ['inbox-patients', practiceId],
+    queryKey: ['practice-patients', practiceId],
     queryFn: async () => {
       if (!practiceId) return [];
       const { data, error } = await supabase

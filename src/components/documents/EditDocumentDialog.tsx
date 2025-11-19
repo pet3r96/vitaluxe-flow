@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProviderDocuments } from '@/integrations/supabase/table-helpers';
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EditDocumentDialogProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface EditDocumentDialogProps {
 }
 
 export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumentDialogProps) {
+  const { effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     document_name: "",
@@ -47,11 +49,13 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
   }, [document]);
 
   const { data: patients } = useQuery({
-    queryKey: ["patients-for-edit"],
+    queryKey: ["practice-patients", effectivePracticeId],
     queryFn: async () => {
+      if (!effectivePracticeId) return [];
       const { data, error } = await supabase
         .from("patient_accounts")
         .select("id, first_name, last_name")
+        .eq("practice_id", effectivePracticeId)
         .order("first_name");
       if (error) throw error;
       return data || [];

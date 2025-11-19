@@ -128,7 +128,7 @@ export const PatientSelectionDialog = ({
   }
 
   const { data: patients, isLoading } = useQuery({
-    queryKey: ["patients", finalPracticeId],
+    queryKey: ["practice-patients", finalPracticeId],
     queryFn: async () => {
       if (!finalPracticeId) return [];
       

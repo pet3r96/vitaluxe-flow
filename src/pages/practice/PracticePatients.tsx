@@ -22,7 +22,7 @@ export default function PracticePatients() {
 
   // Fetch patients with portal status
   const { data: rawPatients = [], isLoading } = useQuery({
-    queryKey: ['patients-with-portal-status', effectivePracticeId],
+    queryKey: ['practice-patients', effectivePracticeId],
     queryFn: async () => {
       if (!effectivePracticeId) {
         logger.warn('No effectivePracticeId available for patients query');
@@ -72,7 +72,7 @@ export default function PracticePatients() {
       logger.info('Inviting patient to portal', logger.sanitize({ patientId }));
       
       // Invalidate any cached patient data to ensure fresh data
-      await queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
+      await queryClient.invalidateQueries({ queryKey: ['practice-patients'] });
       await queryClient.invalidateQueries({ queryKey: ['patient-accounts'] });
       
       // Small delay to ensure cache is cleared
@@ -157,7 +157,7 @@ export default function PracticePatients() {
           : 'Welcome email sent successfully';
         toast.success(message);
       }
-      queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
+      queryClient.invalidateQueries({ queryKey: ['practice-patients'] });
     },
     onError: (error: Error) => {
       logger.error('Failed to invite patient', error);
@@ -274,7 +274,7 @@ export default function PracticePatients() {
         onOpenChange={setBulkInviteDialogOpen}
         patientIds={patientsWithoutPortal.map((p: any) => p.id)}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['patients-with-portal-status'] });
+          queryClient.invalidateQueries({ queryKey: ['practice-patients'] });
         }}
       />
     </div>

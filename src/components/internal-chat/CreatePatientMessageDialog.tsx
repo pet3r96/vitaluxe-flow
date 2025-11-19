@@ -36,7 +36,7 @@ export function CreatePatientMessageDialog({
 
   // Fetch patients with portal status using view
   const { data: patients = [], isLoading: isLoadingPatients, refetch: refetchPatients } = useQuery({
-    queryKey: ['practice-patients-portal', practiceId],
+    queryKey: ['practice-patients', practiceId],
     queryFn: async () => {
       logger.info('[CreatePatientMessageDialog] Fetching patients for practice:', { practiceId });
       
