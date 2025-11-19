@@ -25,9 +25,10 @@ serve(async (req) => {
 
     if (error) {
       edgeLogger.error('[admin-recompute-profits] Recomputation error', { 
-        error: error.message,
+        message: error.message,
         details: error.details,
-        hint: error.hint 
+        hint: error.hint,
+        code: error.code
       });
       throw error;
     }
@@ -51,9 +52,11 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    edgeLogger.error('[admin-recompute-profits] Fatal error', { 
-      error: error instanceof Error ? error.message : JSON.stringify(error)
-    });
+    const errorDetails = error instanceof Error 
+      ? { message: error.message, stack: error.stack }
+      : { error: JSON.stringify(error) };
+    
+    edgeLogger.error('[admin-recompute-profits] Fatal error', errorDetails);
     const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
     
     return new Response(
