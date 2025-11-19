@@ -9,6 +9,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+
   try {
     const authHeader = req.headers.get('Authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
@@ -81,10 +84,28 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('[end-impersonation] Success');
 
+    edgeLogger.logOperation({
+      user_id: user.id,
+      ip_address: ipAddress,
+      operation: 'end_impersonation',
+      success: true,
+      duration_ms: Date.now() - startTime,
+      metadata: { sessionId: session?.id }
+    });
+
     return successResponse({});
 
   } catch (error) {
     edgeLogger.error('[end-impersonation] Unexpected error', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    edgeLogger.logOperation({
+      user_id: undefined,
+      ip_address: ipAddress,
+      operation: 'end_impersonation',
+      success: false,
+      duration_ms: Date.now() - startTime,
+      metadata: { error: errorMessage }
+    });
     return errorResponse('Internal server error', 500);
   }
 });

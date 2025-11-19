@@ -19,6 +19,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+
   try {
     // Parse JSON with error handling
     let requestData;
@@ -26,6 +29,14 @@ Deno.serve(async (req) => {
       requestData = await req.json();
     } catch (error) {
       edgeLogger.error('Invalid JSON in cancel order request', error);
+      edgeLogger.logOperation({
+        user_id: undefined,
+        ip_address: ipAddress,
+        operation: 'cancel_order',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { error: 'invalid_json' }
+      });
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
