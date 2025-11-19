@@ -32,19 +32,19 @@ export function RoomsManagerTable({ practiceId }: RoomsManagerTableProps) {
   const { data: rooms, isLoading, error, refetch } = useQuery({
     queryKey: ["practice-rooms", practiceId],
     queryFn: async () => {
-      console.log('[RoomsManagerTable] Fetching rooms for practice:', practiceId);
-      const { data, error } = await supabase
-        .from("practice_rooms")
-        .select("*")
-        .eq("practice_id", practiceId)
-        .order("name");
+      console.log('[RoomsManagerTable] Fetching rooms via edge function for practice:', practiceId);
+      
+      const { data, error } = await supabase.functions.invoke('get-practice-rooms', {
+        body: { practiceId }
+      });
 
       if (error) {
-        console.error('[RoomsManagerTable] Query error:', error);
-        throw error;
+        console.error('[RoomsManagerTable] Edge function error:', error);
+        throw new Error(error.message || 'Failed to fetch rooms');
       }
-      console.log('[RoomsManagerTable] Rooms fetched:', data?.length || 0, data);
-      return data;
+      
+      console.log('[RoomsManagerTable] Rooms fetched:', data?.rooms?.length || 0, data?.rooms);
+      return data.rooms || [];
     },
     enabled: !!practiceId,
     refetchOnMount: 'always',
