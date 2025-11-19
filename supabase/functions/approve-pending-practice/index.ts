@@ -230,6 +230,7 @@ serve(async (req) => {
           address_zip: practiceData.address_zip,
           contract_url: contract_url,
           linked_topline_id: practiceData.assigned_rep_user_id,
+          signed_up_by_rep_id: pendingPractice.created_by_user_id, // Track who signed up this practice
           active: true,
           updated_at: new Date().toISOString()
         }, { 
