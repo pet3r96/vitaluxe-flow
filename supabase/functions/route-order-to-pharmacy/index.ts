@@ -1,6 +1,8 @@
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { validateRouteOrderRequest } from '../_shared/requestValidators.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -283,12 +285,33 @@ Deno.serve(async (req) => {
   }
 
   const startTime = Date.now();
-  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  const ipAddress = getClientIP(req);
 
   try {
-    // Use service role key to bypass RLS for system tables (product_pharmacies, pharmacy_rep_assignments)
+    // Use service role key to bypass RLS for system tables
     const supabaseClient = createAdminClient();
-    // No Authorization header needed - service role bypasses RLS
+    
+    // Authenticate user for ID validation
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    const { data: { user } } = token ? await supabaseClient.auth.getUser(token) : { data: { user: null } };
+
+    // PHASE 3: Rate limiting (50 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseClient,
+      ipAddress,
+      'route-order-to-pharmacy',
+      { maxRequests: 50, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { function: 'route-order-to-pharmacy', ipAddress });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Parse and validate JSON
     let requestData;
@@ -296,7 +319,7 @@ Deno.serve(async (req) => {
       requestData = await req.json();
     } catch (error) {
       edgeLogger.logOperation({
-        user_id: undefined,
+        user_id: user?.id,
         ip_address: ipAddress,
         operation: 'route_order_to_pharmacy',
         success: false,
@@ -309,11 +332,29 @@ Deno.serve(async (req) => {
       );
     }
 
+    // PHASE 3: ID validation for orderId
+    if (user && requestData.orderId) {
+      const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
+        supabaseClient,
+        user.id,
+        'order',
+        requestData.orderId
+      );
+
+      if (!ownsResource) {
+        edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, orderId: requestData.orderId });
+        return new Response(
+          JSON.stringify({ error: idError || 'Access denied' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     const validation = validateRouteOrderRequest(requestData);
     if (!validation.valid) {
       edgeLogger.warn('Validation failed', { errors: validation.errors });
       edgeLogger.logOperation({
-        user_id: undefined,
+        user_id: user?.id,
         ip_address: ipAddress,
         operation: 'route_order_to_pharmacy',
         success: false,

@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
+import { validateInput, startVideoSessionSchema } from '../_shared/zodSchemas.ts';
 
 Deno.serve(async (req) => {
   const startTime = Date.now();

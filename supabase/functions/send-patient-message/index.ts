@@ -6,6 +6,7 @@ import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 // Helper to normalize phone to E.164
 function normalizePhoneToE164(phone: string): string {
@@ -89,6 +90,24 @@ Deno.serve(async (req) => {
 
     const { subject, message, sender_type, patient_id, parent_message_id } = validation.data;
     const thread_id = body.thread_id; // Optional field not in schema
+
+    // PHASE 3: ID validation for patient_id
+    if (patient_id) {
+      const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
+        supabaseAdmin,
+        user.id,
+        'patient',
+        patient_id
+      );
+
+      if (!ownsResource) {
+        edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, patientId: patient_id });
+        return new Response(
+          JSON.stringify({ error: idError || 'Access denied to this patient' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Detect mode: provider reply or patient message
     const isProviderMode = sender_type === 'provider' && patient_id;
