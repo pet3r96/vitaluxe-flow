@@ -244,8 +244,10 @@ export const ProvidersDataTable = () => {
                     <TableCell className="font-medium">
                       {nameWithSuffix}
                     </TableCell>
-                    <TableCell>{provider.profiles?.prescriber_name || 'Not Set'}</TableCell>
-                    <TableCell>{provider.practice?.name || provider.practice?.company}</TableCell>
+                    <TableCell>
+                      {provider.prescriber_name || provider.profiles?.prescriber_name || provider.profiles?.full_name || provider.profiles?.name || 'Not Set'}
+                    </TableCell>
+                    <TableCell>{provider.practice?.name || provider.practice?.company || 'N/A'}</TableCell>
                     <TableCell>{provider.profiles?.email || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant={provider.active ? "default" : "secondary"}>
