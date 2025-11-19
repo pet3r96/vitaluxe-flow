@@ -340,7 +340,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.generate-agora-token]
-verify_jwt = false
+verify_jwt = true
 
 [functions.start-video-session]
 verify_jwt = true

@@ -53,6 +53,18 @@ serve(async (req) => {
   }
 
   try {
+    // Verify webhook secret for security
+    const webhookSecret = Deno.env.get('WEBHOOK_GHL_SECRET');
+    const requestSecret = req.headers.get('x-webhook-secret');
+    
+    if (!webhookSecret || requestSecret !== webhookSecret) {
+      edgeLogger.error('[handleNotifications] Unauthorized webhook attempt', { hasSecret: !!requestSecret });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createAdminClient();
     edgeLogger.info('[handleNotifications] Supabase admin client created');
 

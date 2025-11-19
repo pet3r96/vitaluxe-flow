@@ -13,6 +13,19 @@ serve(async (req) => {
   }
 
   try {
+    // Verify cron secret for security
+    const cronSecret = Deno.env.get('CRON_SECRET');
+    const requestSecret = req.headers.get('x-cron-secret');
+    
+    if (!cronSecret || requestSecret !== cronSecret) {
+      const { edgeLogger } = await import("../_shared/logger.ts");
+      edgeLogger.error('Unauthorized trial conversion attempt', { hasSecret: !!requestSecret });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabaseClient = createAdminClient();
 
     const now = new Date();
