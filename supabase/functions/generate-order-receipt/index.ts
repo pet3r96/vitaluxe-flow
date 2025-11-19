@@ -520,7 +520,7 @@ serve(async (req) => {
       edgeLogger.info('Storage upload started');
       const storageStart = Date.now();
       
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await adminClient.storage
         .from('receipts')
         .upload(filePath, pdfBuffer, {
           contentType: 'application/pdf',
@@ -533,7 +533,7 @@ serve(async (req) => {
       }
 
       // Generate signed URL (valid for 1 hour)
-      const { data: signedUrlData, error: urlError } = await supabase.storage
+      const { data: signedUrlData, error: urlError } = await adminClient.storage
         .from('receipts')
         .createSignedUrl(filePath, 3600);
 
