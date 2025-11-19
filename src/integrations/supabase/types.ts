@@ -5230,6 +5230,33 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_verification_attempts: {
+        Row: {
+          attempt_id: string
+          code_hash: string
+          created_at: string
+          expires_at: string
+          user_id: string
+          window_key: string
+        }
+        Insert: {
+          attempt_id?: string
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          user_id: string
+          window_key: string
+        }
+        Update: {
+          attempt_id?: string
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          user_id?: string
+          window_key?: string
+        }
+        Relationships: []
+      }
       statuses: {
         Row: {
           active: boolean | null
