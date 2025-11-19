@@ -3,15 +3,18 @@ import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { requireAdmin } from '../_shared/roleChecker.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+
   try {
-    const { edgeLogger } = await import('../_shared/logger.ts');
-    
     const supabase = createAuthClient(req.headers.get('Authorization'));
     const supabaseClient = createAdminClient();
 
@@ -33,14 +36,13 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is admin
+    // PHASE 2: Use centralized role checker
     const { data: roles, error: roleError } = await supabaseClient
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin');
+      .eq('user_id', user.id);
 
-    if (roleError || !roles || roles.length === 0) {
+    if (roleError || !roles || !roles.some(r => ['admin', 'super_admin'].includes(r.role))) {
       edgeLogger.error('Role check failed', roleError);
       throw new Error('Unauthorized: Admin access required');
     }
