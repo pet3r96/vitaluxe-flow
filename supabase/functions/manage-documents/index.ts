@@ -254,18 +254,34 @@ Deno.serve(async (req) => {
       }
 
       case 'get-signed-url': {
-        const { documentId, path, storage_provider, expiresIn = 300 } = body;
+        const { documentId, path, storage_provider, bucket, expiresIn = 300 } = body;
 
         let storagePath = path;
         let provider = storage_provider;
+        let bucketId = bucket || 'provider-documents';
 
         // If documentId provided, look up the document to get storage info
         if (documentId) {
-          const { data: doc } = await supabaseAdmin
+          // Try provider_documents first
+          let { data: doc } = await supabaseAdmin
             .from('provider_documents')
             .select('storage_path, storage_provider')
             .eq('id', documentId)
             .single();
+
+          // If not found, try patient_documents
+          if (!doc) {
+            const { data: patientDoc } = await supabaseAdmin
+              .from('patient_documents')
+              .select('storage_path')
+              .eq('id', documentId)
+              .single();
+            
+            if (patientDoc) {
+              doc = { storage_path: patientDoc.storage_path, storage_provider: 'supabase' };
+              bucketId = 'patient-documents'; // Patient docs are in different bucket
+            }
+          }
 
           if (doc) {
             storagePath = doc.storage_path;
@@ -316,9 +332,9 @@ Deno.serve(async (req) => {
         // FALLBACK TO SUPABASE STORAGE IF PRIMARY FAILED
         if (!signedUrl) {
           try {
-            edgeLogger.info('Generating Supabase Storage signed URL');
+            edgeLogger.info('Generating Supabase Storage signed URL', { bucketId, storagePath });
             const { data: urlData, error: urlError } = await supabaseAdmin.storage
-              .from('provider-documents')
+              .from(bucketId)
               .createSignedUrl(storagePath, expiresIn);
 
             if (urlError) throw urlError;
@@ -327,8 +343,11 @@ Deno.serve(async (req) => {
             usedProvider = 'supabase';
             edgeLogger.info('Supabase Storage signed URL generated');
           } catch (supabaseError: any) {
-            edgeLogger.error('Supabase Storage signed URL generation also failed', supabaseError);
-            throw new Error('Both S3 and Supabase Storage signed URL generation failed');
+            edgeLogger.error('Supabase Storage signed URL generation also failed', supabaseError, {
+              bucketId,
+              storagePath
+            });
+            throw new Error(`Failed to generate signed URL: ${supabaseError.message}`);
           }
         }
 
