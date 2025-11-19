@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from "../_shared/supabaseAdmin.ts";
 import { cacheFetch } from "../_shared/cache.ts";
 import { isAdmin as checkIsAdmin } from '../_shared/roleChecker.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +14,10 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // PHASE 3 SECURITY: Request size validation
+  const sizeValidation = validateRequestSize(req, 'get-patient-dashboard-data', corsHeaders);
+  if (sizeValidation) return sizeValidation;
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -27,6 +33,23 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
+    // PHASE 3 SECURITY: Rate limiting (30 requests/hour)
+    const supabase = createAdminClient();
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabase,
+      getClientIP(req),
+      'get-patient-dashboard-data',
+      { maxRequests: 30, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { effectiveUserId } = await req.json();
     if (!effectiveUserId) {
       throw new Error('effectiveUserId is required');
@@ -39,9 +62,6 @@ serve(async (req) => {
     if (!isAdmin && user.id !== effectiveUserId) {
       throw new Error('Unauthorized: Cannot access other user data');
     }
-
-    // Use admin client for actual queries to bypass RLS
-    const supabase = createAdminClient();
 
     // Cache key uses only patient_id, NOT PHI like name/email
     const cacheKey = `patient_dashboard:${effectiveUserId}`;

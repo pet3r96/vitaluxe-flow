@@ -3,6 +3,7 @@ import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts
 import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateUserOwnsResource } from '../_shared/idValidator.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,10 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // PHASE 3 SECURITY: Request size validation
+  const sizeValidation = validateRequestSize(req, 'refresh-prescription-url', corsHeaders);
+  if (sizeValidation) return sizeValidation;
 
   try {
     // PHASE 3 SECURITY: Authentication

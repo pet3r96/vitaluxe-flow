@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,10 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // PHASE 3 SECURITY: Request size validation
+  const sizeValidation = validateRequestSize(req, 'update-shipping-speed', corsHeaders);
+  if (sizeValidation) return sizeValidation;
 
   const startTime = Date.now();
   const ipAddress = getClientIP(req);
