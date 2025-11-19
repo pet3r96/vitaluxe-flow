@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from "../_shared/supabaseAdmin.ts";
 import { edgeLogger } from '../_shared/logger.ts';
 import { requireAdmin } from '../_shared/roleChecker.ts';
+import { enforceAdminIP } from '../_shared/ipFilter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,15 +18,23 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
+    // Admin client for IP check and deletions
+    const supabaseAdmin = createAdminClient();
+
+    // PHASE 3: IP filtering for admin function
+    const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'delete-all-orders');
+    if (ipCheckResponse) return ipCheckResponse;
+
+    // PHASE 3: Request size validation
+    const sizeCheckResponse = validateRequestSize(req, 'delete-all-orders', corsHeaders);
+    if (sizeCheckResponse) return sizeCheckResponse;
+
     // Client for auth verification (with user JWT)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       throw new Error('No authorization header');
     }
     const supabaseClient = createAuthClient(authHeader);
-
-    // Admin client for deletions (service role, NO JWT - bypasses RLS)
-    const supabaseAdmin = createAdminClient();
 
     // Get authenticated user
     const {

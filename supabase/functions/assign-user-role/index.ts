@@ -8,6 +8,8 @@ import { RateLimiter, RATE_LIMITS, getClientIP } from '../_shared/rateLimiter.ts
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { hasRole, isAdmin as checkIsAdmin } from '../_shared/roleChecker.ts';
+import { enforceAdminIP } from '../_shared/ipFilter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -86,6 +88,14 @@ serve(async (req) => {
     edgeLogger.info('[assign-user-role] Creating admin client');
     const supabaseAdmin = createAdminClient();
     edgeLogger.info('[assign-user-role] Admin client created successfully');
+
+    // PHASE 3: IP filtering for admin function
+    const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'assign-user-role');
+    if (ipCheckResponse) return ipCheckResponse;
+
+    // PHASE 3: Request size validation
+    const sizeCheckResponse = validateRequestSize(req, 'assign-user-role', corsHeaders);
+    if (sizeCheckResponse) return sizeCheckResponse;
 
     // Rate limiting to prevent abuse
     edgeLogger.info('[assign-user-role] Checking rate limit');
