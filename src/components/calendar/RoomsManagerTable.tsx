@@ -29,18 +29,27 @@ export function RoomsManagerTable({ practiceId }: RoomsManagerTableProps) {
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
 
-  const { data: rooms, isLoading, refetch } = useQuery({
+  const { data: rooms, isLoading, error, refetch } = useQuery({
     queryKey: ["practice-rooms", practiceId],
     queryFn: async () => {
+      console.log('[RoomsManagerTable] Fetching rooms for practice:', practiceId);
       const { data, error } = await supabase
         .from("practice_rooms")
         .select("*")
         .eq("practice_id", practiceId)
         .order("name");
 
-      if (error) throw error;
+      if (error) {
+        console.error('[RoomsManagerTable] Query error:', error);
+        throw error;
+      }
+      console.log('[RoomsManagerTable] Rooms fetched:', data?.length || 0, data);
       return data;
     },
+    enabled: !!practiceId,
+    refetchOnMount: 'always',
+    staleTime: 0,
+    retry: 2,
   });
 
   // Set up realtime subscription
@@ -99,6 +108,17 @@ export function RoomsManagerTable({ practiceId }: RoomsManagerTableProps) {
 
   if (isLoading) {
     return <div className="text-center py-8">Loading rooms...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-destructive">
+        <p className="mb-2">Error loading rooms: {(error as Error).message}</p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   return (
