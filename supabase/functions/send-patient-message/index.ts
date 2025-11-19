@@ -93,6 +93,8 @@ Deno.serve(async (req) => {
 
     // PHASE 3: ID validation for patient_id
     if (patient_id) {
+      edgeLogger.info('Validating patient access', { userId: user.id, patientId: patient_id });
+      
       const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
         supabaseAdmin,
         user.id,
@@ -101,6 +103,7 @@ Deno.serve(async (req) => {
       );
 
       if (!ownsResource) {
+        edgeLogger.error('Patient access validation failed', { userId: user.id, patientId: patient_id, error: idError });
         edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, patientId: patient_id });
         return new Response(
           JSON.stringify({ error: idError || 'Access denied to this patient' }),
