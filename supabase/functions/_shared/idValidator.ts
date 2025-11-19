@@ -7,6 +7,31 @@
 import { edgeLogger } from './logger.ts';
 
 /**
+ * Helper function to get user's practice_id
+ * Checks both profiles table (for practice owners/providers) and practice_staff table (for staff)
+ */
+async function getUserPracticeId(supabase: any, userId: string): Promise<string | null> {
+  // Check profiles first (practice owners, providers)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('practice_id')
+    .eq('id', userId)
+    .single();
+  
+  if (profile?.practice_id) return profile.practice_id;
+  
+  // Check practice_staff (staff members)
+  const { data: staffRecord } = await supabase
+    .from('practice_staff')
+    .select('practice_id')
+    .eq('user_id', userId)
+    .eq('active', true)
+    .single();
+  
+  return staffRecord?.practice_id || null;
+}
+
+/**
  * Validate UUID format using regex
  */
 export function isValidUUID(id: string): boolean {
@@ -57,62 +82,50 @@ export async function validateUserOwnsResource(
   try {
     switch (resourceType) {
       case 'practice': {
-        // Check if user belongs to the practice
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('practice_id')
-          .eq('id', userId)
-          .single();
+        // Check if user belongs to the practice (supports both direct practice_id and staff)
+        const userPracticeId = await getUserPracticeId(supabase, userId);
         
-        const valid = profile?.practice_id === resourceId;
+        const valid = userPracticeId === resourceId;
         return { 
           valid, 
           error: valid ? undefined : 'User does not belong to this practice',
-          practiceId: profile?.practice_id
+          practiceId: userPracticeId || undefined
         };
       }
 
       case 'provider': {
-        // Check if provider belongs to user's practice
+        // Check if provider belongs to user's practice (supports staff users)
         const { data: provider } = await supabase
           .from('providers')
           .select('practice_id')
           .eq('id', resourceId)
           .single();
         
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('practice_id')
-          .eq('id', userId)
-          .single();
+        const userPracticeId = await getUserPracticeId(supabase, userId);
         
-        const valid = provider?.practice_id === userProfile?.practice_id;
+        const valid = provider?.practice_id === userPracticeId && userPracticeId !== null;
         return { 
           valid, 
           error: valid ? undefined : 'Provider does not belong to your practice',
-          practiceId: userProfile?.practice_id
+          practiceId: userPracticeId || undefined
         };
       }
 
       case 'patient': {
-        // Check if patient belongs to user's practice
+        // Check if patient belongs to user's practice (supports staff users)
         const { data: patient } = await supabase
           .from('patient_accounts')
           .select('practice_id')
           .eq('id', resourceId)
           .single();
         
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('practice_id')
-          .eq('id', userId)
-          .single();
+        const userPracticeId = await getUserPracticeId(supabase, userId);
         
-        const valid = patient?.practice_id === userProfile?.practice_id;
+        const valid = patient?.practice_id === userPracticeId && userPracticeId !== null;
         return { 
           valid, 
           error: valid ? undefined : 'Patient does not belong to your practice',
-          practiceId: userProfile?.practice_id
+          practiceId: userPracticeId || undefined
         };
       }
 
@@ -146,16 +159,12 @@ export async function validateUserOwnsResource(
           return { valid: false, error: 'Order not found' };
         }
         
-        // First check if user has a practice_id (doctor, provider, staff)
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('practice_id')
-          .eq('id', userId)
-          .single();
+        // Check if user has a practice_id (supports staff users)
+        const userPracticeId = await getUserPracticeId(supabase, userId);
         
         // Check if user is the practice this order belongs to
-        if (userProfile?.practice_id && order.practice_id === userProfile.practice_id) {
-          return { valid: true, practiceId: userProfile.practice_id };
+        if (userPracticeId && order.practice_id === userPracticeId) {
+          return { valid: true, practiceId: userPracticeId };
         }
         
         // Check if user is a topline rep who manages this practice
@@ -205,29 +214,25 @@ export async function validateUserOwnsResource(
         return { 
           valid: false, 
           error: 'Order does not belong to your practice',
-          practiceId: userProfile?.practice_id
+          practiceId: userPracticeId || undefined
         };
       }
 
       case 'prescription': {
-        // Check if prescription belongs to user's practice
+        // Check if prescription belongs to user's practice (supports staff users)
         const { data: prescription } = await supabase
           .from('prescriptions')
           .select('practice_id')
           .eq('id', resourceId)
           .single();
         
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('practice_id')
-          .eq('id', userId)
-          .single();
+        const userPracticeId = await getUserPracticeId(supabase, userId);
         
-        const valid = prescription?.practice_id === userProfile?.practice_id;
+        const valid = prescription?.practice_id === userPracticeId && userPracticeId !== null;
         return { 
           valid, 
           error: valid ? undefined : 'Prescription does not belong to your practice',
-          practiceId: userProfile?.practice_id
+          practiceId: userPracticeId || undefined
         };
       }
 
