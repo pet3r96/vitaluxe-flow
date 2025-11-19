@@ -123,6 +123,13 @@ export const PharmacyShippingRatesDialog = ({
       queryClient.invalidateQueries({ queryKey: ['pharmacies'] });
       queryClient.invalidateQueries({ queryKey: ['pharmacy-shipping-rates', pharmacy.id] });
       queryClient.invalidateQueries({ queryKey: ['pharmacy-enabled-rates', pharmacy.id] });
+      // Invalidate multiple pharmacy rates query used by cart
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === 'multiple-pharmacy-shipping-rates';
+        }
+      });
       onOpenChange(false);
     },
     onError: (error) => {

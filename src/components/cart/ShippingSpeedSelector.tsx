@@ -1,7 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Truck, Clock, Zap } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface ShippingSpeedSelectorProps {
   value: 'ground' | '2day' | 'overnight';
@@ -20,6 +20,8 @@ export const ShippingSpeedSelector = ({
   enabledOptions,
   isLoading = false
 }: ShippingSpeedSelectorProps) => {
+  const hasAutoSelectedRef = useRef(false);
+  
   const allOptions = [
     { value: 'ground' as const, icon: Truck, label: 'Ground Shipping', desc: '(5-7 days)', iconColor: 'text-muted-foreground' },
     { value: '2day' as const, icon: Clock, label: '2-Day Shipping', desc: '(2 business days)', iconColor: 'text-blue-500' },
@@ -30,15 +32,23 @@ export const ShippingSpeedSelector = ({
     ? allOptions.filter(opt => enabledOptions.includes(opt.value))
     : allOptions;
 
-  // Auto-select single option (hooks-safe: called unconditionally, condition inside)
+  // Auto-select single option only once to prevent infinite loop
   useEffect(() => {
-    if (visibleOptions.length === 1) {
+    if (visibleOptions.length === 1 && !hasAutoSelectedRef.current) {
       const only = visibleOptions[0];
       if (value !== only.value) {
+        hasAutoSelectedRef.current = true;
         onChange(only.value);
       }
     }
-  }, [visibleOptions, value, onChange]);
+  }, [visibleOptions.length]);
+
+  // Reset auto-select flag when options change from single to multiple
+  useEffect(() => {
+    if (visibleOptions.length !== 1) {
+      hasAutoSelectedRef.current = false;
+    }
+  }, [visibleOptions.length]);
 
   if (isLoading) {
     return (
