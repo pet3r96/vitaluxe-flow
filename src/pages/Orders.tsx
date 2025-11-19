@@ -1,4 +1,5 @@
 import { OrdersDataTable } from "@/components/orders/OrdersDataTable";
+import { OrderStatistics } from "@/components/orders/OrderStatistics";
 import { ResponsivePage } from "@/components/layout/ResponsivePage";
 import { CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,7 @@ const Orders = () => {
           </Button>
         </div>
       )}
+      <OrderStatistics />
       <OrdersDataTable />
     </ResponsivePage>
   );
