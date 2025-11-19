@@ -212,9 +212,10 @@ const Cart = React.memo(function Cart() {
         discountCode,
         discountPercentage,
         merchantFeePercentage: feePercentage,
+        shippingPreview,
       },
     });
-  }, [navigate, discountCode, discountPercentage, feePercentage]);
+  }, [navigate, discountCode, discountPercentage, feePercentage, shippingPreview]);
 
   // All mutations
   const removeMutation = useMutation({
@@ -617,6 +618,7 @@ const Cart = React.memo(function Cart() {
                       patientName={group.patient_name}
                       enabledOptions={getEnabledSpeeds(group.pharmacy_id)}
                       isLoading={ratesLoading}
+                      rates={pharmacyRatesMap[group.pharmacy_id]}
                     />
                   </CardContent>
                 </Card>
