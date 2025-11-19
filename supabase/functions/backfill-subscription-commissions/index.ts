@@ -26,7 +26,7 @@ serve(async (req) => {
         subscription_id,
         amount,
         payment_status,
-        practice_subscriptions (
+        practice_subscriptions!subscription_id (
           assigned_rep_id,
           monthly_price,
           rep_commission_percentage
