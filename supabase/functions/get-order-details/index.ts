@@ -44,10 +44,26 @@ serve(async (req) => {
     // Use admin client to bypass RLS and get full order details
     const adminClient = createAdminClient();
 
+    // Check for active impersonation
+    let effectiveUserId = user.id;
+    const { data: impersonationData } = await adminClient
+      .from('active_impersonation_sessions')
+      .select('impersonated_user_id')
+      .eq('admin_user_id', user.id)
+      .maybeSingle();
+
+    if (impersonationData?.impersonated_user_id) {
+      effectiveUserId = impersonationData.impersonated_user_id;
+      edgeLogger.info('Using impersonated user for order details', { 
+        adminUserId: user.id,
+        effectiveUserId 
+      });
+    }
+
     // PHASE 3: ID validation
     const { valid, error: idError } = await validateUserOwnsResource(
       adminClient,
-      user.id,
+      effectiveUserId,
       'order',
       orderId
     );
