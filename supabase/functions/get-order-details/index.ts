@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +43,22 @@ serve(async (req) => {
 
     // Use admin client to bypass RLS and get full order details
     const adminClient = createAdminClient();
+
+    // PHASE 3: ID validation
+    const { valid, error: idError } = await validateUserOwnsResource(
+      adminClient,
+      user.id,
+      'order',
+      orderId
+    );
+
+    if (!valid) {
+      edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, orderId });
+      return new Response(
+        JSON.stringify({ error: idError || 'Access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { data, error } = await adminClient
       .from("orders")

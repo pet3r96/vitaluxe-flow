@@ -1,5 +1,6 @@
-import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +26,8 @@ Deno.serve(async (req) => {
     }
 
     edgeLogger.info('User authenticated', { userId: user.id });
+
+    const supabaseAdmin = createAdminClient();
 
     // Get user's role and practice using roleChecker
     const { getUserRoles } = await import('../_shared/roleChecker.ts');
@@ -52,6 +55,23 @@ Deno.serve(async (req) => {
       // Admins: prefer body practice_id (impersonation), then query param
       practiceId = bodyPracticeId || queryPracticeId;
       practiceIdSource = bodyPracticeId ? 'body' : queryPracticeId ? 'query' : 'none';
+      
+      // PHASE 3: ID validation for admin accessing specific practice
+      if (practiceId) {
+        const { valid, error: idError } = await validateUserOwnsResource(
+          supabaseAdmin,
+          user.id,
+          'practice',
+          practiceId
+        );
+        if (!valid && !roles.includes('admin')) {
+          edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, practiceId });
+          return new Response(
+            JSON.stringify({ error: idError || 'Access denied' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
     } else if (roles.includes('doctor')) {
       // Doctor: their user_id IS the practice_id
       practiceId = user.id;

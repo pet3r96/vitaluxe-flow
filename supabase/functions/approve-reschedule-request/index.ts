@@ -1,9 +1,10 @@
-import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { generateNotificationEmailHTML, generateNotificationEmailText } from '../_shared/emailTemplates.ts';
 import { sendNotificationSms } from '../_shared/notificationSmsSender.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 const normalizePhoneToE164 = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
@@ -40,6 +41,8 @@ Deno.serve(async (req) => {
     }
 
     edgeLogger.info('Approve reschedule request', { appointmentId, action, ignoreConflicts, cancelOriginal });
+
+    const supabaseAdmin = createAdminClient();
 
     // Get user role and verify authorization using roleChecker
     const { requireRole, getUserRoles } = await import('../_shared/roleChecker.ts');

@@ -1,9 +1,10 @@
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 
 Deno.serve(async (req) => {
   const requestStartTime = Date.now();
-  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  const ipAddress = getClientIP(req);
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -49,6 +50,23 @@ Deno.serve(async (req) => {
     edgeLogger.info('Authenticated user', { userId: user.id });
 
     const supabase = createAdminClient();
+
+    // PHASE 3: Rate limiting (20 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabase,
+      ipAddress,
+      'end-video-session',
+      { maxRequests: 20, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { userId: user.id, function: 'end-video-session' });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { sessionId } = await req.json();
 
