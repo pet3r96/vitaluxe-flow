@@ -30,8 +30,15 @@ export const ShippingSpeedSelector = ({
     ? allOptions.filter(opt => enabledOptions.includes(opt.value))
     : allOptions;
 
-  // Note: Auto-selection removed to prevent render loops
-  // Parent component (Cart.tsx) handles normalization once per cart version
+  // Auto-select single option (hooks-safe: called unconditionally, condition inside)
+  useEffect(() => {
+    if (visibleOptions.length === 1) {
+      const only = visibleOptions[0];
+      if (value !== only.value) {
+        onChange(only.value);
+      }
+    }
+  }, [visibleOptions, value, onChange]);
 
   if (isLoading) {
     return (
@@ -59,7 +66,7 @@ export const ShippingSpeedSelector = ({
     );
   }
 
-  // If only one option, show as info card (no radio buttons)
+  // If only one option, show as selected with visual indicator
   if (visibleOptions.length === 1) {
     const option = visibleOptions[0];
     const Icon = option.icon;
@@ -70,12 +77,16 @@ export const ShippingSpeedSelector = ({
           <Truck className="h-4 w-4" />
           Shipping for {patientName}
         </Label>
-        <div className="flex items-center justify-between p-3 rounded border bg-accent/50">
+        <div className="flex items-center justify-between p-3 rounded border-2 border-primary bg-accent/50">
           <span className="flex items-center gap-2">
+            <div className="h-4 w-4 rounded-full border-2 border-primary flex items-center justify-center">
+              <div className="h-2 w-2 rounded-full bg-primary" />
+            </div>
             <Icon className={`h-4 w-4 ${option.iconColor}`} />
             <span className="font-medium">{option.label}</span>
             <span className="text-sm text-muted-foreground">{option.desc}</span>
           </span>
+          <span className="text-sm font-semibold text-primary">Selected</span>
         </div>
       </div>
     );

@@ -113,9 +113,20 @@ export const ToplineProductVisibilityManager = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate visibility manager's own query
       queryClient.invalidateQueries({ queryKey: ["products-with-visibility"] });
+      
+      // Invalidate products query (used by practices)
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      toast.success("Product visibility updated");
+      
+      // Invalidate rep visibility settings (used by ProductsGrid badges)
+      queryClient.invalidateQueries({ queryKey: ["rep-product-visibility"] });
+      
+      // Force cache refresh for practice carts and product lists
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      queryClient.invalidateQueries({ queryKey: ["cart-owner-id"] });
+      
+      toast.success("Product visibility updated - changes will reflect for your practices");
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update visibility");

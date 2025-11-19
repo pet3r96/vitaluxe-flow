@@ -103,7 +103,17 @@ export const PharmacyShippingRatesDialog = ({
         .from('pharmacy_shipping_rates')
         .upsert(updates, { onConflict: 'pharmacy_id,shipping_speed' });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[PharmacyShippingRatesDialog] Save error:', {
+          error,
+          code: error.code,
+          message: error.message,
+          updates,
+          pharmacyId: pharmacy.id,
+          timestamp: new Date().toISOString()
+        });
+        throw new Error(`Failed to save shipping rates: ${error.message} (${error.code || 'unknown'})`);
+      }
     },
     onSuccess: () => {
       toast({

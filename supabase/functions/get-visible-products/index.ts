@@ -45,7 +45,7 @@ serve(async (req) => {
         if (error) throw error;
         return data || [];
       },
-      900 // 15 minutes TTL
+      60 // 1 minute TTL - allows faster visibility updates while maintaining performance
     );
 
     return new Response(
