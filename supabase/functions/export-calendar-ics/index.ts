@@ -34,14 +34,10 @@ Deno.serve(async (req) => {
 
     const { startDate, endDate, providerId, roomId } = await req.json();
 
-    // Get user role
-    const { data: roleData } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    const userRole = roleData?.role || 'doctor';
+    // Get user role using roleChecker
+    const { getUserRoles } = await import('../_shared/roleChecker.ts');
+    const userRoles = await getUserRoles(supabaseClient, user.id);
+    const userRole = userRoles[0] || 'doctor';
 
     // Determine practice context
     let practiceId: string | null = null;

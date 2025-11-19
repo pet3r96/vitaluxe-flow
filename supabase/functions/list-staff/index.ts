@@ -29,13 +29,9 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('[list-staff] User', { userId: user.id });
 
-    // Get user's role and practice
-    const { data: userRoles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
-
-    const roles = userRoles?.map(r => r.role) || [];
+    // Get user's role and practice using roleChecker
+    const { getUserRoles } = await import('../_shared/roleChecker.ts');
+    const roles = await getUserRoles(supabase, user.id);
     edgeLogger.info('[list-staff] User roles', { roles });
 
     let practiceId: string | null = null;

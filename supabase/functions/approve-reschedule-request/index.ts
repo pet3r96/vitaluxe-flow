@@ -41,16 +41,13 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('Approve reschedule request', { appointmentId, action, ignoreConflicts, cancelOriginal });
 
-    // Get user role and verify authorization
-    const { data: userRole } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!userRole || !['admin', 'provider'].includes(userRole.role)) {
-      throw new Error('Only admins and providers can approve reschedule requests');
-    }
+    // Get user role and verify authorization using roleChecker
+    const { requireRole, getUserRoles } = await import('../_shared/roleChecker.ts');
+    await requireRole(supabaseClient, user.id, ['admin', 'provider'], 'Only admins and providers can approve reschedule requests');
+    
+    // Get user roles to check if provider (for access validation)
+    const userRoles = await getUserRoles(supabaseClient, user.id);
+    const isProvider = userRoles.includes('provider');
 
     // Fetch the appointment with reschedule request details
     const { data: appointment, error: fetchError } = await supabaseClient
@@ -70,7 +67,7 @@ Deno.serve(async (req) => {
     // Verify user has access to this practice
     const practiceId = appointment.patient_accounts.practice_id;
     
-    if (userRole.role === 'provider') {
+    if (isProvider) {
       const { data: provider } = await supabaseClient
         .from('practice_providers')
         .select('practice_id')

@@ -97,17 +97,13 @@ serve(async (req: Request) => {
       );
     }
 
-    // Get user role
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    const userRole = roleData?.role;
-    if (!userRole || !['admin', 'pharmacy'].includes(userRole)) {
-      throw new Error('Insufficient permissions');
-    }
+    // Get user role using roleChecker
+    const { requireRole, getUserRoles } = await import('../_shared/roleChecker.ts');
+    await requireRole(supabase, user.id, ['admin', 'pharmacy'], 'Insufficient permissions');
+    
+    // Get user role for audit logging
+    const userRoles = await getUserRoles(supabase, user.id);
+    const userRole = userRoles[0] || 'unknown';
 
     const { orderLineId, trackingNumber, carrier, status, changeDescription }: UpdateShippingRequest = requestData;
 

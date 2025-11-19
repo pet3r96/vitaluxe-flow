@@ -77,17 +77,9 @@ serve(async (req: Request) => {
       );
     }
 
-    // Get user role
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    const userRole = roleData?.role;
-    if (!userRole || !['admin', 'pharmacy', 'doctor'].includes(userRole)) {
-      throw new Error('Insufficient permissions - only admin, pharmacy, and doctor users can view tracking');
-    }
+    // Get user role using roleChecker
+    const { requireRole } = await import('../_shared/roleChecker.ts');
+    await requireRole(supabase, user.id, ['admin', 'pharmacy', 'doctor'], 'Insufficient permissions - only admin, pharmacy, and doctor users can view tracking');
 
     let trackingCode = requestData.tracking_code;
     const orderLineId = requestData.order_line_id;

@@ -150,13 +150,8 @@ serve(async (req) => {
       .eq('user_id', userIdToQuery)
       .maybeSingle();
 
-    const { data: userRole } = await adminClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const isAdmin = userRole?.role === 'admin';
+    const { isAdmin: checkAdmin } = await import('../_shared/roleChecker.ts');
+    const isAdmin = await checkAdmin(adminClient, user.id);
     // Fix: Compare user's profile ID with order.doctor_id (both are profile IDs)
     const isPracticeOwner = userProfile?.id === order!.doctor_id;
     
