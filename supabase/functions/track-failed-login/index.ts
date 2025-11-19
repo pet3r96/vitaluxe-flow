@@ -66,6 +66,23 @@ serve(async (req) => {
       details: { email, timestamp: new Date().toISOString() },
     });
 
+    // PHASE 2: Audit logging for login_failed
+    const { error: auditInsertError } = await supabaseClient.from("audit_logs").insert({
+      user_email: email,
+      action_type: "login_failed",
+      entity_type: "auth_users",
+      ip_address: ip,
+      user_agent,
+      details: {
+        email,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    if (auditInsertError) {
+      edgeLogger.error('Failed to log audit event', auditInsertError);
+    }
+
     // Track failed attempts
     const { data: existing } = await supabaseClient
       .from("failed_login_attempts")

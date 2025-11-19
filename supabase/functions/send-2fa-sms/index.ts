@@ -24,6 +24,7 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
 
   try {
     const supabase = createAdminClient();
@@ -318,7 +319,37 @@ serve(async (req) => {
         });
 
         const totalTime = Date.now() - startTime;
-        edgeLogger.info('[2FA Twilio] Queued (timeout)', { attemptId, totalTimeMs: totalTime });
+    edgeLogger.info('[2FA Twilio] Queued (timeout)', { attemptId, totalTimeMs: totalTime });
+
+        // PHASE 2: Audit logging for sms_sent
+        const { error: auditError } = await supabase.from('audit_logs').insert({
+          user_id: user.id,
+          user_email: user.email,
+          action_type: 'sms_sent',
+          entity_type: 'sms_verification_attempts',
+          entity_id: attemptId,
+          ip_address: ipAddress,
+          details: {
+            phone_masked: phoneNumber.replace(/\d(?=\d{4})/g, '*'),
+            purpose,
+            queued: true,
+            timestamp: new Date().toISOString()
+          }
+        });
+
+        if (auditError) {
+          edgeLogger.error('Failed to log audit event', auditError);
+        }
+
+        // PHASE 2: Structured logging
+        edgeLogger.logOperation({
+          user_id: user.id,
+          ip_address: ipAddress,
+          operation: 'send_2fa_sms',
+          success: true,
+          duration_ms: Date.now() - startTime,
+          metadata: { attemptId, queued: true }
+        });
 
         return new Response(
           JSON.stringify({ 
@@ -335,6 +366,16 @@ serve(async (req) => {
     }
 
   } catch (error: any) {
+    // PHASE 2: Log operation failure
+    edgeLogger.logOperation({
+      user_id: undefined,
+      ip_address: ipAddress,
+      operation: 'send_2fa_sms',
+      success: false,
+      duration_ms: Date.now() - startTime,
+      metadata: { error: error.message || 'Internal server error' }
+    });
+
     edgeLogger.error('Error in send-2fa-sms', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message || 'Internal server error' }),

@@ -23,6 +23,7 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
   
   try {
     const supabase = createAdminClient();
@@ -252,9 +253,47 @@ serve(async (req) => {
       responseTimeMs: responseTime 
     });
 
+    // PHASE 2: Audit logging for sms_verified
+    const { error: auditError } = await supabase.from('audit_logs').insert({
+      user_id: user.id,
+      action_type: 'sms_verified',
+      entity_type: 'sms_verification_attempts',
+      entity_id: attemptId,
+      ip_address: ipAddress,
+      details: {
+        phone_masked: phoneNumber.replace(/\d(?=\d{4})/g, '*'),
+        verified_at: new Date().toISOString(),
+        provider
+      }
+    });
+
+    if (auditError) {
+      edgeLogger.error('Failed to log audit event', auditError);
+    }
+
+    // PHASE 2: Structured logging
+    edgeLogger.logOperation({
+      user_id: user.id,
+      ip_address: ipAddress,
+      operation: 'verify_2fa_sms',
+      success: true,
+      duration_ms: Date.now() - startTime,
+      metadata: { attemptId, provider }
+    });
+
     return successResponse(confirmation);
 
   } catch (error: any) {
+    // PHASE 2: Log operation failure
+    edgeLogger.logOperation({
+      user_id: undefined,
+      ip_address: ipAddress,
+      operation: 'verify_2fa_sms',
+      success: false,
+      duration_ms: Date.now() - startTime,
+      metadata: { error: error.message || 'Internal server error' }
+    });
+
     edgeLogger.error('Error in verify-2fa-sms', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
