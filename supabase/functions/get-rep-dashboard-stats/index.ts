@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
           const { data: profitData } = await supabase
             .from('order_profits')
             .select('order_total, topline_profit, payment_status')
-            .eq('topline_id', repUserId);
+            .eq('topline_id', repId);
 
           if (profitData && profitData.length > 0) {
             const totalRevenue = profitData.reduce((sum, p) => sum + (p.order_total || 0), 0);
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
           const { data: profitData } = await supabase
             .from('order_profits')
             .select('order_total, downline_profit, payment_status')
-            .eq('downline_id', repUserId);
+            .eq('downline_id', repId);
 
           if (profitData && profitData.length > 0) {
             const totalRevenue = profitData.reduce((sum, p) => sum + (p.order_total || 0), 0);
