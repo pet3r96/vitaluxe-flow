@@ -337,7 +337,7 @@ describe('Practice Upload - Assigned Document', () => {
     });
 
     expect(data).toHaveLength(1);
-    expect(data[0].assigned_patient_id).toBe(patientId);
+    expect(data[0].assigned_patient_ids).toContain(patientId);
     expect(data[0].assigned_patient_names).toEqual(['John Smith']);
   });
 });

@@ -260,6 +260,6 @@ describe('Practice Upload - Unassigned Document', () => {
 
     expect(data).toHaveLength(1);
     expect(data[0].document_name).toBe('Practice Internal Memo');
-    expect(data[0].practice_id).toBe(practiceId);
+    expect(data[0].source_type).toBe('practice');
   });
 });

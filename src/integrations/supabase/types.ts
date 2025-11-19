@@ -2295,6 +2295,90 @@ export type Database = {
           },
         ]
       }
+      patient_documents: {
+        Row: {
+          created_at: string
+          document_name: string
+          document_type: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          notes: string | null
+          patient_id: string
+          share_with_practice: boolean
+          storage_path: string
+          storage_provider: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_name: string
+          document_type: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          patient_id: string
+          share_with_practice?: boolean
+          storage_path: string
+          storage_provider?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_name?: string
+          document_type?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          patient_id?: string
+          share_with_practice?: boolean
+          storage_path?: string
+          storage_provider?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_account_health"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
       patient_follow_ups: {
         Row: {
           assigned_to: string | null
@@ -4870,6 +4954,7 @@ export type Database = {
         Row: {
           assigned_at: string | null
           created_at: string | null
+          created_by: string | null
           document_id: string
           id: string
           patient_id: string
@@ -4877,6 +4962,7 @@ export type Database = {
         Insert: {
           assigned_at?: string | null
           created_at?: string | null
+          created_by?: string | null
           document_id: string
           id?: string
           patient_id: string
@@ -4884,6 +4970,7 @@ export type Database = {
         Update: {
           assigned_at?: string | null
           created_at?: string | null
+          created_by?: string | null
           document_id?: string
           id?: string
           patient_id?: string
@@ -4935,6 +5022,7 @@ export type Database = {
       }
       provider_documents: {
         Row: {
+          assigned_patient_id: string | null
           created_at: string | null
           document_name: string
           document_type: string
@@ -4944,12 +5032,15 @@ export type Database = {
           mime_type: string | null
           notes: string | null
           practice_id: string
+          status: string | null
           storage_path: string
           storage_provider: string | null
           tags: string[] | null
           updated_at: string | null
+          uploaded_by: string | null
         }
         Insert: {
+          assigned_patient_id?: string | null
           created_at?: string | null
           document_name: string
           document_type: string
@@ -4959,12 +5050,15 @@ export type Database = {
           mime_type?: string | null
           notes?: string | null
           practice_id: string
+          status?: string | null
           storage_path: string
           storage_provider?: string | null
           tags?: string[] | null
           updated_at?: string | null
+          uploaded_by?: string | null
         }
         Update: {
+          assigned_patient_id?: string | null
           created_at?: string | null
           document_name?: string
           document_type?: string
@@ -4974,12 +5068,49 @@ export type Database = {
           mime_type?: string | null
           notes?: string | null
           practice_id?: string
+          status?: string | null
           storage_path?: string
           storage_provider?: string | null
           tags?: string[] | null
           updated_at?: string | null
+          uploaded_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "provider_documents_assigned_patient_id_fkey"
+            columns: ["assigned_patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_account_health"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "provider_documents_assigned_patient_id_fkey"
+            columns: ["assigned_patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_documents_assigned_patient_id_fkey"
+            columns: ["assigned_patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_documents_assigned_patient_id_fkey"
+            columns: ["assigned_patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "provider_documents_assigned_patient_id_fkey"
+            columns: ["assigned_patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
           {
             foreignKeyName: "provider_documents_practice_id_fkey"
             columns: ["practice_id"]
@@ -7715,21 +7846,16 @@ export type Database = {
       get_provider_documents: {
         Args: { p_practice_id: string }
         Returns: {
-          assigned_patient_id: string
           assigned_patient_ids: string[]
           assigned_patient_names: string[]
           document_name: string
           document_type: string
           file_size: number
           id: string
-          is_internal: boolean
           mime_type: string
           notes: string
-          practice_id: string
           source_type: string
-          status: string
           storage_path: string
-          tags: string[]
           uploaded_at: string
           uploaded_by: string
         }[]
