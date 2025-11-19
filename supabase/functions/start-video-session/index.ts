@@ -3,6 +3,9 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -16,6 +19,13 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
+      edgeLogger.logOperation({
+        ip_address: ipAddress,
+        operation: 'start-video-session',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { error: 'Authentication failed' }
+      });
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -283,13 +293,42 @@ Deno.serve(async (req) => {
             message: smsMessage
           }
         });
-        edgeLogger.info('SMS sent to patient successfully');
-      } catch (smsError) {
-        edgeLogger.warn('Failed to send SMS to patient', smsError instanceof Error ? { error: smsError.message } : undefined);
-      }
+      edgeLogger.info('SMS sent to patient successfully');
+    } catch (smsError) {
+      edgeLogger.warn('Failed to send SMS to patient', smsError instanceof Error ? { error: smsError.message } : undefined);
     }
+  }
 
-    return new Response(JSON.stringify({
+  // Log successful operation
+  edgeLogger.logOperation({
+    user_id: effectiveUserId,
+    ip_address: ipAddress,
+    operation: 'start-video-session',
+    success: true,
+    duration_ms: Date.now() - startTime,
+    metadata: {
+      session_id: sessionId,
+      provider_id: session.provider_id,
+      appointment_id: session.appointment_id
+    }
+  });
+
+  // Audit log for video session start
+  await supabase.from('audit_logs').insert({
+    action_type: 'video_session_created',
+    user_id: effectiveUserId,
+    entity_type: 'video_sessions',
+    entity_id: sessionId,
+    ip_address: ipAddress,
+    details: {
+      provider_id: session.provider_id,
+      appointment_id: session.appointment_id,
+      started_by_name: providerName,
+      timestamp: new Date().toISOString()
+    }
+  });
+
+  return new Response(JSON.stringify({
       success: true,
       session: updatedSession,
       message: 'Video session started. Patient has been notified.'

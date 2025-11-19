@@ -16,6 +16,9 @@ interface OrderActionRequest {
 }
 
 serve(async (req) => {
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -34,8 +37,15 @@ serve(async (req) => {
     const supabaseAdmin = createAdminClient();
     const supabase = createAuthClient(req.headers.get('Authorization'));
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      edgeLogger.logOperation({
+        ip_address: ipAddress,
+        operation: 'pharmacy-order-action',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { error: 'Authentication failed' }
+      });
       throw new Error('Unauthorized');
     }
 
@@ -377,6 +387,38 @@ serve(async (req) => {
           edgeLogger.error('Error creating notification', notifError);
         }
       }
+
+      // Log successful operation
+      edgeLogger.logOperation({
+        user_id: user.id,
+        ip_address: ipAddress,
+        operation: 'pharmacy-order-action',
+        success: true,
+        duration_ms: Date.now() - startTime,
+        metadata: {
+          action: 'decline',
+          order_id,
+          pharmacy_id: pharmacy.id,
+          reason,
+          refund_processed: true
+        }
+      });
+
+      // Audit log for pharmacy decline with refund
+      await supabaseAdmin.from('audit_logs').insert({
+        action_type: 'pharmacy_order_routed',
+        user_id: pharmacyUserId,
+        entity_type: 'orders',
+        entity_id: order_id,
+        ip_address: ipAddress,
+        details: {
+          action: 'decline',
+          pharmacy_name: pharmacy.name,
+          reason,
+          refund_id: refundData?.refund_id,
+          timestamp: new Date().toISOString()
+        }
+      });
 
       return new Response(
         JSON.stringify({

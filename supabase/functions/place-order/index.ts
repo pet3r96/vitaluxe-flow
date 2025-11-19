@@ -23,7 +23,8 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
-  edgeLogger.info("Starting order placement");
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  edgeLogger.info("Starting order placement", { ipAddress });
 
   try {
     // Client for auth verification (with user JWT)
@@ -40,6 +41,13 @@ serve(async (req) => {
 
     if (authError || !user) {
       edgeLogger.error("Authentication failed", authError);
+      edgeLogger.logOperation({
+        ip_address: ipAddress,
+        operation: 'place-order',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { error: 'Authentication failed' }
+      });
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -566,6 +574,41 @@ serve(async (req) => {
         edgeLogger.error('Failed to invalidate cache', cacheError);
         // Non-fatal - order was placed successfully
       }
+    }
+
+    const successCount = createdOrders.length;
+    const failedCount = failedPayments.length;
+    
+    // Log successful operation
+    edgeLogger.logOperation({
+      user_id: effectiveUserId,
+      ip_address: ipAddress,
+      operation: 'place-order',
+      success: true,
+      duration_ms: Date.now() - startTime,
+      metadata: {
+        cart_id,
+        order_count: successCount,
+        failed_count: failedCount,
+        total_amount: createdOrders.reduce((sum, o) => sum + o.total_amount, 0)
+      }
+    });
+
+    // Audit log for order placement
+    if (successCount > 0) {
+      await supabaseAdmin.from('audit_logs').insert({
+        action_type: 'order_placed',
+        user_id: effectiveUserId,
+        entity_type: 'orders',
+        entity_id: createdOrders[0]?.id,
+        ip_address: ipAddress,
+        details: {
+          order_count: successCount,
+          cart_id,
+          payment_method_id,
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 
     return new Response(

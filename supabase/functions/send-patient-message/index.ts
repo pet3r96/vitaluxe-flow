@@ -15,10 +15,13 @@ function normalizePhoneToE164(phone: string): string {
 }
 
 Deno.serve(async (req) => {
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    edgeLogger.info('send-patient-message invoked');
+    edgeLogger.info('send-patient-message invoked', { ipAddress });
     
     const authHeader = req.headers.get('Authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
@@ -38,6 +41,13 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !user) {
       edgeLogger.error('Authentication failed', userError);
+      edgeLogger.logOperation({
+        ip_address: ipAddress,
+        operation: 'send-patient-message',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { error: 'Authentication failed' }
+      });
       return new Response(JSON.stringify({ error: 'Not authenticated' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -528,6 +538,20 @@ Deno.serve(async (req) => {
       
       edgeLogger.info('Created notifications for team members', { count: teamMemberIds.length });
     }
+
+    // Log successful operation
+    edgeLogger.logOperation({
+      user_id: user.id,
+      ip_address: ipAddress,
+      operation: 'send-patient-message',
+      success: true,
+      duration_ms: Date.now() - startTime,
+      metadata: {
+        thread_id: insertedMessage.thread_id || insertedMessage.id,
+        message_id: insertedMessage.id,
+        is_provider_mode: false
+      }
+    });
 
     edgeLogger.info('Patient message sent successfully');
     return new Response(JSON.stringify({ success: true }), {
