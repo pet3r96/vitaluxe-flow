@@ -191,6 +191,15 @@ export function CreateAppointmentDialog({
 
   const createMutation = useMutation({
     mutationFn: async (values: any) => {
+      // Validate session and refresh if needed
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          throw new Error('Session expired. Please log in again.');
+        }
+      }
+
       const startDateTime = new Date(`${values.appointmentDate}T${values.startTime}`);
       const endDateTime = new Date(startDateTime.getTime() + parseInt(values.duration) * 60000);
 
@@ -211,16 +220,27 @@ export function CreateAppointmentDialog({
           end_time: endDateTime.toISOString(),
           appointment_type: appointmentType,
           visit_type: values.visitType,
-          service_type: values.serviceType || null,
+          service_type: selectedServiceType?.name || null, // Store NAME not ID
           service_description: values.serviceDescription,
           notes: values.notes,
           status: isWalkIn ? 'checked_in' : 'scheduled',
           checked_in_at: isWalkIn ? new Date().toISOString() : null,
         })
-        .select()
+        .select(`
+          *,
+          patient_accounts!inner(id, first_name, last_name, email, phone),
+          providers(id, first_name, last_name, specialty),
+          practice_rooms(id, name)
+        `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // If 401, session expired - throw error asking user to retry
+        if (error.message?.includes('401') || error.message?.includes('JWT')) {
+          throw new Error('Session expired. Please try again.');
+        }
+        throw error;
+      }
 
       import('@/lib/logger').then(({ logger }) => {
         logger.info('Appointment created', { 
@@ -315,9 +335,17 @@ export function CreateAppointmentDialog({
       return data;
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
-      queryClient.invalidateQueries({ queryKey: ['waiting-room'] });
-      queryClient.invalidateQueries({ queryKey: ['patient-follow-ups'] });
+      // Invalidate ALL calendar-related queries using predicate
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = String(query.queryKey[0]);
+          return key.includes('patient_appointments') || 
+                 key.includes('calendar') || 
+                 key.includes('waiting-room') ||
+                 key.includes('being-treated') ||
+                 key.includes('patient-follow-ups');
+        }
+      });
       
       // Send notification to patient if they have portal access
       const selectedPatient = patients?.find(p => p.id === selectedPatientId);
@@ -413,6 +441,12 @@ export function CreateAppointmentDialog({
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create appointment");
+      import('@/lib/logger').then(({ logger }) => {
+        logger.error('Create appointment failed', error, {
+          practiceId,
+          isWalkIn,
+        });
+      });
     },
   });
 

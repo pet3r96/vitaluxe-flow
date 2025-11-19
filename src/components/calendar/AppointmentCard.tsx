@@ -186,10 +186,15 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
             </div>
           )}
           
-          {appointment.appointment_type && (
+          {(appointment.service_type || appointment.appointment_type) && (
             <div className="flex items-center gap-1 text-xs opacity-80">
               <Clock className="h-3 w-3 shrink-0" />
-              <span className="capitalize truncate">{appointment.appointment_type}</span>
+              <span className="capitalize truncate">
+                {appointment.service_type || 
+                 (appointment.appointment_type ? 
+                   appointment.appointment_type.replace(/_/g, ' ') 
+                   : 'General')}
+              </span>
             </div>
           )}
         </div>
@@ -211,7 +216,9 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
               <p>{appointmentTime}</p>
               {providerName && <p>Provider: {providerName}</p>}
               {appointment.practice_rooms && <p>Room: {appointment.practice_rooms.name}</p>}
-              {appointment.appointment_type && <p>Type: {appointment.appointment_type}</p>}
+              {(appointment.service_type || appointment.appointment_type) && (
+                <p>Type: {appointment.service_type || appointment.appointment_type.replace(/_/g, ' ')}</p>
+              )}
             </div>
           </TooltipContent>
         </Tooltip>
