@@ -112,7 +112,39 @@ export async function validateUserOwnsResource(
       }
 
       case 'patient': {
-        // Check if patient belongs to user's practice (supports staff users)
+        // FIRST: Check if user is admin or super_admin
+        const { data: userRoles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId);
+
+        const roles = userRoles?.map((r: { role: string }) => r.role) || [];
+        const isAdmin = roles.includes('super_admin') || roles.includes('admin');
+
+        if (isAdmin) {
+          edgeLogger.info('Admin access granted for patient validation', { userId, patientId: resourceId });
+          return { valid: true };
+        }
+
+        // SECOND: Check for active impersonation
+        const { data: impersonation } = await supabase
+          .from('active_impersonation_sessions')
+          .select('impersonated_user_id, impersonated_role')
+          .eq('admin_user_id', userId)
+          .gt('expires_at', new Date().toISOString())
+          .maybeSingle();
+
+        if (impersonation) {
+          const impersonatedId = impersonation.impersonated_user_id;
+          edgeLogger.info('Using impersonated context for validation', { 
+            adminId: userId, 
+            impersonatedId,
+            role: impersonation.impersonated_role 
+          });
+          userId = impersonatedId;
+        }
+
+        // THIRD: Standard practice check
         const { data: patient } = await supabase
           .from('patient_accounts')
           .select('practice_id')

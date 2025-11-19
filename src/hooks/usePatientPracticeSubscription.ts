@@ -16,8 +16,22 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
   const { effectiveUserId, session, effectiveRole } = useAuth();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["patient-practice-subscription", effectiveUserId],
+    queryKey: ["patient-practice-subscription", effectiveUserId, effectiveRole],
     queryFn: async () => {
+      // EARLY EXIT: Non-patient roles should not check subscriptions
+      if (effectiveRole !== 'patient') {
+        logger.info('[usePatientPracticeSubscription] Skipping for non-patient role', { 
+          effectiveRole 
+        });
+        return {
+          isSubscribed: true,
+          status: "role_bypass",
+          practiceId: null,
+          practiceName: null,
+          reason: "non_patient_role"
+        };
+      }
+
       if (!session?.access_token) {
         logger.error('[usePatientPracticeSubscription] No session token');
         return {
@@ -117,8 +131,8 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
         reason: undefined
       };
     },
-    // CRITICAL: Only enable for patient role users
-    enabled: !!effectiveUserId && !!session?.access_token && effectiveRole === 'patient',
+    // Enable for all authenticated users, but query will bypass for non-patients
+    enabled: !!effectiveUserId && !!session,
     staleTime: 0, // Always fetch fresh data for subscription checks
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,

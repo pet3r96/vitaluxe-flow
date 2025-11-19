@@ -84,7 +84,7 @@ serve(async (req) => {
 
         // Get appointments count
         const { count: appointmentsCount, error: appointmentsError } = await supabase
-          .from('appointments')
+          .from('patient_appointments')
           .select('*', { count: 'exact', head: true })
           .eq('patient_id', patientAccount.id);
 
@@ -92,10 +92,10 @@ serve(async (req) => {
 
         // Get upcoming appointments count
         const { count: upcomingAppointmentsCount, error: upcomingError } = await supabase
-          .from('appointments')
+          .from('patient_appointments')
           .select('*', { count: 'exact', head: true })
           .eq('patient_id', patientAccount.id)
-          .gte('appointment_date', new Date().toISOString())
+          .gte('start_time', new Date().toISOString())
           .eq('status', 'scheduled');
 
         if (upcomingError) throw upcomingError;

@@ -52,28 +52,40 @@ export function CreateSupportTicketDialog() {
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: TicketFormData) => {
-      logger.info('[CreateSupportTicket] Starting mutation with data', { subject: data.subject, patientEmail: data.patientEmail });
+      logger.info('[CreateSupportTicket] Starting mutation', { subject: data.subject, patientEmail: data.patientEmail });
       
-      // Find patient by email and get their practice_id
+      // Find patient by email and get their practice_id and name
       const { data: patient, error: patientError } = await supabase
         .from("patient_accounts")
-        .select("id, practice_id")
-        .eq("email", data.patientEmail)
-        .single();
+        .select("id, practice_id, first_name, last_name")
+        .eq("email", data.patientEmail.toLowerCase())
+        .maybeSingle();
 
       logger.info('[CreateSupportTicket] Patient lookup result', { patientFound: !!patient, error: patientError?.message });
 
-      if (patientError || !patient) {
-        throw new Error("Patient not found with that email address");
+      if (patientError) throw patientError;
+
+      if (!patient) {
+        throw new Error(`No patient found with email: ${data.patientEmail}`);
       }
+
+      // CRITICAL FIX: Use patient's practice_id
+      const targetPracticeId = patient.practice_id;
+
+      if (!targetPracticeId) {
+        throw new Error('Patient is not assigned to any practice');
+      }
+
+      // Get current user for created_by field
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
 
       // Create a new message thread
       const threadId = crypto.randomUUID();
       
-      // Add detailed logging before insert
       const insertData = {
         patient_id: patient.id,
-        practice_id: patient.practice_id,
+        practice_id: targetPracticeId, // ← Use patient's practice
         sender_id: effectiveUserId!,
         sender_type: "admin",
         subject: data.subject,
@@ -82,7 +94,7 @@ export function CreateSupportTicketDialog() {
         resolved: false,
       };
       
-      logger.info('[CreateSupportTicket] Attempting insert', { patientId: patient.id, practiceId: patient.practice_id });
+      logger.info('[CreateSupportTicket] Creating ticket', { patientId: patient.id, practiceId: targetPracticeId });
 
       const { data: insertResult, error } = await supabase
         .from("patient_messages")
