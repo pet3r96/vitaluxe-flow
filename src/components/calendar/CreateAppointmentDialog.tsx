@@ -146,18 +146,25 @@ export function CreateAppointmentDialog({
   // Watch visitType to conditionally fetch rooms
   const visitType = watch("visitType");
 
-  // Fetch rooms dynamically when visit type is in-person
+  // Fetch rooms dynamically when visit type is in-person using edge function
   const { data: fetchedRooms, isLoading: roomsLoading } = useQuery({
     queryKey: ['practice-rooms', practiceId, visitType],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('practice_rooms')
-        .select('*')
-        .eq('practice_id', practiceId)
-        .eq('active', true)
-        .order('name');
-      if (error) throw error;
-      return data || [];
+      console.log('[CreateAppointmentDialog] Fetching rooms via edge function');
+      
+      const { data, error } = await supabase.functions.invoke('get-practice-rooms', {
+        body: { practiceId }
+      });
+
+      if (error) {
+        console.error('[CreateAppointmentDialog] Edge function error:', error);
+        throw new Error(error.message || 'Failed to fetch rooms');
+      }
+      
+      // Filter for active rooms only
+      const activeRooms = (data?.rooms || []).filter((room: any) => room.active);
+      console.log('[CreateAppointmentDialog] Active rooms fetched:', activeRooms.length);
+      return activeRooms;
     },
     enabled: open && visitType === 'in_person',
   });
