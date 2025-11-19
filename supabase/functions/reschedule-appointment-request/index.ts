@@ -1,17 +1,35 @@
-import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
     const supabaseClient = createAuthClient(req.headers.get('Authorization'));
+    const supabaseAdmin = createAdminClient();
 
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
     const { appointmentId, newDate, newTime, reason, clientDateTimeIso, timezoneOffsetMinutes } = await req.json();
+    
+    // PHASE 3: ID validation - verify appointment belongs to user's patient account
+    const { data: appointment } = await supabaseAdmin
+      .from('patient_appointments')
+      .select('patient_accounts!inner(user_id)')
+      .eq('id', appointmentId)
+      .single();
+    
+    const patientAccount = Array.isArray(appointment?.patient_accounts) 
+      ? appointment.patient_accounts[0] 
+      : appointment?.patient_accounts;
+    
+    if (!appointment || !patientAccount || patientAccount.user_id !== user.id) {
+      edgeLogger.error('ID validation failed', undefined, { userId: user.id, appointmentId });
+      throw new Error('Appointment not found or access denied');
+    }
     
     edgeLogger.info('Reschedule request received', { 
       appointmentId, 
@@ -21,16 +39,15 @@ Deno.serve(async (req) => {
       timezoneOffsetMinutes 
     });
 
-    // Verify patient owns this appointment
-    const { data: appointment, error: fetchError } = await supabaseClient
+    // Fetch appointment details for update
+    const { data: appointmentData, error: fetchError } = await supabaseClient
       .from('patient_appointments')
-      .select('id, patient_accounts!inner(user_id)')
+      .select('id')
       .eq('id', appointmentId)
-      .eq('patient_accounts.user_id', user.id)
       .single();
 
-    if (fetchError || !appointment) {
-      throw new Error('Appointment not found or access denied');
+    if (fetchError || !appointmentData) {
+      throw new Error('Appointment not found');
     }
 
     // Update appointment with reschedule request

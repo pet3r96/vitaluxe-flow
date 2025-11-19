@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,6 +43,25 @@ serve(async (req) => {
     }
 
     edgeLogger.info('[validate-rx-order] Validating RX order', { practiceId: practice_id, productId: product_id, userId: user.id });
+
+    // PHASE 3: ID validation for practice
+    const { valid, error: idError } = await validateUserOwnsResource(
+      supabase,
+      user.id,
+      'practice',
+      practice_id
+    );
+
+    if (!valid) {
+      edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, practiceId: practice_id });
+      return new Response(
+        JSON.stringify({ 
+          allowed: false, 
+          error: idError || 'Access denied' 
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Check if product requires prescription
     const { data: product, error: productError } = await supabase

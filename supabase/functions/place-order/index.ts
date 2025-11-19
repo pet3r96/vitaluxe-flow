@@ -40,6 +40,23 @@ serve(async (req) => {
     // Admin client for efficient operations (bypasses RLS)
     const supabaseAdmin = createAdminClient();
 
+    // PHASE 3: Rate limiting (20 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      ipAddress,
+      'place-order',
+      { maxRequests: 20, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { function: 'place-order', ip: ipAddress });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Authenticate user
     const {
       data: { user },

@@ -3,6 +3,7 @@ import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGenerateReceiptRequest } from '../_shared/requestValidators.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -73,6 +74,22 @@ serve(async (req) => {
 
     // Create admin client for storage operations
     const adminClient = createAdminClient();
+
+    // PHASE 3: ID validation
+    const { valid, error: idError } = await validateUserOwnsResource(
+      adminClient,
+      userIdToQuery,
+      'order',
+      order_id
+    );
+
+    if (!valid) {
+      edgeLogger.error('ID validation failed', undefined, { error: idError, userId: userIdToQuery, orderId: order_id });
+      return new Response(
+        JSON.stringify({ error: idError || 'Access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     // Ensure receipts bucket exists (idempotent)
     try {

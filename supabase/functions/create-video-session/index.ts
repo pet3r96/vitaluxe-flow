@@ -7,6 +7,7 @@ import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { RtcTokenBuilder, RtcRole } from 'https://esm.sh/agora-token@2.0.4';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -51,8 +52,8 @@ Deno.serve(async (req) => {
 
     // Validate CSRF token
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
-    const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
-    if (!valid) {
+    const { valid: csrfValid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
+    if (!csrfValid) {
       edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
       return new Response(
         JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
@@ -79,6 +80,22 @@ Deno.serve(async (req) => {
     const { practiceId, providerId, patientId, sessionType, scheduledStart, scheduledEnd } = body;
 
     edgeLogger.info('Creating video session', { practiceId, sessionType });
+
+    // PHASE 3: ID validation for practice
+    const { valid: idValid, error: idError } = await validateUserOwnsResource(
+      supabaseAdmin,
+      effectiveUserId,
+      'practice',
+      practiceId
+    );
+
+    if (!idValid) {
+      edgeLogger.error('ID validation failed', undefined, { error: idError, userId: effectiveUserId, practiceId });
+      return new Response(
+        JSON.stringify({ error: idError || 'Access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Verify user has access to this practice
     // Check if effective user is the practice owner (doctor role)
