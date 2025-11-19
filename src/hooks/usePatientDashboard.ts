@@ -96,6 +96,22 @@ export function usePatientDashboard(effectiveUserId: string | null, effectiveRol
       }
 
       logger.info('[usePatientDashboard] Successfully fetched batched dashboard data');
+      
+      // Add fallback for medical vault if missing
+      if (data && !data.medicalVault) {
+        data.medicalVault = {
+          medications_count: 0,
+          allergies_count: 0,
+          conditions_count: 0,
+          surgeries_count: 0,
+          immunizations_count: 0,
+          vitals_count: 0,
+          pharmacies_count: 0,
+          emergency_contacts_count: 0,
+          has_data: false
+        };
+      }
+      
       return data;
     },
     enabled: !!effectiveUserId && effectiveRole === 'patient',
