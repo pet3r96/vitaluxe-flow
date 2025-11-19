@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from "../_shared/supabaseAdmin.ts";
 import { validateTrackFailedLoginRequest } from "../_shared/requestValidators.ts";
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,11 +12,35 @@ const corsHeaders = {
 
 serve(async (req) => {
   const startTime = Date.now();
+  const ipAddress = getClientIP(req);
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // PHASE 3: Request size validation
+    const sizeValidation = validateRequestSize(req, 'track-failed-login', corsHeaders);
+    if (sizeValidation) return sizeValidation;
+
+    const supabaseClient = createAdminClient();
+
+    // PHASE 3: Rate limiting (20 failed login tracking per 15 min per IP to prevent logging abuse)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseClient,
+      ipAddress,
+      'track-failed-login',
+      { maxRequests: 20, windowSeconds: 900 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded for failed login tracking', { ipAddress });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     // Parse JSON with error handling
     let requestData;
     try {
@@ -39,8 +65,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const supabaseClient = createAdminClient();
 
     const { email, user_agent } = requestData;
 
