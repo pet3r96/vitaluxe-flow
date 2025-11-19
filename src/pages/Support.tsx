@@ -12,30 +12,55 @@ import { format } from "date-fns";
 import { CreateSupportTicketDialog } from "@/components/support/CreateSupportTicketDialog";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
 
-interface PatientMessage {
+interface SupportTicket {
   id: string;
-  subject: string | null;
-  message_body: string | null;
+  ticket_number: string;
+  subject: string;
+  description: string;
+  status: string;
+  priority: string;
+  ticket_type: string;
+  created_by_email: string;
+  created_by: string;
   created_at: string;
-  resolved: boolean | null;
-  thread_id: string | null;
-  patient_id: string | null;
+  updated_at: string;
+  resolved: boolean;
+  practice_id: string | null;
 }
 
 const Support = () => {
   usePagePerformance('Support');
-  const { effectiveRole } = useAuth();
+  const { effectiveRole, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch all support threads (admin only)
-  const { data: supportThreads, isLoading } = useQuery<PatientMessage[]>({
-    queryKey: ["support-threads", searchQuery],
-    queryFn: async (): Promise<PatientMessage[]> => {
-      const result = await supabase
-        .from("patient_messages")
-        .select<'*', PatientMessage>('*')
-        .order("created_at", { ascending: false});
+  // Fetch support tickets with practice filtering
+  const { data: supportThreads, isLoading } = useQuery<SupportTicket[]>({
+    queryKey: ["support-threads", searchQuery, user?.id],
+    queryFn: async (): Promise<SupportTicket[]> => {
+      let query = supabase
+        .from("support_tickets")
+        .select('*')
+        .order("created_at", { ascending: false });
 
+      // Filter by practice for non-admin roles
+      if (effectiveRole === "doctor") {
+        query = query.eq("practice_id", user?.id);
+      } else if (effectiveRole === "staff" || effectiveRole === "provider") {
+        // Get practice_id from providers table
+        const { data: staffData } = await supabase
+          .from("providers")
+          .select("practice_id")
+          .eq("user_id", user?.id)
+          .eq("active", true)
+          .single();
+        
+        if (staffData?.practice_id) {
+          query = query.eq("practice_id", staffData.practice_id);
+        }
+      }
+      // Admin sees all tickets (no filter)
+
+      const result = await query;
       if (result.error) throw result.error;
       
       const tickets = result.data || [];
@@ -44,7 +69,7 @@ const Support = () => {
       if (searchQuery && tickets.length > 0) {
         return tickets.filter(ticket => 
           ticket.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          ticket.message_body?.toLowerCase().includes(searchQuery.toLowerCase())
+          ticket.description?.toLowerCase().includes(searchQuery.toLowerCase())
         );
       }
       
@@ -198,7 +223,7 @@ const Support = () => {
                           <div className="space-y-1">
                             <CardTitle className="text-base">{ticket.subject || "No Subject"}</CardTitle>
                             <CardDescription>
-                              Patient ID: {ticket.patient_id?.slice(0, 8)}...
+                              Ticket #{ticket.ticket_number} • {ticket.ticket_type}
                             </CardDescription>
                           </div>
                           <Badge variant={ticket.resolved ? "secondary" : "default"}>
@@ -208,15 +233,13 @@ const Support = () => {
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm text-muted-foreground line-clamp-2">
-                          {ticket.message_body}
+                          {ticket.description}
                         </p>
                         <div className="flex items-center justify-between mt-4">
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(ticket.created_at), "MMM dd, yyyy 'at' hh:mm a")}
                           </span>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={`/messages?thread=${ticket.thread_id}`}>View Thread</a>
-                          </Button>
+                          <Badge variant="outline">{ticket.priority}</Badge>
                         </div>
                       </CardContent>
                     </Card>
@@ -277,7 +300,7 @@ const Support = () => {
                           <div className="space-y-1">
                             <CardTitle className="text-base">{ticket.subject || "No Subject"}</CardTitle>
                             <CardDescription>
-                              Patient ID: {ticket.patient_id?.slice(0, 8)}...
+                              Ticket #{ticket.ticket_number} • {ticket.ticket_type}
                             </CardDescription>
                           </div>
                           <Badge>Open</Badge>
@@ -285,15 +308,13 @@ const Support = () => {
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm text-muted-foreground line-clamp-2">
-                          {ticket.message_body}
+                          {ticket.description}
                         </p>
                         <div className="flex items-center justify-between mt-4">
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(ticket.created_at), "MMM dd, yyyy 'at' hh:mm a")}
                           </span>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={`/messages?thread=${ticket.thread_id}`}>View Thread</a>
-                          </Button>
+                          <Badge variant="outline">{ticket.priority}</Badge>
                         </div>
                       </CardContent>
                     </Card>
@@ -354,7 +375,7 @@ const Support = () => {
                           <div className="space-y-1">
                             <CardTitle className="text-base">{ticket.subject || "No Subject"}</CardTitle>
                             <CardDescription>
-                              Patient ID: {ticket.patient_id?.slice(0, 8)}...
+                              Ticket #{ticket.ticket_number} • {ticket.ticket_type}
                             </CardDescription>
                           </div>
                           <Badge variant="secondary">Resolved</Badge>
@@ -362,15 +383,13 @@ const Support = () => {
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm text-muted-foreground line-clamp-2">
-                          {ticket.message_body}
+                          {ticket.description}
                         </p>
                         <div className="flex items-center justify-between mt-4">
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(ticket.created_at), "MMM dd, yyyy 'at' hh:mm a")}
                           </span>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={`/messages?thread=${ticket.thread_id}`}>View Thread</a>
-                          </Button>
+                          <Badge variant="outline">{ticket.priority}</Badge>
                         </div>
                       </CardContent>
                     </Card>

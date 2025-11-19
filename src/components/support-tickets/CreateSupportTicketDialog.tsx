@@ -81,45 +81,59 @@ export function CreateSupportTicketDialog() {
 
   const ticketType = form.watch("ticketType");
 
-  // Fetch recent orders for dropdown
+  // Fetch recent orders for dropdown with improved error handling
   const { data: userOrders, isLoading: ordersLoading } = useQuery({
     queryKey: ["user-orders-for-tickets", user?.id, effectiveRole],
     queryFn: async () => {
-      if (!user?.id) return [];
-      
-      let query = supabase
-        .from("orders")
-        .select(`
-          id,
-          created_at,
-          doctor_id,
-          total_amount,
-          status,
-          order_lines!inner(patient_name, patient_id)
-        `)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      
-      // Filter based on role
-      if (effectiveRole === "doctor") {
-        query = query.eq("doctor_id", user.id);
-      } else if (effectiveRole === "staff") {
-        const { data: staffData } = await supabase
-          .from("providers")
-          .select("practice_id")
-          .eq("user_id", user.id)
-          .eq("active", true)
-          .single();
-        
-        if (staffData?.practice_id) {
-          query = query.eq("doctor_id", staffData.practice_id);
-        }
+      if (!user?.id) {
+        console.log('[CreateSupportTicket] No user ID, skipping orders query');
+        return [];
       }
-      // Admin sees all orders (no filter)
       
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+      console.log('[CreateSupportTicket] Fetching orders for user:', user.id, 'role:', effectiveRole);
+      
+      try {
+        // Simplified query to avoid RLS issues
+        let query = supabase
+          .from("orders")
+          .select('id, created_at, doctor_id, total_amount, status, practice_id')
+          .order("created_at", { ascending: false })
+          .limit(50);
+        
+        // Filter based on role
+        if (effectiveRole === "doctor") {
+          query = query.eq("doctor_id", user.id);
+          console.log('[CreateSupportTicket] Filtering by doctor_id:', user.id);
+        } else if (effectiveRole === "staff" || effectiveRole === "provider") {
+          const { data: staffData, error: staffError } = await supabase
+            .from("providers")
+            .select("practice_id")
+            .eq("user_id", user.id)
+            .eq("active", true)
+            .single();
+          
+          if (staffError) {
+            console.error('[CreateSupportTicket] Error fetching staff practice:', staffError);
+          } else if (staffData?.practice_id) {
+            query = query.eq("doctor_id", staffData.practice_id);
+            console.log('[CreateSupportTicket] Filtering by staff practice_id:', staffData.practice_id);
+          }
+        }
+        // Admin sees all orders (no filter)
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error('[CreateSupportTicket] Error fetching orders:', error);
+          throw error;
+        }
+        
+        console.log('[CreateSupportTicket] Fetched orders:', data?.length || 0);
+        return data || [];
+      } catch (err) {
+        console.error('[CreateSupportTicket] Exception fetching orders:', err);
+        return [];
+      }
     },
     enabled: !!user?.id && ticketType === "pharmacy_order_issue",
   });
