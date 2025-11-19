@@ -8,6 +8,7 @@ import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 import { validateInput, generatePrescriptionPdfSchema } from '../_shared/zodSchemas.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,6 +19,10 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // PHASE 3 SECURITY: Request size validation
+  const sizeValidation = validateRequestSize(req, 'generate-prescription-pdf', corsHeaders);
+  if (sizeValidation) return sizeValidation;
 
   // Define variables at function scope for error handler access
   let supabase = createAdminClient();

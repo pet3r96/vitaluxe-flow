@@ -6,16 +6,21 @@ import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 import { validateInput, bulkInviteSchema } from '../_shared/zodSchemas.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 interface BulkInviteRequest {
   patientIds: string[];
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+  // PHASE 3 SECURITY: Request size validation
+  const sizeValidation = validateRequestSize(req, 'bulk-invite-patients', corsHeaders);
+  if (sizeValidation) return sizeValidation;
+
   const startTime = Date.now();
   const ipAddress = getClientIP(req);
-  
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
     const supabaseAdmin = createAdminClient();

@@ -4,6 +4,7 @@ import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 import { validateInput, pharmacyOrderActionSchema } from '../_shared/zodSchemas.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,12 +20,16 @@ interface OrderActionRequest {
 }
 
 serve(async (req) => {
-  const startTime = Date.now();
-  const ipAddress = getClientIP(req);
-  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // PHASE 3 SECURITY: Request size validation
+  const sizeValidation = validateRequestSize(req, 'pharmacy-order-action', corsHeaders);
+  if (sizeValidation) return sizeValidation;
+
+  const startTime = Date.now();
+  const ipAddress = getClientIP(req);
 
   try {
     const supabaseAdmin = createAdminClient();
