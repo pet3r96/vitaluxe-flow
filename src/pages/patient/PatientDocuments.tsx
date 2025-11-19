@@ -380,6 +380,11 @@ export default function PatientDocuments() {
 
   const handleDownload = async (doc: UnifiedDocument) => {
     try {
+      // Validate storage path exists
+      if (!doc.storage_path) {
+        throw new Error('Document storage path is missing. Please contact support.');
+      }
+
       // Determine bucket based on source
       const bucketName = doc.source === "provider_assigned" ? "provider-documents" : "patient-documents";
       
@@ -387,7 +392,8 @@ export default function PatientDocuments() {
         source: doc.source,
         bucketName,
         storagePath: doc.storage_path,
-        documentName: doc.document_name
+        documentName: doc.document_name,
+        documentId: doc.id
       });
       
       const { data, error } = await supabase.functions.invoke('manage-documents', {
@@ -436,12 +442,13 @@ export default function PatientDocuments() {
       logger.error('[PatientDocuments] Download failed', {
         error: error.message,
         source: doc.source,
-        storagePath: doc.storage_path
+        storagePath: doc.storage_path,
+        documentId: doc.id
       });
       
       toast({
         title: "Download Failed",
-        description: error.message || "Could not download document",
+        description: error.message || "Could not download document. Please try again or contact support.",
         variant: "destructive",
       });
     }

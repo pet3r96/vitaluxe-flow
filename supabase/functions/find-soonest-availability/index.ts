@@ -96,15 +96,20 @@ Deno.serve(async (req) => {
       const dayOfWeek = checkDate.getDay(); // 0 = Sunday, 6 = Saturday
       
       // Get practice hours for this day (using RPC with defaults)
-      const { data: hours, error: hoursError } = await supabaseClient
+      let { data: hours, error: hoursError } = await supabaseClient
         .rpc('get_practice_hours_with_defaults', {
           p_practice_id: practiceId,
           p_day_of_week: dayOfWeek
         });
 
       if (hoursError) {
-        edgeLogger.error('Error fetching hours', hoursError);
-        continue;
+        edgeLogger.warn('[find-soonest-availability] RPC error, using defaults', { error: hoursError });
+        // Use default hours if RPC fails
+        hours = [{
+          start_time: '09:00:00',
+          end_time: '17:00:00',
+          is_closed: dayOfWeek === 0 || dayOfWeek === 6
+        }];
       }
 
       const practiceHours = hours?.[0];

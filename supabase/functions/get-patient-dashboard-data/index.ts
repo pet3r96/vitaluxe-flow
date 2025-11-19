@@ -110,10 +110,10 @@ serve(async (req) => {
 
         // Get recent appointments for activity
         const { data: recentAppointments, error: recentApptError } = await supabase
-          .from('appointments')
-          .select('id, appointment_date, status, appointment_type')
+          .from('patient_appointments')
+          .select('id, start_time, status, appointment_type, service_type')
           .eq('patient_id', patientAccount.id)
-          .order('appointment_date', { ascending: false })
+          .order('start_time', { ascending: false })
           .limit(5);
 
         if (recentApptError) throw recentApptError;
@@ -149,8 +149,8 @@ serve(async (req) => {
           ...(recentAppointments || []).map(apt => ({
             id: apt.id,
             type: 'appointment' as const,
-            title: `${apt.appointment_type || 'Appointment'}`,
-            timestamp: apt.appointment_date,
+            title: apt.service_type || apt.appointment_type || 'Appointment',
+            timestamp: apt.start_time,
             status: apt.status
           })),
           ...(recentOrders || []).map(order => ({
