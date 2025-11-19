@@ -3273,6 +3273,66 @@ export type Database = {
         }
         Relationships: []
       }
+      penetration_test_results: {
+        Row: {
+          actual_result: string
+          attack_vector: string
+          created_at: string
+          error_message: string | null
+          expected_result: string
+          id: string
+          notes: string | null
+          practice_id: string | null
+          sql_trace: string | null
+          success: boolean
+          target_bucket: string | null
+          target_function: string | null
+          target_table: string | null
+          test_category: string
+          test_name: string
+          timestamp: string
+          user_id: string | null
+        }
+        Insert: {
+          actual_result: string
+          attack_vector: string
+          created_at?: string
+          error_message?: string | null
+          expected_result: string
+          id?: string
+          notes?: string | null
+          practice_id?: string | null
+          sql_trace?: string | null
+          success: boolean
+          target_bucket?: string | null
+          target_function?: string | null
+          target_table?: string | null
+          test_category: string
+          test_name: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Update: {
+          actual_result?: string
+          attack_vector?: string
+          created_at?: string
+          error_message?: string | null
+          expected_result?: string
+          id?: string
+          notes?: string | null
+          practice_id?: string | null
+          sql_trace?: string | null
+          success?: boolean
+          target_bucket?: string | null
+          target_function?: string | null
+          target_table?: string | null
+          test_category?: string
+          test_name?: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       performance_metrics: {
         Row: {
           connection_type: string | null
@@ -6617,6 +6677,16 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      penetration_test_summary: {
+        Row: {
+          failed_tests: number | null
+          pass_rate: number | null
+          passed_tests: number | null
+          test_category: string | null
+          total_tests: number | null
+        }
+        Relationships: []
       }
       profiles_masked_for_reps: {
         Row: {
