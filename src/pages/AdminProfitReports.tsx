@@ -42,8 +42,13 @@ const AdminProfitReports = () => {
         .from("order_profits")
         .select(`
           *,
-          orders:order_id (id, created_at, status, doctor_id, profiles:doctor_id (name)),
-          order_lines:order_line_id (product_id, products:product_id (name))
+          orders:order_id (
+            id, 
+            created_at, 
+            status, 
+            doctor_id, 
+            profiles:doctor_id (name)
+          )
         `)
         .order("created_at", { ascending: false });
       

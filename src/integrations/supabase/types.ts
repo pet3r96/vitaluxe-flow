@@ -1645,6 +1645,7 @@ export type Database = {
       }
       order_profits: {
         Row: {
+          admin_profit: number | null
           created_at: string
           downline_id: string | null
           downline_profit: number | null
@@ -1652,11 +1653,12 @@ export type Database = {
           order_id: string
           order_total: number
           payment_status: string | null
-          topline_id: string
+          topline_id: string | null
           topline_profit: number
           updated_at: string
         }
         Insert: {
+          admin_profit?: number | null
           created_at?: string
           downline_id?: string | null
           downline_profit?: number | null
@@ -1664,11 +1666,12 @@ export type Database = {
           order_id: string
           order_total: number
           payment_status?: string | null
-          topline_id: string
+          topline_id?: string | null
           topline_profit?: number
           updated_at?: string
         }
         Update: {
+          admin_profit?: number | null
           created_at?: string
           downline_id?: string | null
           downline_profit?: number | null
@@ -1676,7 +1679,7 @@ export type Database = {
           order_id?: string
           order_total?: number
           payment_status?: string | null
-          topline_id?: string
+          topline_id?: string | null
           topline_profit?: number
           updated_at?: string
         }
