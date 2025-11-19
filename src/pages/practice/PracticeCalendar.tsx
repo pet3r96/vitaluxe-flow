@@ -382,6 +382,7 @@ export default function PracticeCalendar() {
                 <WeekViewByProvider
                   currentDate={currentDate}
                   appointments={appointments}
+                  blockedTime={blockedTime}
                   providers={providers}
                   selectedProviders={selectedProviders}
                   onAppointmentClick={handleAppointmentClick}

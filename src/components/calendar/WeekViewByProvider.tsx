@@ -8,6 +8,7 @@ import { Clock, MapPin } from "lucide-react";
 interface WeekViewByProviderProps {
   currentDate: Date;
   appointments: any[];
+  blockedTime?: any[];
   providers: any[];
   selectedProviders: string[];
   onAppointmentClick: (appointment: any) => void;
@@ -18,6 +19,7 @@ interface WeekViewByProviderProps {
 export function WeekViewByProvider({
   currentDate,
   appointments,
+  blockedTime = [],
   providers,
   selectedProviders,
   onAppointmentClick,
@@ -41,6 +43,30 @@ export function WeekViewByProvider({
     ).sort((a, b) => 
       new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
     );
+  };
+
+  const getBlockedTimesForProviderAndDay = (providerId: string, day: Date) => {
+    return blockedTime.filter(block => {
+      const blockStart = new Date(block.start_time);
+      const blockEnd = new Date(block.end_time);
+      
+      const dayStart = new Date(day);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(day);
+      dayEnd.setHours(23, 59, 59, 999);
+      
+      const overlaps = blockStart <= dayEnd && blockEnd >= dayStart;
+      
+      if (block.block_type === 'practice_closure') {
+        return overlaps;
+      }
+      
+      if (block.block_type === 'provider_unavailable' && block.provider_id === providerId) {
+        return overlaps;
+      }
+      
+      return false;
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -109,6 +135,7 @@ export function WeekViewByProvider({
             {/* Days */}
             {daysOfWeek.map((day) => {
               const dayAppointments = getAppointmentsForProviderAndDay(provider.id, day);
+              const dayBlockedTimes = getBlockedTimesForProviderAndDay(provider.id, day);
               
               return (
                 <div 
@@ -117,6 +144,30 @@ export function WeekViewByProvider({
                   onClick={() => onTimeSlotClick(day, provider.id)}
                 >
                   <div className="space-y-1.5">
+                    {/* Blocked Times */}
+                    {dayBlockedTimes.length > 0 && (
+                      <div className="mb-2">
+                        {dayBlockedTimes.map((block) => (
+                          <div
+                            key={block.id}
+                            className="rounded p-1.5 text-xs bg-muted/60 border-l-2 border-muted-foreground/50 mb-1"
+                          >
+                            <div className="font-semibold text-muted-foreground">
+                              {block.block_type === 'practice_closure' ? '🔒 Closed' : '⏸️ Unavailable'}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                              {format(new Date(block.start_time), 'h:mm a')} - {format(new Date(block.end_time), 'h:mm a')}
+                            </div>
+                            {block.reason && (
+                              <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
+                                {block.reason}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
                     {dayAppointments.length > 0 ? (
                       dayAppointments.slice(0, 3).map((apt) => (
                         <div

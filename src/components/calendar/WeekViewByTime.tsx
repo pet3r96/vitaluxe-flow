@@ -99,6 +99,52 @@ export const WeekViewByTime = memo(function WeekViewByTime({
     return detectOverlaps(dayAppointments);
   };
 
+  const getBlockedTimesForDay = (day: Date) => {
+    return blockedTime.filter(block => {
+      const blockStart = new Date(block.start_time);
+      const blockEnd = new Date(block.end_time);
+      
+      const dayStart = new Date(day);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(day);
+      dayEnd.setHours(23, 59, 59, 999);
+      
+      const overlaps = blockStart <= dayEnd && blockEnd >= dayStart;
+      
+      if (block.block_type === 'practice_closure') {
+        return overlaps;
+      }
+      
+      if (block.block_type === 'provider_unavailable' && block.provider_id) {
+        if (selectedProviders.length > 0 && !selectedProviders.includes(block.provider_id)) {
+          return false;
+        }
+        return overlaps;
+      }
+      
+      return false;
+    });
+  };
+
+  const getBlockedTimeStyle = (block: any) => {
+    const blockStart = new Date(block.start_time);
+    const blockEnd = new Date(block.end_time);
+    
+    const startMinutes = blockStart.getHours() * 60 + blockStart.getMinutes();
+    const endMinutes = blockEnd.getHours() * 60 + blockEnd.getMinutes();
+    
+    const minMinutes = safeStart * 60;
+    const maxMinutes = safeEnd * 60;
+    
+    const clampedStart = Math.max(minMinutes, Math.min(maxMinutes, startMinutes));
+    const clampedEnd = Math.max(minMinutes, Math.min(maxMinutes, endMinutes));
+    
+    const top = ((clampedStart - minMinutes) / 60) * HOUR_HEIGHT;
+    const height = Math.max(((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT, 64);
+    
+    return { top: `${top}px`, height: `${height}px` };
+  };
+
   const getCurrentTimeStyle = (day: Date) => {
     const now = new Date();
     if (!isSameDay(day, now)) return { display: 'none' };
@@ -193,6 +239,28 @@ export const WeekViewByTime = memo(function WeekViewByTime({
                   />
                 );
               })}
+
+              {/* Blocked Time Overlays */}
+              <div className="absolute inset-0 pointer-events-none">
+                {getBlockedTimesForDay(day).map((block) => (
+                  <div
+                    key={block.id}
+                    className="absolute inset-x-0 bg-muted/40 border-l-4 border-muted-foreground/50 backdrop-blur-sm z-5"
+                    style={getBlockedTimeStyle(block)}
+                  >
+                    <div className="px-2 py-1 h-full flex flex-col justify-center">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        {block.block_type === 'practice_closure' ? '🔒 Closed' : '⏸️ Unavailable'}
+                      </div>
+                      {block.reason && (
+                        <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                          {block.reason}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
               {/* Appointments */}
               <div className="absolute inset-0 pointer-events-none">
