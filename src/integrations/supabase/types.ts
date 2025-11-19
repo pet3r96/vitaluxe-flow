@@ -5254,6 +5254,30 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_history: {
+        Row: {
+          audit_timestamp: string
+          audited_by: string | null
+          id: string
+          notes: string | null
+          report_data: Json
+        }
+        Insert: {
+          audit_timestamp?: string
+          audited_by?: string | null
+          id?: string
+          notes?: string | null
+          report_data: Json
+        }
+        Update: {
+          audit_timestamp?: string
+          audited_by?: string | null
+          id?: string
+          notes?: string | null
+          report_data?: Json
+        }
+        Relationships: []
+      }
       sms_codes: {
         Row: {
           attempt_count: number | null
@@ -6901,6 +6925,52 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_public_grants: {
+        Row: {
+          compliance: string | null
+          grantee: unknown
+          privilege_type: string | null
+          table_name: unknown
+          table_schema: unknown
+        }
+        Relationships: []
+      }
+      security_audit_rls_status: {
+        Row: {
+          compliance: string | null
+          rls_status: string | null
+          schemaname: unknown
+          tablename: unknown
+        }
+        Relationships: []
+      }
+      security_audit_storage_buckets: {
+        Row: {
+          access_level: string | null
+          allowed_mime_types: string[] | null
+          compliance: string | null
+          file_size_limit: number | null
+          id: string | null
+          name: string | null
+        }
+        Insert: {
+          access_level?: never
+          allowed_mime_types?: string[] | null
+          compliance?: never
+          file_size_limit?: number | null
+          id?: string | null
+          name?: string | null
+        }
+        Update: {
+          access_level?: never
+          allowed_mime_types?: string[] | null
+          compliance?: never
+          file_size_limit?: number | null
+          id?: string | null
+          name?: string | null
+        }
+        Relationships: []
+      }
       user_2fa_settings_decrypted: {
         Row: {
           created_at: string | null
@@ -7239,6 +7309,7 @@ export type Database = {
       }
       generate_guest_token: { Args: never; Returns: string }
       generate_room_key: { Args: never; Returns: string }
+      generate_security_audit_report: { Args: never; Returns: Json }
       generate_ticket_number: { Args: never; Returns: string }
       get_appointments_during_blocked_time: {
         Args: {

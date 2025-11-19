@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
+import { resetPasswordSchema } from '../_shared/zodSchemas.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,10 +21,31 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   const startTime = Date.now();
-  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  const ipAddress = getClientIP(req);
 
   try {
+    // PHASE 3: Request size validation
+    const sizeValidation = validateRequestSize(req, 'reset-password-with-token', corsHeaders);
+    if (sizeValidation) return sizeValidation;
+
     const supabaseAdmin = createAdminClient();
+
+    // PHASE 3: Rate limiting (5 attempts per hour per IP)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      ipAddress,
+      'reset-password-with-token',
+      { maxRequests: 5, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { ipAddress, function: 'reset-password-with-token' });
+      return new Response(
+        JSON.stringify({ error: 'Too many password reset attempts. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { token, newPassword }: ResetPasswordRequest = await req.json();
 

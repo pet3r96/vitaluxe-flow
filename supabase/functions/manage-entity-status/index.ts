@@ -1,6 +1,8 @@
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { enforceAdminIP } from '../_shared/ipFilter.ts';
+import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 /**
  * Consolidated Entity Status Management Endpoint
@@ -16,6 +18,10 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // PHASE 3: Request size validation
+    const sizeValidation = validateRequestSize(req, 'manage-entity-status', corsHeaders);
+    if (sizeValidation) return sizeValidation;
+
     const authHeader = req.headers.get('Authorization');
     const supabaseClient = createAuthClient(authHeader);
     const supabaseAdmin = createAdminClient();
