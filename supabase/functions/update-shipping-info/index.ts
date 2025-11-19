@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
-import { validateUpdateShippingRequest } from "../_shared/requestValidators.ts";
+import { validateInput, updateShippingSchema } from '../_shared/zodSchemas.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
@@ -10,14 +10,6 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-csrf-token',
 };
-
-interface UpdateShippingRequest {
-  orderLineId: string;
-  trackingNumber?: string;
-  carrier?: string;
-  status?: string;
-  changeDescription?: string;
-}
 
 // Normalize status values to match database enum
 const normalizeStatus = (status?: string): string | undefined => {
@@ -84,22 +76,12 @@ serve(async (req: Request) => {
 
     edgeLogger.info('Update shipping request authenticated');
 
-    // Parse JSON with error handling
-    let requestData;
-    try {
-      requestData = await req.json();
-    } catch (error) {
-      edgeLogger.error('Invalid JSON in update shipping request', error);
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // PHASE 3 SECURITY: Zod schema validation (replaces custom validation)
+    const body = await req.json();
+    const validation = validateInput(updateShippingSchema, body);
 
-    // Validate input
-    const validation = validateUpdateShippingRequest(requestData);
-    if (!validation.valid) {
-      edgeLogger.warn('Update shipping validation failed', { errors: validation.errors });
+    if (!validation.success) {
+      edgeLogger.warn('Validation failed (update-shipping-info)', { errors: validation.errors });
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request data', 
@@ -109,8 +91,10 @@ serve(async (req: Request) => {
       );
     }
 
+    const requestData = validation.data;
+
     // Validate CSRF token
-    const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    const csrfToken = req.headers.get('x-csrf-token') || requestData.csrf_token;
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
     if (!valid) {
       edgeLogger.error('Update shipping CSRF validation failed', { error: csrfError });
@@ -128,7 +112,7 @@ serve(async (req: Request) => {
     const userRoles = await getUserRoles(supabase, user.id);
     const userRole = userRoles[0] || 'unknown';
 
-    const { orderLineId, trackingNumber, carrier, status, changeDescription }: UpdateShippingRequest = requestData;
+    const { orderLineId, trackingNumber, carrier, status, estimatedDelivery } = requestData;
 
     edgeLogger.info('Update shipping payload received', { orderLineId });
 
@@ -205,7 +189,7 @@ serve(async (req: Request) => {
         new_carrier: carrier,
         old_status: currentLine.status,
         new_status: normalizedStatus || currentLine.status,
-        change_description: changeDescription || 'Shipping information updated',
+        change_description: 'Shipping information updated', // Default value since field removed from schema
       });
 
     if (auditError) {

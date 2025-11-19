@@ -217,15 +217,12 @@ export const cancelOrderSchema = z.object({
 });
 
 export const updateShippingSchema = z.object({
-  orderId: z.string().uuid('Invalid order ID format'),
-  tracking_number: z.string().max(100).optional(),
-  carrier: z.string().max(100).optional(),
-  shipping_address: z.object({
-    street: z.string().max(200),
-    city: z.string().max(100),
-    state: z.string().length(2),
-    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
-  }).optional()
+  orderLineId: z.string().uuid('Invalid order line ID format'),
+  trackingNumber: z.string().max(100).optional(),
+  carrier: z.enum(['USPS', 'UPS', 'FedEx', 'DHL', 'Other']).optional(),
+  status: z.enum(['pending', 'processing', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'exception', 'returned']).optional(),
+  estimatedDelivery: z.string().optional(),
+  csrf_token: z.string().min(1, 'CSRF token required')
 });
 
 export const cancelAppointmentSchema = z.object({
@@ -235,13 +232,7 @@ export const cancelAppointmentSchema = z.object({
 });
 
 export const bulkInviteSchema = z.object({
-  practiceId: z.string().uuid('Invalid practice ID format'),
-  patients: z.array(z.object({
-    email: z.string().email(),
-    firstName: z.string().min(1).max(100),
-    lastName: z.string().min(1).max(100),
-    phone: z.string().regex(/^\d{10}$/).optional()
-  })).min(1).max(100)
+  patientIds: z.array(z.string().uuid('Invalid patient ID format')).min(1, 'At least one patient ID is required').max(50, 'Maximum 50 patients per batch')
 });
 
 export const manageCartSchema = z.object({
