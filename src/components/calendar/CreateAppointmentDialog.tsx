@@ -398,14 +398,6 @@ export function CreateAppointmentDialog({
       toast.error("Please select a provider");
       return;
     }
-    if (!values.serviceType) {
-      toast.error("Please select a service type");
-      return;
-    }
-    if (!values.serviceDescription) {
-      toast.error("Please provide a service description");
-      return;
-    }
     
     // Prevent creating scheduled appointments in the past
     if (!isWalkIn) {
@@ -553,24 +545,6 @@ export function CreateAppointmentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="visitType">Visit Type *</Label>
-            <Select value={watch("visitType")} onValueChange={(value) => setValue("visitType", value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="in_person">In-Person</SelectItem>
-                <SelectItem value="video" disabled>
-                  <div className="flex items-center gap-2">
-                    Video Call
-                    <Badge variant="outline" size="xs" className="ml-2">Coming Soon</Badge>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="roomId">
               Room 
               {visitType === 'video' && (
@@ -621,19 +595,28 @@ export function CreateAppointmentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="serviceType">Service Type *</Label>
+            <Label htmlFor="serviceType">Appointment Type</Label>
             <Select 
               value={watch("serviceType")} 
               onValueChange={(value) => {
                 setValue("serviceType", value);
                 const serviceType = serviceTypes?.find(st => st.id === value);
+                
+                // Auto-derive visit_type based on service selection
+                if (serviceType?.name?.toLowerCase().includes('video')) {
+                  setValue("visitType", "video");
+                } else {
+                  setValue("visitType", "in_person");
+                }
+                
+                // Set default duration if available
                 if (serviceType?.typical_duration_minutes) {
                   setValue("duration", serviceType.typical_duration_minutes.toString());
                 }
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select service type" />
+                <SelectValue placeholder="Select appointment type (optional)" />
               </SelectTrigger>
               <SelectContent>
                 {serviceTypes?.map((type) => (
@@ -647,12 +630,12 @@ export function CreateAppointmentDialog({
 
           {watch("serviceType") && (
             <div className="space-y-2">
-              <Label htmlFor="serviceDescription">Service Description *</Label>
+              <Label htmlFor="serviceDescription">Service Description</Label>
               <Textarea
                 id="serviceDescription"
-                {...register("serviceDescription", { required: true })}
+                {...register("serviceDescription")}
                 rows={2}
-                placeholder="Describe the specific service or treatment..."
+                placeholder="Describe the specific service or treatment (optional)..."
                 className="resize-none"
               />
               {serviceTypes?.find(st => st.id === watch("serviceType"))?.description && (
