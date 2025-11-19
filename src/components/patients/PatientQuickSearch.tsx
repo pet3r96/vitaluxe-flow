@@ -33,7 +33,7 @@ export function PatientQuickSearch() {
   }, []);
 
   const { data: patients = [] } = useQuery({
-    queryKey: ["patients-search", effectivePracticeId],
+    queryKey: ["practice-patients", effectivePracticeId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_accounts")

@@ -176,7 +176,7 @@ const InternalChat = () => {
 
   // Fetch patients for patient messages filter
   const { data: patients = [] } = useQuery({
-    queryKey: ['practice-patients-for-filter', practiceId],
+    queryKey: ['practice-patients', practiceId],
     queryFn: async () => {
       if (!practiceId) return [];
       const { data, error } = await supabase

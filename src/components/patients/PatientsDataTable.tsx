@@ -222,7 +222,7 @@ export const PatientsDataTable = () => {
       }
 
       queryClient.invalidateQueries({ queryKey: ['patient-portal-status'] });
-      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['practice-patients'] });
     },
     onError: (error: any) => {
       logger.error("Portal invite failed", error);
@@ -279,7 +279,7 @@ export const PatientsDataTable = () => {
         title: `Account ${action}`,
         description: `Patient account has been ${action} successfully.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['practice-patients'] });
       queryClient.invalidateQueries({ queryKey: ['patient-portal-status'] });
     },
     onError: (error: any) => {
@@ -304,7 +304,7 @@ export const PatientsDataTable = () => {
     },
     onSuccess: () => {
       toast({ title: 'Patient deleted', description: 'All patient records were removed.' });
-      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['practice-patients'] });
     },
     onError: (err: any) => {
       toast({ title: 'Delete failed', description: err?.message || 'Could not delete patient', variant: 'destructive' });
