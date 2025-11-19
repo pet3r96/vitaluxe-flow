@@ -25,13 +25,9 @@ Deno.serve(async (req) => {
     // Check for active impersonation
     let effectiveUserId = user.id;
     const { data: impersonationData } = await supabaseAdmin
-      .from('impersonation_sessions')
+      .from('active_impersonation_sessions')
       .select('impersonated_user_id')
       .eq('admin_user_id', user.id)
-      .eq('revoked', false)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
       .maybeSingle();
 
     if (impersonationData?.impersonated_user_id) {
@@ -71,8 +67,12 @@ Deno.serve(async (req) => {
       .single();
 
     if (repError || !repData) {
+      edgeLogger.warn('User is not a rep', { effectiveUserId, repError });
       return new Response(
-        JSON.stringify({ error: 'User is not a rep' }),
+        JSON.stringify({ 
+          error: 'User is not a rep',
+          details: 'This function requires a topline or downline representative account'
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
