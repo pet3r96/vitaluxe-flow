@@ -240,6 +240,14 @@ export const menus: MenuConfig = {
         { label: "Messages", href: "/messages", icon: MessageSquare },
       ],
     },
+    {
+      title: "Settings",
+      isParent: true,
+      icon: Settings,
+      items: [
+        { label: "My Profile", href: "/profile", icon: UserSquare2 },
+      ],
+    },
   ],
 
   downline: [

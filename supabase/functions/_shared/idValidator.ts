@@ -133,23 +133,78 @@ export async function validateUserOwnsResource(
       }
 
       case 'order': {
-        // Check if order belongs to user's practice
+        // Check if order belongs to user's practice OR if user is a topline/downline rep who can access it
+        
+        // Get the order with both practice_id and doctor_id
         const { data: order } = await supabase
           .from('orders')
-          .select('practice_id')
+          .select('practice_id, doctor_id')
           .eq('id', resourceId)
           .single();
         
+        if (!order) {
+          return { valid: false, error: 'Order not found' };
+        }
+        
+        // First check if user has a practice_id (doctor, provider, staff)
         const { data: userProfile } = await supabase
           .from('profiles')
           .select('practice_id')
           .eq('id', userId)
           .single();
         
-        const valid = order?.practice_id === userProfile?.practice_id;
+        // Check if user is the practice this order belongs to
+        if (userProfile?.practice_id && order.practice_id === userProfile.practice_id) {
+          return { valid: true, practiceId: userProfile.practice_id };
+        }
+        
+        // Check if user is a topline rep who manages this practice
+        const { data: toplineRep } = await supabase
+          .from('reps')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('role', 'topline')
+          .single();
+        
+        if (toplineRep) {
+          // Check if the order's practice is linked to this topline
+          const { data: practiceProfile } = await supabase
+            .from('profiles')
+            .select('linked_topline_id')
+            .eq('id', order.doctor_id)
+            .single();
+          
+          if (practiceProfile?.linked_topline_id === userId) {
+            return { valid: true, practiceId: order.practice_id };
+          }
+        }
+        
+        // Check if user is a downline rep
+        const { data: downlineRep } = await supabase
+          .from('reps')
+          .select('assigned_topline_id, reps!reps_assigned_topline_id_fkey(user_id)')
+          .eq('user_id', userId)
+          .eq('role', 'downline')
+          .single();
+        
+        if (downlineRep && downlineRep.reps) {
+          const toplineUserId = (downlineRep.reps as any).user_id;
+          
+          // Check if the order's practice is linked to this downline's topline
+          const { data: practiceProfile } = await supabase
+            .from('profiles')
+            .select('linked_topline_id')
+            .eq('id', order.doctor_id)
+            .single();
+          
+          if (practiceProfile?.linked_topline_id === toplineUserId) {
+            return { valid: true, practiceId: order.practice_id };
+          }
+        }
+        
         return { 
-          valid, 
-          error: valid ? undefined : 'Order does not belong to your practice',
+          valid: false, 
+          error: 'Order does not belong to your practice',
           practiceId: userProfile?.practice_id
         };
       }
