@@ -208,7 +208,14 @@ Deno.serve(async (req) => {
 
         // Check if user has permission
         const isAdmin = await checkAdmin(supabaseClient, user.id);
-        const isPracticeOwner = user.id === practiceId;
+        
+        // Check if user owns the practice
+        const { data: practiceData } = await supabaseClient
+          .from('practices')
+          .select('owner_id')
+          .eq('id', practiceId)
+          .single();
+        const isPracticeOwner = practiceData?.owner_id === user.id;
         
         // Check if user is staff for this practice
         const { data: staffRecord } = await supabaseClient
