@@ -6656,7 +6656,7 @@ export type Database = {
           rep_email: string | null
           rep_id: string | null
           rep_name: string | null
-          rep_role: Database["public"]["Enums"]["app_role"] | null
+          role: Database["public"]["Enums"]["app_role"] | null
           rx_orders: number | null
           total_commissions: number | null
           total_orders: number | null
