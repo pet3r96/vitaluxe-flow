@@ -65,6 +65,30 @@ serve(async (req) => {
       );
     }
 
+    // PHASE 2 WEEK 4: Per-user rate limiting (5 SMS per hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: userAttempts, error: userRateLimitError } = await supabase
+      .from('sms_verification_attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', oneHourAgo);
+
+    if (userRateLimitError) {
+      edgeLogger.error('[send-2fa-sms] User rate limit check failed', userRateLimitError, { userId: user.id });
+      throw userRateLimitError;
+    }
+
+    if (userAttempts && userAttempts >= 5) {
+      edgeLogger.warn('[send-2fa-sms] Per-user rate limit exceeded', { userId: user.id, attempts: userAttempts });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Too many verification attempts. Please try again in an hour.',
+          attemptsRemaining: 0
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Rate limiting: Check for recent attempts (max 100 in last 15 minutes globally)
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     const { data: recentAttempts, error: recentError } = await supabase
@@ -101,6 +125,7 @@ serve(async (req) => {
     const { data: attemptData, error: insertError } = await supabase
       .from('sms_verification_attempts')
       .insert({
+        user_id: user.id, // PHASE 2 WEEK 4: Track user for rate limiting
         code_hash: codeHash,
         expires_at: expiresAt,
         window_key: windowKey

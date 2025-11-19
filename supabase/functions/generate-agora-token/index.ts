@@ -98,9 +98,11 @@ serve(async (req) => {
     const { 
       channel, 
       uid = `user_${user.id}`,
-      role = 'publisher',
-      expireSeconds = 3600 
+      role = 'publisher'
     } = body;
+    
+    // PHASE 2 WEEK 4: Enforce 30-minute expiry for security
+    const expireSeconds = 1800; // Hard-coded to 30 minutes (1800 seconds)
 
     // Validate required fields
     if (!channel || typeof channel !== 'string' || channel.trim() === '') {
