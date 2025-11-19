@@ -188,7 +188,7 @@ export function CreateAppointmentDialog({
           room_id: values.roomId && values.roomId !== 'none' ? values.roomId : null,
           start_time: startDateTime.toISOString(),
           end_time: endDateTime.toISOString(),
-          appointment_type: values.appointmentType,
+          appointment_type: values.visitType,
           visit_type: values.visitType,
           service_type: values.serviceType || null,
           service_description: values.serviceDescription,
