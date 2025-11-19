@@ -15,9 +15,22 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Initialize supabase client outside try block for error handling
   const supabase = createAdminClient();
 
   try {
+    // Additional security layer: verify webhook secret if configured
+    const webhookSecret = Deno.env.get('WEBHOOK_AUTHNET_SECRET');
+    const requestSecret = req.headers.get('x-webhook-secret');
+    
+    if (webhookSecret && requestSecret !== webhookSecret) {
+      edgeLogger.error('[authorizenet-webhook] Unauthorized attempt', { hasSecret: !!requestSecret });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get webhook signature from headers
     const signature = req.headers.get('x-anet-signature');
     
