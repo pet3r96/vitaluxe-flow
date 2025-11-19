@@ -208,6 +208,49 @@ export const manageEntityStatusSchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
 
+// PHASE 3: Additional validation schemas for critical functions
+
+export const cancelOrderSchema = z.object({
+  orderId: z.string().uuid('Invalid order ID format'),
+  reason: z.string().max(500).optional(),
+  csrf_token: z.string().min(1, 'CSRF token required')
+});
+
+export const updateShippingSchema = z.object({
+  orderId: z.string().uuid('Invalid order ID format'),
+  tracking_number: z.string().max(100).optional(),
+  carrier: z.string().max(100).optional(),
+  shipping_address: z.object({
+    street: z.string().max(200),
+    city: z.string().max(100),
+    state: z.string().length(2),
+    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+  }).optional()
+});
+
+export const cancelAppointmentSchema = z.object({
+  appointmentId: z.string().uuid('Invalid appointment ID format'),
+  reason: z.string().max(500).optional(),
+  csrf_token: z.string().min(1)
+});
+
+export const bulkInviteSchema = z.object({
+  practiceId: z.string().uuid('Invalid practice ID format'),
+  patients: z.array(z.object({
+    email: z.string().email(),
+    firstName: z.string().min(1).max(100),
+    lastName: z.string().min(1).max(100),
+    phone: z.string().regex(/^\d{10}$/).optional()
+  })).min(1).max(100)
+});
+
+export const manageCartSchema = z.object({
+  action: z.enum(['add', 'remove', 'update', 'clear']),
+  productId: z.string().uuid().optional(),
+  quantity: z.number().int().positive().optional(),
+  cartId: z.string().uuid().optional()
+});
+
 // Helper function to safely parse and validate
 export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; errors: string[] } {
   const result = schema.safeParse(data);

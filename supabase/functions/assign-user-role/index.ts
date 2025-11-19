@@ -10,6 +10,7 @@ import { edgeLogger } from '../_shared/logger.ts';
 import { hasRole, isAdmin as checkIsAdmin } from '../_shared/roleChecker.ts';
 import { enforceAdminIP } from '../_shared/ipFilter.ts';
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
+import { validatePasswordStrength } from '../_shared/passwordValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -319,6 +320,22 @@ serve(async (req) => {
     // Generate password if not provided
     const initialPassword = signupData.password || generateSecurePassword();
     edgeLogger.info('Password status', { provided: !!signupData.password });
+
+    // PHASE 3: Backend password strength validation
+    const pwValidation = validatePasswordStrength(initialPassword);
+    if (!pwValidation.valid) {
+      edgeLogger.warn('Weak password rejected in user creation', { 
+        email: signupData.email,
+        errors: pwValidation.errors
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Password does not meet security requirements',
+          details: pwValidation.errors
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Validate role-specific fields
     if (signupData.role === 'doctor') {

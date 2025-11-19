@@ -3,6 +3,9 @@ import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { validateCancelOrderRequest } from "../_shared/requestValidators.ts";
 import { validateCSRFToken } from "../_shared/csrfValidator.ts";
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
+import { validateInput, cancelOrderSchema } from '../_shared/zodSchemas.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,32 +22,10 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const ipAddress = getClientIP(req);
+
   try {
-    // Parse JSON with error handling
-    let requestData;
-    try {
-      requestData = await req.json();
-    } catch (error) {
-      edgeLogger.error('Invalid JSON in cancel order request', error);
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate input
-    const validation = validateCancelOrderRequest(requestData);
-    if (!validation.valid) {
-      edgeLogger.warn('Cancel order validation failed', { errors: validation.errors });
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid request data', 
-          details: validation.errors 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const supabase = createAuthClient(req.headers.get('Authorization'));
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -56,8 +37,64 @@ Deno.serve(async (req) => {
       );
     }
 
+    // PHASE 3: Rate limiting (20 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabase,
+      ipAddress,
+      'cancel-order',
+      { maxRequests: 20, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { function: 'cancel-order', ipAddress });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Parse and validate input
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      edgeLogger.error('Invalid JSON in cancel order request', error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // PHASE 3: Schema validation
+    const validation = validateInput(cancelOrderSchema, requestData);
+    if (!validation.success) {
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { orderId, reason, csrf_token } = validation.data;
+
+    // PHASE 3: ID validation (tenant isolation)
+    const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
+      supabase,
+      user.id,
+      'order',
+      orderId
+    );
+
+    if (!ownsResource) {
+      edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, orderId });
+      return new Response(
+        JSON.stringify({ error: idError || 'Access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Validate CSRF token
-    const { csrf_token, orderId, reason } = requestData as CancelOrderRequest & { csrf_token?: string };
     const csrfValidation = await validateCSRFToken(supabase, user.id, csrf_token);
     if (!csrfValidation.valid) {
       edgeLogger.warn('CSRF validation failed for cancel order', { error: csrfValidation.error });
