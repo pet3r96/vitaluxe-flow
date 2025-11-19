@@ -102,6 +102,26 @@ const handler = async (req: Request): Promise<Response> => {
       throw passwordError;
     }
 
+    // PHASE 2: Revoke all sessions after password reset (security requirement)
+    try {
+      const { error: revokeError } = await supabaseAdmin.functions.invoke('revoke-user-sessions', {
+        body: {
+          userId: resetToken.user_id,
+          reason: 'password_reset'
+        }
+      });
+      
+      if (revokeError) {
+        edgeLogger.warn('Failed to revoke sessions after password reset', { error: revokeError });
+      } else {
+        edgeLogger.info('Successfully revoked all sessions after password reset', {
+          userId: resetToken.user_id
+        });
+      }
+    } catch (err) {
+      edgeLogger.error('Error invoking revoke-user-sessions', err as Error);
+    }
+
     // Mark token as used in the appropriate table (one-time use enforcement)
     if (tokenSource === 'temp_password') {
       // For temp_password_tokens, update both 'used' boolean and 'used_at' timestamp

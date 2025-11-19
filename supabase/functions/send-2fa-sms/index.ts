@@ -41,7 +41,7 @@ serve(async (req) => {
     edgeLogger.info('[2FA Twilio] Processing SMS verification');
 
     // Parse request body
-    const { phoneNumber, purpose = 'verification' } = await req.json();
+    let { phoneNumber, purpose = 'verification' } = await req.json();
 
     if (!phoneNumber) {
       return new Response(
@@ -50,7 +50,13 @@ serve(async (req) => {
       );
     }
 
-    // Validate phone number format (basic E.164 check)
+    // PHASE 2: Normalize phone number to E.164 format
+    phoneNumber = phoneNumber.replace(/[-\s()]/g, '');
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+1' + phoneNumber;
+    }
+
+    // Validate phone number format (E.164 check)
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
     if (!phoneRegex.test(phoneNumber.replace(/[-\s]/g, ''))) {
       return new Response(

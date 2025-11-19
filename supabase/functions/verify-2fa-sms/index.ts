@@ -35,13 +35,19 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { attemptId, code, phoneNumber } = await req.json();
+    let { attemptId, code, phoneNumber } = await req.json();
 
     if (!attemptId || !code || !phoneNumber) {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // PHASE 2: Normalize phone number to E.164 format
+    phoneNumber = phoneNumber.replace(/[-\s()]/g, '');
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+1' + phoneNumber;
     }
 
     // Validate code format
@@ -171,6 +177,29 @@ serve(async (req) => {
       updateData.ghl_enabled = true;
       updateData.ghl_phone_verified = true;
       updateData.last_ghl_verification = verifiedAt;
+    }
+
+    // PHASE 2: Revoke all sessions after phone change (security requirement)
+    try {
+      const { error: revokeError } = await supabase.functions.invoke('revoke-user-sessions', {
+        body: {
+          userId: user.id,
+          reason: 'phone_change'
+        },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (revokeError) {
+        edgeLogger.warn('Failed to revoke sessions after phone change', { error: revokeError });
+      } else {
+        edgeLogger.info('Successfully revoked all sessions after phone change', {
+          userId: user.id
+        });
+      }
+    } catch (err) {
+      edgeLogger.error('Error invoking revoke-user-sessions', err as Error);
     }
 
     if (existingSettings) {
