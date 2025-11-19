@@ -162,6 +162,16 @@ Deno.serve(async (req) => {
       // Non-fatal, continue with cancellation
     }
 
+    // PHASE 2: Structured logging
+    edgeLogger.logOperation({
+      user_id: user.id,
+      ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+      operation: 'cancel_order',
+      success: true,
+      duration_ms: Date.now() - Date.now(), // Will be very small since this is at the end
+      metadata: { orderId, reason: reason || 'No reason provided' }
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true, 
