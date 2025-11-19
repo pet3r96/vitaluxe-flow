@@ -362,14 +362,16 @@ export function AppointmentDetailsDialog({
                   </div>
                 </div>
 
-                {appointment.providers && (
+                {(appointment.providers || appointment.provider_id) && (
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <div className="text-sm">
                       <div className="font-medium">
-                        {appointment.providers.first_name} {appointment.providers.last_name}
+                        {appointment.providers 
+                          ? `${appointment.providers.first_name} ${appointment.providers.last_name}`
+                          : 'Provider Assigned'}
                       </div>
-                      {appointment.providers.specialty && (
+                      {appointment.providers?.specialty && (
                         <div className="text-muted-foreground">{appointment.providers.specialty}</div>
                       )}
                     </div>

@@ -125,7 +125,7 @@ export default function PracticeCalendar() {
     },
     {
       enabled: !!practiceId,
-      staleTime: 30 * 1000, // 30 seconds - balance freshness with performance
+      staleTime: 0, // No cache - instant updates for appointments
       gcTime: 300000, // 5 minutes
       refetchOnWindowFocus: true, // Refetch when user returns to tab
     }
