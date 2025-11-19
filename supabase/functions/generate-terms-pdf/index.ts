@@ -2,6 +2,7 @@ import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGenerateTermsRequest } from '../_shared/requestValidators.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { requireAdmin } from '../_shared/roleChecker.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -107,15 +108,11 @@ Deno.serve(async (req) => {
     // If impersonating (target_user_id provided and different from acting user)
     if (target_user_id && target_user_id !== user.id) {
       // Verify the acting user is an admin
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      if (roleError || !roleData) {
-        throw new Error('Unauthorized: Only admins can accept terms on behalf of other users');
+      try {
+        await requireAdmin(supabase, user.id, 'Unauthorized: Only admins can accept terms on behalf of other users');
+      } catch (err) {
+        const error = err as Error;
+        throw new Error(error.message);
       }
     }
 

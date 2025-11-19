@@ -4,6 +4,7 @@ import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { requireAdmin } from '../_shared/roleChecker.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -32,16 +33,12 @@ serve(async (req) => {
     }
 
     // Verify user is admin
-    const { data: roles, error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle();
-
-    if (roleError || !roles) {
+    try {
+      await requireAdmin(supabaseAdmin, user.id);
+    } catch (err) {
+      const error = err as Error;
       return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
+        JSON.stringify({ error: error.message }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

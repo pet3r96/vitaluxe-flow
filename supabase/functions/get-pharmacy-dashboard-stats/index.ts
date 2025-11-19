@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from "../_shared/supabaseAdmin.ts";
 import { cacheFetch } from "../_shared/cache.ts";
+import { isAdmin as checkIsAdmin } from '../_shared/roleChecker.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,12 +33,7 @@ serve(async (req) => {
     }
 
     // Check if user is admin or accessing their own data
-    const { data: userRoles } = await supabaseAuth
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
-    
-    const isAdmin = userRoles?.some(r => r.role === 'admin' || r.role === 'super_admin');
+    const isAdmin = await checkIsAdmin(supabaseAuth, user.id);
     
     // Allow if admin (for impersonation) or if accessing own data
     if (!isAdmin && user.id !== effectiveUserId) {
