@@ -5,7 +5,9 @@ import { edgeLogger } from '../_shared/logger.ts';
 const agoraAppCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
 
 Deno.serve(async (req) => {
-  edgeLogger.info('[join-video-session] Request received', { method: req.method });
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  edgeLogger.info('[join-video-session] Request received', { method: req.method, ipAddress });
   
   if (req.method === 'OPTIONS') {
     edgeLogger.info('[join-video-session] OPTIONS handled');
@@ -22,6 +24,13 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
+      edgeLogger.logOperation({
+        ip_address: ipAddress,
+        operation: 'join-video-session',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { error: 'Authentication failed' }
+      });
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -255,7 +264,38 @@ Deno.serve(async (req) => {
       cert8: agoraAppCertificate?.slice(0, 8) || 'not-set',
       note: 'Frontend should log IDENTICAL values when client.join() is called'
     });
-    edgeLogger.info('=============================================');
+    edgeLogger.info('[join-video-session] Session joined successfully', {
+      sessionId,
+      channelName: tokenData.channelName
+    });
+
+    // Log successful operation
+    edgeLogger.logOperation({
+      user_id: effectiveUserId,
+      ip_address: ipAddress,
+      operation: 'join-video-session',
+      success: true,
+      duration_ms: Date.now() - startTime,
+      metadata: {
+        session_id: sessionId,
+        channel_name: tokenData.channelName,
+        uid: tokenData.uid
+      }
+    });
+
+    // Audit log for video session access
+    await supabase.from('audit_logs').insert({
+      action_type: 'video_session_joined',
+      user_id: effectiveUserId,
+      entity_type: 'video_sessions',
+      entity_id: sessionId,
+      ip_address: ipAddress,
+      details: {
+        channel_name: tokenData.channelName,
+        uid: tokenData.uid,
+        timestamp: new Date().toISOString()
+      }
+    });
 
     return new Response(JSON.stringify({
       success: true,

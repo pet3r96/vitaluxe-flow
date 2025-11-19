@@ -2,6 +2,9 @@ import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts
 import { corsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  const requestStartTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -12,6 +15,13 @@ Deno.serve(async (req) => {
     
     if (!authHeader) {
       edgeLogger.error('No auth header');
+      edgeLogger.logOperation({
+        ip_address: ipAddress,
+        operation: 'end-video-session',
+        success: false,
+        duration_ms: Date.now() - requestStartTime,
+        metadata: { error: 'Missing auth header' }
+      });
       return new Response(JSON.stringify({ error: 'Unauthorized: missing auth header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -23,6 +33,13 @@ Deno.serve(async (req) => {
     
     if (authError || !user) {
       edgeLogger.error('Auth failed', authError);
+      edgeLogger.logOperation({
+        ip_address: ipAddress,
+        operation: 'end-video-session',
+        success: false,
+        duration_ms: Date.now() - requestStartTime,
+        metadata: { error: 'Authentication failed' }
+      });
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -196,6 +213,20 @@ Deno.serve(async (req) => {
     } catch (error) {
       edgeLogger.error('Failed to send video completion notification', error);
     }
+
+    // Log successful operation
+    edgeLogger.logOperation({
+      user_id: effectiveUserId,
+      ip_address: ipAddress,
+      operation: 'end-video-session',
+      success: true,
+      duration_ms: Date.now() - requestStartTime,
+      metadata: {
+        session_id: sessionId,
+        duration_seconds: durationSeconds,
+        appointment_id: session.appointment_id
+      }
+    });
 
     return new Response(JSON.stringify({
       success: true,

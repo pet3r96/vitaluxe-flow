@@ -9,6 +9,9 @@ interface BulkInviteRequest {
 }
 
 Deno.serve(async (req) => {
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
@@ -26,6 +29,13 @@ Deno.serve(async (req) => {
     const authToken = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(authToken);
     if (authError || !user) {
+      edgeLogger.logOperation({
+        ip_address: ipAddress,
+        operation: 'bulk-invite-patients',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { error: 'Authentication failed' }
+      });
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -168,6 +178,20 @@ Deno.serve(async (req) => {
     } catch (auditError) {
       edgeLogger.error('Failed to log audit event', auditError instanceof Error ? auditError : new Error(String(auditError)));
     }
+
+    // Log successful operation
+    edgeLogger.logOperation({
+      user_id: user.id,
+      ip_address: ipAddress,
+      operation: 'bulk-invite-patients',
+      success: true,
+      duration_ms: Date.now() - startTime,
+      metadata: {
+        total: results.total,
+        successful: results.successful,
+        failed: results.failed
+      }
+    });
 
     return new Response(
       JSON.stringify(results),

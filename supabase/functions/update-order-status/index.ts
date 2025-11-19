@@ -169,6 +169,22 @@ serve(async (req) => {
       // Non-fatal - status was updated successfully
     }
 
+    // Audit log for order status change
+    await supabaseAdmin.from('audit_logs').insert({
+      action_type: 'order_status_changed',
+      user_id: user.id,
+      entity_type: 'orders',
+      entity_id: orderId,
+      ip_address: ipAddress,
+      details: {
+        old_status: oldStatus,
+        new_status: newStatus,
+        change_reason: changeReason,
+        manual_override: true,
+        timestamp: new Date().toISOString()
+      }
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true, 

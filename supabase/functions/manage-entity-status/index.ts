@@ -8,6 +8,9 @@ import { edgeLogger } from '../_shared/logger.ts';
  */
 
 Deno.serve(async (req) => {
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -20,6 +23,14 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
     if (authError || !user) {
+      edgeLogger.logOperation({
+        user_id: user?.id,
+        ip_address: ipAddress,
+        operation: 'manage-entity-status',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { error: 'Authentication failed' }
+      });
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -96,6 +107,15 @@ Deno.serve(async (req) => {
           .eq('id', providerData.user_id);
 
         if (profileUpdateError) throw profileUpdateError;
+
+        edgeLogger.logOperation({
+          user_id: user.id,
+          ip_address: ipAddress,
+          operation: 'manage-entity-status:provider-status',
+          success: true,
+          duration_ms: Date.now() - startTime,
+          metadata: { provider_id: providerId, active }
+        });
         
         return new Response(
           JSON.stringify({ success: true, message: active ? 'Provider activated' : 'Provider deactivated' }),
