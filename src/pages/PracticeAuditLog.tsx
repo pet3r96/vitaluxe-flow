@@ -97,16 +97,7 @@ const PracticeAuditLog = () => {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Practice Audit Log</h1>
-          <p className="text-muted-foreground mt-1">
-            Track all practice status changes and administrative actions
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Status Change History</CardTitle>

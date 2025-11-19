@@ -16,7 +16,8 @@ import { PrescriptionAccessAudit } from "@/components/security/PrescriptionAcces
 import { CartSecurityMonitor } from "@/components/security/CartSecurityMonitor";
 import { IPBanlistManager } from "@/components/admin/IPBanlistManager";
 import { PatientMedicalVaultActivityLog } from "@/components/security/PatientMedicalVaultActivityLog";
-import { Shield, AlertTriangle, Activity, Bell, Archive, Lock, FileText, UserCheck, Eye, Key, CreditCard, ShoppingCart, ShieldBan, History } from "lucide-react";
+import PracticeAuditLog from "./PracticeAuditLog";
+import { Shield, AlertTriangle, Activity, Bell, Archive, Lock, FileText, UserCheck, Eye, Key, CreditCard, ShoppingCart, ShieldBan, History, Building } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -50,6 +51,7 @@ const Security = () => {
     { value: "banking", label: "Banking", icon: CreditCard, group: "Compliance" },
     { value: "vault-activity", label: "Vault Activity", icon: History, group: "Compliance" },
     { value: "audit", label: "Audit Logs", icon: Activity, group: "Compliance" },
+    { value: "practice-status", label: "Practice Status", icon: Building, group: "Compliance" },
     { value: "encryption", label: "Encryption", icon: Key, group: "Controls" },
     { value: "account-security", label: "Account Lockouts", icon: Lock, group: "Controls" },
     { value: "ip-banlist", label: "IP Ban List", icon: ShieldBan, group: "Controls" },
@@ -214,6 +216,10 @@ const Security = () => {
 
         <TabsContent value="audit">
           <AuditLogsViewer />
+        </TabsContent>
+
+        <TabsContent value="practice-status">
+          <PracticeAuditLog />
         </TabsContent>
 
         <TabsContent value="security-events">

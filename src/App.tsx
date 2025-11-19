@@ -341,7 +341,7 @@ const App = () => {
                                             />
                                             <Route path="/admin/terms" element={<AdminTermsManagement />} />
                                             <Route path="/admin/discount-codes" element={<AdminDiscountCodes />} />
-                                            <Route path="/admin/practice-audit" element={<PracticeAuditLog />} />
+                                            <Route path="/admin/practice-audit" element={<Navigate to="/security?tab=practice-status" replace />} />
                                             <Route path="/admin/pharmacy-api-logs" element={<PharmacyApiLogs />} />
                                             <Route path="/admin/alerts" element={<AdminAlerts />} />
                                             <Route path="/rep-reports" element={<RepProfitReports />} />
