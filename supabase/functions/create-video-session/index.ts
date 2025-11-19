@@ -3,10 +3,11 @@
 // Creates instant or scheduled video consultation sessions
 // ============================================================================
 
-import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { RtcTokenBuilder, RtcRole } from 'https://esm.sh/agora-token@2.0.4';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
+import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,13 +29,15 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+
   try {
-    // Import logger once
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.info('Create video session request received');
 
     // Get Supabase client
     const supabase = createAuthClient(req.headers.get('Authorization'));
+    const supabaseAdmin = createAdminClient();
 
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -167,6 +170,33 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('Tokens generated successfully');
 
+    // PHASE 2: Audit logging for video_session_created
+    await supabaseAdmin.from('audit_logs').insert({
+      action_type: 'video_session_created',
+      user_id: user.id,
+      entity_type: 'video_sessions',
+      entity_id: session.id,
+      ip_address: ipAddress,
+      details: {
+        channel_name: channelName,
+        session_type: sessionType,
+        practice_id: practiceId,
+        provider_id: providerId,
+        patient_id: patientId,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    // PHASE 2: Structured logging
+    edgeLogger.logOperation({
+      user_id: user.id,
+      ip_address: ipAddress,
+      operation: 'create_video_session',
+      success: true,
+      duration_ms: Date.now() - startTime,
+      metadata: { sessionId: session.id, channelName, sessionType }
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -187,9 +217,16 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.error('Unexpected error in create-video-session', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    edgeLogger.logOperation({
+      user_id: undefined,
+      ip_address: ipAddress,
+      operation: 'create_video_session',
+      success: false,
+      duration_ms: Date.now() - startTime,
+      metadata: { error: errorMessage }
+    });
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

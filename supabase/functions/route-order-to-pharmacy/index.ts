@@ -1,4 +1,4 @@
-import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { validateRouteOrderRequest } from '../_shared/requestValidators.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const startTime = Date.now();
 
 interface RoutingInput {
   product_id: string;
@@ -280,6 +282,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+
   try {
     // Use service role key to bypass RLS for system tables (product_pharmacies, pharmacy_rep_assignments)
     const supabaseClient = createAdminClient();
@@ -290,6 +295,14 @@ Deno.serve(async (req) => {
     try {
       requestData = await req.json();
     } catch (error) {
+      edgeLogger.logOperation({
+        user_id: undefined,
+        ip_address: ipAddress,
+        operation: 'route_order_to_pharmacy',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { error: 'invalid_json' }
+      });
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -299,6 +312,14 @@ Deno.serve(async (req) => {
     const validation = validateRouteOrderRequest(requestData);
     if (!validation.valid) {
       edgeLogger.warn('Validation failed', { errors: validation.errors });
+      edgeLogger.logOperation({
+        user_id: undefined,
+        ip_address: ipAddress,
+        operation: 'route_order_to_pharmacy',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { errors: validation.errors }
+      });
       return new Response(
         JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -308,6 +329,14 @@ Deno.serve(async (req) => {
     const { product_id, destination_state, user_topline_rep_id } = requestData;
 
     if (!product_id || !destination_state) {
+      edgeLogger.logOperation({
+        user_id: undefined,
+        ip_address: ipAddress,
+        operation: 'route_order_to_pharmacy',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { error: 'missing_required_fields' }
+      });
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { 
@@ -324,6 +353,39 @@ Deno.serve(async (req) => {
       user_topline_rep_id
     );
 
+    // PHASE 2: Audit logging for pharmacy_order_routed (if pharmacy was assigned)
+    if (result.pharmacy_id) {
+      await supabaseClient.from('audit_logs').insert({
+        action_type: 'pharmacy_order_routed',
+        entity_type: 'order_routing',
+        entity_id: result.pharmacy_id,
+        ip_address: ipAddress,
+        details: {
+          product_id,
+          destination_state,
+          pharmacy_id: result.pharmacy_id,
+          reason: result.reason,
+          user_topline_rep_id,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+
+    // PHASE 2: Structured logging
+    edgeLogger.logOperation({
+      user_id: undefined, // System operation
+      ip_address: ipAddress,
+      operation: 'route_order_to_pharmacy',
+      success: !!result.pharmacy_id,
+      duration_ms: Date.now() - startTime,
+      metadata: { 
+        product_id, 
+        destination_state, 
+        pharmacy_id: result.pharmacy_id,
+        reason: result.reason
+      }
+    });
+
     return new Response(
       JSON.stringify(result),
       { 
@@ -334,6 +396,14 @@ Deno.serve(async (req) => {
   } catch (error) {
     edgeLogger.error('Error in route-order-to-pharmacy', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    edgeLogger.logOperation({
+      user_id: undefined,
+      ip_address: ipAddress,
+      operation: 'route_order_to_pharmacy',
+      success: false,
+      duration_ms: Date.now() - startTime,
+      metadata: { error: errorMessage }
+    });
     return new Response(
       JSON.stringify({ error: 'An error occurred processing the request' }),
       { 
