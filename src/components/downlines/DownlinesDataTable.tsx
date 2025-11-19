@@ -94,8 +94,12 @@ export function DownlinesDataTable() {
       // This is a known limitation with Supabase query builder chaining with arrays
       const profilesResult = await (supabase as any)
         .from("profiles")
-        .select("id, linked_topline_id")
-        .eq("role", "practice")
+        .select(`
+          id, 
+          linked_topline_id,
+          user_roles!inner(role)
+        `)
+        .eq("user_roles.role", "doctor")
         .in("linked_topline_id", downlineRepIds);
       
       const practiceProfiles: Array<{ id: string; linked_topline_id: string | null }> | null = profilesResult.data;
