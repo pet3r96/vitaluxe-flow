@@ -3830,6 +3830,84 @@ export type Database = {
           },
         ]
       }
+      practice_blocked_time: {
+        Row: {
+          block_type: string
+          blocked_by: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          practice_id: string
+          provider_id: string | null
+          reason: string | null
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          block_type: string
+          blocked_by: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          practice_id: string
+          provider_id?: string | null
+          reason?: string | null
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          block_type?: string
+          blocked_by?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          practice_id?: string
+          provider_id?: string | null
+          reason?: string | null
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_blocked_time_blocked_by_fkey"
+            columns: ["blocked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_blocked_time_blocked_by_fkey"
+            columns: ["blocked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_blocked_time_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_blocked_time_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_blocked_time_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       practice_development_fee_invoices: {
         Row: {
           amount: number

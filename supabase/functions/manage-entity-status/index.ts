@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { enforceAdminIP } from '../_shared/ipFilter.ts';
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
+import { isAdmin as checkAdmin } from '../_shared/roleChecker.ts';
 
 /**
  * Consolidated Entity Status Management Endpoint
@@ -195,10 +196,63 @@ Deno.serve(async (req) => {
           throw new Error('Operation and practice ID are required');
         }
 
+        // Log auth context for debugging
+        edgeLogger.info('Room operation attempt', {
+          operation,
+          practiceId,
+          authUserId: user.id,
+          userEmail: user.email,
+          roomId,
+          name
+        });
+
+        // Check if user has permission
+        const isAdmin = await checkAdmin(supabaseClient, user.id);
+        const isPracticeOwner = user.id === practiceId;
+        
+        // Check if user is staff for this practice
+        const { data: staffRecord } = await supabaseClient
+          .from('practice_staff')
+          .select('id, practice_id')
+          .eq('user_id', user.id)
+          .eq('practice_id', practiceId)
+          .eq('active', true)
+          .maybeSingle();
+        
+        const isStaff = !!staffRecord;
+
+        if (!isAdmin && !isPracticeOwner && !isStaff) {
+          edgeLogger.warn('Room operation permission denied', {
+            operation,
+            practiceId,
+            authUserId: user.id,
+            isAdmin,
+            isPracticeOwner,
+            isStaff
+          });
+          
+          return new Response(
+            JSON.stringify({ 
+              error: 'Permission denied',
+              details: 'You must be an admin, practice owner, or active staff member to manage rooms'
+            }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         let result;
 
         if (operation === 'create') {
           if (!name) throw new Error('Room name is required');
+
+          edgeLogger.info('Creating room', {
+            practiceId,
+            name,
+            authUserId: user.id,
+            isPracticeOwner,
+            isStaff,
+            isAdmin
+          });
 
           const { data, error } = await supabaseClient
             .from('practice_rooms')
@@ -213,7 +267,23 @@ Deno.serve(async (req) => {
             .select()
             .single();
 
-          if (error) throw error;
+          if (error) {
+            edgeLogger.error('Failed to create room', {
+              error: error.message,
+              code: error.code,
+              details: error.details,
+              hint: error.hint,
+              practiceId,
+              authUserId: user.id,
+              isPracticeOwner,
+              isStaff
+            });
+            
+            if (error.code === '42501' || error.message?.includes('policy')) {
+              throw new Error('Permission denied: RLS policy violation. Please check that you have permission to manage rooms for this practice.');
+            }
+            throw error;
+          }
           result = { success: true, data };
         } else if (operation === 'update') {
           if (!roomId) throw new Error('Room ID is required for update');
@@ -233,7 +303,22 @@ Deno.serve(async (req) => {
             .select()
             .single();
 
-          if (error) throw error;
+          if (error) {
+            edgeLogger.error('Failed to update room', {
+              error: error.message,
+              code: error.code,
+              details: error.details,
+              hint: error.hint,
+              roomId,
+              practiceId,
+              authUserId: user.id
+            });
+            
+            if (error.code === '42501' || error.message?.includes('policy')) {
+              throw new Error('Permission denied: RLS policy violation. Please check that you have permission to manage rooms for this practice.');
+            }
+            throw error;
+          }
           result = { success: true, data };
         } else if (operation === 'delete') {
           if (!roomId) throw new Error('Room ID is required for delete');
@@ -244,9 +329,31 @@ Deno.serve(async (req) => {
             .eq('id', roomId)
             .eq('practice_id', practiceId);
 
-          if (error) throw error;
+          if (error) {
+            edgeLogger.error('Failed to delete room', {
+              error: error.message,
+              code: error.code,
+              details: error.details,
+              hint: error.hint,
+              roomId,
+              practiceId,
+              authUserId: user.id
+            });
+            
+            if (error.code === '42501' || error.message?.includes('policy')) {
+              throw new Error('Permission denied: RLS policy violation. Please check that you have permission to manage rooms for this practice.');
+            }
+            throw error;
+          }
           result = { success: true };
         }
+
+        edgeLogger.info('Room operation successful', {
+          operation,
+          practiceId,
+          roomId,
+          authUserId: user.id
+        });
 
         return new Response(
           JSON.stringify(result),
