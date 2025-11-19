@@ -6951,6 +6951,7 @@ export type Database = {
     Functions: {
       archive_all_logs: { Args: never; Returns: Json }
       archive_old_audit_logs: { Args: never; Returns: number }
+      auto_populate_order_profits: { Args: never; Returns: undefined }
       calculate_practice_video_bill: {
         Args: {
           p_end_date: string

@@ -50,7 +50,7 @@ serve(async (req) => {
     // Step 2: Process each order
     for (const order of orders || []) {
       try {
-        // Get topline rep from practice linkage
+        // Get topline rep from practice linkage (profiles is array due to TS types)
         const toplineUserId = order.profiles?.[0]?.linked_topline_id;
         
         if (!toplineUserId) {
@@ -191,6 +191,15 @@ serve(async (req) => {
       edgeLogger.info('[admin-recompute-profits] Upsert successful', { 
         recordCount: profitRecords.length 
       });
+
+      // Auto-refresh rep productivity view
+      edgeLogger.info('[admin-recompute-profits] Refreshing rep productivity view');
+      const { error: refreshError } = await adminClient.rpc('refresh_rep_productivity_summary');
+      if (refreshError) {
+        edgeLogger.warn('[admin-recompute-profits] Failed to refresh rep productivity', { error: refreshError });
+      } else {
+        edgeLogger.info('[admin-recompute-profits] Rep productivity view refreshed successfully');
+      }
     }
 
     const duration = performance.now() - startTime;
