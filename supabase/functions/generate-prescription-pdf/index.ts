@@ -5,6 +5,9 @@ import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGeneratePrescriptionRequest } from '../_shared/requestValidators.ts';
 import { handleError, createErrorResponse } from '../_shared/errorHandler.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
+import { validateInput, generatePrescriptionPdfSchema } from '../_shared/zodSchemas.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

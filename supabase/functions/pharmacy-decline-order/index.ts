@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,18 +20,55 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const ipAddress = getClientIP(req);
+
   try {
+    const supabase = createAuthClient(req.headers.get('Authorization'));
+    const supabaseAdmin = createAdminClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Unauthorized');
+    }
+
+    // PHASE 3: Rate limiting (30 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      user.id,
+      'pharmacy-decline-order',
+      { maxRequests: 30, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { userId: user.id, function: 'pharmacy-decline-order' });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { order_id, decline_reason, additional_notes }: DeclineRequest = await req.json();
 
     if (!order_id || !decline_reason) {
       throw new Error('order_id and decline_reason are required');
     }
 
-    const supabase = createAuthClient(req.headers.get('Authorization'));
+    // PHASE 3: ID validation
+    const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
+      supabaseAdmin,
+      user.id,
+      'order',
+      order_id
+    );
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('Unauthorized');
+    if (!ownsResource) {
+      edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, orderId: order_id });
+      return new Response(
+        JSON.stringify({ error: idError || 'Access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     edgeLogger.info('Pharmacy user declining order', { userId: user.id, orderId: order_id });

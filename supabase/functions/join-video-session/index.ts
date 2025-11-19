@@ -1,6 +1,8 @@
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateInput, joinVideoSessionSchema } from '../_shared/zodSchemas.ts';
 
 const agoraAppCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
 
@@ -37,7 +39,36 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { sessionId } = await req.json();
+    // PHASE 3: Rate limiting (30 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabase,
+      user.id,
+      'join-video-session',
+      { maxRequests: 30, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { userId: user.id, function: 'join-video-session' });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = await req.json();
+    
+    // PHASE 3: Schema validation
+    const validation = validateInput(joinVideoSessionSchema, body);
+    if (!validation.success) {
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { session_id: sessionId } = validation.data;
     
     edgeLogger.info('join-video-session invoked', {
       sessionId,

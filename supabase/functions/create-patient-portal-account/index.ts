@@ -7,7 +7,8 @@ import { edgeLogger } from '../_shared/logger.ts';
 import { hasRole } from '../_shared/roleChecker.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
-import { createPatientPortalAccountSchema } from '../_shared/zodSchemas.ts';
+import { createPatientPortalAccountSchema, validateInput } from '../_shared/zodSchemas.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 interface CreatePortalAccountRequest {
   patientId: string;
@@ -104,13 +105,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get patientId first to resolve practice context for admins
-    const { patientId }: CreatePortalAccountRequest = await req.json();
+    // Get patientId from raw body
+    const body = await req.json();
+    const patientId = body.patientId;
 
     if (!patientId) {
       return new Response(
         JSON.stringify({ error: 'Missing required field: patientId' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // PHASE 3: ID validation
+    const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
+      supabaseAdmin,
+      effectiveUserId,
+      'patient',
+      patientId
+    );
+
+    if (!ownsResource) {
+      edgeLogger.error('ID validation failed', undefined, { error: idError, userId: effectiveUserId, patientId });
+      return new Response(
+        JSON.stringify({ error: idError || 'Access denied to this patient' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

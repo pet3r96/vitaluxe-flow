@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
+import { validateInput, pharmacyOrderActionSchema } from '../_shared/zodSchemas.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,23 +20,13 @@ interface OrderActionRequest {
 
 serve(async (req) => {
   const startTime = Date.now();
-  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  const ipAddress = getClientIP(req);
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { order_id, action, reason, notes, target_user_id }: OrderActionRequest = await req.json();
-
-    if (!order_id || !action || !reason) {
-      throw new Error('order_id, action, and reason are required');
-    }
-
-    if (!['hold', 'decline'].includes(action)) {
-      throw new Error('action must be either "hold" or "decline"');
-    }
-
     const supabaseAdmin = createAdminClient();
     const supabase = createAuthClient(req.headers.get('Authorization'));
 
@@ -47,6 +40,61 @@ serve(async (req) => {
         metadata: { error: 'Authentication failed' }
       });
       throw new Error('Unauthorized');
+    }
+
+    // PHASE 3: Rate limiting (50 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      user.id,
+      'pharmacy-order-action',
+      { maxRequests: 50, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { userId: user.id, function: 'pharmacy-order-action' });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = await req.json();
+
+    // PHASE 3: Schema validation
+    const validation = validateInput(pharmacyOrderActionSchema, body);
+    if (!validation.success) {
+      edgeLogger.warn('Validation failed', { errors: validation.errors });
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { order_id, action, reason, notes, target_user_id } = body as OrderActionRequest;
+
+    // PHASE 3: ID validation
+    const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
+      supabaseAdmin,
+      user.id,
+      'order',
+      order_id
+    );
+
+    if (!ownsResource) {
+      edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, orderId: order_id });
+      return new Response(
+        JSON.stringify({ error: idError || 'Access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!order_id || !action || !reason) {
+      throw new Error('order_id, action, and reason are required');
+    }
+
+    if (!['hold', 'decline'].includes(action)) {
+      throw new Error('action must be either "hold" or "decline"');
     }
 
     // Determine which user ID to use for pharmacy lookup

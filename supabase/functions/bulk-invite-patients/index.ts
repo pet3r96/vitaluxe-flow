@@ -3,6 +3,8 @@ import { successResponse, errorResponse } from '../_shared/responses.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 interface BulkInviteRequest {
   patientIds: string[];
@@ -10,7 +12,7 @@ interface BulkInviteRequest {
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
-  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
+  const ipAddress = getClientIP(req);
   
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -39,6 +41,23 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // PHASE 3: Rate limiting (10 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabaseAdmin,
+      user.id,
+      'bulk-invite-patients',
+      { maxRequests: 10, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { userId: user.id, function: 'bulk-invite-patients' });
+      return new Response(
+        JSON.stringify({ error: 'Too many bulk invite requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -82,6 +101,24 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Maximum 50 patients can be invited at once' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // PHASE 3: ID validation for all patientIds
+    for (const patientId of patientIds) {
+      const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
+        supabaseAdmin,
+        user.id,
+        'patient',
+        patientId
+      );
+
+      if (!ownsResource) {
+        edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, patientId });
+        return new Response(
+          JSON.stringify({ error: `Access denied to patient ${patientId}` }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const results = {
