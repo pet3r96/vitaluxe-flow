@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
 import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import { validateGeneratePrescriptionRequest } from '../_shared/requestValidators.ts';
@@ -19,10 +19,52 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabase = createAdminClient();
-  let requestData: any;
+  // Define variables at function scope for error handler access
+  let supabase = createAdminClient();
+  let requestData: any = {};
+  let user: any = null;
 
   try {
+    // PHASE 3 SECURITY: Authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseAuth = createAuthClient(authHeader);
+    supabase = createAdminClient(); // Reassign for proper scope
+
+    const { data: userData, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !userData?.user) {
+      edgeLogger.error('Auth failed in generate-prescription-pdf', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    user = userData.user;
+
+    // PHASE 3 SECURITY: Rate limiting (30 requests/hour)
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      supabase,
+      getClientIP(req),
+      'generate-prescription-pdf',
+      { maxRequests: 30, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('Rate limit exceeded', { function: 'generate-prescription-pdf', userId: user.id });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Parse and validate JSON
     try {
       requestData = await req.json();
@@ -31,6 +73,40 @@ serve(async (req) => {
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // PHASE 3 SECURITY: Zod schema validation for prescription_id mode
+    if (requestData.prescription_id) {
+      const validation = validateInput(generatePrescriptionPdfSchema, requestData);
+      if (!validation.success) {
+        edgeLogger.warn('Validation failed (generate-prescription-pdf)', { errors: validation.errors });
+        return new Response(
+          JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { prescription_id } = validation.data;
+
+      // PHASE 3 SECURITY: ID validation for prescription ownership
+      const { valid, error: idError } = await validateUserOwnsResource(
+        supabase,
+        user.id,
+        'prescription',
+        prescription_id
+      );
+
+      if (!valid) {
+        edgeLogger.error('ID validation failed', undefined, { 
+          error: idError, 
+          userId: user.id, 
+          prescriptionId: prescription_id 
+        });
+        return new Response(
+          JSON.stringify({ error: idError || 'Access denied' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     let prescriptionData;

@@ -4,6 +4,10 @@ import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
+// PHASE 3 SECURITY: Custom validation used instead of Zod schema.
+// This validator enforces UUID validation and strict field validation,
+// meeting the same security requirements as Zod schema validation.
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

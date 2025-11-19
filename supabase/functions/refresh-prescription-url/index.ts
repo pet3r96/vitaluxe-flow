@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createAdminClient } from '../_shared/supabaseAdmin.ts';
+import { createAdminClient, createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
+import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +15,44 @@ serve(async (req) => {
   }
 
   try {
+    // PHASE 3 SECURITY: Authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabase = createAuthClient(authHeader);
+    const adminClient = createAdminClient();
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      edgeLogger.error('[refresh-prescription-url] Auth failed', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // PHASE 3 SECURITY: Rate limiting
+    const limiter = new RateLimiter();
+    const { allowed } = await limiter.checkLimit(
+      adminClient,
+      getClientIP(req),
+      'refresh-prescription-url',
+      { maxRequests: 50, windowSeconds: 3600 }
+    );
+
+    if (!allowed) {
+      edgeLogger.info('[refresh-prescription-url] Rate limit exceeded', { userId: user.id });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { prescriptionPath } = await req.json();
 
     if (!prescriptionPath) {
@@ -22,9 +62,40 @@ serve(async (req) => {
       );
     }
 
-    edgeLogger.info('[refresh-prescription-url] Refreshing URL for path', { prescriptionPath });
+    // PHASE 3 SECURITY: Extract prescription ID from path and validate ownership
+    // Expected path format: userId/prescriptionId/filename.pdf
+    const pathParts = prescriptionPath.split('/');
+    if (pathParts.length < 2) {
+      edgeLogger.error('[refresh-prescription-url] Invalid path format', { prescriptionPath });
+      return new Response(
+        JSON.stringify({ error: 'Invalid prescription path format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    const adminClient = createAdminClient();
+    const prescriptionId = pathParts[1];
+
+    // Validate user owns this prescription
+    const { valid, error: idError } = await validateUserOwnsResource(
+      adminClient,
+      user.id,
+      'prescription',
+      prescriptionId
+    );
+
+    if (!valid) {
+      edgeLogger.error('[refresh-prescription-url] ID validation failed', undefined, { 
+        error: idError, 
+        userId: user.id, 
+        prescriptionId 
+      });
+      return new Response(
+        JSON.stringify({ error: idError || 'Access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    edgeLogger.info('[refresh-prescription-url] Refreshing URL for path', { prescriptionPath });
 
     // Generate new signed URL (valid for 1 year)
     const { data: signedUrlData, error: urlError } = await adminClient.storage

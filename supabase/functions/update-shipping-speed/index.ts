@@ -81,6 +81,40 @@ serve(async (req) => {
       );
     }
 
+    // PHASE 3 SECURITY: ID validation - verify user owns the cart lines
+    const { data: cartLines, error: fetchError } = await supabaseAdmin
+      .from('cart_lines')
+      .select('cart_id')
+      .in('id', uniqueLineIds)
+      .limit(1)
+      .single();
+
+    if (fetchError || !cartLines) {
+      edgeLogger.error('Cart lines not found', fetchError, { userId: user.id, lineIds: uniqueLineIds });
+      return new Response(
+        JSON.stringify({ error: 'Cart lines not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate cart belongs to user
+    const { data: cart, error: cartError } = await supabaseAdmin
+      .from('cart')
+      .select('doctor_id')
+      .eq('id', cartLines.cart_id)
+      .single();
+
+    if (cartError || !cart || cart.doctor_id !== user.id) {
+      edgeLogger.error('ID validation failed - cart access denied', undefined, { 
+        userId: user.id, 
+        cartId: cartLines.cart_id 
+      });
+      return new Response(
+        JSON.stringify({ error: 'Access denied' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Update shipping speed ONLY for lines where it differs (idempotent)
     const { data: updatedLines, error: updateError } = await supabase
       .from("cart_lines")

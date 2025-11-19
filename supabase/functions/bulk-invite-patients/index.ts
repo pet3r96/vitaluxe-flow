@@ -5,6 +5,7 @@ import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateUserOwnsResource } from '../_shared/idValidator.ts';
+import { validateInput, bulkInviteSchema } from '../_shared/zodSchemas.ts';
 
 interface BulkInviteRequest {
   patientIds: string[];
@@ -86,22 +87,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { patientIds }: BulkInviteRequest = await req.json();
+    // PHASE 3 SECURITY: Zod schema validation (replaces custom validation)
+    const body = await req.json();
+    const validation = validateInput(bulkInviteSchema, body);
 
-    if (!patientIds || !Array.isArray(patientIds) || patientIds.length === 0) {
+    if (!validation.success) {
+      edgeLogger.warn('Validation failed (bulk-invite-patients)', { errors: validation.errors });
       return new Response(
-        JSON.stringify({ error: 'patientIds must be a non-empty array' }),
+        JSON.stringify({ error: 'Invalid request data', details: validation.errors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Rate limiting: max 50 patients per request
-    if (patientIds.length > 50) {
-      return new Response(
-        JSON.stringify({ error: 'Maximum 50 patients can be invited at once' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { patientIds } = validation.data;
 
     // PHASE 3: ID validation for all patientIds
     for (const patientId of patientIds) {
