@@ -167,7 +167,8 @@ Deno.serve(async (req) => {
         role_type,
         can_order,
         active,
-        created_at
+        created_at,
+        updated_at
       `)
       .eq('role_type', 'provider')
       .order('created_at', { ascending: false });
@@ -217,7 +218,7 @@ Deno.serve(async (req) => {
 
     const { data: userProfiles, error: userProfilesError } = await supabaseClient
       .from('profiles')
-      .select('id, name, full_name, prescriber_name, email, phone, address, npi, dea, license_number')
+      .select('id, name, full_name, prescriber_name, email, phone, address, npi, dea, license_number, staff_role_type')
       .in('id', userIds);
 
     if (userProfilesError) {
@@ -226,6 +227,28 @@ Deno.serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Get auth.users emails as fallback for any profiles missing email
+    const profilesMap = new Map(userProfiles?.map(p => [p.id, p]) || []);
+    
+    // For profiles without email, fetch from auth.users
+    const profilesNeedingEmail = Array.from(profilesMap.values()).filter(p => !p.email);
+    if (profilesNeedingEmail.length > 0) {
+      edgeLogger.info('Fetching auth emails for profiles missing email', { 
+        count: profilesNeedingEmail.length 
+      });
+      
+      for (const profile of profilesNeedingEmail) {
+        const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+        if (authUser?.user?.email) {
+          profile.email = authUser.user.email;
+          edgeLogger.info('Added auth email to profile', { 
+            profileId: profile.id, 
+            email: authUser.user.email 
+          });
+        }
+      }
     }
 
     // Step 3: Fetch practice profiles
