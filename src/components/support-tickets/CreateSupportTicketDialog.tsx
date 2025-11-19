@@ -423,9 +423,9 @@ function getDefaultTicketType(role: string): any {
 function getAvailableTicketTypes(role: string) {
   const allTypes = [
     { value: "pharmacy_order_issue", label: "Pharmacy Order Issue" },
-    { value: "practice_to_admin", label: "General Support (Admin)" },
-    { value: "rep_to_admin", label: "Contact Admin" },
-    { value: "pharmacy_to_admin", label: "Contact Admin" },
+    { value: "practice_to_admin", label: "General Support (Practice)" },
+    { value: "rep_to_admin", label: "Representative Support" },
+    { value: "pharmacy_to_admin", label: "Pharmacy Support" },
     { value: "pharmacy_to_practice", label: "Contact Practice" },
   ];
 
