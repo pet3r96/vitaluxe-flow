@@ -95,7 +95,6 @@ export const AddPracticeRequestDialog = ({ open, onOpenChange, onSuccess }: AddP
         .from("pending_practices")
         .insert([{
           created_by_user_id: effectiveUserId,
-          has_prescriber: true, // Always true now
           practice_name: formData.practice_name,
           email: formData.email,
           phone: formData.phone || null,

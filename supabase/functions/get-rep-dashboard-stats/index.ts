@@ -67,18 +67,12 @@ Deno.serve(async (req) => {
             .eq('role', 'downline');
           statsData.downlineCount = downlines?.length || 0;
 
-          // Get all practice IDs for order count
-          const practiceIds = practices?.map(p => p.id) || [];
-
-          if (practiceIds.length > 0) {
-            const { count } = await supabase
-              .from('orders')
-              .select('*', { count: 'exact', head: true })
-              .in('doctor_id', practiceIds)
-              .neq('status', 'cancelled')
-              .neq('payment_status', 'payment_failed');
-            statsData.orderCount = count || 0;
-          }
+          // Count orders from order_profits where topline is assigned
+          const { data: toplineOrders } = await supabase
+            .from('order_profits')
+            .select('order_id')
+            .eq('topline_id', repId);
+          statsData.orderCount = toplineOrders?.length || 0;
 
           // Calculate profit stats
           const { data: profitData } = await supabase
