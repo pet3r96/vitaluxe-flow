@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
             isAdmin
           });
 
-          const { data, error } = await supabaseClient
+          const { data, error } = await supabaseAdmin
             .from('practice_rooms')
             .insert({
               practice_id: practiceId,
@@ -295,7 +295,7 @@ Deno.serve(async (req) => {
           if (active !== undefined) updateData.active = active;
           if (capacity !== undefined) updateData.capacity = capacity;
 
-          const { data, error } = await supabaseClient
+          const { data, error } = await supabaseAdmin
             .from('practice_rooms')
             .update(updateData)
             .eq('id', roomId)
@@ -323,7 +323,7 @@ Deno.serve(async (req) => {
         } else if (operation === 'delete') {
           if (!roomId) throw new Error('Room ID is required for delete');
 
-          const { error } = await supabaseClient
+          const { error } = await supabaseAdmin
             .from('practice_rooms')
             .delete()
             .eq('id', roomId)
