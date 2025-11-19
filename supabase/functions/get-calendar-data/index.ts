@@ -21,13 +21,10 @@ Deno.serve(async (req) => {
       throw new Error('Missing required fields: practiceId, startDate, endDate');
     }
 
-    // Detect caller role
-    const { data: userRoles } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
-    
-    const callerRole = userRoles?.[0]?.role || null;
+    // Detect caller role using roleChecker
+    const { getUserRoles } = await import('../_shared/roleChecker.ts');
+    const userRoles = await getUserRoles(supabaseClient, user.id);
+    const callerRole = userRoles[0] || null;
     edgeLogger.info('Caller role', { callerRole, userId: user.id });
 
     // Determine provider scoping

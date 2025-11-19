@@ -44,15 +44,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check user authorization
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    const userRole = roleData?.role;
-    if (!userRole || !['admin', 'pharmacy', 'doctor'].includes(userRole)) {
+    // Check user authorization using roleChecker
+    const { hasRole } = await import('../_shared/roleChecker.ts');
+    const isAuthorized = await hasRole(supabase, user.id, ['admin', 'pharmacy', 'doctor']);
+    
+    if (!isAuthorized) {
       throw new Error('Insufficient permissions');
     }
 

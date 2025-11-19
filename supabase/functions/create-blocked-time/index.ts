@@ -28,14 +28,9 @@ Deno.serve(async (req) => {
       throw new Error('End time must be after start time');
     }
 
-    // Check permissions
-    const { data: roles } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
-
-    const userRoles = roles?.map(r => r.role) || [];
-    const isAdmin = userRoles.includes('admin');
+    // Check permissions using roleChecker
+    const { isAdmin: checkAdmin } = await import('../_shared/roleChecker.ts');
+    const isAdmin = await checkAdmin(supabaseClient, user.id);
     const isPracticeOwner = user.id === practiceId;
     
     // Check if user is staff for this practice

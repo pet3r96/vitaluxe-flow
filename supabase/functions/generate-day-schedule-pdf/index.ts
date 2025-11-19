@@ -25,14 +25,10 @@ Deno.serve(async (req) => {
     const { edgeLogger } = await import('../_shared/logger.ts');
     edgeLogger.info('[Print Day] Request received', { userId: user.id, practiceId, date, providerId: providerId || 'all' });
 
-    // Check user roles
-    const { data: roles } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
-
-    const userRoles = roles?.map((r: any) => r.role) || [];
-    const isAdmin = userRoles.includes('admin');
+    // Check user roles using roleChecker
+    const { getUserRoles, isAdmin: checkAdmin } = await import('../_shared/roleChecker.ts');
+    const userRoles = await getUserRoles(supabaseClient, user.id);
+    const isAdmin = await checkAdmin(supabaseClient, user.id);
     const isPractice = user.id === practiceId;
 
     // Check if staff
