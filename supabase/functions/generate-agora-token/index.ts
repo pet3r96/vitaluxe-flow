@@ -254,6 +254,16 @@ serve(async (req) => {
       expireSeconds
     );
 
+    // PHASE 2: Structured logging for success
+    edgeLogger.logOperation({
+      user_id: user.id,
+      ip_address: ipAddress,
+      operation: 'generate_agora_token',
+      success: true,
+      duration_ms: Date.now() - startTime,
+      metadata: { channel, uid, role }
+    });
+
     // Return success response
     return new Response(
       JSON.stringify({

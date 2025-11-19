@@ -8,6 +8,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+
   try {
     const { repId, role } = await req.json();
     const supabase = createAdminClient();

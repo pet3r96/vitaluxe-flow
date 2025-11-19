@@ -282,6 +282,25 @@ serve(async (req) => {
         response_time_ms: responseTime,
         metadata: { purpose, provider: 'twilio' }
       });
+      
+      // PHASE 2: Audit logging for sms_sent
+      const { error: auditError } = await supabase.from('audit_logs').insert({
+        user_id: user.id,
+        action_type: 'sms_sent',
+        entity_type: 'sms_verification_attempts',
+        entity_id: attemptId,
+        ip_address: ipAddress,
+        details: {
+          phone_masked: phoneNumber.replace(/\d(?=\d{4})/g, '*'),
+          provider: 'twilio',
+          purpose
+        }
+      });
+      
+      if (auditError) {
+        edgeLogger.error('[send-2fa-sms] Failed to log audit event', auditError);
+      }
+
 
       const totalTime = Date.now() - startTime;
       edgeLogger.info('[2FA Twilio] Success', { attemptId, totalTimeMs: totalTime });

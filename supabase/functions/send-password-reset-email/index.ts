@@ -104,12 +104,17 @@ const handler = async (req: Request): Promise<Response> => {
       const result = emailResult.data;
       edgeLogger.info('[send-password-reset] Email sent', { correlationId, messageId: result.MessageID });
 
-      // Log audit event
-      await supabaseAdmin.rpc('log_audit_event', {
-        p_action_type: 'password_reset_requested',
-        p_entity_type: 'user',
-        p_entity_id: profile.id,
-        p_details: { method: 'email_token' }
+      // PHASE 2: Audit logging for password_reset
+      await supabaseAdmin.from('audit_logs').insert({
+        user_id: profile.id,
+        user_email: email,
+        action_type: 'password_reset',
+        entity_type: 'user',
+        entity_id: profile.id,
+        details: { 
+          method: 'email_token',
+          timestamp: new Date().toISOString()
+        }
       });
     }
 

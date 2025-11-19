@@ -190,16 +190,17 @@ const handler = async (req: Request): Promise<Response> => {
     const userEmail = userData?.user?.email;
     edgeLogger.info('[reset-password-with-token] Returning success with email', { emailDomain: userEmail?.split('@')[1] });
     
-    // PHASE 2: Audit logging
+    // PHASE 2: Audit logging for password_changed
     await supabaseAdmin.from('audit_logs').insert({
-      action_type: 'password_reset',
+      action_type: 'password_changed',
       user_id: resetToken.user_id,
-      entity_type: 'password_reset_token',
-      entity_id: resetToken.id,
+      entity_type: 'user',
+      entity_id: resetToken.user_id,
       ip_address: ipAddress,
       user_email: userEmail,
       details: {
-        tokenSource,
+        token_source: tokenSource,
+        sessions_revoked: true,
         timestamp: new Date().toISOString()
       }
     });
