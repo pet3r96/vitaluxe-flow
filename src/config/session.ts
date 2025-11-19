@@ -10,8 +10,8 @@
  */
 
 export const SESSION_CONFIG = {
-  // Hard session timeout (30 minutes)
-  HARD_TIMEOUT_MINUTES: 30,
+  // Hard session timeout (8 hours - Phase 2 requirement)
+  HARD_TIMEOUT_MINUTES: 480,
   
   // Activity refresh settings
   REFRESH_ON_ACTIVITY: true,

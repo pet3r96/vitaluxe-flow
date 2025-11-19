@@ -5983,6 +5983,7 @@ export type Database = {
           expires_at: string
           id: string
           impersonated_user_id: string | null
+          session_created_at: string | null
           session_type: string | null
           updated_at: string
           user_id: string
@@ -5993,6 +5994,7 @@ export type Database = {
           expires_at: string
           id?: string
           impersonated_user_id?: string | null
+          session_created_at?: string | null
           session_type?: string | null
           updated_at?: string
           user_id: string
@@ -6003,6 +6005,7 @@ export type Database = {
           expires_at?: string
           id?: string
           impersonated_user_id?: string | null
+          session_created_at?: string | null
           session_type?: string | null
           updated_at?: string
           user_id?: string
@@ -7457,6 +7460,7 @@ export type Database = {
         Returns: boolean
       }
       increment_discount_usage: { Args: { p_code: string }; Returns: undefined }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_admin_ip_banned: { Args: never; Returns: boolean }
       is_cart_owner: {
         Args: { _cart_id: string; _user_id: string }
@@ -7499,6 +7503,7 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: undefined
       }
+      normalize_phone: { Args: { phone_input: string }; Returns: string }
       notify_due_follow_ups: { Args: never; Returns: undefined }
       patient_can_view_provider_document: {
         Args: { p_document_id: string }

@@ -385,6 +385,9 @@ serve(async (req) => {
       }
     }
 
+    // PHASE 2: Normalize email before any processing
+    signupData.email = signupData.email.toLowerCase().trim();
+
     // Check if user already exists by email
     const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
     const userExists = existingUser?.users?.some(u => u.email?.toLowerCase() === signupData.email.toLowerCase());
