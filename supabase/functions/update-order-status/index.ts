@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { cacheDelPattern } from '../_shared/cache.ts';
@@ -14,8 +14,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+
   try {
     const supabaseClient = createAuthClient(req.headers.get('Authorization'));
+    const supabaseAdmin = createAdminClient();
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
@@ -48,21 +52,16 @@ serve(async (req) => {
 
     edgeLogger.info('Status change request', { hasOrderId: !!orderId, newStatus });
 
-    // Get user's role
-    const { data: roleData } = await supabaseClient
+    // Get user's role for audit logging
+    const { data: roleData } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (!roleData) {
-      return new Response(JSON.stringify({ error: 'No role found for user' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const userRole = roleData.role;
+    const userRole = roleData?.role || 'unknown';
+    const isAdmin = roleData && ['admin', 'super_admin'].includes(roleData.role);
+    const isPharmacy = roleData && roleData.role === 'pharmacy';
 
     // Get the order to check permissions
     const { data: orderData, error: orderError } = await supabaseClient
@@ -79,12 +78,11 @@ serve(async (req) => {
     }
 
     // Permission checks
-    const isAdmin = userRole === 'admin';
     const isOwnOrder = orderData.doctor_id === user.id;
     
     // For pharmacy, check if they're assigned to this order
     let canPharmacyUpdate = false;
-    if (userRole === 'pharmacy') {
+    if (isPharmacy) {
       const { data: pharmacyData } = await supabaseClient
         .from('pharmacies')
         .select('id')
@@ -106,6 +104,14 @@ serve(async (req) => {
 
     // Admins can update any order, practices can update their own, pharmacies can update assigned
     if (!isAdmin && !isOwnOrder && !canPharmacyUpdate) {
+      edgeLogger.logOperation({
+        user_id: user.id,
+        ip_address: ipAddress,
+        operation: 'update_order_status',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: { orderId, reason: 'permission_denied' }
+      });
       return new Response(JSON.stringify({ error: 'Permission denied' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
