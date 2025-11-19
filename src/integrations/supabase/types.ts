@@ -4624,6 +4624,7 @@ export type Database = {
           shipping_address_verified_at: string | null
           shipping_address_zip: string | null
           shipping_preference: string | null
+          signed_up_by_rep_id: string | null
           staff_role_type: string | null
           status: string | null
           temp_password: boolean | null
@@ -4679,6 +4680,7 @@ export type Database = {
           shipping_address_verified_at?: string | null
           shipping_address_zip?: string | null
           shipping_preference?: string | null
+          signed_up_by_rep_id?: string | null
           staff_role_type?: string | null
           status?: string | null
           temp_password?: boolean | null
@@ -4734,6 +4736,7 @@ export type Database = {
           shipping_address_verified_at?: string | null
           shipping_address_zip?: string | null
           shipping_preference?: string | null
+          signed_up_by_rep_id?: string | null
           staff_role_type?: string | null
           status?: string | null
           temp_password?: boolean | null
@@ -4765,6 +4768,20 @@ export type Database = {
           {
             foreignKeyName: "profiles_parent_id_fkey"
             columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_signed_up_by_rep_id_fkey"
+            columns: ["signed_up_by_rep_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_signed_up_by_rep_id_fkey"
+            columns: ["signed_up_by_rep_id"]
             isOneToOne: false
             referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]

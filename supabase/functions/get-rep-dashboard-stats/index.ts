@@ -104,11 +104,11 @@ Deno.serve(async (req) => {
             .single();
 
           if (downlineRep?.reps) {
-            const toplineUserId = (downlineRep.reps as any).user_id;
+            // CRITICAL FIX: Downline only sees practices THEY signed up
             const { data: practices } = await supabase
               .from('profiles')
               .select('id')
-              .eq('linked_topline_id', toplineUserId)
+              .eq('signed_up_by_rep_id', repUserId) // Only practices this downline signed up
               .eq('active', true);
             statsData.practiceCount = practices?.length || 0;
 
