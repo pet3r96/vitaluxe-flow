@@ -44,8 +44,12 @@ Deno.serve(async (req) => {
     // Get approved practices that need linking
     const { data: approvedPractices, error: practicesErr } = await supabaseAdmin
       .from('profiles')
-      .select('id, linked_topline_id')
-      .eq('role', 'doctor')
+      .select(`
+        id, 
+        linked_topline_id,
+        user_roles!inner(role)
+      `)
+      .eq('user_roles.role', 'doctor')
       .eq('active', true)
       .is('linked_topline_id', null);
 
