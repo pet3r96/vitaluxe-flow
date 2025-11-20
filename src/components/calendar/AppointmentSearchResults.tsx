@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProviderAvatar } from "./ProviderAvatar";
 import { cn } from "@/lib/utils";
+import { getProviderDisplayName } from "@/utils/providers";
 
 interface AppointmentSearchResultsProps {
   results: any[];
@@ -108,9 +109,7 @@ export function AppointmentSearchResults({
         <div className="p-2 space-y-1">
           {displayedResults.map((appointment, index) => {
             const patientName = `${appointment.patient_accounts?.first_name} ${appointment.patient_accounts?.last_name}`;
-            const providerName = appointment.providers
-              ? `${appointment.providers.first_name} ${appointment.providers.last_name}`
-              : null;
+            const providerName = getProviderDisplayName(appointment.providers);
             const appointmentDate = new Date(appointment.start_time);
             const isToday = appointmentDate.toDateString() === new Date().toDateString();
             const isPast = appointmentDate < new Date();

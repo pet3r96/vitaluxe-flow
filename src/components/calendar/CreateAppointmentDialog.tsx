@@ -246,23 +246,6 @@ export function CreateAppointmentDialog({
         throw error;
       }
 
-      // Transform provider data to flatten structure for component compatibility
-      if (data && data.providers?.profiles) {
-        const providerProfiles = data.providers.profiles;
-        const displayName = providerProfiles.full_name || providerProfiles.name || '';
-        const nameParts = displayName.split(' ');
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-        
-        // Cast to any to allow adding computed fields
-        (data.providers as any).first_name = firstName;
-        (data.providers as any).last_name = lastName;
-        (data.providers as any).full_name = displayName;
-        (data.providers as any).prescriber_name = providerProfiles.prescriber_name || displayName;
-        (data.providers as any).email = providerProfiles.email || '';
-        (data.providers as any).name = providerProfiles.name || displayName;
-      }
-
       import('@/lib/logger').then(({ logger }) => {
         logger.info('Appointment created', { 
           appointmentId: data.id,

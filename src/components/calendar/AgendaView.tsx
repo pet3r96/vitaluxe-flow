@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { getProviderDisplayName } from "@/utils/providers";
 
 interface AgendaViewProps {
   currentDate: Date;
@@ -109,11 +110,11 @@ export function AgendaView({ currentDate, appointments, onAppointmentClick }: Ag
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                            {appointment.providers && (
+                            {appointment.providers && getProviderDisplayName(appointment.providers) && (
                               <div className="flex items-center gap-2">
                                 <User className="h-4 w-4" />
                                 <span>
-                                  {appointment.providers.first_name} {appointment.providers.last_name}
+                                  {getProviderDisplayName(appointment.providers)}
                                 </span>
                               </div>
                             )}
