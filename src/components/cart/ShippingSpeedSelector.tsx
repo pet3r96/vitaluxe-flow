@@ -1,7 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Truck, Clock, Zap } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo, useMemo, useCallback } from "react";
 
 interface ShippingSpeedSelectorProps {
   value: 'ground' | '2day' | 'overnight';
@@ -13,7 +13,7 @@ interface ShippingSpeedSelectorProps {
   rates?: Record<string, number>;
 }
 
-export const ShippingSpeedSelector = ({ 
+export const ShippingSpeedSelector = memo(({ 
   value, 
   onChange, 
   disabled = false,
@@ -24,21 +24,31 @@ export const ShippingSpeedSelector = ({
 }: ShippingSpeedSelectorProps) => {
   const hasAutoSelectedRef = useRef(false);
   
-  const allOptions = [
+  // Memoize options array to prevent recreation on every render
+  const allOptions = useMemo(() => [
     { value: 'ground' as const, icon: Truck, label: 'Ground Shipping', desc: '(5-7 days)', iconColor: 'text-muted-foreground' },
     { value: '2day' as const, icon: Clock, label: '2-Day Shipping', desc: '(2 business days)', iconColor: 'text-blue-500' },
     { value: 'overnight' as const, icon: Zap, label: 'Overnight Shipping', desc: '(Next business day)', iconColor: 'text-yellow-500' }
-  ];
+  ], []);
 
-  // Helper function to format rate
-  const formatRate = (speed: string) => {
+  // Memoize format rate helper
+  const formatRate = useCallback((speed: string) => {
     if (!rates || !rates[speed]) return '';
     return ` - $${rates[speed].toFixed(2)}`;
-  };
+  }, [rates]);
 
-  const visibleOptions = enabledOptions 
-    ? allOptions.filter(opt => enabledOptions.includes(opt.value))
-    : allOptions;
+  // Memoize visible options
+  const visibleOptions = useMemo(() => 
+    enabledOptions 
+      ? allOptions.filter(opt => enabledOptions.includes(opt.value))
+      : allOptions,
+    [allOptions, enabledOptions]
+  );
+
+  // Memoize onChange handler
+  const handleChange = useCallback((newValue: string) => {
+    onChange(newValue as 'ground' | '2day' | 'overnight');
+  }, [onChange]);
 
   // Auto-select single option only once to prevent infinite loop
   useEffect(() => {
@@ -117,7 +127,7 @@ export const ShippingSpeedSelector = ({
         Shipping Speed for {patientName}
       </Label>
       
-      <RadioGroup value={value} onValueChange={onChange} disabled={disabled}>
+      <RadioGroup value={value} onValueChange={handleChange} disabled={disabled}>
         {visibleOptions.map((option) => {
           const Icon = option.icon;
           
@@ -143,4 +153,6 @@ export const ShippingSpeedSelector = ({
       </RadioGroup>
     </div>
   );
-};
+});
+
+ShippingSpeedSelector.displayName = "ShippingSpeedSelector";

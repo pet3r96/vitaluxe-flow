@@ -59,6 +59,13 @@ export const PharmacyShippingRatesDialog = ({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      console.log('[PharmacyShippingRatesDialog] Starting save...', {
+        pharmacyId: pharmacy.id,
+        pharmacyName: pharmacy.name,
+        rates,
+        timestamp: new Date().toISOString()
+      });
+
       const updates: Array<{
         pharmacy_id: string;
         shipping_speed: 'ground' | '2day' | 'overnight';
@@ -98,38 +105,44 @@ export const PharmacyShippingRatesDialog = ({
         }
       }
 
-      // Upsert rates for all speeds
-      const { error } = await supabase
+      console.log('[PharmacyShippingRatesDialog] Upserting rates:', updates);
+
+      // Upsert rates for all speeds and return data to verify what was saved
+      const { data, error } = await supabase
         .from('pharmacy_shipping_rates')
-        .upsert(updates, { onConflict: 'pharmacy_id,shipping_speed' });
+        .upsert(updates, { onConflict: 'pharmacy_id,shipping_speed' })
+        .select();
 
       if (error) {
-        console.error('[PharmacyShippingRatesDialog] Save error:', {
+        console.error('[PharmacyShippingRatesDialog] Save FAILED:', {
           error,
-          code: error.code,
-          message: error.message,
+          errorCode: error.code,
+          errorMessage: error.message,
+          errorDetails: error.details,
           updates,
           pharmacyId: pharmacy.id,
           timestamp: new Date().toISOString()
         });
         throw new Error(`Failed to save shipping rates: ${error.message} (${error.code || 'unknown'})`);
       }
+
+      console.log('[PharmacyShippingRatesDialog] Save SUCCESS:', data);
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('[PharmacyShippingRatesDialog] Saved data:', data);
       toast({
         title: "Shipping Rates Updated",
-        description: "Pharmacy shipping rates have been saved successfully."
+        description: `Updated ${data.length} shipping options for ${pharmacy.name}`
       });
+      
+      // Invalidate ALL related queries to ensure cache is fully refreshed
       queryClient.invalidateQueries({ queryKey: ['pharmacies'] });
-      queryClient.invalidateQueries({ queryKey: ['pharmacy-shipping-rates', pharmacy.id] });
-      queryClient.invalidateQueries({ queryKey: ['pharmacy-enabled-rates', pharmacy.id] });
-      // Invalidate multiple pharmacy rates query used by cart
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return key === 'multiple-pharmacy-shipping-rates';
-        }
-      });
+      queryClient.invalidateQueries({ queryKey: ['pharmacy-shipping-rates'] });
+      queryClient.invalidateQueries({ queryKey: ['multiple-pharmacy-shipping-rates'] });
+      queryClient.invalidateQueries({ queryKey: ['pharmacy-shipping-rates-map'] });
+      queryClient.invalidateQueries({ queryKey: ['pharmacy-enabled-rates'] });
+      
       onOpenChange(false);
     },
     onError: (error) => {
