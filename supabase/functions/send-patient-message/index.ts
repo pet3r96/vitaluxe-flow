@@ -8,13 +8,10 @@ import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 
-// Helper to normalize phone to E.164
+// Helper: Add +1 prefix ONLY for SMS sending to Twilio (not for storage)
 function normalizePhoneToE164(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (phone.startsWith('+')) return phone;
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-  return `+${digits}`;
+  const cleaned = phone.replace(/\D/g, '');
+  return cleaned.length === 10 ? `+1${cleaned}` : phone;
 }
 
 Deno.serve(async (req) => {

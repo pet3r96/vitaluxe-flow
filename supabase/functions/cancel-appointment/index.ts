@@ -8,11 +8,10 @@ import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateInput, cancelAppointmentSchema } from '../_shared/zodSchemas.ts';
 
+// Helper: Add +1 prefix ONLY for SMS sending to Twilio (not for storage)
 const normalizePhoneToE164 = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 10) return `+1${cleaned}`;
-  if (cleaned.length === 11 && cleaned.startsWith('1')) return `+${cleaned}`;
-  return phone;
+  return cleaned.length === 10 ? `+1${cleaned}` : phone;
 };
 
 Deno.serve(async (req) => {

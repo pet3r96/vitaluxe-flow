@@ -23,22 +23,10 @@ interface NotificationPayload {
   entity_id?: string;
 }
 
-// Helper function to normalize phone numbers to E.164 format
+// Helper: Add +1 prefix ONLY for SMS sending to Twilio (not for storage)
 function normalizePhoneToE164(phone: string): string {
-  // Remove all non-digit characters
-  const digits = phone.replace(/\D/g, '');
-  
-  // If already starts with +, return as-is
-  if (phone.startsWith('+')) return phone;
-  
-  // If 10 digits, assume US number
-  if (digits.length === 10) return `+1${digits}`;
-  
-  // If 11 digits starting with 1, add +
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-  
-  // Return with + prefix for other cases
-  return `+${digits}`;
+  const cleaned = phone.replace(/\D/g, '');
+  return cleaned.length === 10 ? `+1${cleaned}` : phone;
 }
 
 serve(async (req) => {
