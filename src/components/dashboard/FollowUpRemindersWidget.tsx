@@ -91,7 +91,7 @@ export function FollowUpRemindersWidget() {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
             <Bell className="h-5 w-5" />
-            Patient Follow-Ups
+            Urgent Follow-Ups (Next 7 Days)
           </CardTitle>
           {!isLoading && followUps && followUps.length > 0 && (
             <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">
