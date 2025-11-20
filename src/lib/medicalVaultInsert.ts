@@ -192,6 +192,40 @@ export async function insertVaultRecord(
     throw new Error("Could not determine practice_id for vault record");
   }
 
+  // ✅ AUTHORIZATION CHECK: Verify user has access to this practice
+  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+  if (!authUser || authError) {
+    throw new Error("Not authenticated");
+  }
+
+  // Check if user is practice owner, provider, or staff for this practice
+  const isPracticeOwner = authUser.id === practiceId;
+  
+  if (!isPracticeOwner) {
+    const { data: providerCheck } = await supabase
+      .from('providers')
+      .select('id')
+      .eq('user_id', authUser.id)
+      .eq('practice_id', practiceId)
+      .eq('active', true)
+      .maybeSingle();
+
+    const { data: staffCheck } = await supabase
+      .from('practice_staff')
+      .select('id')
+      .eq('user_id', authUser.id)
+      .eq('practice_id', practiceId)
+      .eq('active', true)
+      .maybeSingle();
+
+    if (!providerCheck && !staffCheck) {
+      throw new Error(
+        'You are not authorized to add medical records for this practice. ' +
+        'Please contact your practice administrator if you believe this is an error.'
+      );
+    }
+  }
+
   // ✅ CRITICAL FIX: Ensure patient_id is set (fallback to patient_account_id)
   const patientId = payload.patient_id || payload.patient_account_id;
 

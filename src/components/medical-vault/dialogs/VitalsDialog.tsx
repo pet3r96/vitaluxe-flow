@@ -244,7 +244,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
       }
     },
     {
-      queryKey: ["patient-medical-vault", patientAccountId],
+      queryKey: ["patient-vitals", patientAccountId],
       updateFn: (oldData: any, variables) => {
         if (mode === "edit" || (isBasicVitalMode && vitals)) {
           return oldData?.map((item: any) =>

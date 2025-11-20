@@ -218,7 +218,7 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
             item.id === medication.id ? { ...item, ...variables } : item
           );
         }
-        return [...(oldData || []), { ...variables, id: crypto.randomUUID(), is_active: true }];
+        return [...(oldData || []), { ...variables, id: crypto.randomUUID(), active: true }];
       },
       successMessage: mode === "edit" ? "Medication updated successfully" : "Medication added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} medication`,

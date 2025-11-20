@@ -114,7 +114,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
         .select("id, record_data")
         .eq("patient_account_id", patientAccountId)
         .eq("record_type", "allergy")
-        .eq("is_active", true);
+        .eq("active", true);
 
       if (queryError) throw queryError;
 
@@ -214,14 +214,14 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
       }
     },
     {
-      queryKey: ["patient-medical-vault", patientAccountId],
+      queryKey: ["patient-allergies", patientAccountId],
       updateFn: (oldData: any, variables) => {
         if (mode === "edit") {
           return oldData?.map((item: any) =>
             item.id === allergy.id ? { ...item, ...variables } : item
           );
         }
-        return [...(oldData || []), { ...variables, id: crypto.randomUUID(), is_active: true }];
+        return [...(oldData || []), { ...variables, id: crypto.randomUUID(), active: true }];
       },
       successMessage: mode === "edit" ? "Allergy updated successfully" : "Allergy added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} allergy`,
