@@ -175,7 +175,7 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
             item.id === condition.id ? { ...item, ...variables } : item
           );
         }
-        return [...(oldData || []), { ...variables, id: crypto.randomUUID(), is_active: true }];
+        return [...(oldData || []), { ...variables, id: crypto.randomUUID(), active: true }];
       },
       successMessage: mode === "edit" ? "Condition updated successfully" : "Condition added successfully",
       errorMessage: `Failed to ${mode === "edit" ? "update" : "add"} condition`,
