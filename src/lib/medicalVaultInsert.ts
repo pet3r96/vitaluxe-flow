@@ -110,7 +110,6 @@ export interface VitalsRecordData {
 interface BaseVaultInsert {
   patient_account_id: string;
   created_by_user_id?: string;
-  created_by_role?: string;
   is_active?: boolean;
   title: string;
   patient_id: string;
@@ -241,8 +240,7 @@ export async function insertVaultRecord(
     practice_id: practiceId,
     title: payload.title,
     active: payload.is_active ?? true,
-    created_by_user_id: payload.created_by_user_id,
-    created_by_role: payload.created_by_role
+    created_by_user_id: payload.created_by_user_id
   });
   
   const { error } = await supabase
@@ -255,7 +253,6 @@ export async function insertVaultRecord(
       practice_id: practiceId,
       title: payload.title,
       created_by_user_id: payload.created_by_user_id,
-      created_by_role: payload.created_by_role,
       active: payload.is_active ?? true, // ✅ FIX: Use 'active' column name
     });
 

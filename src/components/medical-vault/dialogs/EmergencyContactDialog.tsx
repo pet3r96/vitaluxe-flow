@@ -111,7 +111,6 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
           patient_id: patientAccountId,
           title: data.name,
           created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
         });
         
         if (error) {

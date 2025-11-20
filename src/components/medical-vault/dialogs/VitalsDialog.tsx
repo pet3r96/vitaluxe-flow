@@ -218,7 +218,6 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
           patient_id: patientAccountId,
           title: `Vitals - ${format(new Date(), 'MMM d, yyyy')}`,
           created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
         });
         
         if (error) {

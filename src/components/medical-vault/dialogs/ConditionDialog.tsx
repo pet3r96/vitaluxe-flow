@@ -146,7 +146,6 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
           patient_id: patientAccountId,
           title: data.condition_name,
           created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
           is_active: true,
         });
         
