@@ -334,7 +334,7 @@ export default function PatientProfile() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="phone">Phone (Required)</Label>
                   <PhoneInput
                     id="phone"
                     name="phone"

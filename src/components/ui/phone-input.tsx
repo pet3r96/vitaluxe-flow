@@ -37,9 +37,9 @@ export function PhoneInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
-    // Allow only digits and common phone formatting characters
-    const cleaned = input.replace(/[^\d]/g, "");
-    setDisplayValue(input);
+    // Strip non-digits AND limit to exactly 10 digits
+    const cleaned = input.replace(/[^\d]/g, "").slice(0, 10);
+    setDisplayValue(cleaned);
     onChange(cleaned);
   };
 
@@ -76,6 +76,9 @@ export function PhoneInput({
         disabled={disabled}
         required={required}
         placeholder={placeholder}
+        maxLength={10}
+        inputMode="numeric"
+        pattern="\d*"
         className={cn(
           touched && error && "border-destructive focus-visible:ring-destructive"
         )}
