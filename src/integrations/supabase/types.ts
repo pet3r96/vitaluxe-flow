@@ -8457,7 +8457,6 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: undefined
       }
-      normalize_phone: { Args: { phone_input: string }; Returns: string }
       notify_due_follow_ups: { Args: never; Returns: undefined }
       patient_can_view_provider_document: {
         Args: { p_document_id: string }
