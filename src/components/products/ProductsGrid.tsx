@@ -104,9 +104,9 @@ export const ProductsGrid = () => {
   // Check RX ordering privileges
   const { canOrderRx, hasProviders, providerCount, providersWithNpiCount, isLoading: isLoadingRxPrivileges } = usePracticeRxPrivileges();
 
-  // Auto-fetch practice shipping address for providers
+  // Auto-fetch practice shipping address for providers and staff who can order
   const { data: practiceAddress, isLoading: isLoadingAddress } = usePracticeShippingAddress(
-    isProvider ? effectivePracticeId : null
+    (isProvider || (isStaffAccount && canOrder)) ? effectivePracticeId : null
   );
 
   // Use real-time hook for instant updates

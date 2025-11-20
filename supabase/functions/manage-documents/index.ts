@@ -345,9 +345,22 @@ Deno.serve(async (req) => {
           } catch (supabaseError: any) {
             edgeLogger.error('Supabase Storage signed URL generation also failed', supabaseError, {
               bucketId,
-              storagePath
+              storagePath,
+              errorCode: supabaseError.code,
+              errorMessage: supabaseError.message,
+              userId: user?.id,
+              documentId
             });
-            throw new Error(`Failed to generate signed URL: ${supabaseError.message}`);
+            
+            return new Response(
+              JSON.stringify({ 
+                error: 'Document not found or access denied',
+                details: 'The document may have been moved or deleted. Please contact support.',
+                documentId,
+                storagePath
+              }),
+              { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
           }
         }
 
