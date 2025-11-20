@@ -69,6 +69,22 @@ const Cart = React.memo(function Cart() {
   const showStaffLoading = checkingPrivileges && isStaffAccount;
   const showStaffNoAccess = isStaffAccount && !canOrder && !checkingPrivileges;
 
+  // Diagnostic logging for permission debugging
+  React.useEffect(() => {
+    if (effectiveUserId) {
+      console.log('[Cart] Permission State:', {
+        timestamp: new Date().toISOString(),
+        effectiveRole,
+        effectiveUserId,
+        isStaffAccount,
+        canOrder,
+        checkingPrivileges,
+        showStaffNoAccess,
+        isProviderAccount: authContext?.isProviderAccount
+      });
+    }
+  }, [effectiveRole, effectiveUserId, isStaffAccount, canOrder, checkingPrivileges, showStaffNoAccess, authContext?.isProviderAccount]);
+
   // Resolve cart owner - cached to prevent loops
   const { data: cartOwnerId, isLoading: isLoadingCartOwner, error: cartOwnerError } = useQuery({
     queryKey: ["cart-owner-id", effectiveUserId, effectiveRole, effectivePracticeId],

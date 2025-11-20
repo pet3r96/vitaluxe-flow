@@ -789,7 +789,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setEffectivePracticeId(data.practice_id);
             setIsStaffAccount(true);
             setIsProviderAccount(false);
-            logger.info('Effective practice ID set for staff', logger.sanitize({ practiceId: data.practice_id }));
+            logger.info('Effective practice ID set for staff', logger.sanitize({ 
+              practiceId: data.practice_id,
+              userId: effectiveUserId,
+              role: effectiveRole
+            }));
           } else {
             setEffectivePracticeId(null);
             setIsStaffAccount(false);

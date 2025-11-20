@@ -13,14 +13,25 @@ export const useStaffOrderingPrivileges = () => {
       
       const { data, error } = await supabase
         .from('providers')
-        .select('can_order')
+        .select('can_order, role_type')
         .eq('user_id', effectiveUserId)
-        .neq('role_type', 'provider')
         .single();
       
       if (error) {
-        logger.error('Error fetching staff ordering privileges', error);
+        logger.error('Error fetching staff ordering privileges', error, {
+          userId: effectiveUserId,
+          isStaffAccount
+        });
         return false; // Fail closed for security
+      }
+      
+      // Only apply staff restrictions if this is actually a staff member
+      // Providers (role_type='provider') should NOT be restricted
+      if (data?.role_type === 'provider') {
+        logger.info('Provider account detected, bypassing staff restrictions', {
+          userId: effectiveUserId
+        });
+        return true; // Providers always have access (not subject to staff can_order)
       }
       
       return data?.can_order ?? false;
