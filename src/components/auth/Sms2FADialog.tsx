@@ -136,23 +136,16 @@ export const Sms2FADialog = ({ open, userId, phone }: Sms2FADialogProps) => {
     window.location.assign('/auth');
   };
 
+  // Format for display only - no actual formatting, just limit to 10 digits
   const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, '');
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    return digits.slice(0, 10);
   };
 
-  // Normalize phone to E.164 format (+1XXXXXXXXXX)
+  // Normalize phone to 10 digits for storage/sending
   const normalizePhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, "");
-    // Accept 10-digit (US) or 11-digit (already has +1)
-    if (cleaned.length === 10) {
-      return `+1${cleaned}`;
-    } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
-      return `+${cleaned}`;
-    }
-    return phone; // Return as-is if unexpected format
+    return cleaned.slice(0, 10); // Store exactly 10 digits
   };
 
   const isValidPhone = (num: string) => {

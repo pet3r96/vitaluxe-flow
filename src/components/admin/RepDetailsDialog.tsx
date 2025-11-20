@@ -86,13 +86,11 @@ export const RepDetailsDialog = ({
     setIsEditing(false);
   };
 
+  // Display raw 10 digits only
   const formatPhoneNumber = (phone: string | null) => {
     if (!phone) return "-";
     const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-    }
-    return phone;
+    return cleaned.length === 10 ? cleaned : phone;
   };
 
   return (

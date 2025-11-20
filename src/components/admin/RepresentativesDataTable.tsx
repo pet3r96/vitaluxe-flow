@@ -24,13 +24,11 @@ import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/Mo
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { debounce } from "@/lib/performance";
 
+// Display raw 10 digits only
 const formatPhoneNumber = (phone: string | null | undefined) => {
   if (!phone) return "Not Set";
   const cleaned = phone.replace(/\D/g, "");
-  if (cleaned.length === 10) {
-    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-  }
-  return phone;
+  return cleaned.length === 10 ? cleaned : phone;
 };
 
 export const RepresentativesDataTable = () => {

@@ -41,7 +41,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { phoneNumber, purpose = 'verification' } = await req.json();
+    let { phoneNumber, purpose = 'verification' } = await req.json();
 
     if (!phoneNumber) {
       return new Response(
@@ -50,11 +50,11 @@ serve(async (req) => {
       );
     }
 
-    // Validate phone number format (basic E.164 check)
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(phoneNumber.replace(/[-\s]/g, ''))) {
+    // Sanitize phone to exactly 10 digits
+    phoneNumber = phoneNumber.replace(/\D/g, '');
+    if (phoneNumber.length !== 10) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid phone number format. Use E.164 format (e.g., +15551234567)' }),
+        JSON.stringify({ success: false, error: 'Phone must be exactly 10 digits' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

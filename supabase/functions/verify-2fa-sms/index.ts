@@ -69,10 +69,13 @@ serve(async (req) => {
       );
     }
 
-    // PHASE 2: Normalize phone number to E.164 format
-    phoneNumber = phoneNumber.replace(/[-\s()]/g, '');
-    if (!phoneNumber.startsWith('+')) {
-      phoneNumber = '+1' + phoneNumber;
+    // Sanitize phone to exactly 10 digits
+    phoneNumber = phoneNumber.replace(/\D/g, '');
+    if (phoneNumber.length !== 10) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Phone must be exactly 10 digits' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Validate code format

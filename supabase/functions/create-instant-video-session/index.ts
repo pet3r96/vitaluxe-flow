@@ -172,11 +172,10 @@ Deno.serve(async (req) => {
         
         if (patientWithUser.phone) {
           try {
+            // Add +1 prefix ONLY for SMS sending to Twilio (not for storage)
             const normalizePhoneToE164 = (phone: string): string => {
               const cleaned = phone.replace(/\D/g, '');
-              if (cleaned.length === 10) return `+1${cleaned}`;
-              if (cleaned.length === 11 && cleaned.startsWith('1')) return `+${cleaned}`;
-              return phone;
+              return cleaned.length === 10 ? `+1${cleaned}` : phone;
             };
             const normalizedPhone = normalizePhoneToE164(patientWithUser.phone);
             await sendNotificationSms({
