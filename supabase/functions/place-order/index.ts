@@ -622,7 +622,8 @@ serve(async (req) => {
 
       if (deleteError) {
         edgeLogger.error('Failed to clear cart', deleteError);
-      } else {
+      } else if (deletedLines) {
+        deletedCartLineIds = deletedLines.map(line => line.id);
         edgeLogger.info('Successfully cleared cart lines', { clearedCount: deletedCartLineIds.length });
       }
     }
