@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createAuthClient } from '../_shared/supabaseAdmin.ts';
+import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -35,9 +35,10 @@ serve(async (req) => {
     }
 
     const supabase = createAuthClient(req.headers.get('Authorization'));
+    const supabaseAdmin = createAdminClient();
 
-    // Fetch order details
-    const { data: order, error: orderError } = await supabase
+    // Fetch order details using admin client to bypass RLS
+    const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .select(`
         *,
@@ -57,8 +58,8 @@ serve(async (req) => {
 
     if (orderError) throw orderError;
 
-    // Fetch order lines with provider info
-    const { data: lines, error: linesError } = await supabase
+    // Fetch order lines with provider info using admin client to bypass RLS
+    const { data: lines, error: linesError } = await supabaseAdmin
       .from('order_lines')
       .select(`
         *,
@@ -336,7 +337,10 @@ serve(async (req) => {
     );
   } catch (error: any) {
     edgeLogger.error('Error generating pharmacy order summary', error, {
-      order_id: order_id
+      order_id: order_id,
+      errorMessage: error.message,
+      errorCode: error.code,
+      errorStack: error.stack
     });
     return new Response(
       JSON.stringify({ 

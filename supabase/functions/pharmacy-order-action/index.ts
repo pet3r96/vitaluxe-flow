@@ -137,8 +137,8 @@ serve(async (req) => {
       throw new Error('Pharmacy not found');
     }
 
-    // Fetch order details
-    const { data: order, error: orderError } = await supabase
+    // Fetch order details using admin client to bypass RLS
+    const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .select(`
         *,
@@ -152,7 +152,11 @@ serve(async (req) => {
       .single();
 
     if (orderError) {
-      edgeLogger.error('Error fetching order', orderError);
+      edgeLogger.error('Error fetching order', orderError, {
+        orderId: order_id,
+        errorMessage: orderError.message,
+        errorCode: orderError.code
+      });
       throw orderError;
     }
 
