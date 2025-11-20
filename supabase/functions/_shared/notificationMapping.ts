@@ -7,6 +7,7 @@ export function mapNotificationTypeToEventType(notificationType: string): string
   const mapping: Record<string, string> = {
     // Messages
     'message': 'new_message',
+    'message_received': 'new_message',
     'practice_message_received': 'new_message',
     'new_patient_message': 'new_message',
     'patient_message_received': 'new_message',
