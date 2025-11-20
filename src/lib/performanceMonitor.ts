@@ -45,30 +45,68 @@ const sendToDatabase = async (pageName: string, duration: number, metricType: st
 
 export const measurePageLoad = (pageName: string) => {
   const start = performance.now();
+  let hasReported = false;
   
-  return {
-    end: () => {
+  // Auto-measure after 3 seconds (typical page load complete time)
+  const autoMeasureTimeout = setTimeout(() => {
+    if (!hasReported) {
+      hasReported = true;
       const duration = performance.now() - start;
       
-      // Determine if load time is acceptable
-      const isSlow = duration > 400;
+      // Cap at 30 seconds max to avoid recording "time on page" as "load time"
+      const cappedDuration = Math.min(duration, 30000);
+      
+      const isSlow = cappedDuration > 3000;
       const logMethod = isSlow ? console.warn : console.log;
       const icon = isSlow ? '🐌' : '⚡';
       
-      logMethod(`${icon} [Performance] ${pageName} loaded in ${duration.toFixed(2)}ms`);
+      logMethod(`${icon} [Performance] ${pageName} initial load: ${cappedDuration.toFixed(2)}ms`);
       
       // Track metrics globally
       if (typeof window !== 'undefined') {
         // @ts-ignore
         window.__perf = window.__perf || {};
         // @ts-ignore
-        window.__perf[pageName] = duration;
+        window.__perf[pageName] = cappedDuration;
       }
       
       // Send to database (async, non-blocking)
-      sendToDatabase(pageName, duration, 'page_load');
+      sendToDatabase(pageName, cappedDuration, 'page_load');
+    }
+  }, 3000);
+  
+  return {
+    end: () => {
+      clearTimeout(autoMeasureTimeout);
       
-      return duration;
+      if (!hasReported) {
+        hasReported = true;
+        const duration = performance.now() - start;
+        
+        // Cap at 30 seconds to prevent recording hours as page load time
+        const cappedDuration = Math.min(duration, 30000);
+        
+        const isSlow = cappedDuration > 3000;
+        const logMethod = isSlow ? console.warn : console.log;
+        const icon = isSlow ? '🐌' : '⚡';
+        
+        logMethod(`${icon} [Performance] ${pageName} loaded in ${cappedDuration.toFixed(2)}ms`);
+        
+        // Track metrics globally
+        if (typeof window !== 'undefined') {
+          // @ts-ignore
+          window.__perf = window.__perf || {};
+          // @ts-ignore
+          window.__perf[pageName] = cappedDuration;
+        }
+        
+        // Send to database (async, non-blocking)
+        sendToDatabase(pageName, cappedDuration, 'page_load');
+        
+        return cappedDuration;
+      }
+      
+      return 0;
     }
   };
 };
