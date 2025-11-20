@@ -421,3 +421,6 @@ verify_jwt = true
 
 [functions.place-order]
 verify_jwt = true
+
+[functions.manage-documents]
+verify_jwt = true

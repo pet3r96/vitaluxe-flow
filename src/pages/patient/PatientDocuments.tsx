@@ -420,16 +420,14 @@ export default function PatientDocuments() {
         throw new Error(error.details || error.message || 'Failed to generate download link');
       }
 
-      if (!data || (!data.signedUrl && !data.signed_url)) {
+      if (!data?.url) {
         logger.error('[PatientDocuments] No signed URL in response', { data });
         throw new Error('No signed URL received from server');
       }
-
-      const signedUrl = data.signedUrl || data.signed_url;
       
       logger.info('[PatientDocuments] Signed URL received, initiating download');
 
-      const response = await fetch(signedUrl);
+      const response = await fetch(data.url);
       if (!response.ok) {
         throw new Error(`Download failed: ${response.statusText}`);
       }

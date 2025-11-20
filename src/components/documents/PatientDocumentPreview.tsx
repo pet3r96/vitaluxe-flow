@@ -65,14 +65,13 @@ export function PatientDocumentPreview({
         throw new Error('No response data from server');
       }
 
-      const signedUrl = data.signedUrl || data.signed_url;
-      if (!signedUrl) {
+      if (!data?.url) {
         logger.error('[PatientDocumentPreview] No signed URL in response', { data });
         throw new Error('Server did not return a signed URL');
       }
 
       logger.info('[PatientDocumentPreview] Preview URL generated successfully');
-      setPreviewUrl(signedUrl);
+      setPreviewUrl(data.url);
     } catch (error: any) {
       logger.error("[PatientDocumentPreview] Error loading preview", error, {
         bucketName,
@@ -104,8 +103,9 @@ export function PatientDocumentPreview({
       });
 
       if (error) throw error;
+      if (!data?.url) throw new Error('No signed URL returned');
 
-      const response = await fetch(data.signedUrl || data.signed_url);
+      const response = await fetch(data.url);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
