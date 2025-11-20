@@ -7719,9 +7719,10 @@ export type Database = {
           last_twilio_verification: string | null
           last_verified_at: string | null
           phone_number: string | null
-          phone_number_encrypted: string | null
           phone_verified: boolean | null
           phone_verified_at: string | null
+          reset_at: string | null
+          reset_requested_by: string | null
           twilio_enabled: boolean | null
           twilio_phone_verified: boolean | null
           updated_at: string | null
@@ -7737,10 +7738,11 @@ export type Database = {
           last_ghl_verification?: string | null
           last_twilio_verification?: string | null
           last_verified_at?: string | null
-          phone_number?: string | null
-          phone_number_encrypted?: string | null
+          phone_number?: never
           phone_verified?: boolean | null
           phone_verified_at?: string | null
+          reset_at?: string | null
+          reset_requested_by?: string | null
           twilio_enabled?: boolean | null
           twilio_phone_verified?: boolean | null
           updated_at?: string | null
@@ -7756,10 +7758,11 @@ export type Database = {
           last_ghl_verification?: string | null
           last_twilio_verification?: string | null
           last_verified_at?: string | null
-          phone_number?: string | null
-          phone_number_encrypted?: string | null
+          phone_number?: never
           phone_verified?: boolean | null
           phone_verified_at?: string | null
+          reset_at?: string | null
+          reset_requested_by?: string | null
           twilio_enabled?: boolean | null
           twilio_phone_verified?: boolean | null
           updated_at?: string | null
