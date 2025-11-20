@@ -235,9 +235,10 @@ export async function insertVaultRecord(
       hint: error.hint,
       record_type: payload.record_type
     });
+    throw new Error(error.message || 'Failed to insert vault record');
   }
 
-  return { error };
+  return { error: null };
 }
 
 /**
@@ -283,7 +284,8 @@ export async function updateVaultRecord(
       hint: error.hint,
       record_id: id
     });
+    throw new Error(error.message || 'Failed to update vault record');
   }
 
-  return { error };
+  return { error: null };
 }
