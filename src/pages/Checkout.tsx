@@ -369,15 +369,13 @@ export default function Checkout() {
         throw error;
       }
 
-      if (!data?.success) {
-        throw new Error(data?.error || "Order placement failed");
+      // Only throw if no data at all (edge function completely failed)
+      if (!data) {
+        throw new Error("No response from order placement");
       }
 
-      // Check if any payments failed
-      if (data?.failed_payments && data.failed_payments.length > 0) {
-        throw new Error(data.message || `Payment failed for ${data.failed_payments.length} order(s). Please retry payment from Orders page.`);
-      }
-
+      // Let success: false with failed_payments flow to onSuccess handler
+      // The onSuccess handler will show the payment retry dialog
       return {
         createdOrders: data.created_orders || [],
         failedPayments: data.failed_payments || [],
