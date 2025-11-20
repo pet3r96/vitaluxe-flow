@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       throw new Error(`Invalid input: ${validation.errors.join(', ')}`);
     }
 
-    const { subject, message, sender_type, patient_id, parent_message_id } = validation.data;
+    const { subject, message, sender_type, patient_id, practice_id, parent_message_id } = validation.data;
     const thread_id = body.thread_id; // Optional field not in schema
 
     // PHASE 3: ID validation for patient_id
