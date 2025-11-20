@@ -51,34 +51,61 @@ export function AllergiesSection({ patientAccountId, allergies }: AllergiesSecti
 
   const handleDelete = async (allergy: VaultRecordBase) => {
     const data = asAllergy(allergy);
-    if (!confirm(`Are you sure you want to delete ${data.nka ? 'NKA record' : data.allergen_name}?`)) return;
-    
+    if (!confirm(`Are you sure you want to remove this allergy?`)) {
+      return;
+    }
+
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Fetch practice_id from patient_accounts
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientAccountId)
+        .single();
+
+      if (!patientAccount) throw new Error("Patient account not found");
+
+      // Soft delete: set active = false
       const { error } = await supabase
         .from("patient_medical_vault")
-        .delete()
+        .update({ active: false })
         .eq("id", allergy.id);
-      
+
       if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ["patient-allergies", patientAccountId] });
+
+      queryClient.invalidateQueries({ 
+        queryKey: ["patient-allergies", patientAccountId] 
+      });
       queryClient.invalidateQueries({ queryKey: ["patient-medical-data"] });
-      toast({ title: "Success", description: "Allergy deleted successfully" });
-      if (patientAccountId) {
-        await logMedicalVaultChange({
-          patientAccountId,
-          actionType: 'deleted',
-          entityType: 'allergy',
-          entityId: allergy.id,
-          entityName: data.nka ? 'NKA' : (data.allergen_name || 'Unknown Allergen'),
-          changedByUserId: effectiveUserId || undefined,
-          changedByRole: mapRoleToAuditRole(effectiveRole),
-          oldData: allergy,
-          changeSummary: `Deleted allergy: ${data.nka ? 'NKA' : (data.allergen_name || 'Unknown')}`,
-        });
-      }
+
+      toast({
+        title: "Success",
+        description: "Allergy removed successfully",
+      });
+
+      // Log the soft deletion with before/after values
+      await logMedicalVaultChange({
+        patientAccountId,
+        actionType: 'soft_deleted',
+        entityType: 'allergy',
+        entityId: allergy.id,
+        entityName: data.nka ? 'NKA' : (data.allergen_name || 'Unknown Allergen'),
+        changedByUserId: user.id,
+        changedByRole: mapRoleToAuditRole(effectiveRole),
+        oldData: { ...allergy, active: true },
+        newData: { ...allergy, active: false },
+        changeSummary: `Patient removed allergy: ${data.nka ? 'NKA' : (data.allergen_name || 'Unknown')}`,
+      });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to delete allergy", variant: "destructive" });
+      console.error("Error removing allergy:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove allergy",
+        variant: "destructive",
+      });
     }
   };
 

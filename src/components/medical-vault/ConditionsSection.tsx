@@ -45,34 +45,60 @@ export function ConditionsSection({ patientAccountId, conditions }: ConditionsSe
   };
 
   const handleDelete = async (condition: any) => {
-    if (!confirm(`Are you sure you want to delete ${condition.condition_name}?`)) return;
-    
+    if (!confirm(`Are you sure you want to remove ${condition.condition_name}?`)) {
+      return;
+    }
+
     try {
-      const { error} = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Fetch practice_id from patient_accounts
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientAccountId)
+        .single();
+
+      if (!patientAccount) throw new Error("Patient account not found");
+
+      // Soft delete: set active = false
+      const { error } = await supabase
         .from("patient_medical_vault")
-        .delete()
+        .update({ active: false })
         .eq("id", condition.id);
-      
+
       if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ["patient-conditions", patientAccountId] });
-      queryClient.invalidateQueries({ queryKey: ["patient-medical-data"] });
-      toast({ title: "Success", description: "Condition deleted successfully" });
-      if (patientAccountId) {
-        await logMedicalVaultChange({
-          patientAccountId,
-          actionType: 'deleted',
-          entityType: 'condition',
-          entityId: condition.id,
-          entityName: condition.condition_name,
-          changedByUserId: effectiveUserId || undefined,
-          changedByRole: mapRoleToAuditRole(effectiveRole),
-          oldData: condition,
-          changeSummary: `Deleted condition: ${condition.condition_name}`,
-        });
-      }
+
+      queryClient.invalidateQueries({ 
+        queryKey: ["patient-conditions", patientAccountId] 
+      });
+
+      toast({
+        title: "Success",
+        description: "Condition removed successfully",
+      });
+
+      // Log the soft deletion with before/after values
+      await logMedicalVaultChange({
+        patientAccountId,
+        actionType: 'soft_deleted',
+        entityType: 'condition',
+        entityId: condition.id,
+        entityName: condition.condition_name,
+        changedByUserId: user.id,
+        changedByRole: mapRoleToAuditRole(effectiveRole),
+        oldData: { ...condition, active: true },
+        newData: { ...condition, active: false },
+        changeSummary: `Patient removed condition: ${condition.condition_name}`,
+      });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to delete condition", variant: "destructive" });
+      console.error("Error removing condition:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove condition",
+        variant: "destructive",
+      });
     }
   };
 

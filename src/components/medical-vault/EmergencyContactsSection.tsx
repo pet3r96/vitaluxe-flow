@@ -61,33 +61,60 @@ export function EmergencyContactsSection({ patientAccountId }: EmergencyContacts
     : (contacts || []).slice(0, 2);
 
   const handleDelete = async (contact: any) => {
-    if (!confirm(`Are you sure you want to delete ${contact.name}?`)) return;
-    
+    if (!confirm(`Are you sure you want to remove this emergency contact?`)) {
+      return;
+    }
+
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Fetch practice_id from patient_accounts
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientAccountId)
+        .single();
+
+      if (!patientAccount) throw new Error("Patient account not found");
+
+      // Soft delete: set active = false
       const { error } = await supabase
         .from("patient_medical_vault")
-        .delete()
+        .update({ active: false })
         .eq("id", contact.id);
-      
+
       if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ["patient-emergency-contacts", patientAccountId] });
-      toast({ title: "Success", description: "Contact deleted successfully" });
-      if (patientAccountId) {
-        await logMedicalVaultChange({
-          patientAccountId,
-          actionType: 'deleted',
-          entityType: 'emergency_contact',
-          entityId: contact.id,
-          entityName: contact.name,
-          changedByUserId: effectiveUserId || undefined,
-          changedByRole: mapRoleToAuditRole(effectiveRole),
-          oldData: contact,
-          changeSummary: `Deleted emergency contact: ${contact.name}`,
-        });
-      }
+
+      queryClient.invalidateQueries({ 
+        queryKey: ["patient-emergency-contacts", patientAccountId] 
+      });
+
+      toast({
+        title: "Success",
+        description: "Emergency contact removed successfully",
+      });
+
+      // Log the soft deletion with before/after values
+      await logMedicalVaultChange({
+        patientAccountId,
+        actionType: 'soft_deleted',
+        entityType: 'emergency_contact',
+        entityId: contact.id,
+        entityName: contact.contact_name,
+        changedByUserId: user.id,
+        changedByRole: mapRoleToAuditRole(effectiveRole),
+        oldData: { ...contact, active: true },
+        newData: { ...contact, active: false },
+        changeSummary: `Patient removed emergency contact: ${contact.contact_name}`,
+      });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to delete contact", variant: "destructive" });
+      console.error("Error removing emergency contact:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove emergency contact",
+        variant: "destructive",
+      });
     }
   };
 

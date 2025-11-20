@@ -45,33 +45,60 @@ export function MedicationsSection({ patientAccountId, medications }: Medication
   };
 
   const handleDelete = async (medication: any) => {
-    if (!confirm(`Are you sure you want to delete ${medication.medication_name}?`)) return;
-    
+    if (!confirm(`Are you sure you want to remove ${medication.medication_name}?`)) {
+      return;
+    }
+
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Fetch practice_id from patient_accounts
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientAccountId)
+        .single();
+
+      if (!patientAccount) throw new Error("Patient account not found");
+
+      // Soft delete: set active = false instead of hard delete
       const { error } = await supabase
         .from("patient_medical_vault")
-        .delete()
+        .update({ active: false })
         .eq("id", medication.id);
-      
+
       if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ["patient-medications", patientAccountId] });
-      toast({ title: "Success", description: "Medication deleted successfully" });
-      if (patientAccountId) {
-        await logMedicalVaultChange({
-          patientAccountId,
-          actionType: 'deleted',
-          entityType: 'medication',
-          entityId: medication.id,
-          entityName: medication.medication_name,
-          changedByUserId: effectiveUserId || undefined,
-          changedByRole: mapRoleToAuditRole(effectiveRole),
-          oldData: medication,
-          changeSummary: `Deleted medication: ${medication.medication_name}`,
-        });
-      }
+
+      queryClient.invalidateQueries({ 
+        queryKey: ["patient-medications", patientAccountId] 
+      });
+
+      toast({
+        title: "Success",
+        description: "Medication removed successfully",
+      });
+
+      // Log the soft deletion with before/after values
+      await logMedicalVaultChange({
+        patientAccountId,
+        actionType: 'soft_deleted',
+        entityType: 'medication',
+        entityId: medication.id,
+        entityName: medication.medication_name,
+        changedByUserId: user.id,
+        changedByRole: mapRoleToAuditRole(effectiveRole),
+        oldData: { ...medication, active: true },
+        newData: { ...medication, active: false },
+        changeSummary: `Patient removed medication: ${medication.medication_name}`,
+      });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to delete medication", variant: "destructive" });
+      console.error("Error removing medication:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove medication",
+        variant: "destructive",
+      });
     }
   };
 
