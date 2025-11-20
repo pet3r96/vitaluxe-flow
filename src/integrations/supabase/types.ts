@@ -1394,6 +1394,60 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_queue: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          error_message: string | null
+          id: string
+          max_retries: number
+          message: string
+          metadata: Json | null
+          notification_type: string
+          processed_at: string | null
+          retry_count: number
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          id?: string
+          max_retries?: number
+          message: string
+          metadata?: Json | null
+          notification_type: string
+          processed_at?: string | null
+          retry_count?: number
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          id?: string
+          max_retries?: number
+          message?: string
+          metadata?: Json | null
+          notification_type?: string
+          processed_at?: string | null
+          retry_count?: number
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_templates: {
         Row: {
           active: boolean | null
