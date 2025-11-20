@@ -289,15 +289,20 @@ Deno.serve(async (req) => {
     const providerPayload = {
       patient_id: patient_id,
       practice_id: effectivePracticeId,
-      sender_type: 'provider',
+      sender_type: 'practice', // ✅ FIX: Use 'practice' to match CHECK constraint
       body: message,
       subject: subject || 'Provider Message',
       read_at: null,
       ...(parent_message_id && { parent_message_id: parent_message_id })
     };
 
-      edgeLogger.info('[PROVIDER] Inserting message payload', { 
-        payload: { ...providerPayload, body: '[redacted]' }
+      edgeLogger.info('[PATIENT_MESSAGE] INSERT starting', { 
+        timestamp: new Date().toISOString(),
+        sender_type: providerPayload.sender_type,
+        patient_id: providerPayload.patient_id,
+        practice_id: providerPayload.practice_id,
+        has_parent: !!parent_message_id,
+        subject: providerPayload.subject
       });
 
       const { data: insertedMessage, error: insertError } = await supabaseAdmin
@@ -307,7 +312,12 @@ Deno.serve(async (req) => {
         .single();
 
       if (insertError) {
-        edgeLogger.error('Insert error', insertError, { 
+        edgeLogger.error('[PATIENT_MESSAGE] INSERT failed', insertError, {
+          timestamp: new Date().toISOString(),
+          code: insertError.code,
+          details: insertError.details,
+          hint: insertError.hint,
+          sender_type: providerPayload.sender_type,
           errorDetails: JSON.stringify(insertError),
           payload: { ...providerPayload, body: '[redacted]' }
         });

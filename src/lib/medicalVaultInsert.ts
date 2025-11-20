@@ -192,6 +192,17 @@ export async function insertVaultRecord(
     throw new Error("Could not determine practice_id for vault record");
   }
   
+  console.log('[MEDICAL_VAULT] INSERT starting', {
+    timestamp: new Date().toISOString(),
+    record_type: payload.record_type,
+    patient_account_id: payload.patient_account_id,
+    practice_id: practiceId,
+    title: payload.title,
+    active: payload.is_active ?? true,
+    created_by_user_id: payload.created_by_user_id,
+    created_by_role: payload.created_by_role
+  });
+  
   const { error } = await supabase
     .from('patient_medical_vault')
     .insert({
@@ -203,8 +214,28 @@ export async function insertVaultRecord(
       title: payload.title,
       created_by_user_id: payload.created_by_user_id,
       created_by_role: payload.created_by_role,
-      is_active: payload.is_active ?? true,
+      active: payload.is_active ?? true, // ✅ FIX: Use 'active' column name
     });
+
+  console.log('[MEDICAL_VAULT] INSERT completed', {
+    timestamp: new Date().toISOString(),
+    success: !error,
+    record_type: payload.record_type,
+    patient_account_id: payload.patient_account_id,
+    active: payload.is_active ?? true,
+    error: error?.message
+  });
+
+  if (error) {
+    console.error('[MEDICAL_VAULT] INSERT failed', {
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      record_type: payload.record_type
+    });
+  }
 
   return { error };
 }
@@ -217,9 +248,17 @@ export async function updateVaultRecord(
   id: string,
   payload: Partial<VaultInsert>
 ) {
+  console.log('[MEDICAL_VAULT] UPDATE starting', {
+    timestamp: new Date().toISOString(),
+    record_id: id,
+    has_record_data: !!payload.record_data,
+    has_title: !!payload.title,
+    active: payload.is_active
+  });
+
   const updateData: any = {
     ...(payload.record_data && { record_data: payload.record_data }),
-    ...(payload.is_active !== undefined && { is_active: payload.is_active }),
+    ...(payload.is_active !== undefined && { active: payload.is_active }), // ✅ FIX: Use 'active' column name
     updated_at: new Date().toISOString(),
   };
 
@@ -227,6 +266,24 @@ export async function updateVaultRecord(
     .from('patient_medical_vault')
     .update(updateData)
     .eq('id', id);
+
+  console.log('[MEDICAL_VAULT] UPDATE completed', {
+    timestamp: new Date().toISOString(),
+    success: !error,
+    record_id: id,
+    error: error?.message
+  });
+
+  if (error) {
+    console.error('[MEDICAL_VAULT] UPDATE failed', {
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      record_id: id
+    });
+  }
 
   return { error };
 }

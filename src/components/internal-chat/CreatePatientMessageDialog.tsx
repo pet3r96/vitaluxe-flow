@@ -133,7 +133,7 @@ export function CreatePatientMessageDialog({
           practice_id: practiceId,
           subject: subject,
           message: body,
-          sender_type: 'provider'
+          sender_type: 'practice' // ✅ FIX: Use 'practice' to match CHECK constraint
         }
       });
 

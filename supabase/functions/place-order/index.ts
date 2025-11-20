@@ -562,8 +562,25 @@ serve(async (req) => {
     const failedPayments: any[] = [];
     const failedOrders: string[] = [];
 
+    edgeLogger.info('[PAYMENT_LOOP] Starting payment processing', {
+      timestamp: new Date().toISOString(),
+      order_count: createdOrders.length,
+      payment_method_id,
+      total_amount: createdOrders.reduce((sum, o) => sum + o.total_amount, 0)
+    });
+
     for (const order of createdOrders) {
       try {
+        edgeLogger.info('[PAYMENT_LOOP] Processing order', {
+          order_id: order.id,
+          order_number: order.order_number,
+          amount: order.total_amount,
+          payment_method_id,
+          attempt_number: createdOrders.indexOf(order) + 1,
+          total_orders: createdOrders.length,
+          timestamp: new Date().toISOString()
+        });
+
         const { data: paymentResult, error: paymentError } = await supabaseAdmin.functions.invoke(
           "authorizenet-charge-payment",
           {
@@ -579,6 +596,16 @@ serve(async (req) => {
         );
 
         if (paymentError || !paymentResult?.success) {
+          edgeLogger.error('[PAYMENT_LOOP] Order payment failed', null, {
+            order_id: order.id,
+            order_number: order.order_number,
+            amount: order.total_amount,
+            error: paymentResult?.error || paymentError?.message,
+            authorizenet_code: paymentResult?.authorizenet_response?.messages?.message?.[0]?.code,
+            authorizenet_message: paymentResult?.authorizenet_response?.messages?.message?.[0]?.text,
+            timestamp: new Date().toISOString()
+          });
+
           // Mark order as payment_failed
           await supabaseAdmin
             .from("orders")
@@ -594,6 +621,13 @@ serve(async (req) => {
           });
           failedOrders.push(order.id);
         } else {
+          edgeLogger.info('[PAYMENT_LOOP] Order payment succeeded', {
+            order_id: order.id,
+            order_number: order.order_number,
+            transaction_id: paymentResult?.transaction_id,
+            amount: order.total_amount,
+            timestamp: new Date().toISOString()
+          });
           // Payment succeeded - send to pharmacy API if enabled
           try {
             const pharmacyOrderLines = allOrderLines.filter(line => 

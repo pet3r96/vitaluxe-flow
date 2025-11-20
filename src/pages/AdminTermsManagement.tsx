@@ -53,8 +53,7 @@ interface TermsAcceptance {
   accepted_at: string;
   ip_address?: string;
   user_agent?: string;
-  signature_name?: string;
-  signed_pdf_url?: string;
+  pdf_url?: string; // ✅ FIX: Use 'pdf_url' not 'signed_pdf_url', remove 'signature_name'
   profiles?: { name?: string; email?: string };
 }
 
@@ -518,13 +517,13 @@ export default function AdminTermsManagement() {
                           {format(new Date(acceptance.accepted_at), 'PP p')}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
-                          {acceptance.signature_name}
+                          N/A
                         </TableCell>
                         <TableCell>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => downloadPDF(acceptance.signed_pdf_url, acceptance.profiles?.name)}
+                            onClick={() => downloadPDF(acceptance.pdf_url, acceptance.profiles?.name)}
                           >
                             <Download className="h-4 w-4" />
                           </Button>
