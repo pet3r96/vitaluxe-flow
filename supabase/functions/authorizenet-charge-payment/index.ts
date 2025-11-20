@@ -112,6 +112,13 @@ Deno.serve(async (req) => {
 
     // Get the current user placing the order
     const currentUserId = user.id;
+    edgeLogger.info('Payment method retrieved', { 
+      payment_method_id,
+      card_last_five: paymentMethod.card_last_five,
+      card_type: paymentMethod.card_type,
+      status: paymentMethod.status,
+      practice_id: paymentMethod.practice_id
+    });
     edgeLogger.info('Authorization check starting', { currentUserId, order_doctor_id: order.doctor_id, payment_method_practice_id: paymentMethod.practice_id });
 
     // Verify ownership: payment method must belong to the practice or the user must be authorized
@@ -177,6 +184,13 @@ Deno.serve(async (req) => {
     // - Cards ending in 1111 = always fail (declined)
     // - Other cards = 90% success for realistic testing
     const lastFour = paymentMethod.card_last_five?.slice(-4) || '';
+    edgeLogger.info('Card number analysis', {
+      card_last_five_raw: paymentMethod.card_last_five,
+      lastFour_extracted: lastFour,
+      willMatch0000: lastFour === '0000',
+      willMatch1111: lastFour === '1111'
+    });
+    
     let isSuccess;
 
     if (lastFour === '0000') {
@@ -189,7 +203,13 @@ Deno.serve(async (req) => {
       edgeLogger.info('Test card detected (1111) - forcing failure');
     } else {
       // Real cards - simulate 90% success rate
-      isSuccess = Math.random() > 0.1;
+      const randomValue = Math.random();
+      isSuccess = randomValue > 0.1;
+      edgeLogger.info('Random payment simulation', {
+        randomValue,
+        threshold: 0.1,
+        willSucceed: isSuccess
+      });
     }
     
     if (isSuccess) {

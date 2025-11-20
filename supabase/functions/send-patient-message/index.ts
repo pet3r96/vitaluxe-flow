@@ -289,7 +289,6 @@ Deno.serve(async (req) => {
     const providerPayload = {
       patient_id: patient_id,
       practice_id: effectivePracticeId,
-      sender_id: user.id,
       sender_type: 'provider',
       body: message,
       subject: subject || 'Provider Message',
@@ -308,7 +307,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (insertError) {
-        edgeLogger.error('Insert error', insertError);
+        edgeLogger.error('Insert error', insertError, { 
+          errorDetails: JSON.stringify(insertError),
+          payload: { ...providerPayload, body: '[redacted]' }
+        });
         return new Response(
           JSON.stringify({ error: `Failed to send message: ${insertError.message}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
