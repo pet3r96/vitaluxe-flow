@@ -204,8 +204,12 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
         throw new Error(getEdgeFunctionError(data, error));
       }
 
-      // Invalidate RX privileges cache so UI updates immediately
+      // Invalidate all provider-related queries for instant UI update
       queryClient.invalidateQueries({ queryKey: ['practice-rx-privileges'] });
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
+      queryClient.invalidateQueries({ queryKey: ['practice-providers', targetPracticeId] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['practice-team'] });
       
       toast.success(`Provider added! Welcome email with login credentials sent to ${formData.email}`);
       resetForm();

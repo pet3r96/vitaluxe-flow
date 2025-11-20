@@ -123,8 +123,7 @@ export function CreatePatientMessageDialog({
           patient_id: selectedPatient.patient_account_id,
           subject: subject,
           message: body,
-          sender_type: 'provider',
-          urgency: urgency || 'medium'
+          sender_type: 'provider'
         }
       });
 

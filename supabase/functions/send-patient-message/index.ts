@@ -294,11 +294,12 @@ Deno.serve(async (req) => {
       body: message,
       subject: subject || 'Provider Message',
       read_at: null,
-      ...(effectiveThreadId && { thread_id: effectiveThreadId }),
       ...(parent_message_id && { parent_message_id: parent_message_id })
     };
 
-      edgeLogger.info('Inserting provider message', providerPayload);
+      edgeLogger.info('[PROVIDER] Inserting message payload', { 
+        payload: { ...providerPayload, body: '[redacted]' }
+      });
 
       const { data: insertedMessage, error: insertError } = await supabaseAdmin
         .from('patient_messages')
