@@ -198,7 +198,11 @@ serve(async (req: Request) => {
       });
 
     if (auditError) {
-      edgeLogger.error('Audit log error (non-fatal)', auditError);
+      edgeLogger.error('Audit log error (non-fatal)', auditError, {
+        orderLineId,
+        errorMessage: auditError.message,
+        errorCode: auditError.code
+      });
       // Don't fail the request if audit logging fails
     }
 
@@ -212,7 +216,11 @@ serve(async (req: Request) => {
     );
 
   } catch (error: any) {
-    edgeLogger.error('Error updating shipping info', error);
+    edgeLogger.error('Error updating shipping info', error, {
+      errorMessage: error.message,
+      errorCode: error.code,
+      errorStack: error.stack
+    });
     return new Response(
       JSON.stringify({ 
         error: error.message,
