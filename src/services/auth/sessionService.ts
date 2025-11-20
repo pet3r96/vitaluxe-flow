@@ -112,16 +112,16 @@ export function isSessionExpired(expiresAt: string): boolean {
 }
 
 /**
- * Calculate session expiration time (8 hours from now - Phase 2 requirement)
+ * Calculate session expiration time (60 minutes from now)
  */
 export function calculateSessionExpiration(): Date {
-  return new Date(Date.now() + 8 * 60 * 60 * 1000);
+  return new Date(Date.now() + 60 * 60 * 1000);
 }
 
 /**
- * Check if session is expired by age (hard 8-hour cutoff)
+ * Check if session is expired by age (hard 60-minute cutoff)
  */
 export function isSessionExpiredByAge(sessionCreatedAt: string): boolean {
-  const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);
-  return new Date(sessionCreatedAt) <= eightHoursAgo;
+  const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
+  return new Date(sessionCreatedAt) <= sixtyMinutesAgo;
 }

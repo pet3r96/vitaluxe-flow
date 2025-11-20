@@ -4,14 +4,16 @@
  * System uses a hard session timeout with automatic refresh on user activity.
  * See AuthContext.tsx for implementation.
  * 
- * Hard timeout: 30 minutes from sign-in.
- * Activity refresh: Session extends automatically when user is active.
+ * Hard timeout: 60 minutes from sign-in (or last activity).
+ * Inactivity timeout: 30 minutes of no activity = forced logout.
+ * Activity refresh: Session extends to 60 minutes on user activity.
+ * Maximum session: 2 hours total (regardless of activity).
  * Users are logged out after inactivity and redirected to /auth with 2FA required on next login.
  */
 
 export const SESSION_CONFIG = {
-  // Hard session timeout (8 hours - Phase 2 requirement)
-  HARD_TIMEOUT_MINUTES: 480,
+  // Hard session timeout (60 minutes)
+  HARD_TIMEOUT_MINUTES: 60,
   
   // Activity refresh settings
   REFRESH_ON_ACTIVITY: true,
