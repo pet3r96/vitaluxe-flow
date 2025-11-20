@@ -66,7 +66,7 @@ type TicketFormData = z.infer<typeof ticketSchema>;
 
 export function CreateSupportTicketDialog() {
   const [open, setOpen] = useState(false);
-  const { user, effectiveRole } = useAuth();
+  const { user, effectiveRole, effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
 
   const form = useForm<TicketFormData>({
@@ -192,18 +192,23 @@ export function CreateSupportTicketDialog() {
       } else if (effectiveRole === "doctor" || effectiveRole === "staff") {
         // For practice users, add their practice_id
         if (effectiveRole === "doctor") {
-          ticketData.practice_id = user.id;
+          // Use effectivePracticeId for impersonation support
+          ticketData.practice_id = effectivePracticeId || user.id;
         } else {
-          // Staff users use practice_staff table
-          const { data: staffData } = await supabase
-            .from("practice_staff")
-            .select("practice_id")
-            .eq("user_id", user.id)
-            .eq("active", true)
-            .single();
+          // Staff users use practice_staff table, but respect impersonation
+          if (effectivePracticeId) {
+            ticketData.practice_id = effectivePracticeId;
+          } else {
+            const { data: staffData } = await supabase
+              .from("practice_staff")
+              .select("practice_id")
+              .eq("user_id", user.id)
+              .eq("active", true)
+              .single();
 
-          if (staffData) {
-            ticketData.practice_id = staffData.practice_id;
+            if (staffData) {
+              ticketData.practice_id = staffData.practice_id;
+            }
           }
         }
       } else if (effectiveRole === "pharmacy") {
