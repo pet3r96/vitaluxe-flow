@@ -1,7 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Truck, Clock, Zap } from "lucide-react";
-import { useEffect, useRef, memo, useMemo, useCallback } from "react";
+import { memo, useMemo, useCallback } from "react";
 
 interface ShippingSpeedSelectorProps {
   value: 'ground' | '2day' | 'overnight';
@@ -22,7 +22,6 @@ export const ShippingSpeedSelector = memo(({
   isLoading = false,
   rates
 }: ShippingSpeedSelectorProps) => {
-  const hasAutoSelectedRef = useRef(false);
   
   // Memoize options array to prevent recreation on every render
   const allOptions = useMemo(() => [
@@ -50,24 +49,6 @@ export const ShippingSpeedSelector = memo(({
     onChange(newValue as 'ground' | '2day' | 'overnight');
   }, [onChange]);
 
-  // Auto-select single option only once to prevent infinite loop
-  useEffect(() => {
-    if (visibleOptions.length === 1 && !hasAutoSelectedRef.current) {
-      const only = visibleOptions[0];
-      if (value !== only.value) {
-        hasAutoSelectedRef.current = true;
-        onChange(only.value);
-      }
-    }
-  }, [visibleOptions.length]);
-
-  // Reset auto-select flag when options change from single to multiple
-  useEffect(() => {
-    if (visibleOptions.length !== 1) {
-      hasAutoSelectedRef.current = false;
-    }
-  }, [visibleOptions.length]);
-
   if (isLoading) {
     return (
       <div className="space-y-1.5 p-3 border rounded-lg bg-muted/30">
@@ -94,37 +75,12 @@ export const ShippingSpeedSelector = memo(({
     );
   }
 
-  // If only one option, show as selected with visual indicator
-  if (visibleOptions.length === 1) {
-    const option = visibleOptions[0];
-    const Icon = option.icon;
-    
-    return (
-      <div className="space-y-1.5 p-3 border rounded-lg bg-muted/30">
-        <Label className="text-sm font-semibold flex items-center gap-2">
-          <Truck className="h-4 w-4" />
-          Shipping for {patientName}
-        </Label>
-        <div className="flex items-center justify-between p-3 rounded border-2 border-primary bg-accent/50">
-          <span className="flex items-center gap-2">
-            <div className="h-4 w-4 rounded-full border-2 border-primary flex items-center justify-center">
-              <div className="h-2 w-2 rounded-full bg-primary" />
-            </div>
-            <Icon className={`h-4 w-4 ${option.iconColor}`} />
-            <span className="font-medium">{option.label}{formatRate(option.value)}</span>
-            <span className="text-sm text-muted-foreground">{option.desc}</span>
-          </span>
-          <span className="text-sm font-semibold text-primary">Selected</span>
-        </div>
-      </div>
-    );
-  }
-  // Multiple options - show radio group
+  // Show radio group for all available options (forces explicit selection)
   return (
     <div className="space-y-1.5 p-3 border rounded-lg bg-muted/30">
       <Label className="text-sm font-semibold flex items-center gap-2">
         <Truck className="h-4 w-4" />
-        Shipping Speed for {patientName}
+        Shipping for {patientName}
       </Label>
       
       <RadioGroup value={value} onValueChange={handleChange} disabled={disabled}>
