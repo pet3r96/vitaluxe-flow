@@ -73,7 +73,7 @@ export default function PatientMessages() {
           const searchLower = searchQuery.toLowerCase();
           return (
             msg.subject?.toLowerCase().includes(searchLower) ||
-            msg.message_body?.toLowerCase().includes(searchLower) ||
+            msg.body?.toLowerCase().includes(searchLower) ||
             msg.practice?.name?.toLowerCase().includes(searchLower)
           );
         });
