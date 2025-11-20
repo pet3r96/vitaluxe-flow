@@ -133,19 +133,50 @@ export default function AcceptTerms() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    logger.info('[SECURITY] AcceptTerms submit started', {
+      hasScrolledToBottom,
+      agreed,
+      hasSignature: !!signatureName.trim(),
+      hasTermsId: !!terms?.id,
+      effectiveUserId,
+      effectiveRole,
+      isImpersonating
+    });
+
+    if (!hasScrolledToBottom) {
+      logger.warn('[SECURITY] Terms submit rejected - not scrolled to bottom', { effectiveUserId });
+      toast.error("Please scroll to the bottom to read all terms");
+      return;
+    }
+
     if (!signatureName.trim()) {
+      logger.warn('[SECURITY] Terms submit rejected - no signature', { effectiveUserId });
       toast.error("Please enter your full name");
       return;
     }
 
     if (!agreed) {
+      logger.warn('[SECURITY] Terms submit rejected - not agreed', { effectiveUserId });
       toast.error("You must agree to the terms to continue");
+      return;
+    }
+
+    if (!terms?.id) {
+      logger.error('[SECURITY] Terms submit rejected - no terms ID', { effectiveUserId, effectiveRole });
+      toast.error("Terms information missing");
       return;
     }
 
     setSubmitting(true);
 
     try {
+      logger.info('[SECURITY] Invoking generate-terms-pdf', {
+        termsId: terms.id,
+        userId: effectiveUserId || user?.id,
+        effectiveRole,
+        isImpersonating
+      });
+
       const { data, error } = await supabase.functions.invoke('generate-terms-pdf', {
         body: {
           terms_id: terms.id,
@@ -159,21 +190,38 @@ export default function AcceptTerms() {
         const errorObj = parseEdgeFunctionError(error);
         const backendError = errorData.error || errorObj.message || "Failed to accept terms";
         const details = errorData.details;
+        logger.error('[SECURITY] generate-terms-pdf FAILED', { 
+          error: backendError, 
+          details,
+          termsId: terms.id,
+          userId: effectiveUserId || user?.id
+        });
         toast.error(details ? `${backendError} — ${typeof details === 'string' ? details : JSON.stringify(details)}` : backendError);
         return;
       }
 
       if (data.success) {
-        // Set session flag to prevent re-prompts in this session
+        logger.info('[SECURITY] Terms accepted successfully', { 
+          userId: effectiveUserId || user?.id,
+          termsId: terms.id,
+          effectiveRole,
+          isImpersonating
+        });
+
+        // Set session flag with TIMESTAMP for expiry checking (not ISO string)
         const sessionKey = `vitaluxe_terms_ok_${effectiveUserId || user?.id}`;
-        sessionStorage.setItem(sessionKey, new Date().toISOString());
-        logger.info('[AcceptTerms] Session flag set', { userId: effectiveUserId || user?.id });
+        sessionStorage.setItem(sessionKey, Date.now().toString());
+        logger.info('[SECURITY] Set session flag with timestamp', { 
+          sessionKey,
+          timestamp: Date.now()
+        });
 
         toast.success(isImpersonating 
           ? `Terms accepted for ${impersonatedUserName || 'impersonated user'}!`
           : "Terms accepted successfully!");
         
         // Force a refresh of password status with explicit user context
+        logger.info('[SECURITY] Re-checking password status after terms acceptance');
         await checkPasswordStatus(effectiveRole, effectiveUserId);
         
         navigate("/");
@@ -181,12 +229,18 @@ export default function AcceptTerms() {
         const errorData = parseEdgeFunctionError(data);
         const backendError = errorData.error || "Failed to accept terms";
         const details = errorData.details;
+        logger.error('[SECURITY] Terms acceptance failed - no success flag', { 
+          error: backendError,
+          details,
+          data 
+        });
         toast.error(details ? `${backendError} — ${typeof details === 'string' ? details : JSON.stringify(details)}` : backendError);
         return;
       }
     } catch (error: any) {
-      import('@/lib/logger').then(({ logger }) => {
-        logger.error('Error accepting terms', error);
+      logger.error('[SECURITY] Unexpected error accepting terms', error, {
+        userId: effectiveUserId || user?.id,
+        termsId: terms?.id
       });
       toast.error(error.message || "Failed to accept terms");
     } finally {
