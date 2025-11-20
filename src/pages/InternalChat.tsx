@@ -97,7 +97,12 @@ const InternalChat = () => {
   const { data: messagesData = [], isLoading: messagesLoading } = useQuery({
     queryKey: ['internal-messages', practiceId, filterTab, searchQuery],
     queryFn: async () => {
-      if (!practiceId) return [];
+      if (!practiceId) {
+        console.log('[InternalChat] No practice ID, skipping messages query');
+        return [];
+      }
+
+      console.log('[InternalChat] Fetching messages for practice:', practiceId, 'filter:', filterTab, 'search:', searchQuery);
 
       let query = supabase
         .from('internal_messages')
@@ -126,16 +131,28 @@ const InternalChat = () => {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      
+      if (error) {
+        console.error('[InternalChat] Error fetching messages:', error);
+        throw error;
+      }
+
+      console.log('[InternalChat] Fetched messages:', data?.length || 0, 'messages');
 
       // Transform data to include counts and enrich with sender names
-      return data.map((msg: any) => ({
-        ...msg,
-        sender: { name: teamMap[msg.created_by]?.name || 'Unknown' },
-        reply_count: msg.replies?.length || 0,
-        unread_count: msg.recipients?.filter((r: any) => r.recipient_id === effectiveUserId && !r.read_at).length || 0,
-        has_attachments: (msg.attached_document_ids?.length || 0) > 0 || (msg.attached_form_ids?.length || 0) > 0
-      }));
+      const transformedData = data.map((msg: any) => {
+        const unreadCount = msg.recipients?.filter((r: any) => r.recipient_id === effectiveUserId && !r.read_at).length || 0;
+        return {
+          ...msg,
+          sender: { name: teamMap[msg.created_by]?.name || 'Unknown' },
+          reply_count: msg.replies?.length || 0,
+          unread_count: unreadCount,
+          has_attachments: (msg.attached_document_ids?.length || 0) > 0 || (msg.attached_form_ids?.length || 0) > 0
+        };
+      });
+      
+      console.log('[InternalChat] Transformed messages:', transformedData.length, 'with unread counts');
+      return transformedData;
     },
     enabled: !!practiceId
   });
@@ -144,7 +161,12 @@ const InternalChat = () => {
   const { data: badgeCounts } = useQuery({
     queryKey: ['internal-message-badge-counts', practiceId, effectiveUserId],
     queryFn: async () => {
-      if (!practiceId || !effectiveUserId) return { unreadCount: 0, activeCount: 0 };
+      if (!practiceId || !effectiveUserId) {
+        console.log('[InternalChat] No practice ID or user ID for badge counts');
+        return { unreadCount: 0, activeCount: 0 };
+      }
+
+      console.log('[InternalChat] Fetching badge counts for user:', effectiveUserId, 'practice:', practiceId);
 
       const { data, error } = await supabase
         .from('internal_message_recipients')
@@ -160,9 +182,14 @@ const InternalChat = () => {
         .eq('message.practice_id', practiceId)
         .eq('message.completed', false);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[InternalChat] Error fetching badge counts:', error);
+        throw error;
+      }
 
       const unreadCount = data?.filter(recipient => !recipient.read_at).length || 0;
+
+      console.log('[InternalChat] Badge counts - Total recipients:', data?.length || 0, 'Unread:', unreadCount);
 
       return {
         unreadCount,

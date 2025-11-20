@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar, Clock, User, MapPin, Phone, Mail, FileText, CalendarClock, UserPlus, FolderOpen, Video } from "lucide-react";
 import { format } from "date-fns";
+import { getProviderDisplayName } from "@/utils/providers";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { RescheduleAppointmentDialog } from "./RescheduleAppointmentDialog";
@@ -367,9 +368,7 @@ export function AppointmentDetailsDialog({
                     <User className="h-4 w-4 text-muted-foreground" />
                     <div className="text-sm">
                       <div className="font-medium">
-                        {appointment.providers 
-                          ? `${appointment.providers.first_name} ${appointment.providers.last_name}`
-                          : 'Provider Assigned'}
+                        {getProviderDisplayName(appointment.providers) || 'Provider Assigned'}
                       </div>
                       {appointment.providers?.specialty && (
                         <div className="text-muted-foreground">{appointment.providers.specialty}</div>

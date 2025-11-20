@@ -80,6 +80,12 @@ export function CreateSupportTicketDialog() {
   });
 
   const ticketType = form.watch("ticketType");
+  
+  // Debug form state changes
+  const formValues = form.watch();
+  console.log('[CreateSupportTicket] Form values:', formValues);
+  console.log('[CreateSupportTicket] Form errors:', form.formState.errors);
+  console.log('[CreateSupportTicket] Form valid:', form.formState.isValid);
 
   // Fetch recent orders for dropdown with improved error handling
   const { data: userOrders, isLoading: ordersLoading } = useQuery({
@@ -227,8 +233,15 @@ export function CreateSupportTicketDialog() {
     },
   });
 
-  const onSubmit = (data: TicketFormData) => {
-    createTicketMutation.mutate(data);
+  const onSubmit = async (data: TicketFormData) => {
+    console.log('[CreateSupportTicket] Form submitted:', data);
+    
+    try {
+      await createTicketMutation.mutateAsync(data);
+    } catch (error) {
+      console.error('[CreateSupportTicket] Error creating ticket:', error);
+      toast.error("Failed to create ticket. Please try again.");
+    }
   };
 
   const availableTicketTypes = getAvailableTicketTypes(effectiveRole);
