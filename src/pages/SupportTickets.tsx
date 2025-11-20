@@ -99,9 +99,11 @@ export default function SupportTickets() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Support Tickets</h1>
+          <h1 className="text-3xl font-bold">Messages</h1>
           <p className="text-muted-foreground">
-            Manage and track your support requests
+            {(effectiveRole === 'topline' || effectiveRole === 'downline')
+              ? "Contact admin support team"
+              : "Support tickets and order issue communications"}
           </p>
         </div>
         <CreateSupportTicketDialog />
