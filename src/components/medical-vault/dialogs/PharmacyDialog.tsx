@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-address-autocomplete";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -242,14 +243,15 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone (10 digits) *</Label>
-            <Input
+            <Label htmlFor="phone">Phone *</Label>
+            <PhoneInput
               id="phone"
-              {...register("phone")}
-              placeholder="5618882222"
-              maxLength={10}
+              name="phone"
+              value={watch("phone")}
+              onChange={(value) => setValue("phone", value)}
               disabled={isReadOnly}
-              className={errors.phone ? "border-red-500" : ""}
+              required
+              placeholder="5618882222"
             />
             {errors.phone && (
               <p className="text-sm text-red-500">{errors.phone.message}</p>
