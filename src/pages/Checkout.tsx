@@ -545,6 +545,31 @@ export default function Checkout() {
             }
           });
         }, 300);
+      } else {
+        // Payment failures occurred - trigger retry dialog
+        console.log('[CHECKOUT] Payment failures detected', {
+          failedCount: failedPayments.length,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Transform failed payments into PaymentError format for dialog
+        const paymentErrorsForDialog = failedPayments.map((fp: any) => ({
+          order_id: fp.order_id,
+          error_message: fp.error || 'Payment failed',
+          authorizenet_response: fp.authorizenet_response || {},
+          attempt_number: 1,
+          created_at: new Date().toISOString()
+        }));
+        
+        setPaymentErrors(paymentErrorsForDialog);
+        setFailedOrderIds(failedPayments.map((fp: any) => fp.order_id).filter(Boolean));
+        setShowPaymentRetryDialog(true);
+        
+        toast({
+          title: "Payment Failed",
+          description: `${failedPayments.length} payment${failedPayments.length > 1 ? 's' : ''} failed. Please select a different payment method to retry.`,
+          variant: "destructive",
+        });
       }
     },
   });
