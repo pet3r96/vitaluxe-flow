@@ -202,82 +202,9 @@ serve(async (req: Request) => {
       // Don't fail the request if audit logging fails
     }
 
-    // Auto-create EasyPost shipment if status is 'shipped' and tracking number is provided
-    if (normalizedStatus === 'shipped' && trackingNumber && !currentLine.easypost_shipment_id) {
-      try {
-        edgeLogger.info('Auto-creating EasyPost shipment for order line', { orderLineId });
-        
-        // Get order line details for shipment creation
-        const { data: orderLineDetails, error: orderLineError } = await supabase
-          .from('order_lines')
-          .select(`
-            id,
-            patient_name,
-            patient_address,
-            destination_state,
-            assigned_pharmacy_id,
-            pharmacies!inner(
-              name,
-              address_street,
-              address_city,
-              address_state,
-              address_zip
-            )
-          `)
-          .eq('id', orderLineId)
-          .single();
-
-        if (orderLineError) {
-          edgeLogger.error('Error getting order line details for shipment', orderLineError, { orderLineId });
-        } else if (orderLineDetails.pharmacies) {
-          // Parse patient address for street/city/zip (state comes from destination_state field)
-          const patientAddressParts = orderLineDetails.patient_address?.split(',') || [];
-          const patientStreet = patientAddressParts[0]?.trim() || '';
-          const patientCityStateZip = patientAddressParts[1]?.trim() || '';
-          const patientCity = patientCityStateZip.split(' ')[0] || '';
-          const patientZip = patientCityStateZip.split(' ')[2] || '';
-          // Use direct destination_state field instead of parsing
-          const patientState = orderLineDetails.destination_state || '';
-
-          // Create shipment via EasyPost API
-          const shipmentResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/create-easypost-shipment`, {
-            method: 'POST',
-            headers: {
-              'Authorization': authHeader,
-              'Content-Type': 'application/json',
-              'x-csrf-token': csrfToken || ''
-            },
-            body: JSON.stringify({
-              order_line_id: orderLineId,
-              from_address: {
-                street: (Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies)?.address_street || '',
-                city: (Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies)?.address_city || '',
-                state: (Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies)?.address_state || '',
-                zip: (Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies)?.address_zip || '',
-                name: (Array.isArray(orderLineDetails.pharmacies) ? orderLineDetails.pharmacies[0] : orderLineDetails.pharmacies)?.name || ''
-              },
-              to_address: {
-                street: patientStreet,
-                city: patientCity,
-                state: patientState,
-                zip: patientZip,
-                name: orderLineDetails.patient_name
-              }
-            })
-          });
-
-          if (shipmentResponse.ok) {
-            const shipmentData = await shipmentResponse.json();
-            edgeLogger.info('Auto-created EasyPost shipment', { shipmentId: shipmentData.shipment?.id });
-          } else {
-            edgeLogger.error('Failed to auto-create EasyPost shipment');
-          }
-        }
-      } catch (error) {
-        edgeLogger.error('Error auto-creating EasyPost shipment', error, { orderLineId });
-        // Don't fail the main request if shipment creation fails
-      }
-    }
+    // ✅ DISABLED: Auto-create EasyPost shipment - easypost_shipment_id column doesn't exist in order_lines table
+    // This functionality is disabled because the database schema doesn't support it yet
+    // To enable: add easypost_shipment_id column to order_lines table first
 
     return new Response(
       JSON.stringify({ success: true, message: 'Shipping info updated successfully' }),
