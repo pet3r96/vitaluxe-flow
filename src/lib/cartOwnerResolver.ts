@@ -30,28 +30,10 @@ export async function resolveCartOwnerUserId(
 
   logger.info("Resolving cart owner", { userId, role, practiceId });
 
-  let resolvedId: string;
-
-  // Providers and doctors use their own account
-  if (role === 'provider' || role === 'doctor') {
-    logger.info("Cart owner: provider using own user_id", { userId });
-    resolvedId = userId;
-  }
-  // Staff users: use practice_id directly for shared practice cart
-  else if (role === 'staff' && practiceId) {
-    logger.info("Cart owner: staff using practice_id", { practiceId });
-    resolvedId = practiceId;
-  }
-  // Practice users: use their own user_id (which should equal practice_id)
-  else if (role === 'practice') {
-    logger.info("Cart owner: practice user using own user_id", { userId });
-    resolvedId = userId;
-  }
-  // Admin and other roles - use their own ID as fallback
-  else {
-    logger.info("Cart owner: fallback to user_id", { userId });
-    resolvedId = userId;
-  }
+  // CRITICAL FIX: Every user gets their OWN isolated cart
+  // No more shared carts - prevents cross-user contamination
+  logger.info("Cart owner: user using own user_id", { userId, role });
+  const resolvedId = userId;
 
   // Cache result
   ownerCache.set(cacheKey, { value: resolvedId, timestamp: Date.now() });
