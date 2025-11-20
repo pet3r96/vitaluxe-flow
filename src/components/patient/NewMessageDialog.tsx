@@ -110,8 +110,23 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
       if (!message.trim()) throw new Error("Message is required");
       if (!practiceData?.practiceId) throw new Error("No practice assigned");
 
+      // Get patient account ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!patientAccount) throw new Error("Patient account not found");
+
       const { data, error } = await supabase.functions.invoke("send-patient-message", {
         body: {
+          patient_id: patientAccount.id,
+          practice_id: practiceData.practiceId,
+          sender_type: "patient",
           subject: subject.trim() || "Patient Message",
           message: message.trim(),
         },

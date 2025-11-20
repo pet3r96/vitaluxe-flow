@@ -83,8 +83,23 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
       const firstMsg = messages?.[0];
       if (!firstMsg) throw new Error("Thread not found");
 
+      // Get patient and practice info
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("id, practice_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!patientAccount) throw new Error("Patient account not found");
+
       const { error } = await supabase.functions.invoke("send-patient-message", {
         body: {
+          patient_id: patientAccount.id,
+          practice_id: patientAccount.practice_id,
+          sender_type: "patient",
           message: messageText,
           subject: firstMsg.subject,
           thread_id: threadId,

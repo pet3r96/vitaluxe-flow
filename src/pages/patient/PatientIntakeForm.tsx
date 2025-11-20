@@ -229,7 +229,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
         .from('patient_medical_vault')
         .select('*')
         .eq('patient_account_id', patientAccount.id)
-        .eq('record_type', 'surgery');
+        .eq('record_type', 'procedure');
       if (error) throw error;
       return data || [];
     },

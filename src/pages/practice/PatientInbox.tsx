@@ -196,9 +196,12 @@ export default function PatientInbox() {
 
   const sendReplyMutation = useMutation({
     mutationFn: async ({ patientId, body, threadId, subject }: { patientId: string; body: string; threadId: string; subject?: string }) => {
+      if (!practiceId) throw new Error("Practice ID not available");
+      
       const { error } = await supabase.functions.invoke("send-patient-message", {
         body: { 
-          patient_id: patientId, 
+          patient_id: patientId,
+          practice_id: practiceId,
           message: body, 
           sender_type: "provider",
           thread_id: threadId,
