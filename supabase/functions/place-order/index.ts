@@ -711,17 +711,24 @@ serve(async (req) => {
       });
     }
 
+    // Determine overall success based on failures
+    const hasFailures = failedPayments.length > 0 || failedOrders.length > 0;
+    const overallSuccess = !hasFailures;
+    
     return new Response(
       JSON.stringify({
-        success: true,
+        success: overallSuccess,
         created_orders: createdOrders,
         failed_payments: failedPayments,
         failed_orders: failedOrders,
         deleted_cart_line_ids: deletedCartLineIds,
         execution_time_seconds: executionTimeSeconds,
+        message: hasFailures 
+          ? `${failedPayments.length} payment(s) failed. Orders created but marked as payment_failed. Please retry payment from Orders page.`
+          : 'All orders placed and paid successfully'
       }),
       {
-        status: 200,
+        status: hasFailures ? 207 : 200, // 207 = Multi-Status for partial success
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );

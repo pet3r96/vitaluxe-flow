@@ -373,6 +373,11 @@ export default function Checkout() {
         throw new Error(data?.error || "Order placement failed");
       }
 
+      // Check if any payments failed
+      if (data?.failed_payments && data.failed_payments.length > 0) {
+        throw new Error(data.message || `Payment failed for ${data.failed_payments.length} order(s). Please retry payment from Orders page.`);
+      }
+
       return {
         createdOrders: data.created_orders || [],
         failedPayments: data.failed_payments || [],
@@ -501,11 +506,22 @@ export default function Checkout() {
       }
     },
     onError: (error: any) => {
+      // Check if this is a payment failure (orders created but payment failed)
+      const isPaymentFailure = error.message?.includes('Payment failed for') || 
+                                error.message?.includes('payment(s) failed');
+      
       toast({
-        title: "Order Placement Failed",
-        description: error.message || "Failed to place order. Please try again.",
+        title: isPaymentFailure ? "Payment Processing Error" : "Order Placement Failed",
+        description: isPaymentFailure 
+          ? "Orders were created but payment failed. You can retry payment from the Orders page."
+          : error.message || "Failed to place order. Please try again.",
         variant: "destructive",
       });
+      
+      // Navigate to orders page if payment failed (orders already created)
+      if (isPaymentFailure) {
+        setTimeout(() => navigate('/orders'), 2000);
+      }
     },
   });
 
