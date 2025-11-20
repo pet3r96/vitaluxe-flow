@@ -80,7 +80,6 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
           record_type: "procedure",
           record_data: recordData,
           patient_account_id: patientAccountId,
-          patient_id: patientAccountId,
           title: data.surgery_type,
           created_by_user_id: authUser.id,
         });

@@ -185,7 +185,6 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
           record_type: "medication",
           record_data: recordData,
           patient_account_id: patientAccountId,
-          patient_id: patientAccountId,
           title: data.medication_name,
           created_by_user_id: authUser.id,
           is_active: true,

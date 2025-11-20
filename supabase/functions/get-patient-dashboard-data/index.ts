@@ -204,6 +204,21 @@ serve(async (req) => {
           }
         }));
 
+        // Log final structure for debugging
+        console.log('[get-patient-dashboard-data] FINAL RETURN STRUCTURE', {
+          hasPatientAccount: !!patientAccount,
+          patientFirstName: patientAccount?.first_name,
+          patientLastName: patientAccount?.last_name,
+          vaultHasData: medicalVault.has_data,
+          vaultMedsCount: medicalVault.medications_count,
+          vaultAllergiesCount: medicalVault.allergies_count,
+          vaultConditionsCount: medicalVault.conditions_count,
+          nextApptExists: !!nextAppointmentWithPractice,
+          recentApptCount: recentAppointmentsWithPractice.length,
+          recentMsgCount: recentMessagesFormatted.length,
+          unreadCount: unreadMessagesCount
+        });
+
         // Return data matching PatientDashboardData interface
         return {
           patientAccount,

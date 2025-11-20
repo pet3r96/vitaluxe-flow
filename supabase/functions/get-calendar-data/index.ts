@@ -127,13 +127,12 @@ Deno.serve(async (req) => {
 
     // Parallel fetch for better performance
     const queryStartTime = performance.now();
-    const [settingsResult, providersData, roomsResult, blockedTimeResult] = await Promise.all([
-      // Get practice settings
+    const [calendarHoursResult, providersData, roomsResult, blockedTimeResult] = await Promise.all([
+      // Get practice calendar hours (replaces appointment_settings)
       supabaseClient
-        .from('appointment_settings')
+        .from('practice_calendar_hours')
         .select('*')
-        .eq('practice_id', practiceId)
-        .maybeSingle(),
+        .eq('practice_id', practiceId),
       
       // Get providers based on user type
       (async () => {
@@ -232,22 +231,27 @@ Deno.serve(async (req) => {
       durationMs: (queryEndTime - queryStartTime).toFixed(2)
     });
 
-    const settings = settingsResult.data;
+    const calendarHours = calendarHoursResult.data || [];
     const transformedProviders = providersData;
     const allRooms = roomsResult.data;
     const blockedTime = blockedTimeResult.data;
+
+    // Convert calendar hours to settings format for backward compatibility
+    const settings = {
+      slot_duration: 15,
+      start_hour: 7,
+      end_hour: 20,
+      working_days: calendarHours.filter(h => !h.is_closed).map(h => h.day_of_week),
+      timezone: calendarHours[0]?.timezone || 'America/New_York'
+    };
 
     const fetchDuration = Date.now() - fetchStartTime;
     edgeLogger.info('[get-calendar-data] Total fetch duration', { fetchDuration, unit: 'ms' });
 
     return successResponse({
       appointments: appointments || [],
-      settings: settings || {
-        slot_duration: 15,
-        start_hour: 7,
-        end_hour: 20,
-        working_days: [1, 2, 3, 4, 5]
-      },
+      settings,
+      calendarHours,
       providers: transformedProviders || [],
       rooms: allRooms || [],
       blockedTime: blockedTime || []

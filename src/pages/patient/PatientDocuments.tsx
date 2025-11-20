@@ -287,7 +287,15 @@ export default function PatientDocuments() {
       setCustomTitle("");
       setNotes("");
       setShareWithPractice(true);
+      
+      // Invalidate immediately and refetch after delay to ensure vault insert completes
       queryClient.invalidateQueries({ queryKey: ["patient-unified-documents"] });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ 
+          queryKey: ["patient-unified-documents"], 
+          refetchType: 'active' 
+        });
+      }, 500);
     },
     onError: (error: any) => {
       const errorMessage = error.message || "Could not upload document";

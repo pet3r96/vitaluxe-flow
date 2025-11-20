@@ -143,7 +143,6 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
           record_type: "condition",
           record_data: recordData,
           patient_account_id: patientAccountId,
-          patient_id: patientAccountId,
           title: data.condition_name,
           created_by_user_id: authUser.id,
           is_active: true,

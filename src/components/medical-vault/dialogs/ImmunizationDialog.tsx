@@ -91,7 +91,6 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
           record_type: "immunization",
           record_data: formattedData,
           patient_account_id: patientAccountId,
-          patient_id: patientAccountId,
           title: data.vaccine_name,
           created_by_user_id: authUser.id,
         });

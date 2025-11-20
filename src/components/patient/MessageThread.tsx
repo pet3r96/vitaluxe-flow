@@ -44,7 +44,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
           event: 'INSERT',
           schema: 'public',
           table: 'patient_messages',
-          filter: `thread_id=eq.${threadId}`
+          filter: `parent_message_id=eq.${threadId}`
         },
         (payload) => {
           // Optimistically add new message to cache
@@ -60,7 +60,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
           event: 'UPDATE',
           schema: 'public',
           table: 'patient_messages',
-          filter: `thread_id=eq.${threadId}`
+          filter: `id=eq.${threadId}`
         },
         (payload) => {
           // Update message in cache

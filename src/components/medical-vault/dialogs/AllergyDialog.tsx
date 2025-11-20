@@ -188,7 +188,6 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           record_type: "allergy",
           record_data: recordData,
           patient_account_id: patientAccountId,
-          patient_id: patientAccountId, // In medical vault context, these are the same
           title: data.nka ? "No Known Allergies" : (data.allergen_name || "Allergy"),
           created_by_user_id: user?.id,
           is_active: true,

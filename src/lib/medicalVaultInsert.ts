@@ -112,7 +112,6 @@ interface BaseVaultInsert {
   created_by_user_id?: string;
   is_active?: boolean;
   title: string;
-  patient_id: string;
   practice_id?: string; // Optional - will be auto-fetched if not provided
 }
 
@@ -225,18 +224,10 @@ export async function insertVaultRecord(
     }
   }
 
-  // ✅ CRITICAL FIX: Ensure patient_id is set (fallback to patient_account_id)
-  const patientId = payload.patient_id || payload.patient_account_id;
-
-  if (!patientId) {
-    throw new Error("Could not determine patient_id for vault record");
-  }
-  
   console.log('[MEDICAL_VAULT] INSERT starting', {
     timestamp: new Date().toISOString(),
     record_type: payload.record_type,
     patient_account_id: payload.patient_account_id,
-    patient_id: patientId, // ✅ LOG THE RESOLVED patient_id
     practice_id: practiceId,
     title: payload.title,
     active: payload.is_active ?? true,
@@ -249,11 +240,11 @@ export async function insertVaultRecord(
       record_type: payload.record_type,
       record_data: payload.record_data as any, // Cast only at DB boundary
       patient_account_id: payload.patient_account_id,
-      patient_id: patientId, // ✅ USE RESOLVED patientId
+      patient_id: payload.patient_account_id, // ✅ PATIENT FIX: Use patient_account_id for patient_id
       practice_id: practiceId,
       title: payload.title,
       created_by_user_id: payload.created_by_user_id,
-      active: payload.is_active ?? true, // ✅ FIX: Use 'active' column name
+      active: payload.is_active ?? true,
     });
 
   console.log('[MEDICAL_VAULT] INSERT completed', {
