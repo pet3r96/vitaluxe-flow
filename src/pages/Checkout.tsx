@@ -352,6 +352,12 @@ export default function Checkout() {
         total_lines: linesAll.length 
       }));
 
+      console.log('[Checkout] Starting order placement', {
+        cartId: cart.id,
+        paymentMethodId: selectedPaymentMethodId,
+        timestamp: new Date().toISOString()
+      });
+
       // Call the optimized edge function
       const { data, error } = await supabase.functions.invoke('place-order', {
         body: {
@@ -362,6 +368,13 @@ export default function Checkout() {
           merchant_fee_percentage: merchantFeePercentage,
           csrf_token: csrfToken,
         }
+      });
+
+      console.log('[Checkout] Order placement response', {
+        success: data?.success,
+        orderId: data?.order_id,
+        failedPayments: data?.failed_payments?.length || 0,
+        timestamp: new Date().toISOString()
       });
 
       if (error) {
