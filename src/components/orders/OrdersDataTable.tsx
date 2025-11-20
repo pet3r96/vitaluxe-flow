@@ -232,7 +232,7 @@ export const OrdersDataTable = () => {
       refetchOnReconnect: true, // Refetch when reconnecting
       retry: 3, // Retry up to 3 times
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-      enabled: !!effectiveRole && !!effectiveUserId && !!user, // Only run when auth data is available
+      enabled: !!effectiveRole && !!effectiveUserId && !!user && !!session?.access_token, // Only run when auth data is available
     },
     // Real-time event handler to immediately refetch on INSERT
     (payload) => {
