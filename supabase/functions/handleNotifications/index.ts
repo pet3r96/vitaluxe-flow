@@ -53,12 +53,20 @@ serve(async (req) => {
   }
 
   try {
-    // Verify webhook secret for security
+    // Verify webhook secret for external requests (optional for internal trigger calls)
     const webhookSecret = Deno.env.get('WEBHOOK_GHL_SECRET');
     const requestSecret = req.headers.get('x-webhook-secret');
+    const authHeader = req.headers.get('authorization');
     
-    if (!webhookSecret || requestSecret !== webhookSecret) {
-      edgeLogger.error('[handleNotifications] Unauthorized webhook attempt', { hasSecret: !!requestSecret });
+    // Allow if: has valid webhook secret OR is internal service role call
+    const isAuthorized = (webhookSecret && requestSecret === webhookSecret) || 
+                        (authHeader && authHeader.includes('service_role'));
+    
+    if (!isAuthorized) {
+      edgeLogger.error('[handleNotifications] Unauthorized request', { 
+        hasWebhookSecret: !!requestSecret,
+        hasAuthHeader: !!authHeader 
+      });
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
