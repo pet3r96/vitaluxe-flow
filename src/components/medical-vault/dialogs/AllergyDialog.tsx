@@ -19,6 +19,7 @@ import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs"
 import { useAuth } from "@/contexts/AuthContext";
 import { VaultRecordBase, asAllergy } from "@/lib/vault";
 import { insertVaultRecord, type AllergyRecordData } from "@/lib/medicalVaultInsert";
+import { logger } from "@/lib/logger";
 
 const allergySchema = z.object({
   nka: z.boolean().optional(),
@@ -157,7 +158,22 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           .from("patient_medical_vault")
           .update({ record_data: recordData, updated_at: new Date().toISOString() })
           .eq("id", allergy.id);
-        if (error) throw error;
+        if (error) {
+          logger.error('[AllergyDialog] UPDATE error - DETAILED', error, {
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
+            allergyId: allergy.id,
+            patientAccountId,
+            recordType: 'allergy',
+            recordDataKeys: Object.keys(recordData),
+            isNKA: recordData.nka,
+            effectiveUserId,
+            effectiveRole
+          });
+          throw error;
+        }
       } else {
         const recordData: AllergyRecordData = {
           nka: data.nka || false,
@@ -178,7 +194,23 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           created_by_role: mapRoleToAuditRole(effectiveRole),
           is_active: true,
         });
-        if (error) throw error;
+        
+        if (error) {
+          logger.error('[AllergyDialog] INSERT error - DETAILED', error, {
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
+            patientAccountId,
+            recordType: 'allergy',
+            recordDataKeys: Object.keys(recordData),
+            isNKA: recordData.nka,
+            allergenName: recordData.allergen_name,
+            effectiveUserId,
+            effectiveRole
+          });
+          throw error;
+        }
       }
     },
     {

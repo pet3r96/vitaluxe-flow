@@ -151,7 +151,18 @@ export function ConditionDialog({ open, onOpenChange, patientAccountId, conditio
         });
         
         if (error) {
-          logger.error("Condition INSERT failed", error, { patientAccountId });
+          logger.error('[ConditionDialog] INSERT error - DETAILED', error, {
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
+            patientAccountId,
+            recordType: 'condition',
+            recordDataKeys: Object.keys(recordData),
+            conditionName: data.condition_name,
+            authUserId: authUser.id,
+            effectiveRole
+          });
           throw error;
         }
       }

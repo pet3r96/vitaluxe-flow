@@ -5323,6 +5323,73 @@ export type Database = {
           },
         ]
       }
+      provider_document_patients: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          document_id: string
+          id: string
+          patient_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          document_id: string
+          id?: string
+          patient_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          document_id?: string
+          id?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_document_patients_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "provider_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_document_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_account_health"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "provider_document_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_document_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_document_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_account_id"]
+          },
+          {
+            foreignKeyName: "provider_document_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "v_patients_with_portal_status"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
       provider_documents: {
         Row: {
           assigned_patient_id: string | null

@@ -67,7 +67,18 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
           .eq("id", immunization.id);
         
         if (error) {
-          logger.error("Immunization UPDATE failed", error, { immunizationId: immunization.id });
+          logger.error('[ImmunizationDialog] UPDATE error - DETAILED', error, {
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
+            immunizationId: immunization.id,
+            patientAccountId,
+            recordType: 'immunization',
+            recordDataKeys: Object.keys(formattedData),
+            authUserId: authUser.id,
+            effectiveRole
+          });
           throw error;
         }
       } else {
@@ -87,7 +98,18 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
         });
         
         if (error) {
-          logger.error("Immunization INSERT failed", error, { patientAccountId });
+          logger.error('[ImmunizationDialog] INSERT error - DETAILED', error, {
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
+            patientAccountId,
+            recordType: 'immunization',
+            recordDataKeys: Object.keys(formattedData),
+            vaccineName: data.vaccine_name,
+            authUserId: authUser.id,
+            effectiveRole
+          });
           throw error;
         }
       }

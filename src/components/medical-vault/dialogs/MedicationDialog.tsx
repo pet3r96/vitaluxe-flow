@@ -153,7 +153,18 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
           .eq("id", medication.id);
         
         if (error) {
-          logger.error("Medication UPDATE failed", error, { medicationId: medication.id });
+          logger.error('[MedicationDialog] UPDATE error - DETAILED', error, {
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
+            medicationId: medication.id,
+            patientAccountId,
+            recordType: 'medication',
+            recordDataKeys: Object.keys(recordData),
+            authUserId: authUser.id,
+            effectiveRole
+          });
           throw error;
         }
       } else {
@@ -182,7 +193,19 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
         });
         
         if (error) {
-          logger.error("Medication INSERT failed", error, { patientAccountId });
+          logger.error('[MedicationDialog] INSERT error - DETAILED', error, {
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
+            patientAccountId,
+            recordType: 'medication',
+            recordDataKeys: Object.keys(recordData),
+            medicationName: data.medication_name,
+            authUserId: authUser.id,
+            effectiveRole,
+            hasStopDate: !!recordData.stop_date
+          });
           throw error;
         }
       }
