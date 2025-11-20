@@ -203,17 +203,18 @@ export default function PatientInbox() {
           patient_id: patientId,
           practice_id: practiceId,
           message: body, 
-          sender_type: "provider",
-          thread_id: threadId,
-          parent_message_id: threadId,
+          sender_type: "practice", // ✅ PHASE 2: Fixed to match CHECK constraint
+          parent_message_id: threadId, // ✅ PHASE 2: Removed thread_id (not in schema)
           subject: subject
         },
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["patient-messages-inbox"] });
+      // ✅ PHASE 3: Enhanced query invalidations
+      queryClient.invalidateQueries({ queryKey: ["patient-messages-inbox", practiceId] });
       queryClient.invalidateQueries({ queryKey: ["thread-messages"] });
+      queryClient.invalidateQueries({ queryKey: ['inbox-unread-threads', practiceId] });
       toast.success("Reply sent");
       setReplyText("");
     },

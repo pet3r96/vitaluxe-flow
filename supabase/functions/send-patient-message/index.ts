@@ -89,7 +89,28 @@ Deno.serve(async (req) => {
     }
 
     const { subject, message, sender_type, patient_id, practice_id, parent_message_id } = validation.data;
-    const thread_id = body.thread_id; // Optional field not in schema
+    
+    // ✅ PHASE 1: Enhanced logging for incoming payload
+    edgeLogger.info('[PAYLOAD] Incoming message request', {
+      sender_type,
+      has_patient_id: !!patient_id,
+      has_practice_id: !!practice_id,
+      has_parent_message_id: !!parent_message_id,
+      subject_length: subject?.length || 0,
+      message_length: message?.length || 0
+    });
+
+    // ✅ PHASE 1: Strict sender_type validation (CHECK constraint: 'patient' or 'practice')
+    if (sender_type !== 'patient' && sender_type !== 'practice') {
+      edgeLogger.error('[VALIDATION] Invalid sender_type', { 
+        provided: sender_type,
+        allowed: ['patient', 'practice']
+      });
+      return new Response(
+        JSON.stringify({ error: 'sender_type must be "patient" or "practice"' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // PHASE 3: ID validation for patient_id
     if (patient_id) {
@@ -134,9 +155,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Detect mode: provider reply or patient message
-    const isProviderMode = sender_type === 'provider' && patient_id;
-    edgeLogger.info('Message mode detected', { mode: isProviderMode ? 'provider' : 'patient' });
+    // Detect mode: practice/provider reply or patient message
+    const isProviderMode = sender_type === 'practice' && patient_id;
+    edgeLogger.info('Message mode detected', { mode: isProviderMode ? 'practice' : 'patient' });
 
     // Check for active impersonation session with detailed logging
     const currentTimestamp = new Date().toISOString();
@@ -291,22 +312,8 @@ Deno.serve(async (req) => {
         );
       }
 
-    // Determine thread_id for provider message
-    let effectiveThreadId = thread_id;
-    
-    // If parent_message_id provided but no thread_id, fetch parent's thread_id
-    if (!effectiveThreadId && parent_message_id) {
-      const { data: parentMsg } = await supabaseAdmin
-        .from('patient_messages')
-        .select('thread_id, id')
-        .eq('id', parent_message_id)
-        .maybeSingle();
-      
-      effectiveThreadId = parentMsg?.thread_id || parentMsg?.id;
-      edgeLogger.info('Resolved thread_id from parent', { effectiveThreadId });
-    }
-    
-    const isReply = !!parent_message_id;
+      // ✅ PHASE 1: Removed thread_id dead code (table has no thread_id column)
+      const isReply = !!parent_message_id;
     
     const providerPayload = {
       patient_id: patient_id,
@@ -334,8 +341,13 @@ Deno.serve(async (req) => {
         .single();
 
       if (insertError) {
+        // ✅ PHASE 1: Enhanced error logging with RLS/CHECK constraint detection
+        const isCheckConstraint = insertError.code === '23514' || insertError.message?.includes('check constraint');
+        const isRLSError = insertError.code === '42501' || insertError.message?.includes('policy');
+        
         edgeLogger.error('[PATIENT_MESSAGE] INSERT failed', insertError, {
           timestamp: new Date().toISOString(),
+          error_type: isCheckConstraint ? 'CHECK_CONSTRAINT' : isRLSError ? 'RLS_POLICY' : 'OTHER',
           code: insertError.code,
           details: insertError.details,
           hint: insertError.hint,
@@ -349,17 +361,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      // If new thread (not a reply), set thread_id = id
-      if (!isReply && insertedMessage) {
-        const { error: updateError } = await supabaseAdmin
-          .from('patient_messages')
-          .update({ thread_id: insertedMessage.id })
-          .eq('id', insertedMessage.id);
-          
-        if (updateError) {
-          edgeLogger.error('Failed to set thread_id', updateError);
-        }
-      }
+      // ✅ PHASE 1: Removed thread_id UPDATE dead code (table has no thread_id column)
 
       // Create notification for the patient
       const { data: patientData } = await supabaseAdmin
@@ -390,7 +392,7 @@ Deno.serve(async (req) => {
               message_id: insertedMessage.id,
               patient_id: patient_id,
               practice_id: effectivePracticeId,
-              thread_id: insertedMessage.thread_id || insertedMessage.id
+              thread_id: insertedMessage.id // ✅ PHASE 1: Use message id as thread identifier
             },
             action_url: '/messages',
             entity_type: 'message',
@@ -503,22 +505,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Determine thread_id for patient message
-    let effectiveThreadId = thread_id;
-    
-    // If parent_message_id provided but no thread_id, fetch parent's thread_id
-    if (!effectiveThreadId && parent_message_id) {
-      const { data: parentMsg } = await supabaseAdmin
-        .from('patient_messages')
-        .select('thread_id, id')
-        .eq('id', parent_message_id)
-        .maybeSingle();
-      
-      effectiveThreadId = parentMsg?.thread_id || parentMsg?.id;
-      edgeLogger.info('Resolved thread_id from parent', { effectiveThreadId });
-    }
-    
-    const isReply = !!parent_message_id;
+      // ✅ PHASE 1: Removed thread_id dead code (table has no thread_id column)
+      const isReply = !!parent_message_id;
     
     const patientPayload = {
       patient_id: patientAccount.id,
@@ -528,7 +516,7 @@ Deno.serve(async (req) => {
       body: message,
       subject: subject || 'Patient Message',
       read_at: null,
-      ...(effectiveThreadId && { thread_id: effectiveThreadId }),
+      // ✅ PHASE 1: Removed thread_id (table doesn't have this column)
       ...(parent_message_id && { parent_message_id: parent_message_id })
     };
 
@@ -541,24 +529,23 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      edgeLogger.error('Insert error', insertError);
+      // ✅ PHASE 1: Enhanced error logging with RLS/CHECK constraint detection
+      const isCheckConstraint = insertError.code === '23514' || insertError.message?.includes('check constraint');
+      const isRLSError = insertError.code === '42501' || insertError.message?.includes('policy');
+      
+      edgeLogger.error('[PATIENT_MESSAGE] INSERT failed', insertError, {
+        error_type: isCheckConstraint ? 'CHECK_CONSTRAINT' : isRLSError ? 'RLS_POLICY' : 'OTHER',
+        code: insertError.code,
+        details: insertError.details,
+        hint: insertError.hint
+      });
       return new Response(
         JSON.stringify({ error: `Failed to send message: ${insertError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // If new thread (not a reply), set thread_id = id
-    if (!isReply && insertedMessage) {
-      const { error: updateError } = await supabaseAdmin
-        .from('patient_messages')
-        .update({ thread_id: insertedMessage.id })
-        .eq('id', insertedMessage.id);
-        
-      if (updateError) {
-        edgeLogger.error('Failed to set thread_id', updateError);
-      }
-    }
+    // ✅ PHASE 1: Removed thread_id UPDATE dead code (table has no thread_id column)
 
     // Create notifications for practice team members
     const { data: patientInfo } = await supabaseAdmin
@@ -603,7 +590,7 @@ Deno.serve(async (req) => {
               message_id: insertedMessage.id,
               patient_id: patientAccount.id,
               practice_id: patientAccount.practice_id,
-              thread_id: insertedMessage.thread_id || insertedMessage.id
+              thread_id: insertedMessage.id // ✅ PHASE 1: Use message id as thread identifier
             },
             action_url: '/messages',
             entity_type: 'message',
@@ -627,7 +614,7 @@ Deno.serve(async (req) => {
       success: true,
       duration_ms: Date.now() - startTime,
       metadata: {
-        thread_id: insertedMessage.thread_id || insertedMessage.id,
+        thread_id: insertedMessage.id, // ✅ PHASE 1: Use message id as thread identifier
         message_id: insertedMessage.id,
         is_provider_mode: false
       }
