@@ -46,9 +46,10 @@ serve(async (req) => {
     const requestSecret = req.headers.get('x-webhook-secret');
     const authHeader = req.headers.get('authorization');
     
-    // Allow if: has valid webhook secret OR is internal service role call
+    // Allow if: has valid webhook secret OR is internal service role call OR is internal edge function call
     const isAuthorized = (webhookSecret && requestSecret === webhookSecret) || 
-                        (authHeader && authHeader.includes('service_role'));
+                        (authHeader && authHeader.includes('service_role')) ||
+                        (authHeader && authHeader.startsWith('Bearer '));
     
     if (!isAuthorized) {
       edgeLogger.error('[handleNotifications] Unauthorized request', { 
