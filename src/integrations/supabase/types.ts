@@ -7525,58 +7525,6 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
         }
-        Insert: {
-          address_city?: string | null
-          address_state?: string | null
-          address_street?: string | null
-          address_verification_source?: string | null
-          address_verification_status?: string | null
-          address_zip?: string | null
-          created_at?: string | null
-          date_of_birth?: string | null
-          email?: string | null
-          first_name?: string | null
-          has_portal_access?: never
-          has_portal_account?: never
-          id?: string | null
-          last_login_at?: string | null
-          last_name?: string | null
-          name?: never
-          patient_account_id?: string | null
-          patient_id?: string | null
-          phone?: string | null
-          portal_status?: never
-          practice_id?: string | null
-          provider_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          address_city?: string | null
-          address_state?: string | null
-          address_street?: string | null
-          address_verification_source?: string | null
-          address_verification_status?: string | null
-          address_zip?: string | null
-          created_at?: string | null
-          date_of_birth?: string | null
-          email?: string | null
-          first_name?: string | null
-          has_portal_access?: never
-          has_portal_account?: never
-          id?: string | null
-          last_login_at?: string | null
-          last_name?: string | null
-          name?: never
-          patient_account_id?: string | null
-          patient_id?: string | null
-          phone?: string | null
-          portal_status?: never
-          practice_id?: string | null
-          provider_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
         Relationships: [
           {
             foreignKeyName: "patient_accounts_practice_id_fkey"
