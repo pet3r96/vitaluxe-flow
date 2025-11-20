@@ -49,7 +49,7 @@ export function FollowUpDialog({
   followUp,
 }: FollowUpDialogProps) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset, setValue, watch } = useForm({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
     defaultValues: {
       follow_up_date: "",
       follow_up_time: "",
@@ -108,8 +108,12 @@ export function FollowUpDialog({
       setValue("assigned_to", followUp.assigned_to || "");
     } else {
       reset();
+      // Set default assigned_to to first available staff member
+      if (uniqueStaffMembers && uniqueStaffMembers.length > 0) {
+        setValue("assigned_to", uniqueStaffMembers[0].id);
+      }
     }
-  }, [followUp, setValue, reset]);
+  }, [followUp, setValue, reset, uniqueStaffMembers]);
 
   const createFollowUp = useMutation({
     mutationFn: async (data: any) => {
@@ -178,7 +182,14 @@ export function FollowUpDialog({
         
         if (error) {
           import('@/lib/logger').then(({ logger }) => {
-            logger.error("Follow-up INSERT failed", error, { patientId });
+            logger.error("Follow-up INSERT failed", error, { 
+              patientId,
+              errorCode: error.code,
+              errorDetails: error.details,
+              errorHint: error.hint,
+              errorMessage: error.message,
+              payload: { ...payload, notes: '[redacted]' }
+            });
           });
           throw error;
         }
@@ -200,6 +211,10 @@ export function FollowUpDialog({
   });
 
   const onSubmit = (data: any) => {
+    if (!data.assigned_to) {
+      toast.error("Please assign this follow-up to a team member");
+      return;
+    }
     createFollowUp.mutate(data);
   };
 
@@ -259,16 +274,15 @@ export function FollowUpDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="assigned_to">Assign To (Optional)</Label>
+              <Label htmlFor="assigned_to">Assign To *</Label>
               <Select
-                value={watch("assigned_to") || "unassigned"}
-                onValueChange={(value) => setValue("assigned_to", value === "unassigned" ? "" : value)}
+                value={watch("assigned_to") || ""}
+                onValueChange={(value) => setValue("assigned_to", value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className={!watch("assigned_to") ? "border-destructive" : ""}>
                   <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   
                   {uniqueStaffMembers && uniqueStaffMembers.filter(s => s.role === "admin").length > 0 && (
                     <>

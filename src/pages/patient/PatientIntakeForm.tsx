@@ -25,7 +25,13 @@ import { logger } from "@/lib/logger";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
 
 const intakeSchema = z.object({
-  date_of_birth: z.string().min(1, "Date of birth is required"),
+  date_of_birth: z.string()
+    .min(1, "Date of birth is required")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Please enter a complete date")
+    .refine((val) => {
+      const date = new Date(val);
+      return !isNaN(date.getTime()) && date < new Date();
+    }, "Date of birth must be a valid past date"),
   gender_at_birth: z.string().min(1, "Gender is required"),
   phone: z.string()
     .transform(val => val.replace(/\D/g, ''))
@@ -1078,9 +1084,16 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                   <FormItem>
                     <FormLabel>Date of Birth *</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        max={new Date().toISOString().split('T')[0]}
+                      />
                     </FormControl>
                     <FormMessage />
+                    <p className="text-sm text-muted-foreground">
+                      Please enter your complete date of birth
+                    </p>
                   </FormItem>
                 )}
               />
@@ -1093,7 +1106,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
                     <FormLabel>Gender at Birth *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className={!field.value ? "border-destructive" : ""}>
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                       </FormControl>

@@ -104,6 +104,10 @@ export function CreateFollowUpFromAppointmentDialog({
       toast.error("Please provide a reason for the follow-up");
       return;
     }
+    if (!data.assigned_to) {
+      toast.error("Please assign this follow-up to a team member");
+      return;
+    }
     createFollowUp.mutate(data);
   };
 
@@ -226,13 +230,13 @@ export function CreateFollowUpFromAppointmentDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="assigned_to">Assign To</Label>
+              <Label htmlFor="assigned_to">Assign To *</Label>
               <Select
                 value={watch("assigned_to")}
                 onValueChange={(value) => setValue("assigned_to", value)}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Unassigned - Select staff member" />
+                <SelectTrigger className={!watch("assigned_to") ? "border-destructive" : ""}>
+                  <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
                   {staffMembers && staffMembers.filter(s => s.role === "admin").length > 0 && (
