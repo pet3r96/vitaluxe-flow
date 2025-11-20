@@ -452,20 +452,109 @@ serve(async (req) => {
       }]);
     }
 
-    edgeLogger.info('Creating orders', { orderCount: ordersToCreate.length, keys: ordersToCreate.length > 0 ? Object.keys(ordersToCreate[0]) : [] });
+    edgeLogger.info('[STEP 1] Orders calculated (NOT created yet)', { 
+      orderCount: ordersToCreate.length, 
+      totalAmount: ordersToCreate.reduce((sum, o) => sum + o.total_amount, 0),
+      timestamp: new Date().toISOString()
+    });
+
+    // ========================================
+    // CRITICAL: ATTEMPT PAYMENT FIRST (before creating orders)
+    // ========================================
+    edgeLogger.info('[STEP 2] Attempting payment BEFORE order creation', {
+      payment_method_id,
+      totalAmount: ordersToCreate.reduce((sum, o) => sum + o.total_amount, 0),
+      timestamp: new Date().toISOString()
+    });
+
+    // Process payment for the total cart amount
+    const totalAmount = ordersToCreate.reduce((sum, o) => sum + o.total_amount, 0);
+    
+    const { data: paymentResult, error: paymentError } = await supabaseAdmin.functions.invoke(
+      "authorizenet-charge-payment",
+      {
+        body: {
+          amount: totalAmount,
+          payment_method_id: payment_method_id,
+          doctor_id: doctorIdForOrder, // For authorization check
+        },
+        headers: {
+          'x-csrf-token': csrf_token
+        }
+      }
+    );
+
+    // If payment failed, return error immediately WITHOUT creating orders
+    if (paymentError || !paymentResult?.success) {
+      edgeLogger.error('[STEP 2] Payment failed - NO ORDERS CREATED', null, {
+        error: paymentResult?.error || paymentError?.message,
+        authorizenet_code: paymentResult?.authorizenet_response?.messages?.message?.[0]?.code,
+        authorizenet_message: paymentResult?.authorizenet_response?.messages?.message?.[0]?.text,
+        timestamp: new Date().toISOString()
+      });
+
+      // Log failed operation
+      edgeLogger.logOperation({
+        user_id: effectiveUserId,
+        ip_address: ipAddress,
+        operation: 'place-order',
+        success: false,
+        duration_ms: Date.now() - startTime,
+        metadata: {
+          reason: 'payment_declined',
+          error: paymentResult?.error || paymentError?.message
+        }
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: paymentResult?.error || paymentError?.message || "Payment declined",
+          authorizenet_response: paymentResult?.authorizenet_response || null,
+        }),
+        {
+          status: 200, // Return 200 with success: false (not a server error, payment declined)
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    edgeLogger.info('[STEP 2] Payment succeeded - proceeding to create orders', {
+      transaction_id: paymentResult?.transaction_id,
+      timestamp: new Date().toISOString()
+    });
+
+    // ========================================
+    // PAYMENT SUCCEEDED - NOW CREATE ORDERS
+    // ========================================
+    edgeLogger.info('[STEP 3] Creating orders in database', { 
+      orderCount: ordersToCreate.length,
+      timestamp: new Date().toISOString()
+    });
+
+    // Add payment info to orders
+    const ordersWithPayment = ordersToCreate.map(order => ({
+      ...order,
+      authorizenet_transaction_id: paymentResult.transaction_id,
+      payment_status: 'paid',
+    }));
 
     // Batch insert all orders using admin client (bypasses RLS)
     const { data: createdOrders, error: ordersError } = await supabaseAdmin
       .from("orders")
-      .insert(ordersToCreate)
+      .insert(ordersWithPayment)
       .select();
 
     if (ordersError || !createdOrders) {
-      edgeLogger.error('Failed to create orders', ordersError);
-      throw new Error("Failed to create orders");
+      edgeLogger.error('[STEP 3] Failed to create orders after successful payment', ordersError);
+      // CRITICAL: Payment succeeded but order creation failed - this needs manual intervention
+      throw new Error("Payment succeeded but order creation failed. Contact support with transaction ID: " + paymentResult.transaction_id);
     }
 
-    edgeLogger.info('Created orders successfully', { orderCount: createdOrders.length });
+    edgeLogger.info('[STEP 3] Orders created successfully', { 
+      orderCount: createdOrders.length,
+      timestamp: new Date().toISOString()
+    });
 
     // Batch insert all order lines using admin client (bypasses RLS)
     const allOrderLines: any[] = [];
@@ -538,13 +627,65 @@ serve(async (req) => {
       throw new Error(`Failed to create order lines: ${orderLinesError.message} | Code: ${orderLinesError.code} | Hint: ${orderLinesError.hint || 'none'}`);
     }
 
-    edgeLogger.info('Created order lines successfully', { orderLineCount: allOrderLines.length, orderCount: createdOrders.length });
+    edgeLogger.info('[STEP 4] Order lines created successfully', { 
+      orderLineCount: allOrderLines.length, 
+      orderCount: createdOrders.length,
+      timestamp: new Date().toISOString()
+    });
 
-    // CRITICAL FIX: Clear cart lines immediately after order creation
-    // Cart lines have served their purpose once orders are created
-    // Failed payments should be retried via Orders page, not by keeping items in cart
+    // ========================================
+    // SEND TO PHARMACY API (if applicable)
+    // ========================================
+    edgeLogger.info('[STEP 5] Sending orders to pharmacy APIs', {
+      timestamp: new Date().toISOString()
+    });
+
+    for (const order of createdOrders) {
+      try {
+        const pharmacyOrderLines = allOrderLines.filter(line => 
+          line.order_id === order.id && line.assigned_pharmacy_id
+        );
+
+        // Group order lines by pharmacy_id to batch API calls
+        const linesByPharmacy = new Map<string, any[]>();
+        for (const line of pharmacyOrderLines) {
+          const pharmacyId = line.assigned_pharmacy_id;
+          if (!linesByPharmacy.has(pharmacyId)) {
+            linesByPharmacy.set(pharmacyId, []);
+          }
+          linesByPharmacy.get(pharmacyId)!.push(line);
+        }
+
+        // Send one batched call per pharmacy
+        for (const [pharmacyId, lines] of linesByPharmacy.entries()) {
+          edgeLogger.info('[STEP 5] Sending order lines to pharmacy', { 
+            lineCount: lines.length, 
+            pharmacyId,
+            order_id: order.id 
+          });
+          await supabaseAdmin.functions.invoke("send-order-to-pharmacy", {
+            body: {
+              order_id: order.id,
+              order_line_ids: lines.map(l => l.id),
+              pharmacy_id: pharmacyId,
+            }
+          });
+        }
+      } catch (apiError) {
+        edgeLogger.error('[STEP 5] Failed to send order to pharmacy API', apiError, { order_id: order.id });
+        // Non-fatal - order was already paid and created successfully
+      }
+    }
+
+    // ========================================
+    // CLEAR CART
+    // ========================================
     let deletedCartLineIds: string[] = [];
-    edgeLogger.info('Clearing cart_lines', { cartId: cart_id });
+    edgeLogger.info('[STEP 6] Clearing cart', { 
+      cartId: cart_id,
+      timestamp: new Date().toISOString()
+    });
+    
     const { data: deletedLines, error: deleteError } = await supabaseAdmin
       .from("cart_lines")
       .delete()
@@ -552,134 +693,14 @@ serve(async (req) => {
       .select('id');
 
     if (deleteError) {
-      edgeLogger.error('Failed to clear cart', deleteError);
+      edgeLogger.error('[STEP 6] Failed to clear cart', deleteError);
     } else if (deletedLines) {
-      deletedCartLineIds = deletedLines.map(line => line.id);
-      edgeLogger.info('Successfully cleared cart lines', { clearedCount: deletedCartLineIds.length });
+      deletedCartLineIds = deletedLines.map(l => l.id);
+      edgeLogger.info('[STEP 6] Cart cleared successfully', { deletedCount: deletedCartLineIds.length });
     }
 
-    // Process payments for each order
-    const failedPayments: any[] = [];
-    const failedOrders: string[] = [];
-
-    edgeLogger.info('[PAYMENT_LOOP] Starting payment processing', {
-      timestamp: new Date().toISOString(),
-      order_count: createdOrders.length,
-      payment_method_id,
-      total_amount: createdOrders.reduce((sum, o) => sum + o.total_amount, 0)
-    });
-
-    for (const order of createdOrders) {
-      try {
-        edgeLogger.info('[PAYMENT_LOOP] Processing order', {
-          order_id: order.id,
-          order_number: order.order_number,
-          amount: order.total_amount,
-          payment_method_id,
-          attempt_number: createdOrders.indexOf(order) + 1,
-          total_orders: createdOrders.length,
-          timestamp: new Date().toISOString()
-        });
-
-        const { data: paymentResult, error: paymentError } = await supabaseAdmin.functions.invoke(
-          "authorizenet-charge-payment",
-          {
-            body: {
-              order_id: order.id,
-              payment_method_id: payment_method_id,
-              amount: order.total_amount,
-            },
-            headers: {
-              'x-csrf-token': csrf_token
-            }
-          }
-        );
-
-        if (paymentError || !paymentResult?.success) {
-          edgeLogger.error('[PAYMENT_LOOP] Order payment failed', null, {
-            order_id: order.id,
-            order_number: order.order_number,
-            amount: order.total_amount,
-            error: paymentResult?.error || paymentError?.message,
-            authorizenet_code: paymentResult?.authorizenet_response?.messages?.message?.[0]?.code,
-            authorizenet_message: paymentResult?.authorizenet_response?.messages?.message?.[0]?.text,
-            timestamp: new Date().toISOString()
-          });
-
-          // Mark order as payment_failed
-          await supabaseAdmin
-            .from("orders")
-            .update({ payment_status: "payment_failed", status: "pending" })
-            .eq("id", order.id);
-
-          failedPayments.push({
-            order_id: order.id,
-            order_number: order.order_number,
-            success: false,
-            error: paymentResult?.error || paymentError?.message || "Payment processing failed",
-            authorizenet_response: paymentResult?.authorizenet_response || null,
-          });
-          failedOrders.push(order.id);
-        } else {
-          edgeLogger.info('[PAYMENT_LOOP] Order payment succeeded', {
-            order_id: order.id,
-            order_number: order.order_number,
-            transaction_id: paymentResult?.transaction_id,
-            amount: order.total_amount,
-            timestamp: new Date().toISOString()
-          });
-          // Payment succeeded - send to pharmacy API if enabled
-          try {
-            const pharmacyOrderLines = allOrderLines.filter(line => 
-              line.order_id === order.id && line.assigned_pharmacy_id
-            );
-
-            // Group order lines by pharmacy_id to batch API calls
-            const linesByPharmacy = new Map<string, any[]>();
-            for (const line of pharmacyOrderLines) {
-              const pharmacyId = line.assigned_pharmacy_id;
-              if (!linesByPharmacy.has(pharmacyId)) {
-                linesByPharmacy.set(pharmacyId, []);
-              }
-              linesByPharmacy.get(pharmacyId)!.push(line);
-            }
-
-            // Send one batched call per pharmacy
-            for (const [pharmacyId, lines] of linesByPharmacy.entries()) {
-              edgeLogger.info('Sending order lines to pharmacy', { lineCount: lines.length, pharmacyId });
-              await supabaseAdmin.functions.invoke("send-order-to-pharmacy", {
-                body: {
-                  order_id: order.id,
-                  order_line_ids: lines.map(l => l.id),
-                  pharmacy_id: pharmacyId,
-                }
-              });
-            }
-          } catch (apiError) {
-            edgeLogger.error('Failed to send order to pharmacy API', apiError);
-            // Non-fatal - order was already paid and created successfully
-          }
-        }
-      } catch (error: any) {
-        // Payment exception - mark order as failed
-        await supabaseAdmin
-          .from("orders")
-          .update({ payment_status: "payment_failed", status: "pending" })
-          .eq("id", order.id);
-
-        failedPayments.push({
-          order_id: order.id,
-          order_number: order.order_number,
-          success: false,
-          error: error.message || "Payment processing failed",
-          authorizenet_response: null,
-        });
-        failedOrders.push(order.id);
-      }
-    }
-
-    // Increment discount code usage if all payments succeeded
-    if (failedPayments.length === 0 && discount_code && createdOrders.length > 0) {
+    // Increment discount code usage
+    if (discount_code && createdOrders.length > 0) {
       try {
         await supabaseAdmin.rpc('increment_discount_usage', { 
           p_code: discount_code
@@ -693,7 +714,10 @@ serve(async (req) => {
     // Cart lines already cleared above (after order creation, before payment)
 
     const executionTimeSeconds = (Date.now() - startTime) / 1000;
-    edgeLogger.info('Order placement completed', { executionTime: executionTimeSeconds, orderCount: createdOrders.length, failedPayments: failedPayments.length });
+    edgeLogger.info('[COMPLETE] Order placement completed successfully', { 
+      executionTime: executionTimeSeconds, 
+      orderCount: createdOrders.length 
+    });
 
     // Invalidate caches after successful order placement
     if (createdOrders.length > 0) {
@@ -711,7 +735,6 @@ serve(async (req) => {
     }
 
     const successCount = createdOrders.length;
-    const failedCount = failedPayments.length;
     
     // Log successful operation
     edgeLogger.logOperation({
@@ -723,7 +746,6 @@ serve(async (req) => {
       metadata: {
         cart_id,
         order_count: successCount,
-        failed_count: failedCount,
         total_amount: createdOrders.reduce((sum, o) => sum + o.total_amount, 0)
       }
     });
@@ -745,24 +767,26 @@ serve(async (req) => {
       });
     }
 
-    // Determine overall success based on failures
-    const hasFailures = failedPayments.length > 0 || failedOrders.length > 0;
-    const overallSuccess = !hasFailures;
+    // SUCCESS: All orders created and paid
+    edgeLogger.info('[COMPLETE] Order placement successful', {
+      orderCount: createdOrders.length,
+      totalAmount: createdOrders.reduce((sum, o) => sum + o.total_amount, 0),
+      executionTime: executionTimeSeconds,
+      timestamp: new Date().toISOString()
+    });
     
     return new Response(
       JSON.stringify({
-        success: overallSuccess,
+        success: true,
         created_orders: createdOrders,
-        failed_payments: failedPayments,
-        failed_orders: failedOrders,
+        failed_payments: [],
+        failed_orders: [],
         deleted_cart_line_ids: deletedCartLineIds,
         execution_time_seconds: executionTimeSeconds,
-        message: hasFailures 
-          ? `${failedPayments.length} payment(s) failed. Orders created but marked as payment_failed. Please retry payment from Orders page.`
-          : 'All orders placed and paid successfully'
+        message: 'All orders placed and paid successfully'
       }),
       {
-        status: hasFailures ? 207 : 200, // 207 = Multi-Status for partial success
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
