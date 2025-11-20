@@ -387,39 +387,47 @@ Deno.serve(async (req) => {
             timestamp: new Date().toISOString()
           });
           
-          // Update order with transaction details
-          const { error: updateError } = await supabase
-            .from('orders')
-            .update({
-              authorizenet_transaction_id: mockTransactionId,
-              authorizenet_profile_id: paymentMethod.authorizenet_profile_id,
-              payment_method_used: paymentMethod.payment_type,
-              payment_method_id: payment_method_id,
-              payment_status: 'paid',
-            })
-            .eq('id', order_id);
+          // ✅ ONLY update order if order_id exists (skip in pre-order mode)
+          if (order_id) {
+            const { error: updateError } = await supabase
+              .from('orders')
+              .update({
+                authorizenet_transaction_id: mockTransactionId,
+                authorizenet_profile_id: paymentMethod.authorizenet_profile_id,
+                payment_method_used: paymentMethod.payment_type,
+                payment_method_id: payment_method_id,
+                payment_status: 'paid',
+              })
+              .eq('id', order_id);
 
-          if (updateError) {
-            edgeLogger.error('[AUTHNET_CHARGE] Error updating order', updateError, { attempt: paymentAttempt });
-            finalError = { error: 'Unable to process payment. Please try again or contact support.' };
-            
-            if (paymentAttempt < maxAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              continue;
+            if (updateError) {
+              edgeLogger.error('[AUTHNET_CHARGE] Error updating order', updateError, { attempt: paymentAttempt });
+              finalError = { error: 'Unable to process payment. Please try again or contact support.' };
+              
+              if (paymentAttempt < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                continue;
+              }
+              
+              return new Response(
+                JSON.stringify({ 
+                  success: false, 
+                  error: finalError.error
+                }),
+                { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
             }
-            
-            return new Response(
-              JSON.stringify({ 
-                success: false, 
-                error: finalError.error
-              }),
-              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+          } else {
+            // Pre-order mode: payment authorized but no order to update yet
+            edgeLogger.info('[AUTHNET_CHARGE] Pre-order mode: payment authorized, no order update', {
+              transaction_id: mockTransactionId,
+              attempt: paymentAttempt
+            });
           }
 
           edgeLogger.info("[AUTHNET_CHARGE] Payment successful", { 
             transaction_id: mockTransactionId,
-            order_id,
+            order_id: order_id || 'pre-order',
             attempt: paymentAttempt,
             timestamp: new Date().toISOString()
           });
