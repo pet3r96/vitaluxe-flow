@@ -62,21 +62,34 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
-    if (timezone) {
-      updateData.timezone = timezone;
-    }
+    // Store general settings in practice_calendar_hours as default for all days if no daySettings
+    // This maintains backward compatibility while using the new table
+    let data = { success: true };
+    
+    if (!daySettings || daySettings.length === 0) {
+      // No per-day settings, create default for working days
+      const defaultWorkingDays = workingDays || [1, 2, 3, 4, 5];
+      
+      for (let day = 0; day <= 6; day++) {
+        const isWorking = defaultWorkingDays.includes(day);
+        const { error: calendarError } = await supabaseClient
+          .from('practice_calendar_hours')
+          .upsert({
+            practice_id: practiceId,
+            day_of_week: day,
+            start_time: isWorking ? `${String(startHour ?? 8).padStart(2, '0')}:00:00` : '09:00:00',
+            end_time: isWorking ? `${String(endHour ?? 18).padStart(2, '0')}:00:00` : '17:00:00',
+            is_closed: !isWorking,
+            timezone: timezone || 'America/New_York'
+          }, {
+            onConflict: 'practice_id,day_of_week'
+          });
 
-    const { data, error } = await supabaseClient
-      .from('appointment_settings')
-      .upsert(updateData, {
-        onConflict: 'practice_id'
-      })
-      .select()
-      .single();
-
-    if (error) {
-      edgeLogger.error('[update-appointment-settings] Error upserting settings', error);
-      throw error;
+        if (calendarError) {
+          edgeLogger.error('[update-appointment-settings] Error upserting calendar hours', calendarError);
+          throw calendarError;
+        }
+      }
     }
 
     edgeLogger.info('[update-appointment-settings] Settings updated successfully');

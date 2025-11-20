@@ -140,7 +140,6 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
           record_type: "pharmacy",
           record_data: recordData,
           patient_account_id: patientAccountId,
-          patient_id: patientAccountId,
           title: data.pharmacy_name || "Pharmacy",
           created_by_user_id: authUser.id,
         });

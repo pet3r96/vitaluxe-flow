@@ -108,7 +108,6 @@ export function EmergencyContactDialog({ open, onOpenChange, patientAccountId, c
           record_type: "emergency_contact",
           record_data: recordData,
           patient_account_id: patientAccountId,
-          patient_id: patientAccountId,
           title: data.name,
           created_by_user_id: authUser.id,
         });

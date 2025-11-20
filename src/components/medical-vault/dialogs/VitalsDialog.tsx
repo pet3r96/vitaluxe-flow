@@ -215,7 +215,6 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
           record_type: "vital_sign",
           record_data: formattedData,
           patient_account_id: patientAccountId,
-          patient_id: patientAccountId,
           title: `Vitals - ${format(new Date(), 'MMM d, yyyy')}`,
           created_by_user_id: authUser.id,
         });
