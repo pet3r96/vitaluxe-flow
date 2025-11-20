@@ -157,16 +157,17 @@ const InternalChat = () => {
     enabled: !!practiceId
   });
 
-  // Fetch unread counts for badges (always from active messages)
+  // Fetch unread counts for badges (respects the selected tab)
   const { data: badgeCounts } = useQuery({
-    queryKey: ['internal-message-badge-counts', practiceId, effectiveUserId],
+    queryKey: ['internal-message-badge-counts', practiceId, effectiveUserId, filterTab],
     queryFn: async () => {
       if (!practiceId || !effectiveUserId) {
         console.log('[InternalChat] No practice ID or user ID for badge counts');
         return { unreadCount: 0, activeCount: 0 };
       }
 
-      console.log('[InternalChat] Fetching badge counts for user:', effectiveUserId, 'practice:', practiceId);
+      const isCompletedTab = filterTab === 'completed';
+      console.log('[InternalChat] Fetching badge counts for user:', effectiveUserId, 'practice:', practiceId, 'tab:', filterTab);
 
       const { data, error } = await supabase
         .from('internal_message_recipients')
@@ -180,7 +181,7 @@ const InternalChat = () => {
         `)
         .eq('recipient_id', effectiveUserId)
         .eq('message.practice_id', practiceId)
-        .eq('message.completed', false);
+        .eq('message.completed', isCompletedTab);
 
       if (error) {
         console.error('[InternalChat] Error fetching badge counts:', error);
@@ -189,7 +190,7 @@ const InternalChat = () => {
 
       const unreadCount = data?.filter(recipient => !recipient.read_at).length || 0;
 
-      console.log('[InternalChat] Badge counts - Total recipients:', data?.length || 0, 'Unread:', unreadCount);
+      console.log('[InternalChat] Badge counts - Tab:', filterTab, 'Total recipients:', data?.length || 0, 'Unread:', unreadCount);
 
       return {
         unreadCount,
