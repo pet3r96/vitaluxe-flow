@@ -25,7 +25,7 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
     queryFn: async () => {
       if (isPatient) {
         const { data, error } = await PatientTermsAccept()
-          .select('id, accepted_at, signature_name, signed_pdf_url, terms_version')
+          .select('id, accepted_at, pdf_url, terms_version') // ✅ FIX: Use 'pdf_url' not 'signed_pdf_url', remove 'signature_name'
           .eq('user_id', userId)
           .order('accepted_at', { ascending: false })
           .limit(1)
@@ -35,7 +35,7 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
         return data;
       } else {
       const { data, error } = await UserTermsAccept()
-          .select('id, accepted_at, signature_name, signed_pdf_url, terms_version, role')
+          .select('id, accepted_at, pdf_url, terms_version, role') // ✅ FIX: Use 'pdf_url' not 'signed_pdf_url', remove 'signature_name'
           .eq('user_id', userId)
           .order('accepted_at', { ascending: false })
           .limit(1)
@@ -48,13 +48,13 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
   });
 
   const handleDownload = async () => {
-    if (!termsData?.signed_pdf_url) {
+    if (!termsData?.pdf_url) { // ✅ FIX: Use 'pdf_url' not 'signed_pdf_url'
       toast.error("No signed agreement available");
       return;
     }
 
     try {
-      const result = await getSignedUrl('terms-signed', termsData.signed_pdf_url, 300);
+      const result = await getSignedUrl('terms-signed', termsData.pdf_url, 300); // ✅ FIX: Use 'pdf_url'
       
       if (!result.success || !result.signed_url) {
         toast.error("Failed to generate download link");
@@ -147,11 +147,6 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
               <Download className="h-4 w-4" />
               Download
             </Button>
-          </div>
-          
-          <div className="space-y-1">
-            <p className="text-sm font-medium">Signed By</p>
-            <p className="text-sm text-muted-foreground">{termsData.signature_name}</p>
           </div>
           
           <div className="space-y-1">

@@ -69,38 +69,81 @@ Deno.serve(async (req) => {
       );
     }
 
-    edgeLogger.info("Charging payment for order", { order_id, amount });
+    edgeLogger.info("[AUTHNET_CHARGE] Starting payment charge", { 
+      order_id, 
+      amount, 
+      payment_method_id,
+      timestamp: new Date().toISOString()
+    });
 
-    // Fetch the order to get the doctor_id (practice owner)
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select('id, doctor_id')
-      .eq('id', order_id)
-      .single();
+    // RETRY LOGIC - Attempt payment up to 2 times
+    let paymentAttempt = 0;
+    const maxAttempts = 2;
+    let finalSuccess = false;
+    let finalTransactionId: string | null = null;
+    let finalError: any = null;
 
-    if (orderError || !order) {
-      edgeLogger.error('Order not found', orderError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Order not found. Please try again or contact support.' 
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    while (paymentAttempt < maxAttempts && !finalSuccess) {
+      paymentAttempt++;
+      
+      edgeLogger.info('[AUTHNET_CHARGE] Payment attempt starting', {
+        attempt: paymentAttempt,
+        maxAttempts,
+        order_id,
+        payment_method_id,
+        amount,
+        timestamp: new Date().toISOString()
+      });
 
-    edgeLogger.info("Order found", { order_id, practice_id: order.doctor_id });
-    edgeLogger.info("Verifying payment method", { payment_method_id });
+      try {
+        // Fetch the order to get the doctor_id (practice owner)
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .select('id, doctor_id')
+          .eq('id', order_id)
+          .single();
 
-    // Fetch payment method (no practice_id filter initially)
-    const { data: paymentMethod, error: pmError } = await supabase
-      .from('practice_payment_methods')
-      .select('*')
-      .eq('id', payment_method_id)
-      .single();
+        if (orderError || !order) {
+          edgeLogger.error('[AUTHNET_CHARGE] Order not found', orderError, { attempt: paymentAttempt });
+          finalError = { error: 'Order not found. Please try again or contact support.' };
+          
+          if (paymentAttempt < maxAttempts) {
+            edgeLogger.info('[AUTHNET_CHARGE] Retrying after order lookup failure', { 
+              attempt: paymentAttempt,
+              willRetry: true 
+            });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: finalError.error
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
 
-    if (pmError || !paymentMethod) {
-      edgeLogger.error('Payment method not found', pmError);
+        edgeLogger.info("[AUTHNET_CHARGE] Order verified", { 
+          order_id, 
+          practice_id: order.doctor_id,
+          attempt: paymentAttempt
+        });
+        edgeLogger.info("[AUTHNET_CHARGE] Verifying payment method", { 
+          payment_method_id,
+          attempt: paymentAttempt
+        });
+
+        // Fetch payment method (no practice_id filter initially)
+        const { data: paymentMethod, error: pmError } = await supabase
+          .from('practice_payment_methods')
+          .select('*')
+          .eq('id', payment_method_id)
+          .single();
+
+        if (pmError || !paymentMethod) {
+          edgeLogger.error('[AUTHNET_CHARGE] Payment method not found', pmError, { attempt: paymentAttempt });
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -213,37 +256,119 @@ Deno.serve(async (req) => {
     }
     
     if (isSuccess) {
-      const mockTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Update order with transaction details
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({
-          authorizenet_transaction_id: mockTransactionId,
-          authorizenet_profile_id: paymentMethod.authorizenet_profile_id,
-          payment_method_used: paymentMethod.payment_type,
-          payment_method_id: payment_method_id,
-          payment_status: 'paid',
-        })
-        .eq('id', order_id);
+          const mockTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          edgeLogger.info('[AUTHNET_CHARGE] Authorize.Net response received (simulated)', {
+            order_id,
+            success: true,
+            transaction_id: mockTransactionId,
+            attempt: paymentAttempt,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Update order with transaction details
+          const { error: updateError } = await supabase
+            .from('orders')
+            .update({
+              authorizenet_transaction_id: mockTransactionId,
+              authorizenet_profile_id: paymentMethod.authorizenet_profile_id,
+              payment_method_used: paymentMethod.payment_type,
+              payment_method_id: payment_method_id,
+              payment_status: 'paid',
+            })
+            .eq('id', order_id);
 
-      if (updateError) {
-        edgeLogger.error('Error updating order', updateError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Unable to process payment. Please try again or contact support.' 
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+          if (updateError) {
+            edgeLogger.error('[AUTHNET_CHARGE] Error updating order', updateError, { attempt: paymentAttempt });
+            finalError = { error: 'Unable to process payment. Please try again or contact support.' };
+            
+            if (paymentAttempt < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              continue;
+            }
+            
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                error: finalError.error
+              }),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          edgeLogger.info("[AUTHNET_CHARGE] Payment successful", { 
+            transaction_id: mockTransactionId,
+            order_id,
+            attempt: paymentAttempt,
+            timestamp: new Date().toISOString()
+          });
+
+          finalSuccess = true;
+          finalTransactionId = mockTransactionId;
+          break; // Exit retry loop on success
+        } else {
+          // Simulate payment failure
+          edgeLogger.info("[AUTHNET_CHARGE] Payment failed for order", { 
+            order_id,
+            attempt: paymentAttempt,
+            willRetry: paymentAttempt < maxAttempts
+          });
+          
+          finalError = {
+            success: false,
+            error: 'Your card was declined. Please try a different payment method or contact your bank.',
+            message: 'Payment declined',
+            authorizenet_response: {
+              messages: {
+                resultCode: 'Error',
+                message: [{ code: 'E00027', text: 'The transaction was declined.' }]
+              }
+            }
+          };
+          
+          if (paymentAttempt < maxAttempts) {
+            edgeLogger.info('[AUTHNET_CHARGE] Retrying after payment failure', { 
+              attempt: paymentAttempt,
+              maxAttempts,
+              willRetry: true 
+            });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          
+          // Only mark as declined after all retries exhausted
+          const { error: updateError } = await supabaseAdmin
+            .from('practice_payment_methods')
+            .update({ status: 'declined' })
+            .eq('id', payment_method_id);
+            
+          if (updateError) {
+            edgeLogger.error('[AUTHNET_CHARGE] Failed to mark payment method as declined', updateError);
+          }
+        }
+      } catch (attemptError) {
+        edgeLogger.error('[AUTHNET_CHARGE] Payment attempt error', attemptError, {
+          attempt: paymentAttempt,
+          maxAttempts,
+          order_id,
+          willRetry: paymentAttempt < maxAttempts
+        });
+        
+        finalError = attemptError;
+        
+        if (paymentAttempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
       }
+    }
 
-      edgeLogger.info("Payment successful", { transaction_id: mockTransactionId });
-
+    // After retry loop - return final result
+    if (finalSuccess && finalTransactionId) {
       return new Response(
         JSON.stringify({
           success: true,
-          transaction_id: mockTransactionId,
+          transaction_id: finalTransactionId,
           message: 'Payment processed successfully',
           authorizenet_response: {
             messages: {
@@ -255,30 +380,17 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
-      // Simulate payment failure
-      edgeLogger.info("Payment failed for order", { order_id });
-      
-      // Mark payment method as declined
-      const { error: updateError } = await supabaseAdmin
-        .from('practice_payment_methods')
-        .update({ status: 'declined' })
-        .eq('id', payment_method_id);
-        
-      if (updateError) {
-        edgeLogger.error('Failed to mark payment method as declined', updateError);
-      }
+      edgeLogger.error('[AUTHNET_CHARGE] All payment attempts exhausted', finalError, {
+        order_id,
+        totalAttempts: maxAttempts,
+        timestamp: new Date().toISOString()
+      });
       
       return new Response(
-        JSON.stringify({
+        JSON.stringify(finalError || {
           success: false,
-          error: 'Your card was declined. Please try a different payment method or contact your bank.',
-          message: 'Payment declined',
-          authorizenet_response: {
-            messages: {
-              resultCode: 'Error',
-              message: [{ code: 'E00027', text: 'The transaction was declined.' }]
-            }
-          }
+          error: 'Payment failed after multiple attempts. Please try again or contact support.',
+          message: 'Payment failed'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
