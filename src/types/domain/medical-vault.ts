@@ -148,7 +148,7 @@ export type VaultRecordData =
 export interface MedicalVaultRecord {
   id: string;
   patient_account_id: string;
-  record_type: 'allergy' | 'medication' | 'condition' | 'immunization' | 'surgery' | 'vitals' | 'pharmacy' | 'emergency_contact' | 'document' | 'insurance';
+  record_type: 'allergy' | 'medication' | 'condition' | 'immunization' | 'procedure' | 'vital_sign' | 'pharmacy' | 'emergency_contact' | 'document' | 'insurance';
   record_data: VaultRecordData;
   is_active: boolean;
   created_at: string;

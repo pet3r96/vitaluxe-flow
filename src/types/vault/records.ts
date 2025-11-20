@@ -133,9 +133,9 @@ export type TypedVaultRecord =
   | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'medication'; record_data: MedicationRecordData })
   | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'condition'; record_data: ConditionRecordData })
   | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'allergy'; record_data: AllergyRecordData })
-  | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'vital'; record_data: VitalRecordData })
+  | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'vital_sign'; record_data: VitalRecordData })
   | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'immunization'; record_data: ImmunizationRecordData })
-  | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'surgery'; record_data: SurgeryRecordData })
+  | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'procedure'; record_data: SurgeryRecordData })
   | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'pharmacy'; record_data: PharmacyRecordData })
   | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'emergency_contact'; record_data: EmergencyContactRecordData })
   | (Omit<VaultRow, 'record_data' | 'record_type'> & { record_type: 'document'; record_data: DocumentRecordData })
@@ -155,16 +155,16 @@ export function isAllergyRecord(record: any): record is TypedVaultRecord & { rec
   return record.record_type === 'allergy';
 }
 
-export function isVitalRecord(record: any): record is TypedVaultRecord & { record_type: 'vital' } {
-  return record.record_type === 'vital';
+export function isVitalRecord(record: any): record is TypedVaultRecord & { record_type: 'vital_sign' } {
+  return record.record_type === 'vital_sign';
 }
 
 export function isImmunizationRecord(record: any): record is TypedVaultRecord & { record_type: 'immunization' } {
   return record.record_type === 'immunization';
 }
 
-export function isSurgeryRecord(record: any): record is TypedVaultRecord & { record_type: 'surgery' } {
-  return record.record_type === 'surgery';
+export function isSurgeryRecord(record: any): record is TypedVaultRecord & { record_type: 'procedure' } {
+  return record.record_type === 'procedure';
 }
 
 export function isPharmacyRecord(record: any): record is TypedVaultRecord & { record_type: 'pharmacy' } {

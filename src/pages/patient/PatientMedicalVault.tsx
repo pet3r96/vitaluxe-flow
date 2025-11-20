@@ -117,7 +117,7 @@ export default function PatientMedicalVault() {
         .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
-        .eq("record_type", "vital")
+        .eq("record_type", "vital_sign")
         .order("date_recorded", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -151,7 +151,7 @@ export default function PatientMedicalVault() {
         .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccount.id)
-        .eq("record_type", "surgery")
+        .eq("record_type", "procedure")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];

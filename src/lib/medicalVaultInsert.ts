@@ -149,12 +149,12 @@ export type ImmunizationInsert = BaseVaultInsert & {
 };
 
 export type SurgeryInsert = BaseVaultInsert & {
-  record_type: 'surgery';
+  record_type: 'procedure';
   record_data: SurgeryRecordData;
 };
 
 export type VitalsInsert = BaseVaultInsert & {
-  record_type: 'vitals';
+  record_type: 'vital_sign';
   record_data: VitalsRecordData;
 };
 

@@ -42,7 +42,7 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
         .from("patient_medical_vault")
         .select("*")
         .eq("patient_account_id", patientAccountId)
-        .eq("record_type", "surgery")
+        .eq("record_type", "procedure")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []).map((item) => ({
