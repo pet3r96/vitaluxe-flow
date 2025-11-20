@@ -27,6 +27,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useCartCount } from "@/hooks/useCartCount";
 import { useStaffOrderingPrivileges } from "@/hooks/useStaffOrderingPrivileges";
 import { usePracticeRxPrivileges } from "@/hooks/usePracticeRxPrivileges";
+import { usePracticeShippingAddress } from "@/hooks/usePracticeShippingAddress";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
 import { extractStateWithFallback, isValidStateCode } from "@/lib/addressUtils";
@@ -102,6 +103,11 @@ export const ProductsGrid = () => {
   
   // Check RX ordering privileges
   const { canOrderRx, hasProviders, providerCount, providersWithNpiCount, isLoading: isLoadingRxPrivileges } = usePracticeRxPrivileges();
+
+  // Auto-fetch practice shipping address for providers
+  const { data: practiceAddress, isLoading: isLoadingAddress } = usePracticeShippingAddress(
+    isProvider ? effectivePracticeId : null
+  );
 
   // Use real-time hook for instant updates
   const { data: products, isLoading } = useRealtimeProducts();
@@ -838,6 +844,23 @@ export const ProductsGrid = () => {
                 </Button>
               </>
             )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Practice Shipping Address Missing Alert */}
+      {!viewingAsAdmin && isProvider && !isLoadingAddress && (!practiceAddress || !practiceAddress.shipping_address_state) && (
+        <Alert className="bg-destructive/10 border-destructive">
+          <AlertTriangle className="h-4 w-4 text-destructive" />
+          <AlertDescription className="text-sm">
+            <strong>Missing Practice Shipping Address.</strong> Please update your practice profile with a valid shipping address to enable ordering.{' '}
+            <Button
+              variant="link"
+              className="h-auto p-0 text-destructive underline font-semibold"
+              onClick={() => navigate('/profile')}
+            >
+              Update Shipping Address
+            </Button>
           </AlertDescription>
         </Alert>
       )}

@@ -2,7 +2,7 @@ import { useMemo, useRef, useEffect, memo } from "react";
 import { format, addDays, startOfWeek, isSameDay, setHours, setMinutes } from "date-fns";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
-import { detectOverlaps } from "@/lib/calendarUtils";
+import { detectOverlaps, isAfterHours } from "@/lib/calendarUtils";
 
 interface WeekViewProps {
   currentDate: Date;
@@ -32,8 +32,19 @@ export const WeekViewByTime = memo(function WeekViewByTime({
   highlightedAppointmentId,
 }: WeekViewProps) {
   const HOUR_HEIGHT = 88; // Increased from 72px for better visibility
+  
+  // Extend calendar hours by +2 to accommodate after-hours appointments
+  const latestAppointmentHour = useMemo(() => {
+    if (appointments.length === 0) return endHour;
+    
+    const latest = Math.max(...appointments.map(appt => 
+      new Date(appt.end_time).getHours()
+    ));
+    return Math.max(endHour, latest + 1);
+  }, [appointments, endHour]);
+  
   const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
-  const safeEnd = Math.max(safeStart + 1, Math.min(24, endHour ?? 20));
+  const safeEnd = Math.max(safeStart + 1, Math.min(24, latestAppointmentHour ?? 20));
   const slotPx = (HOUR_HEIGHT * slotDuration) / 60;
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -285,6 +296,7 @@ export const WeekViewByTime = memo(function WeekViewByTime({
                           onClick={() => onAppointmentClick(appointment)}
                           duration={duration}
                           isHighlighted={highlightedAppointmentId === appointment.id}
+                          isAfterHours={isAfterHours(appointment.start_time, endHour)}
                         />
                       </div>
                     </div>

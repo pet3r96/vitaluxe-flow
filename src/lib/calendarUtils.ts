@@ -1,5 +1,21 @@
 import type { CalendarAppointment, AppointmentWithLayout } from '@/types/domain/calendar';
 
+/**
+ * Check if an appointment is scheduled after practice hours
+ */
+export function isAfterHours(
+  appointmentStartTime: string | Date,
+  practiceEndHour: number
+): boolean {
+  const start = new Date(appointmentStartTime);
+  const startHour = start.getHours();
+  const startMinute = start.getMinutes();
+  const startTotalMinutes = startHour * 60 + startMinute;
+  const practiceEndMinutes = practiceEndHour * 60;
+  
+  return startTotalMinutes >= practiceEndMinutes;
+}
+
 export function doAppointmentsOverlap(
   a: CalendarAppointment,
   b: CalendarAppointment

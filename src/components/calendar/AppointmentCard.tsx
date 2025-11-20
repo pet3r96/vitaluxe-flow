@@ -19,6 +19,7 @@ interface AppointmentCardProps {
   style?: React.CSSProperties;
   duration?: number;
   isHighlighted?: boolean;
+  isAfterHours?: boolean;
 }
 
 // ENHANCED: Brighter, more saturated colors for better visibility
@@ -33,7 +34,7 @@ const statusColors: Record<string, string> = {
   no_show: 'bg-orange-400 border-orange-500 text-white dark:bg-orange-500 dark:border-orange-600',
 };
 
-export function AppointmentCard({ appointment, onClick, isDragging, style, duration, isHighlighted }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onClick, isDragging, style, duration, isHighlighted, isAfterHours }: AppointmentCardProps) {
   const statusColor = statusColors[appointment.status] || statusColors.scheduled;
   const isWalkIn = appointment.appointment_type === 'walk_in' || appointment.status === 'checked_in';
   const isPending = appointment.status === 'pending' && appointment.confirmation_type === 'pending';
@@ -65,7 +66,8 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
         statusColor,
         isDragging && "opacity-50 cursor-move",
         isWalkIn && "border-l-[6px]",
-        isHighlighted && "ring-4 ring-primary ring-offset-2 animate-pulse"
+        isHighlighted && "ring-4 ring-primary ring-offset-2 animate-pulse",
+        isAfterHours && "!border-l-amber-500 !bg-amber-400/20 dark:!bg-amber-500/20 opacity-90"
       )}
     >
       {isCompact ? (
@@ -74,6 +76,7 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
           <div className="flex items-center justify-between gap-1">
             <p className="font-bold text-xs leading-tight truncate flex-1">
               {patientName}
+              {isAfterHours && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">🌙</span>}
             </p>
             {appointment.patient_id && (
               <PatientQuickAccessButton
@@ -116,6 +119,7 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
           <div className="flex items-center gap-1">
             <p className="font-bold text-sm leading-tight truncate flex-1">
               {patientName}
+              {isAfterHours && <Badge variant="outline" className="ml-1 text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500">After Hours</Badge>}
             </p>
             {appointment.visit_type === 'video' && (
               <Video className="h-3.5 w-3.5 flex-shrink-0 opacity-90" />
@@ -156,6 +160,7 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
           <div className="flex items-center gap-1">
             <p className="font-bold text-base leading-tight truncate flex-1">
               {patientName}
+              {isAfterHours && <Badge variant="outline" className="ml-2 bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500">🌙 After Hours</Badge>}
             </p>
             {appointment.visit_type === 'video' && (
               <Video className="h-4 w-4 flex-shrink-0 opacity-90" />

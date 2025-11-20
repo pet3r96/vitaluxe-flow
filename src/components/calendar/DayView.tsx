@@ -2,7 +2,7 @@ import { useMemo, useRef, useEffect, memo } from "react";
 import { format, setHours, setMinutes, isSameDay } from "date-fns";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
-import { detectOverlaps } from "@/lib/calendarUtils";
+import { detectOverlaps, isAfterHours } from "@/lib/calendarUtils";
 import type { CalendarProvider, CalendarAppointment, BlockedTimeSlot } from '@/types/domain/calendar';
 
 interface DayViewProps {
@@ -33,8 +33,22 @@ export const DayView = memo(function DayView({
   highlightedAppointmentId,
 }: DayViewProps) {
   const HOUR_HEIGHT = 96; // Increased from 88px for even better visibility
+  
+  // Extend calendar hours by +2 to accommodate after-hours appointments
+  const latestAppointmentHour = useMemo(() => {
+    const dayAppointments = appointments.filter(appt => 
+      isSameDay(new Date(appt.start_time), currentDate)
+    );
+    if (dayAppointments.length === 0) return endHour;
+    
+    const latest = Math.max(...dayAppointments.map(appt => 
+      new Date(appt.end_time).getHours()
+    ));
+    return Math.max(endHour, latest + 1);
+  }, [appointments, currentDate, endHour]);
+  
   const safeStart = Math.max(0, Math.min(23, startHour ?? 7));
-  const safeEnd = Math.max(safeStart + 1, Math.min(24, endHour ?? 20));
+  const safeEnd = Math.max(safeStart + 1, Math.min(24, latestAppointmentHour ?? 20));
   const slotPx = (HOUR_HEIGHT * slotDuration) / 60;
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -278,6 +292,7 @@ export const DayView = memo(function DayView({
                           onClick={() => onAppointmentClick(appointment)}
                           duration={duration}
                           isHighlighted={highlightedAppointmentId === appointment.id}
+                          isAfterHours={isAfterHours(appointment.start_time, endHour)}
                         />
                       </div>
                     );
