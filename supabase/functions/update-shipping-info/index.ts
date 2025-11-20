@@ -128,10 +128,10 @@ serve(async (req: Request) => {
       throw new Error(`Unsupported status value: "${status}". Allowed values: pending, filled, shipped, denied, change_requested`);
     }
 
-    // Get current order line data including easypost_shipment_id
+    // Get current order line data
     const { data: currentLine, error: fetchError } = await supabase
       .from('order_lines')
-      .select('tracking_number, shipping_carrier, status, easypost_shipment_id')
+      .select('tracking_number, shipping_carrier, status')
       .eq('id', orderLineId)
       .single();
 
@@ -212,12 +212,7 @@ serve(async (req: Request) => {
     );
 
   } catch (error: any) {
-    // ✅ ENHANCED ERROR LOGGING: Serialize error object properly for debugging
-    edgeLogger.error('Error updating shipping info', {
-      message: error.message,
-      stack: error.stack,
-      errorDetails: JSON.stringify(error, Object.getOwnPropertyNames(error))
-    });
+    edgeLogger.error('Error updating shipping info', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
