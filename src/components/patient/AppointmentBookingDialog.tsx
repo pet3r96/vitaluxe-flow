@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Calendar, Building, Loader2, AlertCircle, CheckCircle, Info, ChevronDown } from "lucide-react";
 import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
 import { usePatientPracticeSubscription } from "@/hooks/usePatientPracticeSubscription";
+import { usePatientAccount } from "@/hooks/usePatientAccount";
 import { logger } from '@/lib/logger';
 
 interface AppointmentBookingDialogProps {
@@ -37,53 +38,10 @@ export function AppointmentBookingDialog({ open, onOpenChange, onSuccess }: Appo
   const [debugOpen, setDebugOpen] = useState(false);
   const [visitType, setVisitType] = useState<'in_person'>('in_person');
 
-  // Fetch patient's assigned practice - DIRECT QUERY (no join)
-  const { data: patientAccount } = useQuery({
-    queryKey: ["patient-account"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-      
-      // Check for active impersonation session with graceful fallback
-      let effectiveUserId = user.id;
-      try {
-        const { data: impersonationData } = await supabase.functions.invoke('get-active-impersonation');
-        effectiveUserId = impersonationData?.session?.impersonated_user_id || user.id;
-      } catch (e) {
-        logger.warn('[AppointmentBooking] get-active-impersonation failed, using real user id');
-      }
-      
-      logger.info('[AppointmentBooking] Effective user ID determined', { userId: effectiveUserId });
-      
-      // Get patient_account with practice_id only (no join)
-      const { data, error } = await supabase
-        .from("patient_accounts")
-        .select("id, practice_id")
-        .eq("user_id", effectiveUserId)
-        .maybeSingle();
-      
-      if (error) throw error;
-      
-      // If we have a practice_id, fetch practice details separately
-      if (data?.practice_id) {
-        const { data: practiceData, error: practiceError } = await supabase
-          .from("profiles")
-          .select("name, address_street, address_city, address_state, address_zip")
-          .eq("id", data.practice_id)
-          .single();
-        
-        if (!practiceError && practiceData) {
-          logger.info('[AppointmentBooking] Practice loaded', { practiceName: practiceData.name });
-          return {
-            ...data,
-            practice: practiceData
-          };
-        }
-      }
-      
-      logger.info('[AppointmentBooking] Patient account loaded', { patientId: data?.id });
-      return data;
-    },
+  // Fetch patient's assigned practice using shared hook
+  const { data: patientAccount } = usePatientAccount({ 
+    includePractice: true, 
+    staleTime: 300000 
   });
 
   // Subscription status is already checked by parent via usePatientPracticeSubscription hook

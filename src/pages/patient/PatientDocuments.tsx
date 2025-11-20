@@ -22,6 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Lock } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 interface UnifiedDocument {
   id: string;
@@ -498,7 +499,8 @@ export default function PatientDocuments() {
   };
 
   return (
-    <div className="patient-container">
+    <ErrorBoundary>
+    <div className="patient-container p-4 md:p-6 space-y-6">
       <div className="mb-8">
         <h1 className="patient-section-header">My Documents</h1>
         <p className="text-muted-foreground text-sm md:text-base">Upload and manage your medical documents</p>
@@ -825,5 +827,6 @@ export default function PatientDocuments() {
         />
       )}
     </div>
+    </ErrorBoundary>
   );
 }
