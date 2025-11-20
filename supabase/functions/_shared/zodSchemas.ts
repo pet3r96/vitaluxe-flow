@@ -6,10 +6,11 @@ import { z } from 'https://esm.sh/zod@3.22.4';
  */
 
 // Message schemas
+// ✅ PHASE 4: Fixed sender_type to match CHECK constraint ('patient' or 'practice')
 export const sendMessageSchema = z.object({
   subject: z.string().trim().min(1, 'Subject is required').max(200, 'Subject must be less than 200 characters'),
   message: z.string().trim().min(1, 'Message is required').max(10000, 'Message must be less than 10000 characters'),
-  sender_type: z.enum(['patient', 'provider'], { errorMap: () => ({ message: 'Sender type must be patient or provider' }) }),
+  sender_type: z.enum(['patient', 'practice'], { errorMap: () => ({ message: 'Sender type must be "patient" or "practice"' }) }),
   patient_id: z.string().uuid('Invalid patient ID format').optional(),
   practice_id: z.string().uuid('Invalid practice ID format').optional(),
   urgency: z.enum(['low', 'medium', 'high', 'urgent']).optional(),

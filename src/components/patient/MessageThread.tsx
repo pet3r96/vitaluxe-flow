@@ -102,17 +102,18 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
           sender_type: "patient",
           message: messageText,
           subject: firstMsg.subject,
-          thread_id: threadId,
-          parent_message_id: firstMsg.id,
+          parent_message_id: firstMsg.id, // ✅ PHASE 2: Removed thread_id (not in schema)
         },
       });
 
       if (error) throw error;
     },
     onSuccess: () => {
+      // ✅ PHASE 3: Enhanced query invalidations
+      queryClient.invalidateQueries({ queryKey: ["thread-messages", threadId] });
+      queryClient.invalidateQueries({ queryKey: ["patient-messages"] });
       toast.success("Message sent");
       setMessage("");
-      // Real-time will handle the update
       onThreadUpdate?.();
     },
     onError: (error: any) => {

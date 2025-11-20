@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/lib/logger";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CreatePatientMessageDialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function CreatePatientMessageDialog({
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
+  const queryClient = useQueryClient();
 
   // Fetch patients directly from patient_accounts table (matches Practice Calendar approach)
   const { data: patients = [], isLoading: isLoadingPatients, refetch: refetchPatients } = useQuery({
@@ -138,6 +140,12 @@ export function CreatePatientMessageDialog({
       });
 
       if (error) throw error;
+
+      // ✅ PHASE 3: Query invalidations for UI refresh
+      queryClient.invalidateQueries({ queryKey: ['patient-messages', selectedPatient.patient_account_id] });
+      queryClient.invalidateQueries({ queryKey: ['patient-chat-threads', selectedPatient.patient_account_id] });
+      queryClient.invalidateQueries({ queryKey: ['patient-messages-inbox', practiceId] });
+      queryClient.invalidateQueries({ queryKey: ['inbox-unread-threads', practiceId] });
 
       toast.success('Message sent to patient');
       onSuccess();
