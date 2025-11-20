@@ -147,24 +147,22 @@ const InternalChat = () => {
       if (!practiceId || !effectiveUserId) return { unreadCount: 0, activeCount: 0 };
 
       const { data, error } = await supabase
-        .from('internal_messages')
+        .from('internal_message_recipients')
         .select(`
           id,
-          completed,
-          recipients:internal_message_recipients!inner(
-            recipient_id,
-            read_at
+          read_at,
+          message:internal_messages!inner(
+            id,
+            completed
           )
         `)
-        .eq('practice_id', practiceId)
-        .eq('recipients.recipient_id', effectiveUserId)
-        .eq('completed', false);
+        .eq('recipient_id', effectiveUserId)
+        .eq('message.practice_id', practiceId)
+        .eq('message.completed', false);
 
       if (error) throw error;
 
-      const unreadCount = data?.filter(msg => 
-        msg.recipients?.some((r: any) => !r.read_at)
-      ).length || 0;
+      const unreadCount = data?.filter(recipient => !recipient.read_at).length || 0;
 
       return {
         unreadCount,

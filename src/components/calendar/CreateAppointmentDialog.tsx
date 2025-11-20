@@ -229,7 +229,11 @@ export function CreateAppointmentDialog({
         .select(`
           *,
           patient_accounts!inner(id, first_name, last_name, email, phone),
-          providers(id, first_name, last_name, specialty),
+          providers!inner(
+            id,
+            user_id,
+            profiles!providers_user_id_fkey(id, name, full_name, prescriber_name)
+          ),
           practice_rooms(id, name)
         `)
         .single();
