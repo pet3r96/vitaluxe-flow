@@ -120,6 +120,7 @@ export function CreatePatientMessageDialog({
       const { data, error } = await supabase.functions.invoke('send-patient-message', {
         body: {
           patient_id: selectedPatient.patient_account_id,
+          practice_id: practiceId,
           subject: subject,
           message: body,
           sender_type: 'provider'
