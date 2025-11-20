@@ -356,7 +356,7 @@ serve(async (req) => {
         .update({
           status: 'approved',
           reviewed_at: new Date().toISOString(),
-          reviewed_by: user.id,
+          reviewed_by_user_id: user.id,
           admin_notes: adminNotes
         })
         .eq('id', requestId);
@@ -385,7 +385,7 @@ serve(async (req) => {
         .update({
           status: 'rejected',
           reviewed_at: new Date().toISOString(),
-          reviewed_by: user.id,
+          reviewed_by_user_id: user.id,
           rejection_reason: rejectionReason,
           admin_notes: adminNotes
         })
