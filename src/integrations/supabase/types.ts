@@ -1289,6 +1289,39 @@ export type Database = {
           },
         ]
       }
+      notification_logs: {
+        Row: {
+          channel: string
+          created_at: string
+          error_message: string | null
+          external_id: string | null
+          id: string
+          notification_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          notification_id?: string | null
+          status: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          notification_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           channels: Json | null
@@ -1433,6 +1466,39 @@ export type Database = {
           severity?: string
           title?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      notifications_sent: {
+        Row: {
+          created_at: string
+          entity_id: string
+          event_type: string
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          recipient: string
+          sent_at: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          event_type: string
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient: string
+          sent_at?: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          event_type?: string
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient?: string
+          sent_at?: string
         }
         Relationships: []
       }
