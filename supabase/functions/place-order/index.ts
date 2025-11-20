@@ -510,6 +510,16 @@ serve(async (req) => {
         JSON.stringify({
           success: false,
           error: paymentResult?.error || paymentError?.message || "Payment declined",
+          created_orders: [],
+          failed_payments: [{
+            order_index: 0,
+            amount: totalAmount,
+            error: paymentResult?.error || paymentError?.message || "Payment declined",
+            payment_method_id: payment_method_id,
+            authorizenet_response: paymentResult?.authorizenet_response || null,
+          }],
+          failed_orders: [],
+          deleted_cart_line_ids: [],
           authorizenet_response: paymentResult?.authorizenet_response || null,
         }),
         {
