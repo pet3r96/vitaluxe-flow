@@ -8560,6 +8560,7 @@ export type Database = {
         | "document_uploaded_by_patient"
         | "patient_message_received"
         | "new_patient_message"
+        | "message_received"
       order_status:
         | "pending"
         | "filled"
@@ -8790,6 +8791,7 @@ export const Constants = {
         "document_uploaded_by_patient",
         "patient_message_received",
         "new_patient_message",
+        "message_received",
       ],
       order_status: [
         "pending",
