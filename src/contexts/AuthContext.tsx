@@ -110,56 +110,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const effectiveUserId = impersonatedUserId || user?.id || null;
   const canImpersonate = userRole === 'admin' && canImpersonateDb;
 
-  // Function to fetch 2FA enforcement setting
-  const fetchTwoFAEnforcementSetting = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('setting_value')
-        .eq('setting_key', 'two_fa_enforcement_enabled')
-        .single();
-      
-      if (error) throw error;
-      
-      // Parse the setting value (stored as string 'true'/'false')
-      const isEnabled = data.setting_value === 'true';
-      setTwoFAEnforcementEnabled(isEnabled);
-      return isEnabled;
-    } catch (error) {
-      logger.error('Error fetching 2FA enforcement setting', error);
-      // Default to enabled for security
-      setTwoFAEnforcementEnabled(true);
-      return true;
-    }
-  };
-
-  // Function to check Twilio 2FA status
+  // Function to check Twilio 2FA status - OPTIMIZED with parallel queries
   const check2FAStatus = async (userId: string) => {
     logger.info('Check 2FA status started', logger.sanitize({ userId }));
     
-    // Check if 2FA enforcement is enabled system-wide
-    const isEnforced = await fetchTwoFAEnforcementSetting();
-    
-    if (!isEnforced) {
-      logger.info('2FA enforcement disabled system-wide');
-      setRequires2FASetup(false);
-      setRequires2FAVerify(false);
-      setTwoFAStatusChecked(true);
-      return;
-    }
-    
     try {
-      // Query user_2fa_settings_decrypted for enrollment (check both Twilio and GHL)
-      // Using decrypted view to access phone_number and all status columns
-      const { data, error } = await supabase
-        .from('user_2fa_settings_decrypted')
-        .select('twilio_enabled, ghl_enabled, phone_verified, phone_number, is_enrolled, enrolled_at, phone_verified_at')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Parallelize 2FA enforcement check and user settings check
+      const [enforcementResult, userSettingsResult] = await Promise.allSettled([
+        // Check if 2FA enforcement is enabled system-wide
+        supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'two_fa_enforcement_enabled')
+          .single(),
+        
+        // Query user_2fa_settings_decrypted for enrollment (check both Twilio and GHL)
+        supabase
+          .from('user_2fa_settings_decrypted')
+          .select('twilio_enabled, ghl_enabled, phone_verified, phone_number, is_enrolled, enrolled_at, phone_verified_at')
+          .eq('user_id', userId)
+          .maybeSingle()
+      ]);
       
-      logger.info('2FA status query completed', { hasData: !!data, hasError: !!error });
-
-      if (error) throw error;
+      // Process enforcement setting
+      let isEnforced = true; // Default to enabled for security
+      if (enforcementResult.status === 'fulfilled' && !enforcementResult.value.error) {
+        isEnforced = enforcementResult.value.data?.setting_value === 'true';
+      }
+      setTwoFAEnforcementEnabled(isEnforced);
+      
+      if (!isEnforced) {
+        logger.info('2FA enforcement disabled system-wide');
+        setRequires2FASetup(false);
+        setRequires2FAVerify(false);
+        setTwoFAStatusChecked(true);
+        return;
+      }
+      
+      // Process user settings
+      const data = userSettingsResult.status === 'fulfilled' && !userSettingsResult.value.error
+        ? userSettingsResult.value.data
+        : null;
+      
+      logger.info('2FA status query completed', { hasData: !!data });
 
       // Check if any provider is enabled
       const anyProviderEnabled = !!(data?.twilio_enabled || data?.ghl_enabled);
