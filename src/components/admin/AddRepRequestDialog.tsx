@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
-import { validatePhone } from "@/lib/validators";
 import { useQueryClient } from "@tanstack/react-query";
 import type { PendingRepRequest } from '@/types/manual-schema';
 
@@ -22,7 +22,6 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
   const { user, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({ phone: "" });
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -33,16 +32,6 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate phone number
-    if (formData.phone) {
-      const phoneResult = validatePhone(formData.phone);
-      if (!phoneResult.valid) {
-        setValidationErrors({ phone: phoneResult.error || "" });
-        toast.error("Please fix validation errors before submitting");
-        return;
-      }
-    }
 
     // Security check: toplines can only add downlines
     if (effectiveRole === "topline" && formData.role !== "downline") {
@@ -162,28 +151,13 @@ export const AddRepRequestDialog = ({ open, onOpenChange, onSuccess }: AddRepReq
 
           <div className="space-y-2">
             <Label htmlFor="phone">Phone</Label>
-            <Input
+            <PhoneInput
               id="phone"
-              type="tel"
-              value={formData.phone || ""}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '');
-                setFormData({ ...formData, phone: value });
-                setValidationErrors({ ...validationErrors, phone: "" });
-              }}
-              onBlur={() => {
-                if (formData.phone) {
-                  const result = validatePhone(formData.phone);
-                  setValidationErrors({ ...validationErrors, phone: result.error || "" });
-                }
-              }}
-              placeholder="1234567890"
-              maxLength={10}
-              className={validationErrors.phone ? "border-destructive" : ""}
+              name="phone"
+              value={formData.phone}
+              onChange={(value) => setFormData({ ...formData, phone: value })}
+              placeholder="5551234567"
             />
-            {validationErrors.phone && (
-              <p className="text-sm text-destructive">{validationErrors.phone}</p>
-            )}
           </div>
 
           <div className="space-y-2">
