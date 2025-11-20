@@ -90,7 +90,6 @@ export interface PatientMessage {
   sender_type: SenderType;
   sender_id?: string;
   thread_id?: string | null;
-  urgency?: 'normal' | 'urgent';
   priority?: string;
   read_at: string | null;
   resolved: boolean;
