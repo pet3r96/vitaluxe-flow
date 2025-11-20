@@ -35,8 +35,13 @@ export function CreatePatientMessageDialog({
 
   // Fetch patients directly from patient_accounts table (matches Practice Calendar approach)
   const { data: patients = [], isLoading: isLoadingPatients, refetch: refetchPatients } = useQuery({
-    queryKey: ['practice-patients', practiceId],
+    queryKey: ['practice-patients-dialog', practiceId, open],
     queryFn: async () => {
+      if (!practiceId) {
+        logger.warn('[CreatePatientMessageDialog] No practiceId available');
+        return [];
+      }
+      
       logger.info('[CreatePatientMessageDialog] Fetching patients for practice:', { practiceId });
       
       const { data, error } = await supabase
@@ -63,18 +68,23 @@ export function CreatePatientMessageDialog({
       const transformedData = (data || []).map(pa => ({
         patient_id: pa.id,
         patient_account_id: pa.id,
-        name: `${pa.first_name} ${pa.last_name}`,
-        email: pa.email,
+        name: `${pa.first_name || ''} ${pa.last_name || ''}`.trim(),
+        email: pa.email || '',
         phone: pa.phone,
         practice_id: pa.practice_id,
         has_portal_access: pa.user_id !== null && pa.status !== 'disabled',
         has_portal_account: pa.user_id !== null
       }));
       
-      logger.info('[CreatePatientMessageDialog] Patients fetched:', { count: transformedData.length });
+      logger.info('[CreatePatientMessageDialog] Patients fetched:', { 
+        count: transformedData.length,
+        withPortal: transformedData.filter(p => p.has_portal_access).length 
+      });
       return transformedData;
     },
-    enabled: open && !!practiceId
+    enabled: open && !!practiceId,
+    staleTime: 0,
+    refetchOnMount: true
   });
 
   // Mutation to create portal account
