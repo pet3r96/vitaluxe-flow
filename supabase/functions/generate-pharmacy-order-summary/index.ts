@@ -42,7 +42,7 @@ serve(async (req) => {
       .from('orders')
       .select(`
         *,
-        profiles (
+        profiles!orders_practice_id_fkey (
           name,
           company,
           npi,
