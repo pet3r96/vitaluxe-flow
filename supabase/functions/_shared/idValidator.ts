@@ -11,6 +11,8 @@ import { edgeLogger } from './logger.ts';
  * Checks both profiles table (for practice owners/providers) and practice_staff table (for staff)
  */
 async function getUserPracticeId(supabase: any, userId: string): Promise<string | null> {
+  edgeLogger.info('[ID_VALIDATOR] Resolving practice_id', { userId });
+  
   // Check user_roles to determine role type
   const { data: userRoles } = await supabase
     .from('user_roles')
@@ -18,33 +20,54 @@ async function getUserPracticeId(supabase: any, userId: string): Promise<string 
     .eq('user_id', userId);
 
   const roles = userRoles?.map((r: { role: string }) => r.role) || [];
+  edgeLogger.info('[ID_VALIDATOR] User roles found', { userId, roles });
   
   // If user is a doctor (practice owner), their user_id IS their practice_id
   if (roles.includes('doctor')) {
+    edgeLogger.info('[ID_VALIDATOR] User is doctor, practice_id = user_id', { userId });
     return userId;
   }
   
   // If user is a provider, check providers table
   if (roles.includes('provider')) {
-    const { data: provider } = await supabase
+    const { data: provider, error } = await supabase
       .from('providers')
-      .select('practice_id')
+      .select('practice_id, active')
       .eq('user_id', userId)
       .eq('active', true)
       .maybeSingle();
+    
+    edgeLogger.info('[ID_VALIDATOR] Provider lookup', { 
+      userId, 
+      found: !!provider,
+      practice_id: provider?.practice_id,
+      active: provider?.active,
+      error: error?.message
+    });
     
     if (provider?.practice_id) return provider.practice_id;
   }
   
   // If user is staff, check practice_staff table
-  const { data: staffRecord } = await supabase
+  const { data: staffRecord, error } = await supabase
     .from('practice_staff')
-    .select('practice_id')
+    .select('practice_id, active')
     .eq('user_id', userId)
     .eq('active', true)
     .maybeSingle();
   
-  return staffRecord?.practice_id || null;
+  edgeLogger.info('[ID_VALIDATOR] Staff lookup', { 
+    userId, 
+    found: !!staffRecord,
+    practice_id: staffRecord?.practice_id,
+    active: staffRecord?.active,
+    error: error?.message
+  });
+  
+  const result = staffRecord?.practice_id || null;
+  edgeLogger.info('[ID_VALIDATOR] Final practice_id', { userId, practice_id: result });
+  
+  return result;
 }
 
 /**

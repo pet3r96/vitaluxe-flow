@@ -95,18 +95,40 @@ Deno.serve(async (req) => {
     if (patient_id) {
       edgeLogger.info('Validating patient access', { userId: user.id, patientId: patient_id });
       
-      const { valid: ownsResource, error: idError } = await validateUserOwnsResource(
+      const { valid: ownsResource, error: idError, practiceId: userPracticeId } = await validateUserOwnsResource(
         supabaseAdmin,
         user.id,
         'patient',
         patient_id
       );
+      
+      // Add patient practice_id lookup for comparison
+      const { data: patientData } = await supabaseAdmin
+        .from('patient_accounts')
+        .select('practice_id')
+        .eq('id', patient_id)
+        .maybeSingle();
+      
+      edgeLogger.info('Patient validation result', {
+        userId: user.id,
+        patientId: patient_id,
+        userPracticeId,
+        patientPracticeId: patientData?.practice_id,
+        valid: ownsResource,
+        error: idError
+      });
 
       if (!ownsResource) {
-        edgeLogger.error('Patient access validation failed', { userId: user.id, patientId: patient_id, error: idError });
-        edgeLogger.error('ID validation failed', undefined, { error: idError, userId: user.id, patientId: patient_id });
+        edgeLogger.error('Patient validation FAILED', { 
+          userId: user.id, 
+          patientId: patient_id,
+          reason: idError,
+          userPracticeId,
+          patientPracticeId: patientData?.practice_id,
+          mismatch: userPracticeId !== patientData?.practice_id
+        });
         return new Response(
-          JSON.stringify({ error: idError || 'Access denied to this patient' }),
+          JSON.stringify({ error: idError || 'Patient does not belong to your practice' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
