@@ -29,7 +29,6 @@ export function CreatePatientMessageDialog({
   const { effectiveUserId } = useAuth();
   
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  const [urgency, setUrgency] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
@@ -142,7 +141,6 @@ export function CreatePatientMessageDialog({
 
   const handleClose = () => {
     setSelectedPatient(null);
-    setUrgency('medium');
     setSubject('');
     setBody('');
     onOpenChange(false);
@@ -218,41 +216,6 @@ export function CreatePatientMessageDialog({
               )}
             </div>
 
-            {/* Priority/Urgency */}
-            <div className="space-y-2">
-              <Label>Urgency</Label>
-              <Select value={urgency} onValueChange={(v: any) => setUrgency(v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">
-                    <div className="flex items-center gap-2">
-                      <Circle className="h-4 w-4 text-gray-500" />
-                      Low
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="medium">
-                    <div className="flex items-center gap-2">
-                      <Info className="h-4 w-4 text-blue-500" />
-                      Medium
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="high">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-orange-500" />
-                      High
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="urgent">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-red-500" />
-                      Urgent
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             {/* Subject */}
             <div className="space-y-2">

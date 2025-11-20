@@ -24,7 +24,6 @@ interface PatientMessage {
   sender_type: string;
   subject: string;
   message_body: string;
-  urgency: 'low' | 'normal' | 'high' | 'urgent';
   resolved: boolean;
   resolved_by: string | null;
   resolved_at: string | null;
@@ -40,14 +39,13 @@ interface PatientMessage {
 export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabProps) => {
   const [selectedMessage, setSelectedMessage] = useState<PatientMessage | null>(null);
   const [replyText, setReplyText] = useState("");
-  const [urgencyFilter, setUrgencyFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("unresolved");
   const [resolutionNotes, setResolutionNotes] = useState("");
   const queryClient = useQueryClient();
 
   // Fetch patient messages
   const { data: messages = [], isLoading } = useQuery({
-    queryKey: ['patient-messages', practiceId, urgencyFilter, statusFilter],
+    queryKey: ['patient-messages', practiceId, statusFilter],
     queryFn: async () => {
       let query = supabase
         .from('patient_messages')
@@ -189,22 +187,6 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
     },
   });
 
-  const getUrgencyBadge = (urgency: string) => {
-    const config = {
-      urgent: { color: "bg-red-500/10 text-red-500 border-red-500/30", icon: AlertCircle },
-      high: { color: "bg-orange-500/10 text-orange-500 border-orange-500/30", icon: AlertCircle },
-      normal: { color: "bg-blue-500/10 text-blue-500 border-blue-500/30", icon: Clock },
-      low: { color: "bg-gray-500/10 text-gray-500 border-gray-500/30", icon: Clock },
-    };
-    const { color, icon: Icon } = config[urgency as keyof typeof config] || config.normal;
-    
-    return (
-      <Badge variant="outline" className={color}>
-        <Icon className="w-3 h-3 mr-1" />
-        {urgency.charAt(0).toUpperCase() + urgency.slice(1)}
-      </Badge>
-    );
-  };
 
   const handleSelectMessage = (msg: PatientMessage) => {
     setSelectedMessage(msg);
@@ -234,19 +216,6 @@ export const PatientMessagesTab = ({ practiceId, userId }: PatientMessagesTabPro
               <SelectItem value="unresolved">Unresolved</SelectItem>
               <SelectItem value="resolved">Resolved</SelectItem>
               <SelectItem value="all">All</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Urgency</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="normal">Normal</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
             </SelectContent>
           </Select>
         </div>

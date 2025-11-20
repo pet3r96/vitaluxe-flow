@@ -520,7 +520,6 @@ export interface PatientMessageWithRelations {
   subject: string;
   message_body: string;
   sender_type: 'patient' | 'practice';
-  urgency: 'normal' | 'urgent';
   resolved: boolean;
   read_at: string | null;
   created_at: string;

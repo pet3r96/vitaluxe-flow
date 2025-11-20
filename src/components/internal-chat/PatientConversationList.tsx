@@ -9,8 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
 interface PatientConversationListProps {
-  filter: 'active' | 'urgent' | 'resolved';
-  setFilter: (filter: 'active' | 'urgent' | 'resolved') => void;
+  filter: 'active' | 'resolved';
+  setFilter: (filter: 'active' | 'resolved') => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   selectedPatient: string;
@@ -23,7 +23,6 @@ interface PatientConversationListProps {
   onNewMessage: () => void;
   unreadCount: number;
   activeCount: number;
-  urgentCount: number;
 }
 
 export function PatientConversationList({
@@ -41,7 +40,6 @@ export function PatientConversationList({
   onNewMessage,
   unreadCount,
   activeCount,
-  urgentCount,
 }: PatientConversationListProps) {
   return (
     <div className="w-full lg:w-[380px] flex flex-col border-r bg-background">
@@ -63,10 +61,6 @@ export function PatientConversationList({
             <TabsTrigger value="active" className="text-xs flex-1">
               Active
               {activeCount > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">{activeCount}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="urgent" className="text-xs flex-1">
-              Urgent
-              {urgentCount > 0 && <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">{urgentCount}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="resolved" className="text-xs flex-1">
               Resolved

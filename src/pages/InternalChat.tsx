@@ -40,7 +40,7 @@ const InternalChat = () => {
 
   // Patient messages state
   const [selectedPatientMessageId, setSelectedPatientMessageId] = useState<string | null>(null);
-  const [patientFilterTab, setPatientFilterTab] = useState<'active' | 'urgent' | 'resolved'>('active');
+  const [patientFilterTab, setPatientFilterTab] = useState<'active' | 'resolved'>('active');
   const [patientSearchQuery, setPatientSearchQuery] = useState('');
   const [selectedPatientInFilter, setSelectedPatientInFilter] = useState<string>('all');
   const [createPatientDialogOpen, setCreatePatientDialogOpen] = useState(false);
@@ -518,8 +518,6 @@ const InternalChat = () => {
       // Apply filters
       if (patientFilterTab === 'active') {
         query = query.eq('resolved', false);
-      } else if (patientFilterTab === 'urgent') {
-        query = query.eq('urgency', 'urgent').eq('resolved', false);
       } else if (patientFilterTab === 'resolved') {
         query = query.eq('resolved', true);
       }
@@ -811,13 +809,10 @@ const InternalChat = () => {
   const activeCount = (messagesData || []).filter((m) => !m.completed).length;
   const urgentCount = (messagesData || []).filter((m) => m.priority === 'urgent' && !m.completed).length;
 
-  // Compute patient message counts safely
-  const patientUrgentCount = (patientMessagesData || []).filter((m) => m.urgency === 'urgent' && !m.resolved).length;
-
   // Combined totals (internal + patient)
   const combinedUnreadCount = unreadCount + (patientUnreadCount || 0);
   const combinedActiveCount = activeCount + (patientActiveCount || 0);
-  const combinedUrgentCount = urgentCount + patientUrgentCount;
+  const combinedUrgentCount = urgentCount;
 
   if (!practiceId) {
     return (
@@ -981,7 +976,6 @@ const InternalChat = () => {
                   onNewMessage={() => setCreatePatientDialogOpen(true)}
                   unreadCount={patientUnreadCount}
                   activeCount={patientActiveCount}
-                  urgentCount={patientUrgentCount}
                 />
               ) : (
                 <PatientMessageThread
@@ -1015,7 +1009,6 @@ const InternalChat = () => {
                 onNewMessage={() => setCreatePatientDialogOpen(true)}
                 unreadCount={patientUnreadCount}
                 activeCount={patientActiveCount}
-                urgentCount={patientUrgentCount}
               />
 
               <PatientMessageThread
