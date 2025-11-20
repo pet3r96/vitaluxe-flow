@@ -420,11 +420,30 @@ export default function Checkout() {
         timestamp: new Date().toISOString()
       });
       
-      toast({
-        title: "Order Placement Failed",
-        description: error?.message || "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
+      // Check if this is a payment-related error that should show retry dialog
+      const errorMessage = error?.message || '';
+      const isPaymentError = errorMessage.toLowerCase().includes('payment') ||
+                           errorMessage.toLowerCase().includes('declined') ||
+                           errorMessage.toLowerCase().includes('card') ||
+                           errorMessage.toLowerCase().includes('authorize');
+      
+      if (isPaymentError && cart?.id) {
+        // Show payment retry dialog even on edge function errors
+        setPaymentErrors([{
+          order_index: 0,
+          amount: calculateFinalTotal(),
+          error: errorMessage,
+          payment_method_id: selectedPaymentMethodId,
+        }]);
+        setFailedOrderIds([]); // No orders created yet
+        setShowPaymentRetryDialog(true);
+      } else {
+        toast({
+          title: "Order Placement Failed",
+          description: error?.message || "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
     },
     onSuccess: async (result) => {
       console.log('[CHECKOUT] Mutation success', {

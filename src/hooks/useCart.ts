@@ -74,11 +74,12 @@ export function useCart(
       }
     },
     enabled: !!userId && stableOptions.enabled,
-    staleTime: 5000, // 5 second cache to prevent excessive fetches
+    staleTime: 3000, // ✅ 3 second cache for faster updates
     gcTime: 10000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: stableOptions.refetchOnMount,
-    retry: 1, // Only retry once on failure
+    retry: 0, // ✅ Don't retry on failure - fail fast
+    placeholderData: (previousData) => previousData, // ✅ Keep showing old data during refetch
   });
 }

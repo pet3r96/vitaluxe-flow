@@ -81,6 +81,7 @@ export const useAddToCart = () => {
       logger.info('[useAddToCart] Success - refetching for accurate data');
       queryClient.invalidateQueries({ queryKey: ['cart', variables.cartOwnerId] });
       queryClient.invalidateQueries({ queryKey: ['cart-count', variables.cartOwnerId] });
-    }
+    },
+    retry: 0,  // ✅ Fail fast - don't retry failed mutations
   });
 };
