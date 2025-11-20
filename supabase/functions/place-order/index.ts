@@ -91,6 +91,34 @@ serve(async (req) => {
 
     edgeLogger.info("Place order request", { cart_id, payment_method_id });
 
+    // Verify payment method exists and is active
+    const { data: paymentMethod, error: pmError } = await supabaseAdmin
+      .from('practice_payment_methods')
+      .select('id, card_last_five, status')
+      .eq('id', payment_method_id)
+      .single();
+
+    if (pmError || !paymentMethod) {
+      edgeLogger.error('[PLACE_ORDER] Payment method not found', pmError);
+      return new Response(
+        JSON.stringify({ error: 'Payment method not found' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (paymentMethod.status !== 'active') {
+      edgeLogger.error('[PLACE_ORDER] Payment method not active', { status: paymentMethod.status });
+      return new Response(
+        JSON.stringify({ error: `Cannot charge ${paymentMethod.status} payment method` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    edgeLogger.info('[PLACE_ORDER] Payment method validated', {
+      last5: paymentMethod.card_last_five,
+      status: paymentMethod.status
+    });
+
     // Validate CSRF token using shared validator
     if (!csrf_token) {
       edgeLogger.error("CSRF token missing");

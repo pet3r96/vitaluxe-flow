@@ -188,16 +188,30 @@ export default function Checkout() {
         .select("*")
         .in("practice_id", practiceIds)
         .eq("payment_type", "credit_card")
-        .neq("status", "removed")
+        .eq("status", "active")
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       
-      // Auto-select default payment method
+      // Auto-select default payment method - prioritize active cards
       if (data && data.length > 0 && !selectedPaymentMethodId) {
-        const defaultMethod = data.find(pm => pm.is_default) || data[0];
-        setSelectedPaymentMethodId(defaultMethod.id);
+        const defaultMethod = 
+          data.find(pm => pm.is_default && pm.status === 'active') ??
+          data.find(pm => pm.status === 'active') ??
+          null;
+        
+        if (defaultMethod) {
+          console.log('[CHECKOUT] Auto-selected payment method:', {
+            id: defaultMethod.id,
+            last5: defaultMethod.card_last_five,
+            status: defaultMethod.status,
+            is_default: defaultMethod.is_default,
+          });
+          setSelectedPaymentMethodId(defaultMethod.id);
+        } else {
+          console.error('[CHECKOUT] No active payment methods available');
+        }
       }
       
       return data || [];
@@ -252,6 +266,21 @@ export default function Checkout() {
       if (!selectedPaymentMethodId) {
         throw new Error("Please select a payment method before confirming your order");
       }
+
+      // Validate selected payment method is active
+      const selectedMethod = paymentMethods?.find(pm => pm.id === selectedPaymentMethodId);
+      if (!selectedMethod) {
+        throw new Error("Selected payment method not found. Please refresh and try again.");
+      }
+      if (selectedMethod.status !== 'active') {
+        throw new Error(`Cannot use ${selectedMethod.status} payment method. Please select an active card.`);
+      }
+
+      console.log('[CHECKOUT] Using payment method:', {
+        id: selectedMethod.id,
+        last5: selectedMethod.card_last_five,
+        status: selectedMethod.status
+      });
 
       // Validate CSRF token before order placement
       const csrfToken = getCSRFToken();
@@ -1108,6 +1137,7 @@ export default function Checkout() {
           onClick={handlePlaceOrder}
           disabled={
             checkoutMutation.isPending || 
+            !selectedPaymentMethodId ||
             !agreed ||
             isLoading ||
             !isMounted ||

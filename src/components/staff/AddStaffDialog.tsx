@@ -11,7 +11,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { validatePhone } from "@/lib/validators";
 import { getCurrentCSRFToken } from "@/lib/csrf";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -36,6 +36,7 @@ const STAFF_ROLE_TYPES = [
 
 export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: AddStaffDialogProps) => {
   const { effectiveUserId, effectiveRole } = useAuth();
+  const queryClient = useQueryClient();
   const { isSubscribed, status, trialEndsAt, currentPeriodEnd } = useSubscription();
   const [loading, setLoading] = useState(false);
   const [selectedPractice, setSelectedPractice] = useState(practiceId || "");
@@ -180,6 +181,13 @@ export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: Ad
       }
 
       resetForm();
+      
+      // Invalidate all staff-related queries for instant UI update
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      queryClient.invalidateQueries({ queryKey: ['practice-staff', targetPracticeId] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['practice-team'] });
+      
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
