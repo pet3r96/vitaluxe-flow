@@ -194,30 +194,30 @@ export default function Checkout() {
 
       if (error) throw error;
       
-      // Auto-select default payment method - prioritize active cards
-      if (data && data.length > 0 && !selectedPaymentMethodId) {
-        const defaultMethod = 
-          data.find(pm => pm.is_default && pm.status === 'active') ??
-          data.find(pm => pm.status === 'active') ??
-          null;
-        
-        if (defaultMethod) {
-          console.log('[CHECKOUT] Auto-selected payment method:', {
-            id: defaultMethod.id,
-            last5: defaultMethod.card_last_five,
-            status: defaultMethod.status,
-            is_default: defaultMethod.is_default,
-          });
-          setSelectedPaymentMethodId(defaultMethod.id);
-        } else {
-          console.error('[CHECKOUT] No active payment methods available');
-        }
-      }
-      
       return data || [];
     },
     enabled: !!practiceIdForPayment && !!user,
   });
+
+  // Auto-select payment method when data loads
+  useEffect(() => {
+    if (paymentMethods && paymentMethods.length > 0 && !selectedPaymentMethodId) {
+      const defaultMethod = 
+        paymentMethods.find(pm => pm.is_default && pm.status === 'active') ??
+        paymentMethods.find(pm => pm.status === 'active') ??
+        null;
+      
+      if (defaultMethod) {
+        console.log('[CHECKOUT] Auto-selected payment method:', {
+          id: defaultMethod.id,
+          last5: defaultMethod.card_last_five,
+          status: defaultMethod.status,
+          is_default: defaultMethod.is_default,
+        });
+        setSelectedPaymentMethodId(defaultMethod.id);
+      }
+    }
+  }, [paymentMethods, selectedPaymentMethodId]);
 
   // Fetch checkout attestation
   const { data: checkoutAttestation } = useQuery<CheckoutAttestationData | null>({
