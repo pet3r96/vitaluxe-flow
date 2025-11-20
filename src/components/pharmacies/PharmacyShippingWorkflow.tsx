@@ -341,9 +341,10 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
             trackingNumber: trackingNumber.trim(),
             carrier: normalizedCarrier,
             status: 'shipped',
+            csrf_token: csrfToken,  // ✅ Add to body as schema requires
           },
           headers: {
-            'x-csrf-token': csrfToken
+            'x-csrf-token': csrfToken  // Keep in headers too for compatibility
           }
         });
 

@@ -24,8 +24,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let order_id: string | undefined;  // ✅ Declare at function scope for catch block access
+
   try {
-    const { order_id } = await req.json();
+    const body = await req.json();
+    order_id = body.order_id;
 
     if (!order_id) {
       throw new Error('order_id is required');
@@ -332,9 +335,17 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    edgeLogger.error('Error generating pharmacy order summary', error);
+    edgeLogger.error('Error generating pharmacy order summary', {
+      message: error.message,
+      stack: error.stack,
+      order_id: order_id,  // ✅ Add context with correct variable name
+      errorDetails: JSON.stringify(error, null, 2)  // ✅ Full error object
+    });
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || 'Unknown error generating PDF',
+        details: error.stack  // ✅ Include stack trace for debugging
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
