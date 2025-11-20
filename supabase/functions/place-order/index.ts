@@ -130,6 +130,31 @@ serve(async (req) => {
       edgeLogger.info('Impersonation detected', { adminUserId: user.id, effectiveUserId });
     }
 
+    // Get user's effective practice and role info EARLY (before cart ownership check)
+    const { data: userProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("role, practice_id, provider_id")
+      .eq("id", user.id)
+      .single();
+
+    const isStaffAccount = userProfile?.role === "staff";
+    const isProviderAccount = userProfile?.role === "provider";
+
+    // Get practice ID for staff via practice_staff table if needed
+    let effectivePracticeId = (isStaffAccount || isProviderAccount) ? userProfile.practice_id : user.id;
+
+    if (isStaffAccount && !effectivePracticeId) {
+      const { data: staffRecord } = await supabaseAdmin
+        .from('practice_staff')
+        .select('practice_id')
+        .eq('user_id', user.id)
+        .eq('active', true)
+        .single();
+      effectivePracticeId = staffRecord?.practice_id || user.id;
+    }
+
+    const doctorIdForOrder = effectivePracticeId;
+
     // Fetch cart with all lines using admin client (bypasses RLS for efficiency)
     const { data: cart, error: cartError } = await supabaseAdmin
       .from("cart")
@@ -168,11 +193,16 @@ serve(async (req) => {
       );
     }
 
-    // Verify cart belongs to effective user (accounts for impersonation)
-    if (cart.doctor_id !== effectiveUserId) {
+    // Verify cart belongs to effective user (accounts for impersonation AND staff users)
+    // Compare cart ownership with practice ID for staff users
+    const cartOwnerIdToCheck = effectivePracticeId || effectiveUserId;
+    if (cart.doctor_id !== cartOwnerIdToCheck) {
       edgeLogger.error("Cart ownership mismatch", undefined, {
         cartDoctorId: cart.doctor_id,
+        cartOwnerIdToCheck,
         effectiveUserId,
+        effectivePracticeId,
+        isStaffAccount,
         isImpersonating: !!impersonationSession
       });
       return new Response(
@@ -180,18 +210,6 @@ serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Get user's effective practice and role info
-    const { data: userProfile } = await supabaseAdmin
-      .from("profiles")
-      .select("role, practice_id, provider_id")
-      .eq("id", user.id)
-      .single();
-
-    const isStaffAccount = userProfile?.role === "staff";
-    const isProviderAccount = userProfile?.role === "provider";
-    const effectivePracticeId = (isStaffAccount || isProviderAccount) ? userProfile.practice_id : user.id;
-    const doctorIdForOrder = effectivePracticeId;
 
     // Get staff provider record if staff account
     let staffProviderRecord = null;
@@ -299,6 +317,7 @@ serve(async (req) => {
       const orderIndex = ordersToCreate.length;
       ordersToCreate.push({
         doctor_id: doctorIdForOrder,
+        practice_id: effectivePracticeId,
         total_amount: totalAfterDiscount,
         subtotal_before_discount: lineTotal,
         discount_code: discount_code || null,
@@ -357,6 +376,7 @@ serve(async (req) => {
       const orderIndex = ordersToCreate.length;
       ordersToCreate.push({
         doctor_id: doctorIdForOrder,
+        practice_id: effectivePracticeId,
         total_amount: totalAfterDiscount,
         subtotal_before_discount: lineTotal,
         discount_code: discount_code || null,

@@ -195,7 +195,8 @@ export async function validateUserOwnsResource(
         const userPracticeId = await getUserPracticeId(supabase, userId);
         
         // Check if user is the practice this order belongs to
-        if (userPracticeId && order.practice_id === userPracticeId) {
+        // Check BOTH practice_id and doctor_id since orders use doctor_id as primary practice reference
+        if (userPracticeId && (order.practice_id === userPracticeId || order.doctor_id === userPracticeId)) {
           return { valid: true, practiceId: userPracticeId };
         }
         
