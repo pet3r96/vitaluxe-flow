@@ -131,21 +131,51 @@ serve(async (req) => {
       });
 
       if (createUserError) {
-        // Check if this is an "already registered" error (be flexible with error format)
+        // Check if this is an "already registered" error with comprehensive error detection
         const errorMsg = createUserError.message?.toLowerCase() || '';
+        const errorCode = createUserError.code;
         const isAlreadyRegistered = 
-          (createUserError.status === 422 || createUserError.status === 400) &&
-          (errorMsg.includes('already registered') || errorMsg.includes('already been registered') || errorMsg.includes('user with this email'));
+          // Check multiple status codes that Supabase Auth might use
+          ([422, 400, 409, 23505].includes(createUserError.status) || errorCode === '23505') &&
+          (
+            errorMsg.includes('already registered') || 
+            errorMsg.includes('already been registered') || 
+            errorMsg.includes('user with this email') ||
+            (errorMsg.includes('email') && errorMsg.includes('exist')) ||
+            (errorMsg.includes('email') && errorMsg.includes('unique')) ||
+            errorMsg.includes('duplicate')
+          );
         
         if (isAlreadyRegistered) {
-          edgeLogger.info('User already exists, fetching ID via SQL helper', { emailDomain: pendingRep.email?.split('@')[1] });
+          edgeLogger.info('User already exists, fetching ID via SQL helper with retry', { emailDomain: pendingRep.email?.split('@')[1] });
           
-          // Fetch existing user ID using SQL helper
-          const { data: existingUserIdData, error: fetchIdError } = await supabaseAdmin
-            .rpc('get_auth_user_id_by_email', { p_email: pendingRep.email });
+          // Fetch existing user ID using SQL helper with retry logic
+          let existingUserIdData, fetchIdError;
+          for (let attempt = 1; attempt <= 2; attempt++) {
+            const result = await supabaseAdmin
+              .rpc('get_auth_user_id_by_email', { p_email: pendingRep.email });
+            
+            existingUserIdData = result.data;
+            fetchIdError = result.error;
+            
+            if (!fetchIdError && existingUserIdData) {
+              break; // Success
+            }
+            
+            if (attempt === 1) {
+              edgeLogger.warn('Failed to fetch user ID on first attempt, retrying...', { 
+                emailDomain: pendingRep.email?.split('@')[1],
+                error: fetchIdError?.message 
+              });
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+            }
+          }
           
           if (fetchIdError || !existingUserIdData) {
-            edgeLogger.error('Failed to fetch existing user ID', fetchIdError);
+            edgeLogger.error('Failed to fetch existing user ID after retry', fetchIdError, {
+              emailDomain: pendingRep.email?.split('@')[1],
+              attempts: 2
+            });
             throw new Error('User already registered but could not resolve account. Please contact administrator.');
           }
           
@@ -156,8 +186,13 @@ serve(async (req) => {
           edgeLogger.info('Resolved existing user ID, ensuring records complete', { userId: newUserId });
           
         } else {
-          // Non-recoverable error
-          edgeLogger.error('Failed to create user (non-recoverable)', createUserError);
+          // Non-recoverable error - log detailed info for debugging
+          edgeLogger.error('Failed to create user (non-recoverable)', createUserError, {
+            errorStatus: createUserError.status,
+            errorCode: createUserError.code,
+            errorMessage: createUserError.message,
+            emailDomain: pendingRep.email?.split('@')[1]
+          });
           throw new Error(`Failed to create user: ${createUserError.message}`);
         }
       } else if (newUser?.user) {

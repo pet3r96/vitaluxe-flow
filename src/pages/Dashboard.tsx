@@ -421,6 +421,7 @@ const Dashboard = () => {
                 <TabbedAppointmentsWidget />
                 <WaitingRoomWidget />
                 <TabbedCommunicationsWidget />
+                <FollowUpRemindersWidget />
                 <RecentActivityWidget />
               </div>
             ) : null}
