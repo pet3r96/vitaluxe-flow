@@ -160,15 +160,17 @@ export class VaultQueryBuilder {
     patientAccountId: string,
     data: MedicationRecordData
   ): Promise<TypedVaultRecord> {
+    const practiceId = await getPracticeId(patientAccountId);
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .insert({
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
+        practice_id: practiceId,
         record_type: "medication",
         title: data.medication_name || "Medication",
         record_data: toJsonSafe(data),
-      })
+      } as any)
       .select()
       .single();
     
@@ -180,15 +182,17 @@ export class VaultQueryBuilder {
     patientAccountId: string,
     data: ConditionRecordData
   ): Promise<TypedVaultRecord> {
+    const practiceId = await getPracticeId(patientAccountId);
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .insert({
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
+        practice_id: practiceId,
         record_type: "condition",
         title: data.condition_name || "Condition",
         record_data: toJsonSafe(data),
-      })
+      } as any)
       .select()
       .single();
     
@@ -200,15 +204,17 @@ export class VaultQueryBuilder {
     patientAccountId: string,
     data: AllergyRecordData
   ): Promise<TypedVaultRecord> {
+    const practiceId = await getPracticeId(patientAccountId);
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .insert({
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
+        practice_id: practiceId,
         record_type: "allergy",
         title: data.allergen_name || "Allergy",
         record_data: toJsonSafe(data),
-      })
+      } as any)
       .select()
       .single();
     
@@ -220,15 +226,17 @@ export class VaultQueryBuilder {
     patientAccountId: string,
     data: VitalRecordData
   ): Promise<TypedVaultRecord> {
+    const practiceId = await getPracticeId(patientAccountId);
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .insert({
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
+        practice_id: practiceId,
         record_type: "vital",
         title: data.vital_type || "Vital Sign",
         record_data: toJsonSafe(data),
-      })
+      } as any)
       .select()
       .single();
     
@@ -240,15 +248,17 @@ export class VaultQueryBuilder {
     patientAccountId: string,
     data: ImmunizationRecordData
   ): Promise<TypedVaultRecord> {
+    const practiceId = await getPracticeId(patientAccountId);
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .insert({
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
+        practice_id: practiceId,
         record_type: "immunization",
         title: data.vaccine || data.vaccine_name || "Immunization",
         record_data: toJsonSafe(data),
-      })
+      } as any)
       .select()
       .single();
     
@@ -260,15 +270,17 @@ export class VaultQueryBuilder {
     patientAccountId: string,
     data: SurgeryRecordData
   ): Promise<TypedVaultRecord> {
+    const practiceId = await getPracticeId(patientAccountId);
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .insert({
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
+        practice_id: practiceId,
         record_type: "surgery",
         title: data.procedure || data.surgery_type || "Surgery",
         record_data: toJsonSafe(data),
-      })
+      } as any)
       .select()
       .single();
     
@@ -280,15 +292,17 @@ export class VaultQueryBuilder {
     patientAccountId: string,
     data: PharmacyRecordData
   ): Promise<TypedVaultRecord> {
+    const practiceId = await getPracticeId(patientAccountId);
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .insert({
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
+        practice_id: practiceId,
         record_type: "pharmacy",
-        title: data.name || data.pharmacy_name || "Pharmacy",
+        title: data.pharmacy_name || data.name || "Pharmacy",
         record_data: toJsonSafe(data),
-      })
+      } as any)
       .select()
       .single();
     
@@ -300,15 +314,17 @@ export class VaultQueryBuilder {
     patientAccountId: string,
     data: EmergencyContactRecordData
   ): Promise<TypedVaultRecord> {
+    const practiceId = await getPracticeId(patientAccountId);
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .insert({
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
+        practice_id: practiceId,
         record_type: "emergency_contact",
         title: data.name || "Emergency Contact",
         record_data: toJsonSafe(data),
-      })
+      } as any)
       .select()
       .single();
     
@@ -320,15 +336,17 @@ export class VaultQueryBuilder {
     patientAccountId: string,
     data: DocumentRecordData
   ): Promise<TypedVaultRecord> {
+    const practiceId = await getPracticeId(patientAccountId);
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .insert({
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
+        practice_id: practiceId,
         record_type: "document",
-        title: data.title || "Document",
+        title: data.document_name || "Document",
         record_data: toJsonSafe(data),
-      })
+      } as any)
       .select()
       .single();
     
@@ -340,15 +358,17 @@ export class VaultQueryBuilder {
     patientAccountId: string,
     data: NoteRecordData
   ): Promise<TypedVaultRecord> {
+    const practiceId = await getPracticeId(patientAccountId);
     const { data: result, error } = await supabase
       .from("patient_medical_vault")
       .insert({
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
+        practice_id: practiceId,
         record_type: "note",
-        title: "Note",
+        title: "Clinical Note",
         record_data: toJsonSafe(data),
-      })
+      } as any)
       .select()
       .single();
     
