@@ -237,33 +237,35 @@ serve(async (req) => {
       if (threadError) {
         edgeLogger.error('Error creating message thread', threadError);
       } else {
-        // Add pharmacy and practice as recipients to internal messaging system
-        const recipients = [
-          { message_id: thread.id, recipient_id: user.id },
-          { message_id: thread.id, recipient_id: order.profiles.id }
-        ];
-
-        const { error: recipientsError } = await supabase
-          .from('internal_message_recipients')
-          .insert(recipients);
-
-        if (recipientsError) {
-          edgeLogger.error('Error adding message recipients', recipientsError);
-        }
-
-        // Create initial message
+        // ✅ FIX: Create message first, then use message.id for recipients
         const messageBody = `Order has been placed on hold by ${pharmacy.name}.\n\nReason: ${reason}\n${notes ? `\nNotes: ${notes}` : ''}`;
         
-        const { error: messageError } = await supabase
+        const { data: messageData, error: messageError } = await supabase
           .from('messages')
           .insert({
             thread_id: thread.id,
             sender_id: user.id,
             body: messageBody,
-          });
+          })
+          .select('id')
+          .single();
 
         if (messageError) {
           edgeLogger.error('Error creating initial message', messageError);
+        } else if (messageData) {
+          // Add pharmacy and practice as recipients using the actual message ID
+          const recipients = [
+            { message_id: messageData.id, recipient_id: user.id },
+            { message_id: messageData.id, recipient_id: order.profiles.id }
+          ];
+
+          const { error: recipientsError } = await supabase
+            .from('internal_message_recipients')
+            .insert(recipients);
+
+          if (recipientsError) {
+            edgeLogger.error('Error adding message recipients', recipientsError);
+          }
         }
       }
 
