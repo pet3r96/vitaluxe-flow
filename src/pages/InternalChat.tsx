@@ -113,8 +113,7 @@ const InternalChat = () => {
             id,
             recipient_id,
             read_at
-          ),
-          replies:internal_message_replies(id)
+          )
         `)
         .eq('practice_id', practiceId)
         .order('created_at', { ascending: false });
