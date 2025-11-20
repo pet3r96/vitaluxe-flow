@@ -18,6 +18,22 @@ import type {
  * Type-safe vault query builder
  * Wraps Supabase queries with proper typing for patient_medical_vault records
  */
+
+// Helper to fetch practice_id for a patient account
+async function getPracticeId(patientAccountId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from("patient_accounts")
+    .select("practice_id")
+    .eq("id", patientAccountId)
+    .single();
+  
+  if (error || !data?.practice_id) {
+    throw new Error(`Could not fetch practice_id for patient ${patientAccountId}`);
+  }
+  
+  return data.practice_id;
+}
+
 export class VaultQueryBuilder {
   static async getMedications(patientAccountId: string): Promise<TypedVaultRecord[]> {
     const { data, error } = await supabase

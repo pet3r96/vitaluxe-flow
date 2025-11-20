@@ -24,11 +24,21 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      // Get practice_id from patient_accounts
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientId)
+        .single();
+      
+      if (!patientAccount) throw new Error("Patient account not found");
+      
       const { error } = await supabase
         .from("patient_medical_vault")
         .insert({
           patient_account_id: patientId,
           patient_id: patientId,
+          practice_id: patientAccount.practice_id,
           record_type: 'note',
           title: `${type.charAt(0).toUpperCase() + type.slice(1)} Note`,
           record_data: {
@@ -55,11 +65,22 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
   // Update vital signs
   const updateVital = useCallback(async (vital: any) => {
     try {
+      // Get practice_id from patient_accounts
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientId)
+        .single();
+      
+      if (!patientAccount) throw new Error("Patient account not found");
+      
       // JUSTIFIED: patient_medical_vault table uses JSONB record_data field
       const { error } = await supabase
         .from("patient_medical_vault")
         .insert([{
           patient_account_id: patientId,
+          patient_id: patientId,
+          practice_id: patientAccount.practice_id,
           record_type: "vital",
           title: "Vital Signs",
           record_data: vital,
@@ -95,12 +116,22 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
         .from("patient-documents")
         .getPublicUrl(filePath);
 
+      // Get practice_id from patient_accounts
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientId)
+        .single();
+      
+      if (!patientAccount) throw new Error("Patient account not found");
+
       // Save document record
       const { error } = await supabase
         .from("patient_medical_vault")
         .insert({
           patient_account_id: patientId,
           patient_id: patientId,
+          practice_id: patientAccount.practice_id,
           record_type: 'document',
           title: file.name,
           record_data: {

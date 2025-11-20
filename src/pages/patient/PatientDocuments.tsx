@@ -245,9 +245,19 @@ export default function PatientDocuments() {
 
       if (uploadError) throw uploadError;
 
+      // Get practice_id from patient account
+      const { data: practiceData } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientAccount.id)
+        .single();
+      
+      if (!practiceData?.practice_id) throw new Error("Could not determine practice_id");
+
       const { error: dbError } = await supabase.from("patient_medical_vault").insert({
         patient_id: patientAccount.id,
         patient_account_id: patientAccount.id,
+        practice_id: practiceData.practice_id,
         record_type: 'document',
         title: documentName?.trim() || file.name,
         record_data: {

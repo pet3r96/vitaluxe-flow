@@ -964,7 +964,11 @@ export type Database = {
           changed_by: string | null
           created_at: string | null
           id: string
+          new_values: Json | null
           patient_account_id: string
+          performed_by_user_id: string | null
+          practice_id: string
+          previous_values: Json | null
           record_id: string | null
         }
         Insert: {
@@ -973,7 +977,11 @@ export type Database = {
           changed_by?: string | null
           created_at?: string | null
           id?: string
+          new_values?: Json | null
           patient_account_id: string
+          performed_by_user_id?: string | null
+          practice_id: string
+          previous_values?: Json | null
           record_id?: string | null
         }
         Update: {
@@ -982,10 +990,28 @@ export type Database = {
           changed_by?: string | null
           created_at?: string | null
           id?: string
+          new_values?: Json | null
           patient_account_id?: string
+          performed_by_user_id?: string | null
+          practice_id?: string
+          previous_values?: Json | null
           record_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_medical_vault_audit_logs_practice"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_medical_vault_audit_logs_practice"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "medical_vault_audit_logs_changed_by_fkey"
             columns: ["changed_by"]
@@ -2691,6 +2717,7 @@ export type Database = {
       }
       patient_medical_vault: {
         Row: {
+          active: boolean
           allergies: Json | null
           attachments: Json | null
           blood_type: string | null
@@ -2704,6 +2731,7 @@ export type Database = {
           metadata: Json | null
           patient_account_id: string | null
           patient_id: string
+          practice_id: string
           primary_value: string | null
           provider_id: string | null
           record_data: Json | null
@@ -2713,6 +2741,7 @@ export type Database = {
           vital_signs: Json | null
         }
         Insert: {
+          active?: boolean
           allergies?: Json | null
           attachments?: Json | null
           blood_type?: string | null
@@ -2726,6 +2755,7 @@ export type Database = {
           metadata?: Json | null
           patient_account_id?: string | null
           patient_id: string
+          practice_id: string
           primary_value?: string | null
           provider_id?: string | null
           record_data?: Json | null
@@ -2735,6 +2765,7 @@ export type Database = {
           vital_signs?: Json | null
         }
         Update: {
+          active?: boolean
           allergies?: Json | null
           attachments?: Json | null
           blood_type?: string | null
@@ -2748,6 +2779,7 @@ export type Database = {
           metadata?: Json | null
           patient_account_id?: string | null
           patient_id?: string
+          practice_id?: string
           primary_value?: string | null
           provider_id?: string | null
           record_data?: Json | null
@@ -2757,6 +2789,20 @@ export type Database = {
           vital_signs?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_patient_medical_vault_practice"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_patient_medical_vault_practice"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patient_medical_vault_patient_account_id_fkey"
             columns: ["patient_account_id"]

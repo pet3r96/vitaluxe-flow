@@ -72,11 +72,14 @@ export const useAuditLogs = (patientAccountId?: string) => {
 // Utility function to log changes
 export const logMedicalVaultChange = async (params: {
   patientAccountId: string;
-  actionType: 'created' | 'updated' | 'deleted' | 'pre_intake_completed';
+  practiceId?: string; // Optional - will be fetched if not provided
+  actionType: 'created' | 'updated' | 'deleted' | 'soft_deleted' | 'restored' | 'pre_intake_completed';
   // New DB fields  
   recordId?: string;
   changedBy?: string;
   changeSummary?: string;
+  previousValues?: any;
+  newValues?: any;
   // Legacy fields (ignored in DB insert, kept for backward compatibility)
   entityType?: string;
   entityId?: string;
@@ -87,14 +90,34 @@ export const logMedicalVaultChange = async (params: {
   newData?: any;
 }) => {
   try {
+    // Auto-fetch practice_id if not provided
+    let practiceId = params.practiceId;
+    if (!practiceId) {
+      const { data } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", params.patientAccountId)
+        .single();
+      practiceId = data?.practice_id;
+    }
+    
+    if (!practiceId) {
+      logger.error("Cannot log vault change: practice_id not found", { patientAccountId: params.patientAccountId });
+      return;
+    }
+    
     const { error } = await supabase
       .from("medical_vault_audit_logs")
       .insert({
         patient_account_id: params.patientAccountId,
+        practice_id: practiceId,
         action_type: params.actionType,
         record_id: params.recordId || params.entityId,
         changed_by: params.changedBy || params.changedByUserId,
+        performed_by_user_id: params.changedBy || params.changedByUserId,
         change_summary: params.changeSummary,
+        previous_values: params.previousValues || params.oldData,
+        new_values: params.newValues || params.newData,
       });
 
     if (error) {

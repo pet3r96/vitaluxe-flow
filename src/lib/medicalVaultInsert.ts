@@ -114,6 +114,7 @@ interface BaseVaultInsert {
   is_active?: boolean;
   title: string;
   patient_id: string;
+  practice_id?: string; // Optional - will be auto-fetched if not provided
 }
 
 // Type-specific insert payloads
@@ -176,6 +177,21 @@ export async function insertVaultRecord(
   supabase: SupabaseClient<Database>,
   payload: VaultInsert
 ) {
+  // Auto-fetch practice_id if not provided
+  let practiceId = payload.practice_id;
+  if (!practiceId) {
+    const { data } = await supabase
+      .from("patient_accounts")
+      .select("practice_id")
+      .eq("id", payload.patient_account_id)
+      .single();
+    practiceId = data?.practice_id;
+  }
+  
+  if (!practiceId) {
+    throw new Error("Could not determine practice_id for vault record");
+  }
+  
   const { error } = await supabase
     .from('patient_medical_vault')
     .insert({
@@ -183,6 +199,7 @@ export async function insertVaultRecord(
       record_data: payload.record_data as any, // Cast only at DB boundary
       patient_account_id: payload.patient_account_id,
       patient_id: payload.patient_id,
+      practice_id: practiceId,
       title: payload.title,
       created_by_user_id: payload.created_by_user_id,
       created_by_role: payload.created_by_role,
