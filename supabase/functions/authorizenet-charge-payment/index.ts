@@ -59,16 +59,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate CSRF token
+    // Validate CSRF token with detailed diagnostics
     const csrfToken = req.headers.get('x-csrf-token') || undefined;
+    edgeLogger.info('[AUTHNET_CHARGE] CSRF validation starting', { 
+      userId: user.id, 
+      hasCsrfToken: !!csrfToken,
+      csrfTokenLength: csrfToken?.length || 0
+    });
+    
     const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
+    
     if (!valid) {
-      edgeLogger.error('CSRF validation failed', undefined, { error: csrfError });
+      edgeLogger.error('[AUTHNET_CHARGE] CSRF validation failed', undefined, { 
+        userId: user.id,
+        error: csrfError,
+        hasCsrfToken: !!csrfToken,
+        tokenProvided: csrfToken ? 'yes (redacted)' : 'no'
+      });
       return new Response(
-        JSON.stringify({ error: csrfError || 'Invalid CSRF token' }),
+        JSON.stringify({ 
+          success: false,
+          error: csrfError || 'Invalid CSRF token' 
+        }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    edgeLogger.info('[AUTHNET_CHARGE] CSRF validation passed', { userId: user.id });
 
     edgeLogger.info("[AUTHNET_CHARGE] Starting payment charge", { 
       order_id: order_id || 'none (pre-order)', 
@@ -105,34 +122,66 @@ Deno.serve(async (req) => {
       });
 
       try {
-        // Fetch the order to get the doctor_id (practice owner)
-        const { data: order, error: orderError } = await supabase
-          .from('orders')
-          .select('id, doctor_id')
-          .eq('id', order_id)
-          .single();
+        // Handle pre-order mode (order_id may not exist yet)
+        let order = null;
+        
+        if (order_id) {
+          // Fetch the order to get the doctor_id (practice owner)
+          const { data: orderData, error: orderError } = await supabase
+            .from('orders')
+            .select('id, doctor_id')
+            .eq('id', order_id)
+            .single();
 
-        if (orderError || !order) {
-          edgeLogger.error('[AUTHNET_CHARGE] Order not found', orderError, { attempt: paymentAttempt });
-          finalError = { error: 'Order not found. Please try again or contact support.' };
-          
-          if (paymentAttempt < maxAttempts) {
-            edgeLogger.info('[AUTHNET_CHARGE] Retrying after order lookup failure', { 
+          if (orderError || !orderData) {
+            edgeLogger.error('[AUTHNET_CHARGE] Order not found', orderError, { 
               attempt: paymentAttempt,
-              willRetry: true 
+              order_id 
             });
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            continue;
+            finalError = { 
+              success: false,
+              error: 'Order not found. Please try again or contact support.' 
+            };
+            
+            if (paymentAttempt < maxAttempts) {
+              edgeLogger.info('[AUTHNET_CHARGE] Retrying after order lookup failure', { 
+                attempt: paymentAttempt,
+                willRetry: true 
+              });
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              continue;
+            }
+            
+            break; // Exit loop, fall through to final response
           }
           
-          break; // Exit loop, fall through to final response
+          order = orderData;
+        } else {
+          // Pre-order mode: use doctor_id parameter
+          edgeLogger.info('[AUTHNET_CHARGE] Pre-order mode (no order_id yet)', {
+            doctor_id: doctorIdForAuth,
+            attempt: paymentAttempt
+          });
+          
+          if (!doctorIdForAuth) {
+            edgeLogger.error('[AUTHNET_CHARGE] No order_id or doctor_id provided', undefined, {
+              attempt: paymentAttempt
+            });
+            finalError = { 
+              success: false,
+              error: 'Invalid request: missing order_id or doctor_id' 
+            };
+            break;
+          }
         }
 
-        edgeLogger.info("[AUTHNET_CHARGE] Order verified", { 
-          order_id, 
-          practice_id: order.doctor_id,
-          attempt: paymentAttempt
-        });
+        if (order) {
+          edgeLogger.info("[AUTHNET_CHARGE] Order verified", { 
+            order_id, 
+            practice_id: order.doctor_id,
+            attempt: paymentAttempt
+          });
+        }
         edgeLogger.info("[AUTHNET_CHARGE] Verifying payment method", { 
           payment_method_id,
           attempt: paymentAttempt
@@ -146,8 +195,14 @@ Deno.serve(async (req) => {
           .single();
 
         if (pmError || !paymentMethod) {
-          edgeLogger.error('[AUTHNET_CHARGE] Payment method not found', pmError, { attempt: paymentAttempt });
-          finalError = { error: 'Payment method not found. Please select a valid payment method or add a new one.' };
+          edgeLogger.error('[AUTHNET_CHARGE] Payment method not found', pmError, { 
+            attempt: paymentAttempt,
+            payment_method_id
+          });
+          finalError = { 
+            success: false,
+            error: 'Payment method not found. Please select a valid payment method or add a new one.' 
+          };
           
           if (paymentAttempt < maxAttempts) {
             edgeLogger.info('[AUTHNET_CHARGE] Retrying after payment method lookup failure', { 
@@ -169,7 +224,11 @@ Deno.serve(async (req) => {
       status: paymentMethod.status,
       practice_id: paymentMethod.practice_id
     });
-    edgeLogger.info('Authorization check starting', { currentUserId, order_doctor_id: order.doctor_id, payment_method_practice_id: paymentMethod.practice_id });
+    edgeLogger.info('Authorization check starting', { 
+      currentUserId, 
+      order_doctor_id: order?.doctor_id || doctorIdForAuth, 
+      payment_method_practice_id: paymentMethod.practice_id 
+    });
 
     // Verify ownership: payment method must belong to the practice or the user must be authorized
     let isAuthorized = false;
@@ -216,7 +275,7 @@ Deno.serve(async (req) => {
     if (!isAuthorized) {
       edgeLogger.error('Payment authorization failed', undefined, {
         payment_method_practice_id: paymentMethod.practice_id,
-        order_doctor_id: order.doctor_id,
+        order_doctor_id: order?.doctor_id || doctorIdForAuth,
         current_user_id: currentUserId
       });
       return new Response(
@@ -393,12 +452,15 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString()
       });
       
+      // Ensure error response always has success: false
+      const errorResponse = {
+        success: false,
+        error: finalError?.error || 'Payment failed after multiple attempts. Please try again or contact support.',
+        message: finalError?.message || 'Payment failed'
+      };
+      
       return new Response(
-        JSON.stringify(finalError || {
-          success: false,
-          error: 'Payment failed after multiple attempts. Please try again or contact support.',
-          message: 'Payment failed'
-        }),
+        JSON.stringify(errorResponse),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
