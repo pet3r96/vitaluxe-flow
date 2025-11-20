@@ -498,6 +498,7 @@ serve(async (req) => {
           doctor_id: doctorIdForOrder, // For authorization check
         },
         headers: {
+          'Authorization': req.headers.get('Authorization') || '',  // ✅ Pass user's auth header
           'x-csrf-token': csrf_token
         }
       }
