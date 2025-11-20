@@ -34,25 +34,46 @@ export function CreatePatientMessageDialog({
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
 
-  // Fetch patients with portal status using view
+  // Fetch patients directly from patient_accounts table (matches Practice Calendar approach)
   const { data: patients = [], isLoading: isLoadingPatients, refetch: refetchPatients } = useQuery({
     queryKey: ['practice-patients', practiceId],
     queryFn: async () => {
       logger.info('[CreatePatientMessageDialog] Fetching patients for practice:', { practiceId });
       
       const { data, error } = await supabase
-        .from('v_patients_with_portal_status')
-        .select('patient_id, name, email, phone, has_portal_access, patient_account_id, practice_id')
+        .from('patient_accounts')
+        .select(`
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          practice_id,
+          user_id,
+          status
+        `)
         .eq('practice_id', practiceId)
-        .order('name');
+        .order('last_name');
       
       if (error) {
         logger.error('[CreatePatientMessageDialog] Error fetching patients:', error);
         throw error;
       }
       
-      logger.info('[CreatePatientMessageDialog] Patients fetched:', { count: data?.length || 0 });
-      return data || [];
+      // Transform data to match component expectations
+      const transformedData = (data || []).map(pa => ({
+        patient_id: pa.id,
+        patient_account_id: pa.id,
+        name: `${pa.first_name} ${pa.last_name}`,
+        email: pa.email,
+        phone: pa.phone,
+        practice_id: pa.practice_id,
+        has_portal_access: pa.user_id !== null && pa.status !== 'disabled',
+        has_portal_account: pa.user_id !== null
+      }));
+      
+      logger.info('[CreatePatientMessageDialog] Patients fetched:', { count: transformedData.length });
+      return transformedData;
     },
     enabled: open && !!practiceId
   });
