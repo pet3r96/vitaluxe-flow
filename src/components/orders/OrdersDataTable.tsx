@@ -139,7 +139,10 @@ export const OrdersDataTable = () => {
         }
         // Admin: scopeId remains null (no filter)
         
-        if (!session?.access_token) {
+        // Fetch fresh session directly from Supabase (not from potentially stale React state)
+        const { data: { session: freshSession } } = await supabase.auth.getSession();
+
+        if (!freshSession?.access_token) {
           toast({
             title: "Authentication Required",
             description: "No active session. Please log in again.",
@@ -158,7 +161,7 @@ export const OrdersDataTable = () => {
             search: searchQuery || undefined
           },
           headers: {
-            Authorization: `Bearer ${session.access_token}`
+            Authorization: `Bearer ${freshSession.access_token}`
           }
         });
         
@@ -232,7 +235,12 @@ export const OrdersDataTable = () => {
       refetchOnReconnect: true, // Refetch when reconnecting
       retry: 3, // Retry up to 3 times
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-      enabled: !!effectiveRole && !!effectiveUserId && !!user && !!session?.access_token, // Only run when auth data is available
+      enabled: !!effectiveRole && 
+               !!effectiveUserId && 
+               !!user && 
+               !!session?.access_token &&
+               // For staff, also require practiceId to be loaded before firing query
+               (effectiveRole !== 'staff' || !!effectivePracticeId), // Only run when auth data is available
     },
     // Real-time event handler to immediately refetch on INSERT
     (payload) => {

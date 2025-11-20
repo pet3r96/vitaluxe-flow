@@ -477,10 +477,10 @@ export default function Checkout() {
                     user_id: patientWithUser.user_id,
                     notification_type: 'order_placed',
                     title: 'Order Confirmed',
-                    message: `Your order #${order.order_number} has been placed and will be shipped to you. Total: $${orderTotal.toFixed(2)}`,
+                    message: `Your order #${order.id.slice(0, 8).toUpperCase()} has been placed and will be shipped to you. Total: $${orderTotal.toFixed(2)}`,
                     metadata: {
                       orderId: order.id,
-                      orderNumber: order.order_number,
+                      orderNumber: order.id.slice(0, 8).toUpperCase(),
                       orderTotal: orderTotal.toFixed(2)
                     }
                   }
@@ -554,7 +554,7 @@ export default function Checkout() {
           navigate("/orders", {
             state: {
               orderPlaced: true,
-              orderNumber: createdOrders[0]?.order_number,
+              orderNumber: createdOrders[0]?.id?.slice(0, 8)?.toUpperCase(),
               orderCount: createdOrders.length,
               _forceRefresh: Date.now()
             }
