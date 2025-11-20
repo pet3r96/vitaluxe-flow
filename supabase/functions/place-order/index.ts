@@ -94,7 +94,7 @@ serve(async (req) => {
     // Verify payment method exists and is active
     const { data: paymentMethod, error: pmError } = await supabaseAdmin
       .from('practice_payment_methods')
-      .select('id, card_last_five, status')
+      .select('id, card_last_five, card_type, status')
       .eq('id', payment_method_id)
       .single();
 
@@ -105,6 +105,15 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // PHASE 6: Payment method verification logging
+    edgeLogger.info('[PLACE_ORDER] Payment method verified', {
+      payment_method_id: paymentMethod.id,
+      card_last_five: paymentMethod.card_last_five,
+      card_type: paymentMethod.card_type,
+      status: paymentMethod.status,
+      practice_id_match: 'will_check_later'
+    });
 
     if (paymentMethod.status !== 'active') {
       edgeLogger.error('[PLACE_ORDER] Payment method not active', { status: paymentMethod.status });
@@ -470,6 +479,16 @@ serve(async (req) => {
     // Process payment for the total cart amount
     const totalAmount = ordersToCreate.reduce((sum, o) => sum + o.total_amount, 0);
     
+    // PHASE 2: Diagnostic logging before payment invocation
+    edgeLogger.info('[PLACE_ORDER] Invoking authorizenet-charge-payment', {
+      payment_method_id,
+      card_last_five: paymentMethod.card_last_five,
+      amount: totalAmount,
+      doctor_id: doctorIdForOrder,
+      has_csrf_token: !!csrf_token,
+      timestamp: new Date().toISOString()
+    });
+    
     const { data: paymentResult, error: paymentError } = await supabaseAdmin.functions.invoke(
       "authorizenet-charge-payment",
       {
@@ -483,6 +502,15 @@ serve(async (req) => {
         }
       }
     );
+
+    // PHASE 2: Diagnostic logging after payment invocation
+    edgeLogger.info('[PLACE_ORDER] Payment invocation completed', {
+      success: paymentResult?.success,
+      has_error: !!paymentError,
+      error_message: paymentError?.message || paymentResult?.error,
+      transaction_id: paymentResult?.transaction_id,
+      timestamp: new Date().toISOString()
+    });
 
     // If payment failed, return error immediately WITHOUT creating orders
     if (paymentError || !paymentResult?.success) {

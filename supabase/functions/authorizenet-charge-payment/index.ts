@@ -59,35 +59,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate CSRF token with detailed diagnostics
-    const csrfToken = req.headers.get('x-csrf-token') || undefined;
-    edgeLogger.info('[AUTHNET_CHARGE] CSRF validation starting', { 
-      userId: user.id, 
-      hasCsrfToken: !!csrfToken,
-      csrfTokenLength: csrfToken?.length || 0
-    });
-    
-    const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
-    
-    if (!valid) {
-      edgeLogger.error('[AUTHNET_CHARGE] CSRF validation failed', undefined, { 
-        userId: user.id,
-        error: csrfError,
-        hasCsrfToken: !!csrfToken,
-        tokenProvided: csrfToken ? 'yes (redacted)' : 'no'
-      });
-      return new Response(
-        JSON.stringify({ 
-          success: false,
-          error: csrfError || 'Invalid CSRF token' 
-        }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    edgeLogger.info('[AUTHNET_CHARGE] CSRF validation passed', { userId: user.id });
-
-    edgeLogger.info("[AUTHNET_CHARGE] Starting payment charge", { 
+    edgeLogger.info("[AUTHNET_CHARGE] Starting payment charge", {
       order_id: order_id || 'none (pre-order)', 
       doctor_id: doctor_id || 'none',
       amount, 
@@ -152,6 +124,40 @@ Deno.serve(async (req) => {
       });
 
       try {
+        // PHASE 3: CSRF validation inside retry loop
+        const csrfToken = req.headers.get('x-csrf-token') || undefined;
+        edgeLogger.info('[AUTHNET_CHARGE] CSRF validation starting', { 
+          userId: user.id, 
+          attempt: paymentAttempt,
+          hasCsrfToken: !!csrfToken,
+          csrfTokenLength: csrfToken?.length || 0
+        });
+        
+        const { valid, error: csrfError } = await validateCSRFToken(supabase, user.id, csrfToken);
+        
+        if (!valid) {
+          edgeLogger.error('[AUTHNET_CHARGE] CSRF validation failed', undefined, { 
+            userId: user.id,
+            attempt: paymentAttempt,
+            error: csrfError,
+            hasCsrfToken: !!csrfToken,
+            tokenProvided: csrfToken ? 'yes (redacted)' : 'no'
+          });
+          
+          finalError = {
+            success: false,
+            error: csrfError || 'Invalid CSRF token'
+          };
+          
+          // CSRF failures are NOT retryable
+          break;
+        }
+        
+        edgeLogger.info('[AUTHNET_CHARGE] CSRF validation passed', { 
+          userId: user.id,
+          attempt: paymentAttempt 
+        });
+
         // Handle pre-order mode (order_id may not exist yet)
         let order = null;
         
@@ -317,17 +323,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // PHASE 5: Early return protection logging
+    edgeLogger.info('[AUTHNET_CHARGE] Authorization passed - proceeding to test card logic', {
+      payment_method_id,
+      card_last_five: paymentMethod.card_last_five,
+      amount,
+      attempt: paymentAttempt,
+      timestamp: new Date().toISOString()
+    });
+
+    // PHASE 4: Enhanced test card logic with detailed logging
     // TODO: Replace with actual Authorize.Net API call when keys are available
     // Test card support for reliable testing:
     // - Cards ending in 0000 = always succeed
     // - Cards ending in 1111 = always fail (declined)
     // - Other cards = 90% success for realistic testing
     const lastFour = paymentMethod.card_last_five?.slice(-4) || '';
-    edgeLogger.info('Card number analysis', {
+    edgeLogger.info('[AUTHNET_CHARGE] Test card analysis', {
       card_last_five_raw: paymentMethod.card_last_five,
       lastFour_extracted: lastFour,
+      lastFourLength: lastFour.length,
       willMatch0000: lastFour === '0000',
-      willMatch1111: lastFour === '1111'
+      willMatch1111: lastFour === '1111',
+      isTestMode: lastFour === '0000' || lastFour === '1111',
+      attempt: paymentAttempt
     });
     
     let isSuccess;
@@ -335,11 +354,17 @@ Deno.serve(async (req) => {
     if (lastFour === '0000') {
       // Test card - guaranteed success
       isSuccess = true;
-      edgeLogger.info('Test card detected (0000) - forcing success');
+      edgeLogger.info('[AUTHNET_CHARGE] ✅ Test card detected (0000) - SIMULATING SUCCESS', {
+        attempt: paymentAttempt,
+        bypass_authorizenet: true
+      });
     } else if (lastFour === '1111') {
       // Test card - guaranteed failure
       isSuccess = false;
-      edgeLogger.info('Test card detected (1111) - forcing failure');
+      edgeLogger.info('[AUTHNET_CHARGE] ❌ Test card detected (1111) - SIMULATING FAILURE', {
+        attempt: paymentAttempt,
+        bypass_authorizenet: true
+      });
     } else {
       // Real cards - simulate 90% success rate
       const randomValue = Math.random();
