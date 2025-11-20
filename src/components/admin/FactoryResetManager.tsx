@@ -213,7 +213,12 @@ export const FactoryResetManager = () => {
       
       // Invalidate orders-related queries to refresh the UI
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return key === 'orders' && query.queryKey.length >= 2;
+          }
+        }),
         queryClient.invalidateQueries({ queryKey: ["order-lines"] }),
         queryClient.invalidateQueries({ queryKey: ["order-profits"] }),
         queryClient.invalidateQueries({ queryKey: ["commissions"] }),

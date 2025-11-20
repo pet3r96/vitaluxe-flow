@@ -126,7 +126,12 @@ export const PaymentRetryDialog = ({
           title: "Payment Successful", 
           description: "All orders have been paid successfully." 
         });
-        queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return key === 'orders' && query.queryKey.length >= 2;
+          }
+        });
         onOpenChange(false);
         navigate('/orders');
       } else {
