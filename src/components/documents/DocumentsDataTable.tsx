@@ -119,7 +119,7 @@ export function DocumentsDataTable({ documents, isLoading }: DocumentsDataTableP
       });
 
       if (error) throw error;
-      if (!data?.signedUrl) throw new Error('No signed URL returned');
+      if (!data?.url) throw new Error('No signed URL returned');
 
       // Fetch as blob and download (HIPAA compliant - no new tabs)
       const response = await fetch(data.url);
