@@ -156,11 +156,12 @@ export const generatePrescriptionPdfSchema = z.object({
 
 export const pharmacyOrderActionSchema = z.object({
   order_id: z.string().uuid('Invalid order ID'),
-  action: z.enum(['accept', 'reject', 'ship', 'deliver'], {
-    errorMap: () => ({ message: 'Invalid action' })
+  action: z.enum(['hold', 'decline'], {  // ✅ Match actual function
+    errorMap: () => ({ message: 'Invalid action. Must be "hold" or "decline"' })
   }),
-  tracking_number: z.string().trim().max(100).optional(),
+  reason: z.string().trim().min(1, 'Reason is required').max(200),  // ✅ Add required field
   notes: z.string().trim().max(500).optional(),
+  target_user_id: z.string().uuid().optional(),  // ✅ For admin impersonation
 });
 
 export const routeOrderToPharmacySchema = z.object({
@@ -221,7 +222,7 @@ export const cancelOrderSchema = z.object({
 export const updateShippingSchema = z.object({
   orderLineId: z.string().uuid('Invalid order line ID format'),
   trackingNumber: z.string().max(100).optional(),
-  carrier: z.enum(['USPS', 'UPS', 'FedEx', 'DHL', 'Other']).optional(),
+  carrier: z.enum(['USPS', 'UPS', 'FedEx', 'DHL', 'Other', 'usps', 'ups', 'fedex', 'dhl', 'other']).optional(),  // ✅ Accept both cases
   status: z.enum(['pending', 'processing', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'exception', 'returned']).optional(),
   estimatedDelivery: z.string().optional(),
   csrf_token: z.string().min(1, 'CSRF token required')

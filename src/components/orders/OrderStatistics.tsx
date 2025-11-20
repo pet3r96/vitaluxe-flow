@@ -7,8 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 export const OrderStatistics = () => {
   const { effectiveRole, effectiveUserId, effectivePracticeId } = useAuth();
 
-  // Only show order statistics for admin, reps, and pharmacy
-  if (!["admin", "topline", "downline", "pharmacy"].includes(effectiveRole)) {
+  // Only show order statistics for admin and reps (not pharmacy)
+  if (!["admin", "topline", "downline"].includes(effectiveRole)) {  // ✅ Remove pharmacy
     return null;
   }
 

@@ -63,7 +63,7 @@ export const PharmacyShippingManager = () => {
           )
         `)
         .eq('assigned_pharmacy_id', pharmacyData.id)
-        .neq('orders.payment_status', 'payment_failed')
+        .eq('orders.payment_status', 'paid')  // ✅ Only show paid orders
         .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
         .limit(100); // Increased from 50 with time filter
