@@ -386,11 +386,14 @@ export function CreateSupportTicketDialog() {
               name="subject"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Subject</FormLabel>
+                  <FormLabel>Subject (minimum 5 characters)</FormLabel>
                   <FormControl>
                     <Input placeholder="Brief description of the issue" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-destructive font-medium" />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {field.value?.length || 0} / 5 characters minimum
+                  </p>
                 </FormItem>
               )}
             />
@@ -400,7 +403,7 @@ export function CreateSupportTicketDialog() {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Description (minimum 10 characters)</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Detailed description of your support request"
@@ -408,7 +411,10 @@ export function CreateSupportTicketDialog() {
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-destructive font-medium" />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {field.value?.length || 0} / 10 characters minimum
+                  </p>
                 </FormItem>
               )}
             />
