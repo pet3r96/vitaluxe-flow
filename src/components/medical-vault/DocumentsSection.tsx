@@ -177,13 +177,11 @@ const { data: documents = [], isLoading } = useQuery({
       });
 
       if (error) throw error;
-
-      const signedUrl = data.signedUrl || data.signed_url;
-      if (!signedUrl) throw new Error('No signed URL returned');
+      if (!data?.url) throw new Error('No signed URL returned');
 
       // Download file
       const link = document.createElement('a');
-      link.href = signedUrl;
+      link.href = data.url;
       link.download = doc.document_name;
       document.body.appendChild(link);
       link.click();
