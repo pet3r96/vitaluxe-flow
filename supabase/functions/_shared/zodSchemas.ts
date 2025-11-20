@@ -132,7 +132,7 @@ export const joinVideoSessionSchema = z.object({
 export const createPatientPortalAccountSchema = z.object({
   email: z.string().trim().email('Invalid email address').max(255),
   patient_name: z.string().trim().min(1, 'Patient name is required').max(200),
-  phone: z.string().trim().regex(/^\+?1?\d{10,15}$/, 'Invalid phone number'),
+  phone: z.string().trim().regex(/^\d{10}$/, 'Phone must be exactly 10 digits'),
   date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   practice_id: z.string().uuid('Invalid practice ID'),
 });
@@ -182,11 +182,11 @@ export const resetPasswordWithTokenSchema = z.object({
 export const verify2FASchema = z.object({
   attemptId: z.string().uuid('Invalid attempt ID'),
   code: z.string().regex(/^\d{6}$/, 'Code must be 6 digits'),
-  phoneNumber: z.string().trim().regex(/^\+?1?\d{10,15}$/, 'Invalid phone number'),
+  phoneNumber: z.string().trim().regex(/^\d{10}$/, 'Phone must be exactly 10 digits'),
 });
 
 export const send2FASchema = z.object({
-  phone: z.string().trim().regex(/^\+?1?\d{10,15}$/, 'Invalid phone number'),
+  phone: z.string().trim().regex(/^\d{10}$/, 'Phone must be exactly 10 digits'),
   userId: z.string().uuid('Invalid user ID').optional(),
 });
 

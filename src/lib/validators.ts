@@ -91,8 +91,8 @@ export function validateEmail(email: string | null | undefined): { valid: boolea
 }
 
 /**
- * Format phone number for display
- * Converts 10-digit string to (XXX) XXX-XXXX format
+ * Display phone number as raw 10 digits
+ * Phone numbers are stored as exactly 10 digits (e.g., "5618868226")
  */
 export function formatPhoneNumber(phone: string | null | undefined): string {
   if (!phone) return "-";
@@ -100,9 +100,6 @@ export function formatPhoneNumber(phone: string | null | undefined): string {
   // Remove all non-digit characters
   const cleaned = phone.replace(/\D/g, "");
   
-  // Return as-is if not 10 digits
-  if (cleaned.length !== 10) return phone;
-  
-  // Format as (XXX) XXX-XXXX
-  return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  // Return raw 10 digits only
+  return cleaned.length === 10 ? cleaned : phone;
 }

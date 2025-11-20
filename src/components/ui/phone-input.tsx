@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { validatePhone, formatPhoneNumber } from "@/lib/validators";
+import { validatePhone } from "@/lib/validators";
 import { cn } from "@/lib/utils";
 
 interface PhoneInputProps {
@@ -20,16 +20,16 @@ export function PhoneInput({
   required,
   id,
   name,
-  placeholder = "(555) 123-4567"
+  placeholder = "5551234567"
 }: PhoneInputProps) {
   const [displayValue, setDisplayValue] = useState("");
   const [error, setError] = useState<string | undefined>();
   const [touched, setTouched] = useState(false);
 
-  // Initialize display value from prop
+  // Initialize display value from prop - display raw 10 digits
   useEffect(() => {
     if (value) {
-      setDisplayValue(formatPhoneNumber(value));
+      setDisplayValue(value);
     } else {
       setDisplayValue("");
     }
@@ -56,9 +56,8 @@ export function PhoneInput({
     
     if (validation.valid) {
       setError(undefined);
-      // Format the display
-      const formatted = formatPhoneNumber(value);
-      setDisplayValue(formatted);
+      // Display raw 10 digits only
+      setDisplayValue(value);
     } else {
       setError(validation.error);
       setDisplayValue(value);
