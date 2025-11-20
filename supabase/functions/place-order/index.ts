@@ -385,7 +385,7 @@ serve(async (req) => {
         price_before_discount: line.price_snapshot,
         discount_percentage: discount_percentage || 0,
         discount_amount: ((line.price_snapshot - discountedPrice) * (line.quantity || 1)) || 0,
-        shipping_speed: line.shipping_speed,
+        shipping_speed: line.shipping_speed || 'ground', // Default to 'ground' if not specified
         shipping_cost: lineShippingCost,
         patient_id: line.patient_id,
         patient_name: line.patient_name,
@@ -452,7 +452,12 @@ serve(async (req) => {
       .insert(allOrderLines);
 
     if (orderLinesError) {
-      edgeLogger.error('Failed to create order lines', orderLinesError);
+      edgeLogger.error('Failed to create order lines', {
+        error: orderLinesError,
+        orderLineCount: allOrderLines.length,
+        sampleOrderLine: allOrderLines[0],
+        missingShippingSpeeds: allOrderLines.filter(line => !line.shipping_speed).length
+      });
       
       // Rollback: Delete the orders we just created
       if (createdOrders.length > 0) {
