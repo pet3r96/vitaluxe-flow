@@ -160,7 +160,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       if (targetPatientAccountId) {
         const { data, error } = await supabase
           .from('patient_accounts')
-          .select('*')
+          .select('id, first_name, last_name, date_of_birth, gender_at_birth, address_street, address_city, address_state, address_zip, practice_id, email, phone, intake_completed_at, emergency_contact_name, emergency_contact_phone, address, city, state, zip_code')
           .eq('id', targetPatientAccountId)
           .single();
         
@@ -171,7 +171,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       // Patient mode: Fetch by user_id (original behavior)
       const { data, error } = await supabase
         .from('patient_accounts')
-        .select('*')
+        .select('id, first_name, last_name, date_of_birth, gender_at_birth, address_street, address_city, address_state, address_zip, practice_id, email, phone, intake_completed_at, emergency_contact_name, emergency_contact_phone, address, city, state, zip_code')
         .eq('user_id', effectiveUserId)
         .single();
       
@@ -188,7 +188,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
         .from('patient_medical_vault')
-        .select('*')
+        .select('id, patient_account_id, record_type, record_data, is_active, created_at, updated_at')
         .eq('patient_account_id', patientAccount.id)
         .eq('record_type', 'medication');
       if (error) throw error;
@@ -203,7 +203,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
         .from('patient_medical_vault')
-        .select('*')
+        .select('id, patient_account_id, record_type, record_data, is_active, created_at, updated_at')
         .eq('patient_account_id', patientAccount.id)
         .eq('record_type', 'allergy');
       if (error) throw error;
@@ -218,7 +218,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
         .from('patient_medical_vault')
-        .select('*')
+        .select('id, patient_account_id, record_type, record_data, is_active, created_at, updated_at')
         .eq('patient_account_id', patientAccount.id)
         .eq('record_type', 'condition');
       if (error) throw error;
@@ -233,7 +233,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
         .from('patient_medical_vault')
-        .select('*')
+        .select('id, patient_account_id, record_type, record_data, is_active, created_at, updated_at')
         .eq('patient_account_id', patientAccount.id)
         .eq('record_type', 'procedure');
       if (error) throw error;
@@ -248,7 +248,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
       if (!patientAccount?.id) return [];
       const { data, error } = await supabase
         .from('patient_medical_vault')
-        .select('*')
+        .select('id, patient_account_id, record_type, record_data, is_active, created_at, updated_at')
         .eq('patient_account_id', patientAccount.id)
         .eq('record_type', 'immunization');
       if (error) throw error;

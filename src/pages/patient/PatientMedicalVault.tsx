@@ -25,6 +25,7 @@ import { AuditLogDialog } from "@/components/medical-vault/dialogs/AuditLogDialo
 import { generateAuditReportPDF } from "@/lib/auditReportPdfGenerator";
 import { logger } from "@/lib/logger";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default function PatientMedicalVault() {
   usePagePerformance('PatientMedicalVault');
@@ -334,7 +335,8 @@ export default function PatientMedicalVault() {
 
 
   return (
-    <div className="patient-container">
+    <ErrorBoundary>
+      <div className="patient-container">
       {/* Audit Log Dialog */}
       <AuditLogDialog
         open={auditDialogOpen}
@@ -495,5 +497,6 @@ export default function PatientMedicalVault() {
         />
       </div>
     </div>
+    </ErrorBoundary>
   );
 }

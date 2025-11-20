@@ -14,6 +14,7 @@ import { PatientVirtualWaitingRoom } from "@/components/video/PatientVirtualWait
 import { usePatientDashboard } from "@/hooks/usePatientDashboard";
 import { logger } from "@/lib/logger";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 
 export default function PatientDashboard() {
@@ -72,7 +73,8 @@ export default function PatientDashboard() {
   }
 
   return (
-    <div className="patient-container w-full max-w-7xl mx-auto">
+    <ErrorBoundary>
+      <div className="patient-container w-full max-w-7xl mx-auto">
       {/* Welcome Header */}
       <div className="text-center mb-6 sm:mb-8 px-2">
         <h1 className="patient-section-header">
@@ -568,5 +570,6 @@ export default function PatientDashboard() {
         </Card>
       </div>
     </div>
+    </ErrorBoundary>
   );
 }

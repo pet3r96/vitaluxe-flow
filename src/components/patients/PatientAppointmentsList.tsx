@@ -31,7 +31,7 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
       // Simplified query without FK traversals that might fail
       const { data, error } = await supabase
         .from('patient_appointments')
-        .select('*')
+        .select('id, patient_id, practice_id, provider_id, start_time, end_time, status, notes, visit_type, room_id, appointment_type, reason_for_visit, service_description, created_at, updated_at')
         .eq('patient_id', patientId)
         .eq('practice_id', practiceId)
         .order('start_time', { ascending: false });
@@ -51,10 +51,10 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
       
       const [providersData, roomsData, patientData] = await Promise.all([
         providerIds.length > 0 
-          ? supabase.from('providers').select('id, user_id').in('id', providerIds)
+          ? supabase.from('providers').select('id, user_id, practice_id, specialty, license_number, created_at').in('id', providerIds)
           : Promise.resolve({ data: [] }),
         roomIds.length > 0
-          ? supabase.from('practice_rooms').select('id, name').in('id', roomIds)
+          ? supabase.from('practice_rooms').select('id, name, practice_id, capacity, location').in('id', roomIds)
           : Promise.resolve({ data: [] }),
         supabase.from('patient_accounts').select('id, first_name, last_name, phone, email').eq('id', patientId).maybeSingle()
       ]);
@@ -91,7 +91,7 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
     queryFn: async () => {
       const { data, error } = await supabase
         .from('providers')
-        .select('*')
+        .select('id, practice_id, user_id, first_name, last_name, specialty, license_number')
         .eq('practice_id', practiceId);
       if (error) throw error;
       return data;
@@ -103,7 +103,7 @@ export const PatientAppointmentsList = ({ patientId, practiceId }: PatientAppoin
     queryFn: async () => {
       const { data, error } = await supabase
         .from('practice_rooms')
-        .select('*')
+        .select('id, practice_id, name, capacity, location')
         .eq('practice_id', practiceId);
       if (error) throw error;
       return data;
