@@ -287,14 +287,9 @@ export const PatientDialog = ({
       return;
     }
 
-    // Validate phone if provided
-    if (formData.phone) {
-      const phoneResult = validatePhone(formData.phone);
-      if (!phoneResult.valid) {
-        setValidationErrors({ ...validationErrors, phone: phoneResult.error || "", email: validationErrors.email });
-        toast.error("Please fix validation errors before submitting");
-        return;
-      }
+    if (!formData.phone) {
+      toast.error("Phone number is required");
+      return;
     }
 
     // Validate email if provided
@@ -524,7 +519,7 @@ export const PatientDialog = ({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="phone">Phone (Optional)</Label>
+                <Label htmlFor="phone">Phone (Required)</Label>
                 <PhoneInput
                   id="phone"
                   value={formData.phone}
@@ -532,6 +527,7 @@ export const PatientDialog = ({
                     setFormData({ ...formData, phone: value });
                     setValidationErrors({ ...validationErrors, phone: "" });
                   }}
+                  required
                   placeholder="(555) 123-4567"
                 />
                 {validationErrors.phone && (

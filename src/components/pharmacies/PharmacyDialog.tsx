@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { toast } from "sonner";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -325,12 +326,12 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
 
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
-            <Input
+            <PhoneInput
               id="phone"
-              type="tel"
-              placeholder="(555) 555-5555"
+              name="phone"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(value) => setFormData({ ...formData, phone: value })}
+              placeholder="5555555555"
             />
           </div>
 
