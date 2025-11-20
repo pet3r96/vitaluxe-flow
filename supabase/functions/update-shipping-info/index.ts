@@ -285,9 +285,17 @@ serve(async (req: Request) => {
     );
 
   } catch (error: any) {
-    edgeLogger.error('Error updating shipping info', error);
+    // ✅ ENHANCED ERROR LOGGING: Serialize error object properly for debugging
+    edgeLogger.error('Error updating shipping info', {
+      message: error.message,
+      stack: error.stack,
+      errorDetails: JSON.stringify(error, Object.getOwnPropertyNames(error))
+    });
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack  // Include stack trace for debugging
+      }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

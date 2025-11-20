@@ -22,6 +22,12 @@ async function getUserPracticeId(supabase: any, userId: string): Promise<string 
   const roles = userRoles?.map((r: { role: string }) => r.role) || [];
   edgeLogger.info('[ID_VALIDATOR] User roles found', { userId, roles });
   
+  // ✅ PHARMACY FIX: If user is a pharmacy, they don't have a practice_id
+  if (roles.includes('pharmacy')) {
+    edgeLogger.info('[ID_VALIDATOR] User is pharmacy, no practice_id', { userId });
+    return null;
+  }
+  
   // If user is a doctor (practice owner), their user_id IS their practice_id
   if (roles.includes('doctor')) {
     edgeLogger.info('[ID_VALIDATOR] User is doctor, practice_id = user_id', { userId });
@@ -217,6 +223,41 @@ export async function validateUserOwnsResource(
       }
 
       case 'order': {
+        // ✅ PHARMACY FIX: Check if user is a pharmacy FIRST
+        const { data: pharmacyData } = await supabase
+          .from('pharmacies')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (pharmacyData) {
+          // User is a pharmacy - check if they're assigned to this order
+          edgeLogger.info('[ID_VALIDATOR] Pharmacy user detected, checking order assignment', { 
+            userId, 
+            pharmacyId: pharmacyData.id,
+            orderId: resourceId 
+          });
+          
+          const { data: assignedLines } = await supabase
+            .from('order_lines')
+            .select('id')
+            .eq('order_id', resourceId)
+            .eq('assigned_pharmacy_id', pharmacyData.id)
+            .limit(1);
+          
+          const isAssigned = !!assignedLines && assignedLines.length > 0;
+          edgeLogger.info('[ID_VALIDATOR] Pharmacy order check result', { 
+            isAssigned,
+            orderId: resourceId,
+            pharmacyId: pharmacyData.id
+          });
+          
+          return {
+            valid: isAssigned,
+            error: isAssigned ? undefined : 'Order not assigned to your pharmacy'
+          };
+        }
+        
         // Check if order belongs to user's practice OR if user is a topline/downline rep who can access it
         
         // Get the order with both practice_id and doctor_id

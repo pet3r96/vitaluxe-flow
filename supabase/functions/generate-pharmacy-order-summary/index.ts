@@ -146,7 +146,7 @@ serve(async (req) => {
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Order Number: ${order.order_number || order_id.slice(0, 8)}`, 20, yPos);
+    doc.text(`Order ID: ${order_id.slice(0, 8)}`, 20, yPos);  // ✅ FIX: order.order_number doesn't exist
     yPos += 6;
     doc.text(`Order Date: ${new Date(order.created_at).toLocaleDateString()}`, 20, yPos);
     yPos += 6;
