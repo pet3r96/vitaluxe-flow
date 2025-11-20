@@ -335,11 +335,8 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    edgeLogger.error('Error generating pharmacy order summary', {
-      message: error.message,
-      stack: error.stack,
-      order_id: order_id,  // ✅ Add context with correct variable name
-      errorDetails: JSON.stringify(error, null, 2)  // ✅ Full error object
+    edgeLogger.error('Error generating pharmacy order summary', error, {
+      order_id: order_id
     });
     return new Response(
       JSON.stringify({ 
