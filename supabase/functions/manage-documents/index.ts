@@ -297,16 +297,23 @@ Deno.serve(async (req) => {
         let signedUrl: string | null = null;
         let usedProvider = provider;
 
+        // Get AWS credentials outside the block for logging
+        const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
+        const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
+        const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
+        const s3BucketName = Deno.env.get('S3_BUCKET_NAME');
+
         // TRY SPECIFIED PROVIDER FIRST
         if (provider === 's3') {
-          const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
-          const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
-          const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
-          const s3BucketName = Deno.env.get('S3_BUCKET_NAME');
-
           if (awsAccessKeyId && awsSecretAccessKey && s3BucketName) {
             try {
-              edgeLogger.info('[manage-documents] Generating S3 signed URL...');
+              edgeLogger.info('[S3] Attempting signed URL generation', { 
+                path: storagePath,
+                bucket: s3BucketName,
+                region: awsRegion,
+                hasCredentials: !!(awsAccessKeyId && awsSecretAccessKey)
+              });
+              
               const s3Client = new S3Client({
                 region: awsRegion,
                 credentials: {
@@ -321,9 +328,18 @@ Deno.serve(async (req) => {
               });
 
               signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
-              edgeLogger.info('[manage-documents] ✅ S3 signed URL generated');
+              edgeLogger.info('[S3] ✅ Signed URL generated successfully', { 
+                path: storagePath,
+                expiresIn,
+                urlGenerated: true
+              });
             } catch (s3Error: any) {
-              edgeLogger.error('[manage-documents] ⚠️ S3 signed URL generation failed', s3Error);
+              edgeLogger.error('[S3] ⚠️ Signed URL generation failed', s3Error, {
+                path: storagePath,
+                errorName: s3Error.name,
+                errorCode: s3Error.code,
+                willFallback: true
+              });
               signedUrl = null;
             }
           }
@@ -332,7 +348,12 @@ Deno.serve(async (req) => {
         // FALLBACK TO SUPABASE STORAGE IF PRIMARY FAILED
         if (!signedUrl) {
           try {
-            edgeLogger.info('Generating Supabase Storage signed URL', { bucketId, storagePath });
+            edgeLogger.info('[SUPABASE] 🔄 Attempting fallback signed URL', { 
+              bucket: bucketId,
+              path: storagePath,
+              reason: 'S3 failed or unavailable'
+            });
+            
             const { data: urlData, error: urlError } = await supabaseAdmin.storage
               .from(bucketId)
               .createSignedUrl(storagePath, expiresIn);
@@ -341,11 +362,15 @@ Deno.serve(async (req) => {
 
             signedUrl = urlData.signedUrl;
             usedProvider = 'supabase';
-            edgeLogger.info('Supabase Storage signed URL generated');
+            edgeLogger.info('[SUPABASE] ✅ Fallback signed URL generated', { 
+              bucket: bucketId,
+              path: storagePath
+            });
           } catch (supabaseError: any) {
-            edgeLogger.error('Supabase Storage signed URL generation also failed', supabaseError, {
-              bucketId,
-              storagePath,
+            edgeLogger.error('[FATAL] ❌ Both S3 and Supabase failed', supabaseError, {
+              bucket: bucketId,
+              path: storagePath,
+              s3Available: !!(awsAccessKeyId && awsSecretAccessKey && s3BucketName),
               errorCode: supabaseError.code,
               errorMessage: supabaseError.message,
               userId: user?.id,

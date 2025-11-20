@@ -53,19 +53,25 @@ export function DocumentCard({ document }: DocumentCardProps) {
   });
 
   const downloadDocument = async () => {
-    try {
-      const { data, error } = await supabase.storage
-        .from("provider-documents")
-        .createSignedUrl(document.storage_path, 60);
+    if (!document?.storage_path) return;
 
-      if (error || !data) {
-        logger.error("Failed to create signed URL", error, { documentId: document.id });
-        toast.error("Failed to generate download link");
-        return;
-      }
+    try {
+      // ✅ CORRECT: Use edge function for S3-first logic
+      const { data, error } = await supabase.functions.invoke('manage-documents', {
+        body: {
+          action: 'get-signed-url',
+          bucket: 'provider-documents',
+          path: document.storage_path,
+          storage_provider: document.storage_provider || 's3',
+          expiresIn: 3600
+        }
+      });
+
+      if (error) throw error;
+      if (!data?.url) throw new Error('No signed URL returned');
 
       // Fetch as blob and download (HIPAA compliant - no new tabs)
-      const response = await fetch(data.signedUrl);
+      const response = await fetch(data.url);
       if (!response.ok) {
         throw new Error('Failed to download document');
       }
@@ -81,8 +87,11 @@ export function DocumentCard({ document }: DocumentCardProps) {
       window.URL.revokeObjectURL(url);
 
       toast.success("Document downloaded");
-    } catch (error) {
-      logger.error("Download error", error, { documentId: document.id });
+    } catch (error: any) {
+      logger.error('[DocumentCard] Download error', error, { 
+        documentId: document.id,
+        storage_provider: document.storage_provider 
+      });
       toast.error("Failed to download document");
     }
   };

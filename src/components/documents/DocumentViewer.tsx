@@ -39,9 +39,9 @@ export function DocumentViewer({ open, onOpenChange, document, bucketName = 'pro
       });
 
       if (error) throw error;
-      if (!data?.signedUrl) throw new Error('No signed URL returned');
+      if (!data?.url) throw new Error('No signed URL returned');
       
-      setFileUrl(data.signedUrl);
+      setFileUrl(data.url);
     } catch (error: any) {
       logger.error('[DocumentViewer] Failed to load', error, { documentId: document?.id, bucket: bucketName });
       toast.error("Failed to load document");
@@ -65,7 +65,7 @@ export function DocumentViewer({ open, onOpenChange, document, bucketName = 'pro
       });
 
       if (error) throw error;
-      if (!data?.signedUrl) throw new Error('No signed URL returned');
+      if (!data?.url) throw new Error('No signed URL returned');
 
       // Fetch as blob and download (HIPAA compliant - no new tabs)
       const response = await fetch(data.signedUrl);
