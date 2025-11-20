@@ -15,7 +15,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // PHASE 3 SECURITY: Request size validation
   const sizeValidation = validateRequestSize(req, 'get-patient-dashboard-data', corsHeaders);
   if (sizeValidation) return sizeValidation;
 
@@ -25,7 +24,6 @@ serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    // Use auth client to authenticate requesting user
     const supabaseAuth = createAuthClient(authHeader);
 
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
@@ -33,7 +31,6 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    // PHASE 3 SECURITY: Rate limiting (30 requests/hour)
     const supabase = createAdminClient();
     const limiter = new RateLimiter();
     const { allowed } = await limiter.checkLimit(
@@ -55,26 +52,23 @@ serve(async (req) => {
       throw new Error('effectiveUserId is required');
     }
 
-    // Check if user is admin or accessing their own data
     const isAdmin = await checkIsAdmin(supabaseAuth, user.id);
     
-    // Allow if admin (for impersonation) or if accessing own data
     if (!isAdmin && user.id !== effectiveUserId) {
       throw new Error('Unauthorized: Cannot access other user data');
     }
 
-    // Cache key uses only patient_id, NOT PHI like name/email
     const cacheKey = `patient_dashboard:${effectiveUserId}`;
     
     const dashboardData = await cacheFetch(
       cacheKey,
       async () => {
-        console.log('Cache miss - fetching patient dashboard data');
+        console.log('[get-patient-dashboard-data] Cache miss - fetching data for user', effectiveUserId);
         
-        // Get patient account
+        // 1. Get patient account with full details
         const { data: patientAccount, error: accountError } = await supabase
           .from('patient_accounts')
-          .select('*')
+          .select('id, first_name, last_name, practice_id, user_id, email, birth_date, address_street, address_city, address_state, address_zip, address_formatted, gender_at_birth, intake_completed_at')
           .eq('user_id', effectiveUserId)
           .single();
 
@@ -82,112 +76,142 @@ serve(async (req) => {
           throw new Error('Patient account not found');
         }
 
-        // Get appointments count
-        const { count: appointmentsCount, error: appointmentsError } = await supabase
+        // 2. Get next upcoming appointment
+        const { data: nextAppointment, error: nextApptError } = await supabase
           .from('patient_appointments')
-          .select('*', { count: 'exact', head: true })
-          .eq('patient_id', patientAccount.id);
-
-        if (appointmentsError) throw appointmentsError;
-
-        // Get upcoming appointments count
-        const { count: upcomingAppointmentsCount, error: upcomingError } = await supabase
-          .from('patient_appointments')
-          .select('*', { count: 'exact', head: true })
+          .select('id, start_time, end_time, visit_type, status, practice_id, provider_id')
           .eq('patient_id', patientAccount.id)
           .gte('start_time', new Date().toISOString())
-          .eq('status', 'scheduled');
+          .eq('status', 'scheduled')
+          .order('start_time', { ascending: true })
+          .limit(1)
+          .maybeSingle();
 
-        if (upcomingError) throw upcomingError;
+        if (nextApptError) {
+          console.error('[get-patient-dashboard-data] Error fetching next appointment', nextApptError);
+        }
 
-        // Get orders count
-        const { data: orderLines, error: ordersError } = await supabase
-          .from('order_lines')
-          .select('id', { count: 'exact' })
-          .eq('patient_id', patientAccount.id);
+        // Get practice name for next appointment
+        let nextAppointmentWithPractice = null;
+        if (nextAppointment) {
+          const { data: practice } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', nextAppointment.practice_id)
+            .maybeSingle();
+          
+          nextAppointmentWithPractice = {
+            ...nextAppointment,
+            practice: { name: practice?.name || 'Practice' }
+          };
+        }
 
-        if (ordersError) throw ordersError;
+        // 3. Get unread messages count
+        const { data: unreadMessages, error: unreadError } = await supabase
+          .from('patient_messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientAccount.id)
+          .is('read_at', null)
+          .eq('sender_type', 'practice');
 
-        // Get recent appointments for activity
+        if (unreadError) {
+          console.error('[get-patient-dashboard-data] Error counting unread messages', unreadError);
+        }
+
+        const unreadMessagesCount = unreadMessages || 0;
+
+        // 4. Get medical vault counts using new RPC
+        const { data: vaultCounts, error: vaultError } = await supabase
+          .rpc('get_patient_vault_counts', {
+            p_patient_account_id: patientAccount.id
+          });
+
+        if (vaultError) {
+          console.error('[get-patient-dashboard-data] Error fetching vault counts', vaultError);
+        }
+
+        const medicalVault = {
+          medications_count: vaultCounts?.medications_count || 0,
+          allergies_count: vaultCounts?.allergies_count || 0,
+          conditions_count: vaultCounts?.conditions_count || 0,
+          surgeries_count: vaultCounts?.surgeries_count || 0,
+          immunizations_count: vaultCounts?.immunizations_count || 0,
+          vitals_count: vaultCounts?.vitals_count || 0,
+          pharmacies_count: vaultCounts?.pharmacies_count || 0,
+          emergency_contacts_count: vaultCounts?.emergency_contacts_count || 0,
+          has_data: (
+            (vaultCounts?.medications_count || 0) > 0 ||
+            (vaultCounts?.allergies_count || 0) > 0 ||
+            (vaultCounts?.conditions_count || 0) > 0 ||
+            (vaultCounts?.surgeries_count || 0) > 0 ||
+            (vaultCounts?.immunizations_count || 0) > 0 ||
+            (vaultCounts?.vitals_count || 0) > 0 ||
+            (vaultCounts?.pharmacies_count || 0) > 0 ||
+            (vaultCounts?.emergency_contacts_count || 0) > 0
+          )
+        };
+
+        // 5. Get recent appointments (last 5)
         const { data: recentAppointments, error: recentApptError } = await supabase
           .from('patient_appointments')
-          .select('id, start_time, status, appointment_type, service_type')
+          .select('id, start_time, end_time, status, visit_summary_url, practice_id, provider_id')
           .eq('patient_id', patientAccount.id)
           .order('start_time', { ascending: false })
           .limit(5);
 
-        if (recentApptError) throw recentApptError;
-
-        // Get recent orders for activity
-        const { data: recentOrders, error: recentOrdersError } = await supabase
-          .from('order_lines')
-          .select('id, created_at, status, product_id')
-          .eq('patient_id', patientAccount.id)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (recentOrdersError) throw recentOrdersError;
-
-        // Fetch recent messages - refactored to handle FK properly
-        const { data: messageThreads } = await supabase
-          .from('message_threads')
-          .select('id, subject, created_at, resolved')
-          .eq('created_by', effectiveUserId)
-          .order('created_at', { ascending: false })
-          .limit(5);
-        
-        let recentMessages: any[] = [];
-        if (messageThreads && messageThreads.length > 0) {
-          const { data: threadMessages } = await supabase
-            .from('messages')
-            .select('thread_id, body, created_at, sender_id')
-            .in('thread_id', messageThreads.map(t => t.id))
-            .order('created_at', { ascending: false });
-          
-          recentMessages = messageThreads.map(thread => {
-            const latestMessage = threadMessages?.find(m => m.thread_id === thread.id);
-            return {
-              id: thread.id,
-              subject: thread.subject,
-              message_body: latestMessage?.body || '',
-              created_at: thread.created_at,
-              read_at: null,
-              sender: { name: 'You' }
-            };
-          });
+        if (recentApptError) {
+          console.error('[get-patient-dashboard-data] Error fetching recent appointments', recentApptError);
         }
 
-        // Format activity items
-        const recentActivity = [
-          ...(recentAppointments || []).map(apt => ({
-            id: apt.id,
-            type: 'appointment' as const,
-            title: apt.service_type || apt.appointment_type || 'Appointment',
-            timestamp: apt.start_time,
-            status: apt.status
-          })),
-          ...(recentOrders || []).map(order => ({
-            id: order.id,
-            type: 'order' as const,
-            title: 'Order',
-            timestamp: order.created_at,
-            status: order.status
-          })),
-          ...(recentMessages || []).map(msg => ({
-            id: msg.id,
-            type: 'message' as const,
-            title: msg.subject,
-            timestamp: msg.created_at,
-            status: msg.resolved ? 'resolved' : 'active'
-          }))
-        ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          .slice(0, 10);
+        // Get practice names for recent appointments
+        const recentAppointmentsWithPractice = await Promise.all(
+          (recentAppointments || []).map(async (appt) => {
+            const { data: practice } = await supabase
+              .from('profiles')
+              .select('name')
+              .eq('id', appt.practice_id)
+              .maybeSingle();
+            
+            return {
+              ...appt,
+              practice: { name: practice?.name || 'Practice' }
+            };
+          })
+        );
 
+        // 6. Get recent messages (last 5 root messages)
+        const { data: recentMessages, error: recentMsgError } = await supabase
+          .from('patient_messages')
+          .select('id, subject, message_body, created_at, read_at, sender_type, practice_id')
+          .eq('patient_id', patientAccount.id)
+          .is('parent_message_id', null)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (recentMsgError) {
+          console.error('[get-patient-dashboard-data] Error fetching recent messages', recentMsgError);
+        }
+
+        // Format messages with sender info
+        const recentMessagesFormatted = (recentMessages || []).map(msg => ({
+          id: msg.id,
+          subject: msg.subject,
+          message_body: msg.message_body,
+          created_at: msg.created_at,
+          read_at: msg.read_at,
+          sender: {
+            name: msg.sender_type === 'patient' ? 'You' : 'Practice'
+          }
+        }));
+
+        // Return data matching PatientDashboardData interface
         return {
-          appointmentsCount: appointmentsCount || 0,
-          upcomingAppointmentsCount: upcomingAppointmentsCount || 0,
-          ordersCount: orderLines?.length || 0,
-          recentActivity
+          patientAccount,
+          medicalVault,
+          nextAppointment: nextAppointmentWithPractice,
+          unreadMessagesCount,
+          recentAppointments: recentAppointmentsWithPractice,
+          recentMessages: recentMessagesFormatted
         };
       },
       120 // 120 seconds TTL
@@ -198,7 +222,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in get-patient-dashboard-data:', error);
+    console.error('[get-patient-dashboard-data] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),

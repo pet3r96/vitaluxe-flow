@@ -27,7 +27,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
       const { data, error } = await supabase
         .from("patient_messages")
         .select("*")
-        .or(`id.eq.${threadId},thread_id.eq.${threadId}`)
+        .or(`id.eq.${threadId},parent_message_id.eq.${threadId}`)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data;
@@ -135,7 +135,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
           resolved_by: user.id,
           resolution_notes: notes,
         })
-        .or(`id.eq.${threadId},thread_id.eq.${threadId}`);
+        .or(`id.eq.${threadId},parent_message_id.eq.${threadId}`);
 
       if (error) throw error;
     },
@@ -161,7 +161,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
           resolved_by: null,
           resolution_notes: null,
         })
-        .or(`id.eq.${threadId},thread_id.eq.${threadId}`);
+        .or(`id.eq.${threadId},parent_message_id.eq.${threadId}`);
 
       if (error) throw error;
     },

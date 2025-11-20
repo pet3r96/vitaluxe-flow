@@ -40,14 +40,15 @@ Deno.serve(async (req) => {
 
     const practiceId = patientAccount.practice_id;
     
-    // Get practice timezone from appointment_settings
-    const { data: appointmentSettings } = await supabaseClient
-      .from('appointment_settings')
+    // Get practice timezone from calendar hours
+    const { data: calendarHours } = await supabaseClient
+      .from('practice_calendar_hours')
       .select('timezone')
       .eq('practice_id', practiceId)
-      .single();
+      .limit(1)
+      .maybeSingle();
     
-    const practiceTimezone = appointmentSettings?.timezone || 'America/New_York';
+    const practiceTimezone = calendarHours?.timezone || 'America/New_York';
     
     // Helpers for time calculations in practice timezone
     const parseTimeToMinutes = (time: string) => {

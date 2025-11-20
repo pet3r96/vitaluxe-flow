@@ -8199,6 +8199,10 @@ export type Database = {
           uploader_role: string
         }[]
       }
+      get_patient_vault_counts: {
+        Args: { p_patient_account_id: string }
+        Returns: Json
+      }
       get_patient_vault_grouped: {
         Args: { p_patient_account_id: string }
         Returns: Json

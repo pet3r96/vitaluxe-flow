@@ -176,7 +176,7 @@ export default function PatientAppointments() {
 
         const { data: apptRows, error: apptErr } = await supabase
           .from('patient_appointments')
-          .select('id,start_time,end_time,status,confirmation_type,visit_type,reason_for_visit,notes,visit_summary_url,practice_id,provider_id,street,city,state,zip')
+          .select('id,start_time,end_time,status,confirmation_type,visit_type,reason_for_visit,notes,visit_summary_url,practice_id,provider_id')
           .eq('patient_id', patientAccount.id)
           .order('start_time', { ascending: false });
         if (apptErr) throw apptErr;
