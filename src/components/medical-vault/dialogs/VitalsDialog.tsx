@@ -222,11 +222,20 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
         });
         
         if (error) {
-          logger.error('[VitalsDialog] Insert error', error, {
+          logger.error('[VitalsDialog] Insert error - DETAILED', error, {
             errorCode: error.code,
-            code: error.code,
-            message: error.message,
-            details: error.details
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
+            patientAccountId,
+            recordType: 'vitals',
+            recordDataKeys: Object.keys(formattedData),
+            vitalType,
+            authUserId: authUser.id,
+            effectiveRole,
+            hasHeight: !!formattedData.height,
+            hasWeight: !!formattedData.weight,
+            hasBloodPressure: !!(formattedData.blood_pressure_systolic && formattedData.blood_pressure_diastolic)
           });
           throw error;
         }
