@@ -128,21 +128,34 @@ serve(async (req) => {
 
         if (recentOrdersError) throw recentOrdersError;
 
-        // Get recent messages
-        const { data: recentMessages, error: messagesError } = await supabase
+        // Fetch recent messages - refactored to handle FK properly
+        const { data: messageThreads } = await supabase
           .from('message_threads')
-          .select(`
-            id,
-            subject,
-            created_at,
-            resolved,
-            messages!inner(body, created_at)
-          `)
+          .select('id, subject, created_at, resolved')
           .eq('created_by', effectiveUserId)
           .order('created_at', { ascending: false })
           .limit(5);
-
-        if (messagesError) throw messagesError;
+        
+        let recentMessages: any[] = [];
+        if (messageThreads && messageThreads.length > 0) {
+          const { data: threadMessages } = await supabase
+            .from('messages')
+            .select('thread_id, body, created_at, sender_id')
+            .in('thread_id', messageThreads.map(t => t.id))
+            .order('created_at', { ascending: false });
+          
+          recentMessages = messageThreads.map(thread => {
+            const latestMessage = threadMessages?.find(m => m.thread_id === thread.id);
+            return {
+              id: thread.id,
+              subject: thread.subject,
+              message_body: latestMessage?.body || '',
+              created_at: thread.created_at,
+              read_at: null,
+              sender: { name: 'You' }
+            };
+          });
+        }
 
         // Format activity items
         const recentActivity = [

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { PatientDocumentPreview } from "@/components/documents/PatientDocumentPreview";
 import { format } from "date-fns";
 import { logger } from "@/lib/logger";
+import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 
 interface PatientDocument {
   id: string;
@@ -203,24 +204,53 @@ const { data: documents = [], isLoading } = useQuery({
   };
 
   const deleteMutation = useMutation({
-    mutationFn: async (documentId: string) => {
+    mutationFn: async (document: any) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Fetch practice_id from patient_accounts
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientAccountId)
+        .single();
+
+      if (!patientAccount) throw new Error("Patient account not found");
+
+      // Soft delete: set active = false
       const { error } = await supabase
         .from("patient_medical_vault")
-        .delete()
-        .eq("id", documentId);
+        .update({ active: false })
+        .eq("id", document.id);
       
       if (error) throw error;
+
+      // Log the soft deletion with before/after values
+      await logMedicalVaultChange({
+        patientAccountId,
+        actionType: 'soft_deleted',
+        entityType: 'document',
+        entityId: document.id,
+        entityName: document.document_name,
+        changedByUserId: user.id,
+        changedByRole: 'patient',
+        oldData: { ...document, active: true },
+        newData: { ...document, active: false },
+        changeSummary: `Patient removed document: ${document.document_name}`,
+      });
+
+      return document.id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patient-documents-vault", patientAccountId] });
       toast({
-        title: "Document deleted",
-        description: "Document has been removed from the vault",
+        title: "Document removed",
+        description: "Document has been removed from your vault",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Delete failed",
+        title: "Remove failed",
         description: error.message,
         variant: "destructive",
       });
@@ -304,7 +334,11 @@ const { data: documents = [], isLoading } = useQuery({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteMutation.mutate(doc.id)}
+                        onClick={() => {
+                          if (confirm("Are you sure you want to remove this document?")) {
+                            deleteMutation.mutate(doc);
+                          }
+                        }}
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />

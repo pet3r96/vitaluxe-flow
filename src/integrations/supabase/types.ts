@@ -1313,6 +1313,13 @@ export type Database = {
             referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
         ]
       }
       notification_logs: {
@@ -2485,6 +2492,7 @@ export type Database = {
           document_name: string
           document_type: string
           file_size: number | null
+          hidden_by_patient: boolean
           id: string
           mime_type: string | null
           notes: string | null
@@ -2500,6 +2508,7 @@ export type Database = {
           document_name: string
           document_type: string
           file_size?: number | null
+          hidden_by_patient?: boolean
           id?: string
           mime_type?: string | null
           notes?: string | null
@@ -2515,6 +2524,7 @@ export type Database = {
           document_name?: string
           document_type?: string
           file_size?: number | null
+          hidden_by_patient?: boolean
           id?: string
           mime_type?: string | null
           notes?: string | null
@@ -4206,6 +4216,54 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_calendar_hours: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_closed: boolean
+          practice_id: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_closed?: boolean
+          practice_id: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_closed?: boolean
+          practice_id?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_calendar_hours_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_calendar_hours_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
         ]

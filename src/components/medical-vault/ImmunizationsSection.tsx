@@ -59,33 +59,60 @@ export function ImmunizationsSection({ patientAccountId }: ImmunizationsSectionP
     : (immunizations || []).slice(0, 2);
 
   const handleDelete = async (immunization: any) => {
-    if (!confirm(`Are you sure you want to delete ${immunization.vaccine_name}?`)) return;
-    
+    if (!confirm(`Are you sure you want to remove this immunization record?`)) {
+      return;
+    }
+
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Fetch practice_id from patient_accounts
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientAccountId)
+        .single();
+
+      if (!patientAccount) throw new Error("Patient account not found");
+
+      // Soft delete: set active = false
       const { error } = await supabase
         .from("patient_medical_vault")
-        .delete()
+        .update({ active: false })
         .eq("id", immunization.id);
-      
+
       if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ["patient-immunizations", patientAccountId] });
-      toast({ title: "Success", description: "Immunization deleted successfully" });
-      if (patientAccountId) {
-        await logMedicalVaultChange({
-          patientAccountId,
-          actionType: 'deleted',
-          entityType: 'immunization',
-          entityId: immunization.id,
-          entityName: immunization.vaccine_name,
-          changedByUserId: effectiveUserId || undefined,
-          changedByRole: mapRoleToAuditRole(effectiveRole),
-          oldData: immunization,
-          changeSummary: `Deleted immunization: ${immunization.vaccine_name}`,
-        });
-      }
+
+      queryClient.invalidateQueries({ 
+        queryKey: ["patient-immunizations", patientAccountId] 
+      });
+
+      toast({
+        title: "Success",
+        description: "Immunization record removed successfully",
+      });
+
+      // Log the soft deletion with before/after values
+      await logMedicalVaultChange({
+        patientAccountId,
+        actionType: 'soft_deleted',
+        entityType: 'immunization',
+        entityId: immunization.id,
+        entityName: immunization.vaccine_name,
+        changedByUserId: user.id,
+        changedByRole: mapRoleToAuditRole(effectiveRole),
+        oldData: { ...immunization, active: true },
+        newData: { ...immunization, active: false },
+        changeSummary: `Patient removed immunization: ${immunization.vaccine_name}`,
+      });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to delete immunization", variant: "destructive" });
+      console.error("Error removing immunization:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove immunization",
+        variant: "destructive",
+      });
     }
   };
 

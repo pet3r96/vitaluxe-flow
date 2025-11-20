@@ -59,33 +59,60 @@ export function SurgeriesSection({ patientAccountId }: SurgeriesSectionProps) {
     : (surgeries || []).slice(0, 2);
 
   const handleDelete = async (surgery: any) => {
-    if (!confirm(`Are you sure you want to delete ${surgery.surgery_type}?`)) return;
-    
+    if (!confirm(`Are you sure you want to remove this surgery record?`)) {
+      return;
+    }
+
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Fetch practice_id from patient_accounts
+      const { data: patientAccount } = await supabase
+        .from("patient_accounts")
+        .select("practice_id")
+        .eq("id", patientAccountId)
+        .single();
+
+      if (!patientAccount) throw new Error("Patient account not found");
+
+      // Soft delete: set active = false
       const { error } = await supabase
         .from("patient_medical_vault")
-        .delete()
+        .update({ active: false })
         .eq("id", surgery.id);
-      
+
       if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ["patient-surgeries", patientAccountId] });
-      toast({ title: "Success", description: "Surgery deleted successfully" });
-      if (patientAccountId) {
-        await logMedicalVaultChange({
-          patientAccountId,
-          actionType: 'deleted',
-          entityType: 'surgery',
-          entityId: surgery.id,
-          entityName: surgery.surgery_type,
-          changedByUserId: effectiveUserId || undefined,
-          changedByRole: mapRoleToAuditRole(effectiveRole),
-          oldData: surgery,
-          changeSummary: `Deleted surgery: ${surgery.surgery_type}`,
-        });
-      }
+
+      queryClient.invalidateQueries({ 
+        queryKey: ["patient-surgeries", patientAccountId] 
+      });
+
+      toast({
+        title: "Success",
+        description: "Surgery record removed successfully",
+      });
+
+      // Log the soft deletion with before/after values
+      await logMedicalVaultChange({
+        patientAccountId,
+        actionType: 'soft_deleted',
+        entityType: 'surgery',
+        entityId: surgery.id,
+        entityName: surgery.procedure_name,
+        changedByUserId: user.id,
+        changedByRole: mapRoleToAuditRole(effectiveRole),
+        oldData: { ...surgery, active: true },
+        newData: { ...surgery, active: false },
+        changeSummary: `Patient removed surgery: ${surgery.procedure_name}`,
+      });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to delete surgery", variant: "destructive" });
+      console.error("Error removing surgery:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove surgery",
+        variant: "destructive",
+      });
     }
   };
 
