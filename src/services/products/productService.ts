@@ -40,7 +40,11 @@ export async function fetchProducts(params: ProductQueryParams) {
       );
 
       if (fnError) {
-        logger.warn('Cached product visibility failed, falling back to direct RPC', fnError);
+        logger.error('Cached product visibility failed', fnError, {
+          effectiveUserId,
+          errorDetails: fnError.message || fnError
+        });
+        logger.warn('Falling back to direct RPC');
         // Fallback to direct RPC
         const { data: visibleProductsData } = await supabase.rpc(
           "get_visible_products_for_effective_user",

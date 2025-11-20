@@ -125,13 +125,7 @@ Deno.serve(async (req) => {
             continue;
           }
           
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: finalError.error
-            }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          break; // Exit loop, fall through to final response
         }
 
         edgeLogger.info("[AUTHNET_CHARGE] Order verified", { 
@@ -153,14 +147,18 @@ Deno.serve(async (req) => {
 
         if (pmError || !paymentMethod) {
           edgeLogger.error('[AUTHNET_CHARGE] Payment method not found', pmError, { attempt: paymentAttempt });
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Payment method not found. Please select a valid payment method or add a new one.' 
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+          finalError = { error: 'Payment method not found. Please select a valid payment method or add a new one.' };
+          
+          if (paymentAttempt < maxAttempts) {
+            edgeLogger.info('[AUTHNET_CHARGE] Retrying after payment method lookup failure', { 
+              attempt: paymentAttempt 
+            });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          
+          break; // Exit loop
+        }
 
     // Get the current user placing the order
     const currentUserId = user.id;
