@@ -512,6 +512,24 @@ serve(async (req) => {
 
     edgeLogger.info('Created order lines successfully', { orderLineCount: allOrderLines.length, orderCount: createdOrders.length });
 
+    // CRITICAL FIX: Clear cart lines immediately after order creation
+    // Cart lines have served their purpose once orders are created
+    // Failed payments should be retried via Orders page, not by keeping items in cart
+    let deletedCartLineIds: string[] = [];
+    edgeLogger.info('Clearing cart_lines', { cartId: cart_id });
+    const { data: deletedLines, error: deleteError } = await supabaseAdmin
+      .from("cart_lines")
+      .delete()
+      .eq("cart_id", cart_id)
+      .select('id');
+
+    if (deleteError) {
+      edgeLogger.error('Failed to clear cart', deleteError);
+    } else if (deletedLines) {
+      deletedCartLineIds = deletedLines.map(line => line.id);
+      edgeLogger.info('Successfully cleared cart lines', { clearedCount: deletedCartLineIds.length });
+    }
+
     // Process payments for each order
     const failedPayments: any[] = [];
     const failedOrders: string[] = [];
@@ -610,23 +628,7 @@ serve(async (req) => {
       }
     }
 
-    // CRITICAL: Clear cart lines atomically after successful order placement
-    let deletedCartLineIds: string[] = [];
-    if (failedPayments.length === 0) {
-      edgeLogger.info('Clearing cart_lines', { cartId: cart_id });
-      const { data: deletedLines, error: deleteError } = await supabaseAdmin
-        .from("cart_lines")
-        .delete()
-        .eq("cart_id", cart_id)
-        .select('id');
-
-      if (deleteError) {
-        edgeLogger.error('Failed to clear cart', deleteError);
-      } else if (deletedLines) {
-        deletedCartLineIds = deletedLines.map(line => line.id);
-        edgeLogger.info('Successfully cleared cart lines', { clearedCount: deletedCartLineIds.length });
-      }
-    }
+    // Cart lines already cleared above (after order creation, before payment)
 
     const executionTimeSeconds = (Date.now() - startTime) / 1000;
     edgeLogger.info('Order placement completed', { executionTime: executionTimeSeconds, orderCount: createdOrders.length, failedPayments: failedPayments.length });
