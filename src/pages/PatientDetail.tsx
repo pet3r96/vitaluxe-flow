@@ -232,7 +232,7 @@ export default function PatientDetail() {
           .from("patient_medical_vault")
           .select("*")
           .eq("patient_account_id", actualPatientId)
-          .eq("record_type", "vital")
+          .eq("record_type", "vital_sign")
           .order("created_at", { ascending: false })
           .then(({ data, error }) => {
             if (error) throw error;
@@ -252,7 +252,7 @@ export default function PatientDetail() {
           .from("patient_medical_vault")
           .select("*")
           .eq("patient_account_id", actualPatientId)
-          .eq("record_type", "surgery")
+          .eq("record_type", "procedure")
           .order("created_at", { ascending: false })
           .then(({ data, error }) => {
             if (error) throw error;

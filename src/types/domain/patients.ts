@@ -26,9 +26,9 @@ export interface PatientMedicalData {
   medications: Array<ExtractVaultRecord<'medication'>>;
   conditions: Array<ExtractVaultRecord<'condition'>>;
   allergies: Array<ExtractVaultRecord<'allergy'>>;
-  vitals: Array<ExtractVaultRecord<'vital'>>;
+  vitals: Array<ExtractVaultRecord<'vital_sign'>>;
   immunizations: Array<ExtractVaultRecord<'immunization'>>;
-  surgeries: Array<ExtractVaultRecord<'surgery'>>;
+  surgeries: Array<ExtractVaultRecord<'procedure'>>;
   pharmacies: Array<ExtractVaultRecord<'pharmacy'>>;
   emergencyContacts: Array<ExtractVaultRecord<'emergency_contact'>>;
 }

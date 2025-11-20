@@ -212,7 +212,7 @@ export function VitalsDialog({ open, onOpenChange, patientAccountId, vitals, mod
         
         // Insert new record using type-safe wrapper
         const { error } = await insertVaultRecord(supabase, {
-          record_type: "vitals",
+          record_type: "vital_sign",
           record_data: formattedData,
           patient_account_id: patientAccountId,
           patient_id: patientAccountId,

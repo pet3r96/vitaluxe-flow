@@ -77,7 +77,7 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
         };
         
         const { error } = await insertVaultRecord(supabase, {
-          record_type: "surgery",
+          record_type: "procedure",
           record_data: recordData,
           patient_account_id: patientAccountId,
           patient_id: patientAccountId,

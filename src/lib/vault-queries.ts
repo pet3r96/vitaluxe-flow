@@ -76,7 +76,7 @@ export class VaultQueryBuilder {
       .from("patient_medical_vault")
       .select("*")
       .eq("patient_account_id", patientAccountId)
-      .eq("record_type", "vital")
+      .eq("record_type", "vital_sign")
       .order("created_at", { ascending: false });
     
     if (error) throw error;
@@ -100,7 +100,7 @@ export class VaultQueryBuilder {
       .from("patient_medical_vault")
       .select("*")
       .eq("patient_account_id", patientAccountId)
-      .eq("record_type", "surgery")
+      .eq("record_type", "procedure")
       .order("created_at", { ascending: false });
     
     if (error) throw error;
@@ -233,7 +233,7 @@ export class VaultQueryBuilder {
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
         practice_id: practiceId,
-        record_type: "vital",
+        record_type: "vital_sign",
         title: data.vital_type || "Vital Sign",
         record_data: toJsonSafe(data),
       } as any)
@@ -277,7 +277,7 @@ export class VaultQueryBuilder {
         patient_account_id: patientAccountId,
         patient_id: patientAccountId,
         practice_id: practiceId,
-        record_type: "surgery",
+        record_type: "procedure",
         title: data.procedure || data.surgery_type || "Surgery",
         record_data: toJsonSafe(data),
       } as any)

@@ -39,7 +39,7 @@ export function MedicalVaultSummaryCard({ patientAccountId, onViewVault }: Medic
           .from('patient_medical_vault')
           .select('id, record_data')
           .eq('patient_account_id', patientAccountId)
-          .eq('record_type', 'vital')
+          .eq('record_type', 'vital_sign')
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),

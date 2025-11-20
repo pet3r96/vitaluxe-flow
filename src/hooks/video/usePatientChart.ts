@@ -81,7 +81,7 @@ export const usePatientChart = (patientId: string): UsePatientChartReturn => {
           patient_account_id: patientId,
           patient_id: patientId,
           practice_id: patientAccount.practice_id,
-          record_type: "vital",
+          record_type: "vital_sign",
           title: "Vital Signs",
           record_data: vital,
           date_recorded: new Date().toISOString(),

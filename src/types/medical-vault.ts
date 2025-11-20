@@ -6,7 +6,7 @@
 export interface MedicalVaultRecord {
   id: string;
   patient_account_id: string;
-  record_type: 'medication' | 'allergy' | 'condition' | 'vital' | 'immunization' | 'surgery' | 'pharmacy' | 'emergency_contact' | 'document';
+  record_type: 'medication' | 'allergy' | 'condition' | 'vital_sign' | 'immunization' | 'procedure' | 'pharmacy' | 'emergency_contact' | 'document';
   record_data: Record<string, any>;
   created_at: string;
   updated_at: string;

@@ -109,16 +109,16 @@ function isAllergyRecord(record: import("@/types/vault/records").TypedVaultRecor
   return record.record_type === 'allergy';
 }
 
-function isVitalRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'vital' }> {
-  return record.record_type === 'vital';
+function isVitalRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'vital_sign' }> {
+  return record.record_type === 'vital_sign';
 }
 
 function isImmunizationRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'immunization' }> {
   return record.record_type === 'immunization';
 }
 
-function isSurgeryRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'surgery' }> {
-  return record.record_type === 'surgery';
+function isSurgeryRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'procedure' }> {
+  return record.record_type === 'procedure';
 }
 
 function isPharmacyRecord(record: import("@/types/vault/records").TypedVaultRecord): record is Extract<import("@/types/vault/records").TypedVaultRecord, { record_type: 'pharmacy' }> {
@@ -492,7 +492,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           const { error: heightError } = await supabase.from('patient_medical_vault').insert({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
-            record_type: 'vital',
+            record_type: 'vital_sign',
             title: 'Height',
             record_data: {
               vital_type: 'height',
@@ -516,7 +516,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           const { error: weightError } = await supabase.from('patient_medical_vault').insert({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
-            record_type: 'vital',
+            record_type: 'vital_sign',
             title: 'Weight',
             record_data: {
               vital_type: 'weight',
@@ -809,7 +809,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           const vaultEntries = surgeryEntries.map(surgery => ({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
-            record_type: 'surgery',
+            record_type: 'procedure',
             title: surgery.surgery_type,
             record_data: surgery
           }));
