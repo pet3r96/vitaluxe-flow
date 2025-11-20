@@ -486,9 +486,17 @@ export default function Checkout() {
           predicate: (query) => query.queryKey[0] === 'orders'
         });
         
+        const successOrderCount = createdOrders?.length || 0;
+        
         toast({
           title: "Order Placed Successfully! 🎉",
-          description: `${orderCount} order${orderCount > 1 ? 's' : ''} placed and paid. Cart cleared (${deletedCount} items). Redirecting to orders page...`,
+          description: `${successOrderCount} order${successOrderCount > 1 ? 's' : ''} placed and paid. Cart cleared (${deletedCount} items). Redirecting...`,
+        });
+        
+        console.log('[Checkout] Payment successful, redirecting to orders page', {
+          orderCount: successOrderCount,
+          firstOrderNumber: createdOrders[0]?.order_number,
+          timestamp: new Date().toISOString()
         });
         
         // Navigate after ensuring cache updates propagate
@@ -498,41 +506,26 @@ export default function Checkout() {
               orderPlaced: true,
               orderNumber: createdOrders[0]?.order_number,
               orderCount: createdOrders.length,
-              _forceRefresh: Date.now() // Cache buster
+              _forceRefresh: Date.now()
             }
           });
         }, 300);
-      } else {
-        // Some payments failed - show retry dialog
-        setPaymentErrors(failedPayments);
-        setFailedOrderIds(failedOrders);
-        setShowPaymentRetryDialog(true);
-        // Don't invalidate cart query - keep cart intact so user can edit if needed
-        
-        toast({
-          title: "Payment Declined",
-          description: `${failedPayments.length} payment${failedPayments.length > 1 ? 's' : ''} failed. Your cart has been preserved. Fix payment details and try again, or go back to cart.`,
-          variant: "destructive",
-        });
       }
     },
     onError: (error: any) => {
-      // Check if this is a payment failure (orders created but payment failed)
-      const isPaymentFailure = error.message?.includes('Payment failed for') || 
-                                error.message?.includes('payment(s) failed');
+      console.log('[Checkout] Payment failed', {
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
       
       toast({
-        title: isPaymentFailure ? "Payment Processing Error" : "Order Placement Failed",
-        description: isPaymentFailure 
-          ? "Orders were created but payment failed. You can retry payment from the Orders page."
-          : error.message || "Failed to place order. Please try again.",
+        title: "Payment Declined",
+        description: error.message || "Payment was declined. Please check your payment method and try again.",
         variant: "destructive",
       });
       
-      // Navigate to orders page if payment failed (orders already created)
-      if (isPaymentFailure) {
-        setTimeout(() => navigate('/orders'), 2000);
-      }
+      // Stay on checkout page - user can fix payment and retry
+      // DO NOT redirect to orders page for declined payments
     },
   });
 

@@ -11,7 +11,8 @@ const corsHeaders = {
 }
 
 interface ChargeRequest {
-  order_id: string;
+  order_id?: string; // Optional - may not exist yet if called before order creation
+  doctor_id?: string; // Required if order_id not provided (for authorization check)
   payment_method_id: string;
   amount: number;
 }
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
     const sizeValidation = validateRequestSize(req, 'authorizenet-charge-payment', corsHeaders);
     if (sizeValidation) return sizeValidation;
 
-    const { order_id, payment_method_id, amount }: ChargeRequest = await req.json();
+    const { order_id, doctor_id, payment_method_id, amount }: ChargeRequest = await req.json();
     
     const supabase = createAuthClient(req.headers.get('Authorization'));
     const supabaseAdmin = createAdminClient();
@@ -70,11 +71,19 @@ Deno.serve(async (req) => {
     }
 
     edgeLogger.info("[AUTHNET_CHARGE] Starting payment charge", { 
-      order_id, 
+      order_id: order_id || 'none (pre-order)', 
+      doctor_id: doctor_id || 'none',
       amount, 
       payment_method_id,
       timestamp: new Date().toISOString()
     });
+
+    // Get doctor_id for auth (from order or parameter)
+    let doctorIdForAuth = doctor_id;
+    if (order_id && !doctorIdForAuth) {
+      const { data: order } = await supabase.from('orders').select('doctor_id').eq('id', order_id).single();
+      if (order) doctorIdForAuth = order.doctor_id;
+    }
 
     // RETRY LOGIC - Attempt payment up to 2 times
     let paymentAttempt = 0;
@@ -168,10 +177,10 @@ Deno.serve(async (req) => {
     let isAuthorized = false;
 
     // Case 1: Payment method belongs to the practice that owns the order
-    if (paymentMethod.practice_id === order.doctor_id) {
+    if (paymentMethod.practice_id === doctorIdForAuth) {
       edgeLogger.info('Payment authorized: practice card');
       isAuthorized = true;
-    } else if (currentUserId === order.doctor_id) {
+    } else if (currentUserId === doctorIdForAuth) {
       // Case 2: Current user is the practice owner
       edgeLogger.info('Payment authorized: practice owner');
       isAuthorized = true;
@@ -182,7 +191,7 @@ Deno.serve(async (req) => {
         .from('providers')
         .select('practice_id, user_id, active')
         .eq('user_id', currentUserId)
-        .eq('practice_id', order.doctor_id)
+            .eq('practice_id', doctorIdForAuth)
         .eq('active', true)
         .maybeSingle();
 
@@ -191,7 +200,7 @@ Deno.serve(async (req) => {
         .from('practice_staff')
         .select('practice_id, user_id, active')
         .eq('user_id', currentUserId)
-        .eq('practice_id', order.doctor_id)
+        .eq('practice_id', doctorIdForAuth)
         .eq('active', true)
         .maybeSingle();
 
@@ -199,7 +208,7 @@ Deno.serve(async (req) => {
 
       if (providerLink || staffMembership) {
         // User is linked to this practice: allow practice card or personal card
-        if (paymentMethod.practice_id === order.doctor_id || paymentMethod.practice_id === currentUserId) {
+        if (paymentMethod.practice_id === doctorIdForAuth || paymentMethod.practice_id === currentUserId) {
           edgeLogger.info('Payment authorized: linked user using practice or personal card');
           isAuthorized = true;
         }
