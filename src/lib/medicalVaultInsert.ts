@@ -191,11 +191,19 @@ export async function insertVaultRecord(
   if (!practiceId) {
     throw new Error("Could not determine practice_id for vault record");
   }
+
+  // ✅ CRITICAL FIX: Ensure patient_id is set (fallback to patient_account_id)
+  const patientId = payload.patient_id || payload.patient_account_id;
+
+  if (!patientId) {
+    throw new Error("Could not determine patient_id for vault record");
+  }
   
   console.log('[MEDICAL_VAULT] INSERT starting', {
     timestamp: new Date().toISOString(),
     record_type: payload.record_type,
     patient_account_id: payload.patient_account_id,
+    patient_id: patientId, // ✅ LOG THE RESOLVED patient_id
     practice_id: practiceId,
     title: payload.title,
     active: payload.is_active ?? true,
@@ -209,7 +217,7 @@ export async function insertVaultRecord(
       record_type: payload.record_type,
       record_data: payload.record_data as any, // Cast only at DB boundary
       patient_account_id: payload.patient_account_id,
-      patient_id: payload.patient_id,
+      patient_id: patientId, // ✅ USE RESOLVED patientId
       practice_id: practiceId,
       title: payload.title,
       created_by_user_id: payload.created_by_user_id,

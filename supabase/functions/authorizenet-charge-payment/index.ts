@@ -95,12 +95,34 @@ Deno.serve(async (req) => {
       timestamp: new Date().toISOString()
     });
 
-    // Get doctor_id for auth (from order or parameter)
-    let doctorIdForAuth = doctor_id;
+  // Get doctor_id for auth (from order or parameter)
+  let doctorIdForAuth = doctor_id;
+
+  // ✅ DIAGNOSTIC: Log before doctor_id lookup
+  edgeLogger.info('[AUTHNET_CHARGE] Doctor ID resolution starting', {
+    provided_doctor_id: doctor_id,
+    order_id: order_id,
+    will_lookup_from_order: !!order_id && !doctor_id
+  });
     if (order_id && !doctorIdForAuth) {
-      const { data: order } = await supabase.from('orders').select('doctor_id').eq('id', order_id).single();
+      edgeLogger.info('[AUTHNET_CHARGE] Fetching doctor_id from order', { order_id });
+      
+      const { data: order, error: orderFetchError } = await supabase.from('orders').select('doctor_id').eq('id', order_id).single();
+      
+      edgeLogger.info('[AUTHNET_CHARGE] Order lookup result', {
+        found: !!order,
+        doctor_id: order?.doctor_id,
+        error: orderFetchError?.message
+      });
+      
       if (order) doctorIdForAuth = order.doctor_id;
     }
+
+    // ✅ DIAGNOSTIC: Log resolved doctor_id
+    edgeLogger.info('[AUTHNET_CHARGE] Doctor ID resolved', {
+      doctorIdForAuth,
+      will_proceed_with_payment: !!doctorIdForAuth
+    });
 
     // RETRY LOGIC - Attempt payment up to 2 times
     let paymentAttempt = 0;
@@ -108,6 +130,14 @@ Deno.serve(async (req) => {
     let finalSuccess = false;
     let finalTransactionId: string | null = null;
     let finalError: any = null;
+
+    // ✅ DIAGNOSTIC: Log before retry loop
+    edgeLogger.info('[AUTHNET_CHARGE] Entering retry loop', {
+      maxAttempts,
+      payment_method_id,
+      amount,
+      doctorIdForAuth
+    });
 
     while (paymentAttempt < maxAttempts && !finalSuccess) {
       paymentAttempt++;
