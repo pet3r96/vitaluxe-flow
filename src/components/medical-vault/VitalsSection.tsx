@@ -5,7 +5,7 @@ import { Activity, Plus, Edit, Eye, ChevronDown, ChevronUp } from "lucide-react"
 import { format } from "date-fns";
 import { useState } from "react";
 import { VitalsDialog } from "./dialogs/VitalsDialog";
-import { VaultRecordBase } from "@/lib/vault";
+import { VaultRecordBase, asVital } from "@/lib/vault";
 
 interface VitalRecord extends VaultRecordBase {
   vital_type?: string;
@@ -31,6 +31,12 @@ interface VitalsSectionProps {
 }
 
 export function VitalsSection({ patientAccountId, vitals = [] }: VitalsSectionProps) {
+  // Transform vitals to flatten record_data into top-level properties
+  const flattenedVitals = vitals.map(v => ({
+    ...v,
+    ...asVital(v)
+  }));
+
   const [expanded, setExpanded] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedVital, setSelectedVital] = useState<VitalRecord | null>(null);
@@ -47,9 +53,9 @@ export function VitalsSection({ patientAccountId, vitals = [] }: VitalsSectionPr
     return `${height} ${unit}`;
   };
 
-  // Separate height and weight records
-  const heightRecord = vitals.find(v => v.vital_type === 'height');
-  const weightRecord = vitals.find(v => v.vital_type === 'weight');
+  // Separate height and weight records (using flattened vitals)
+  const heightRecord = flattenedVitals.find(v => v.vital_type === 'height');
+  const weightRecord = flattenedVitals.find(v => v.vital_type === 'weight');
 
   // Calculate BMI if both height and weight exist
   const calculateBMI = () => {
@@ -65,9 +71,9 @@ export function VitalsSection({ patientAccountId, vitals = [] }: VitalsSectionPr
     return ((weightLbs / (heightInches * heightInches)) * 703).toFixed(1);
   };
 
-  // Group time-series vitals by type
+  // Group time-series vitals by type (using flattened vitals)
   const groupedTimeSeriesVitals: Record<string, VitalRecord[]> = {};
-  vitals.forEach(vital => {
+  flattenedVitals.forEach(vital => {
     if (!vital.vital_type || vital.vital_type === 'height' || vital.vital_type === 'weight') {
       // Check if this is an old-style record (no vital_type but has time-series data)
       const hasTimeSeriesData = vital.blood_pressure_systolic || vital.pulse || 
@@ -112,7 +118,9 @@ export function VitalsSection({ patientAccountId, vitals = [] }: VitalsSectionPr
 
   const openDialog = (mode: "add" | "edit" | "view" | "add-basic" | "add-timeseries", vital?: VitalRecord, type?: "height" | "weight") => {
     setDialogMode(mode);
-    setSelectedVital(vital || null);
+    // Find original record from vitals array (with record_data intact) for dialog
+    const originalRecord = vital ? vitals.find(v => v.id === vital.id) : null;
+    setSelectedVital(originalRecord || null);
     setBasicVitalType(type || null);
     setDialogOpen(true);
   };
