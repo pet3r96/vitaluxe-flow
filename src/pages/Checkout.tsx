@@ -527,19 +527,13 @@ export default function Checkout() {
           }
         });
         
-        // Force refetch orders (not just invalidate) to ensure fresh data
-        // ✅ FIX: Only refetch the main orders query with full key structure
-        await queryClient.refetchQueries({ 
+        // ✅ FIXED: Only invalidate - let Orders page refetch with proper auth
+        // Invalidation marks cache as stale, natural refetch happens when OrdersDataTable mounts
+        await queryClient.invalidateQueries({
           predicate: (query) => {
             const key = query.queryKey[0];
-            // Match the exact query key structure used by OrdersDataTable: ["orders", role, userId, practiceId]
             return key === 'orders' && query.queryKey.length >= 2;
           }
-        });
-
-        // Also invalidate for good measure
-        await queryClient.invalidateQueries({ 
-          predicate: (query) => query.queryKey[0] === 'orders'
         });
         
         const successOrderCount = createdOrders?.length || 0;
