@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,6 +85,18 @@ export function FollowUpDialog({
       return data || [];
     },
   });
+
+  // De-duplicate staff members by ID to prevent duplicate entries in the dropdown
+  const uniqueStaffMembers = useMemo(() => {
+    if (!staffMembers) return [];
+    
+    const seen = new Set<string>();
+    return staffMembers.filter(member => {
+      if (seen.has(member.id)) return false;
+      seen.add(member.id);
+      return true;
+    });
+  }, [staffMembers]);
 
   useEffect(() => {
     if (followUp) {
@@ -257,12 +270,12 @@ export function FollowUpDialog({
                 <SelectContent>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   
-                  {staffMembers && staffMembers.filter(s => s.role === "admin").length > 0 && (
+                  {uniqueStaffMembers && uniqueStaffMembers.filter(s => s.role === "admin").length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
                         Admin
                       </div>
-                      {staffMembers
+                      {uniqueStaffMembers
                         .filter(s => s.role === "admin")
                         .map(staff => (
                           <SelectItem key={staff.id} value={staff.id}>
@@ -272,12 +285,12 @@ export function FollowUpDialog({
                     </>
                   )}
                   
-                  {staffMembers && staffMembers.filter(s => s.role === "provider").length > 0 && (
+                  {uniqueStaffMembers && uniqueStaffMembers.filter(s => s.role === "provider").length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-1 pt-2">
                         Providers
                       </div>
-                      {staffMembers
+                      {uniqueStaffMembers
                         .filter(s => s.role === "provider")
                         .map(staff => (
                           <SelectItem key={staff.id} value={staff.id}>
@@ -287,12 +300,12 @@ export function FollowUpDialog({
                     </>
                   )}
                   
-                  {staffMembers && staffMembers.filter(s => s.role === "staff").length > 0 && (
+                  {uniqueStaffMembers && uniqueStaffMembers.filter(s => s.role === "staff").length > 0 && (
                     <>
                       <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-1 pt-2">
                         Staff
                       </div>
-                      {staffMembers
+                      {uniqueStaffMembers
                         .filter(s => s.role === "staff")
                         .map(staff => (
                           <SelectItem key={staff.id} value={staff.id}>

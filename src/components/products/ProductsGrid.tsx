@@ -540,7 +540,8 @@ export const ProductsGrid = () => {
         // Success - pharmacy found, proceed with insertion
         logger.info(`✅ Pharmacy routed: ${routingResult.reason}`);
 
-        const { error } = await supabase.functions.invoke('manage-cart', {
+        // Non-blocking cart addition for instant UI feedback
+        supabase.functions.invoke('manage-cart', {
           body: {
             action: 'add',
             cartOwnerId: cartOwnerForDb,
@@ -561,9 +562,16 @@ export const ProductsGrid = () => {
             orderNotes: orderNotes,
             prescriptionMethod: prescriptionMethod,
           }
+        }).then(({ error }) => {
+          if (error) {
+            logger.error('[ProductsGrid] Error adding to cart (practice order)', error);
+            toast.error(error.message || "Failed to add product to cart");
+            // Revert optimistic update
+            const resolvedCartOwnerId = cartOwnerId || effectiveUserId;
+            queryClient.invalidateQueries({ queryKey: ["cart", resolvedCartOwnerId] });
+            queryClient.invalidateQueries({ queryKey: ["cart-count", resolvedCartOwnerId] });
+          }
         });
-
-        if (error) throw error;
       } else {
         // PATIENT ORDER - fetch from patient_accounts table (patientId is patient_accounts.id from dialog)
         const { data: patientRecord, error: patientError } = await supabase
@@ -677,7 +685,11 @@ export const ProductsGrid = () => {
           patientRecord.address_zip
         );
 
-        const { error } = await supabase.functions.invoke('manage-cart', {
+        // CRITICAL FIX: Use resolvedCartOwnerId for optimistic updates (not effectiveUserId)
+        const resolvedCartOwnerId = cartOwnerId || effectiveUserId;
+        
+        // Non-blocking cart addition for instant UI feedback
+        supabase.functions.invoke('manage-cart', {
           body: {
             action: 'add',
             cartOwnerId: cartOwnerForDb,
@@ -705,14 +717,21 @@ export const ProductsGrid = () => {
             orderNotes: orderNotes,
             prescriptionMethod: prescriptionMethod,
           }
+        }).then(({ error }) => {
+          if (error) {
+            logger.error('[ProductsGrid] Error adding to cart (patient order)', error);
+            toast.error(error.message || "Failed to add product to cart");
+            // Revert optimistic update
+            queryClient.invalidateQueries({ queryKey: ["cart", resolvedCartOwnerId] });
+            queryClient.invalidateQueries({ queryKey: ["cart-count", resolvedCartOwnerId] });
+          }
         });
-
-        if (error) throw error;
       }
 
+      // Show immediate success toast (optimistic)
       toast.success("Product added to cart");
       
-      // CRITICAL FIX: Use cartOwnerId for optimistic updates (not effectiveUserId)
+      // Immediately trigger optimistic update for UI
       const resolvedCartOwnerId = cartOwnerId || effectiveUserId;
       
       logger.info('[ProductsGrid] 🔍 Invalidating cart queries with:', { 
