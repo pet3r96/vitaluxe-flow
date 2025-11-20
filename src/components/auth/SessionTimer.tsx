@@ -125,8 +125,8 @@ export const SessionTimer = ({ userId }: SessionTimerProps) => {
         >
           <p className="text-sm leading-relaxed">
             {isActive 
-              ? "You're active! Your session automatically extends to 30 minutes from your last activity. Time shown is current countdown until forced logout."
-              : "You've been inactive for 30+ seconds. Your session will expire when this timer reaches zero (unless you become active again). Maximum session: 2 hours for compliance."
+              ? "You're active! Your session extends to 60 minutes from your last activity. Maximum: 2 hours total."
+              : "You've been inactive for 30+ seconds. Your session will expire when this timer reaches zero (60 min max). Stay active to extend!"
             }
           </p>
         </TooltipContent>
