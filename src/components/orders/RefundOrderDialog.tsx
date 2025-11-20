@@ -78,7 +78,12 @@ export const RefundOrderDialog = ({
         title: "Refund Processed",
         description: data.message || "Refund has been processed successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === 'orders' && query.queryKey.length >= 2;
+        }
+      });
       queryClient.invalidateQueries({ queryKey: ["order-refunds", order.id] });
       onSuccess();
       onOpenChange(false);

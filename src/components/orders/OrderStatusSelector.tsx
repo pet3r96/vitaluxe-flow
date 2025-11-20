@@ -68,7 +68,12 @@ export const OrderStatusSelector = ({ order, onSuccess }: OrderStatusSelectorPro
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === 'orders' && query.queryKey.length >= 2;
+        }
+      });
       toast({ title: "Order status updated successfully" });
       setDialogOpen(false);
       setChangeReason("");
@@ -96,7 +101,12 @@ export const OrderStatusSelector = ({ order, onSuccess }: OrderStatusSelectorPro
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === 'orders' && query.queryKey.length >= 2;
+        }
+      });
       toast({ title: "Auto-calculation restored" });
       onSuccess();
     },
