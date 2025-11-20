@@ -13,7 +13,7 @@ import { NotificationPreferencesDialog } from "@/components/notifications/Notifi
 import { ActivityLogSection } from "@/components/patient/ActivityLogSection";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GoogleAddressAutocomplete, AddressValue } from "@/components/ui/google-address-autocomplete";
-import { validatePhone } from "@/lib/validators";
+import { validatePhone, normalizePhone } from "@/lib/validators";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { SignedAgreementSection } from "@/components/profile/SignedAgreementSection";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
@@ -94,14 +94,32 @@ export default function PatientProfile() {
     mutationFn: async (updates: any) => {
       if (!effectiveUserId) throw new Error("Not authenticated");
 
-      const { error } = await supabase
+      console.log('[PatientProfile] UPDATE PAYLOAD:', {
+        user_id: effectiveUserId,
+        phone: updates.phone,
+        phone_length: updates.phone?.length,
+        all_updates: updates
+      });
+
+      const { data, error } = await supabase
         .from("patient_accounts")
         .update(updates)
-        .eq("user_id", effectiveUserId);
+        .eq("user_id", effectiveUserId)
+        .select();
+
+      console.log('[PatientProfile] UPDATE RESULT:', { 
+        success: !error,
+        phone_saved: data?.[0]?.phone,
+        error 
+      });
 
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('[PatientProfile] Update successful:', { 
+        phone: data?.[0]?.phone 
+      });
       toast.success("Profile updated successfully");
       setEditing(false);
       refetch();
@@ -109,6 +127,7 @@ export default function PatientProfile() {
       queryClient.invalidateQueries({ queryKey: ["patient-account-dashboard"] });
     },
     onError: (error: any) => {
+      console.error('[PatientProfile] Update failed:', error);
       toast.error(error.message);
     },
   });
@@ -117,16 +136,37 @@ export default function PatientProfile() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    // Validate phone numbers before submission
-    const phoneValidation = validatePhone(phone);
+    // NORMALIZE phone before validation
+    const normalizedPhone = normalizePhone(phone);
+    
+    // ENFORCE REQUIRED - phone must be exactly 10 digits
+    const phoneValidation = validatePhone(normalizedPhone, { required: true });
     if (!phoneValidation.valid) {
+      console.error('[PatientProfile] Phone validation failed:', { 
+        original: phone,
+        normalized: normalizedPhone,
+        error: phoneValidation.error 
+      });
       toast.error(phoneValidation.error || "Invalid phone number");
       return;
     }
+    
+    // Additional explicit check
+    if (!normalizedPhone || normalizedPhone.length !== 10) {
+      console.error('[PatientProfile] Phone not 10 digits:', { normalizedPhone });
+      toast.error("Phone number must be exactly 10 digits");
+      return;
+    }
+
+    console.log('[PatientProfile] Phone validation passed:', { 
+      original: phone,
+      normalized: normalizedPhone 
+    });
 
     // Validate emergency contact phone if provided
     if (emergencyPhone && emergencyPhone !== "") {
-      const emergencyPhoneValidation = validatePhone(emergencyPhone);
+      const normalizedEmergencyPhone = normalizePhone(emergencyPhone);
+      const emergencyPhoneValidation = validatePhone(normalizedEmergencyPhone);
       if (!emergencyPhoneValidation.valid) {
         toast.error("Invalid emergency contact phone: " + emergencyPhoneValidation.error);
         return;
@@ -142,14 +182,14 @@ export default function PatientProfile() {
     updateMutation.mutate({
       first_name: formData.get("first_name"),
       last_name: formData.get("last_name"),
-      phone: phone,
+      phone: normalizedPhone,
       date_of_birth: formData.get("date_of_birth"),
       address: addressValue.street || "",
       city: addressValue.city || "",
       state: addressValue.state || "",
       zip_code: addressValue.zip || "",
       emergency_contact_name: formData.get("emergency_contact_name"),
-      emergency_contact_phone: emergencyPhone,
+      emergency_contact_phone: emergencyPhone ? normalizePhone(emergencyPhone) : null,
     });
   };
 

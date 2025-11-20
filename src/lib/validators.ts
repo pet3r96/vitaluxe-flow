@@ -52,15 +52,58 @@ export const emailSchema = z
   .or(z.literal(""));
 
 /**
+ * Normalize phone number to exactly 10 digits
+ * Removes formatting characters, country codes, extensions
+ * Examples:
+ *   "(561) 886-8226" → "5618868226"
+ *   "+1 561-886-8226" → "5618868226"
+ *   "1-561-886-8226" → "5618868226"
+ */
+export function normalizePhone(input: string | null | undefined): string {
+  if (!input) return "";
+  
+  // Strip everything except digits
+  let digits = input.replace(/\D/g, "");
+  
+  // Remove leading 1 (US country code)
+  if (digits.length === 11 && digits.startsWith("1")) {
+    digits = digits.substring(1);
+  }
+  
+  return digits;
+}
+
+/**
  * Helper functions for programmatic validation
  */
-export function validatePhone(phone: string | null | undefined): { valid: boolean; error?: string } {
-  if (!phone || phone === "") return { valid: true };
+export function validatePhone(
+  phone: string | null | undefined,
+  options?: { required?: boolean }
+): { valid: boolean; error?: string } {
+  // Normalize first
+  const normalized = normalizePhone(phone);
   
-  const result = phoneSchema.safeParse(phone);
-  return result.success 
-    ? { valid: true } 
-    : { valid: false, error: result.error.issues[0]?.message };
+  // If required and empty, fail
+  if (options?.required && (!normalized || normalized === "")) {
+    return { valid: false, error: "Phone number is required" };
+  }
+  
+  // If optional and empty, pass
+  if (!normalized || normalized === "") {
+    return { valid: true };
+  }
+  
+  // Must be exactly 10 digits
+  if (normalized.length !== 10) {
+    return { valid: false, error: "Phone number must be exactly 10 digits" };
+  }
+  
+  // Must contain only numbers
+  if (!/^\d{10}$/.test(normalized)) {
+    return { valid: false, error: "Phone number must contain only numbers" };
+  }
+  
+  return { valid: true };
 }
 
 export function validateNPI(npi: string | null | undefined): { valid: boolean; error?: string } {
