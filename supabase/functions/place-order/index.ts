@@ -452,11 +452,31 @@ serve(async (req) => {
       .insert(allOrderLines);
 
     if (orderLinesError) {
-      edgeLogger.error('Failed to create order lines', {
+      edgeLogger.error('Failed to create order lines - DETAILED DIAGNOSTICS', {
         error: orderLinesError,
+        errorCode: orderLinesError.code,
+        errorMessage: orderLinesError.message,
+        errorDetails: orderLinesError.details,
+        errorHint: orderLinesError.hint,
         orderLineCount: allOrderLines.length,
         sampleOrderLine: allOrderLines[0],
-        missingShippingSpeeds: allOrderLines.filter(line => !line.shipping_speed).length
+        allOrderLineKeys: allOrderLines.length > 0 ? Object.keys(allOrderLines[0]) : [],
+        missingShippingSpeeds: allOrderLines.filter(line => !line.shipping_speed).length,
+        invalidShippingSpeeds: allOrderLines.filter(line => 
+          line.shipping_speed && !['ground', '2day', 'overnight'].includes(line.shipping_speed)
+        ).map(line => ({ id: line.id, speed: line.shipping_speed })),
+        missingOrderIds: allOrderLines.filter(line => !line.order_id).length,
+        missingProductIds: allOrderLines.filter(line => !line.product_id).length,
+        missingPatientNames: allOrderLines.filter(line => !line.patient_name || line.patient_name.trim() === '').length,
+        missingPrices: allOrderLines.filter(line => line.price === null || line.price === undefined).length,
+        invalidPrescriptionMethods: allOrderLines.filter(line => 
+          line.prescription_method && !['upload', 'written'].includes(line.prescription_method)
+        ).map(line => ({ id: line.id, method: line.prescription_method })),
+        invalidRefills: allOrderLines.filter(line => 
+          (line.refills_total !== null && (line.refills_total < 0 || line.refills_total > 3)) ||
+          (line.refills_remaining !== null && (line.refills_remaining < 0 || line.refills_remaining > 3))
+        ).map(line => ({ id: line.id, total: line.refills_total, remaining: line.refills_remaining })),
+        timestamp: new Date().toISOString()
       });
       
       // Rollback: Delete the orders we just created
@@ -467,7 +487,7 @@ serve(async (req) => {
           .in("id", createdOrders.map(o => o.id));
       }
       
-      throw new Error("Failed to create order lines");
+      throw new Error(`Failed to create order lines: ${orderLinesError.message} | Code: ${orderLinesError.code} | Hint: ${orderLinesError.hint || 'none'}`);
     }
 
     edgeLogger.info('Created order lines successfully', { orderLineCount: allOrderLines.length, orderCount: createdOrders.length });
