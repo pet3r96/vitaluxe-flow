@@ -32,6 +32,10 @@ export const useAddToCart = () => {
     },
     onSuccess: (_, variables) => {
       logger.info('[useAddToCart] Success - cart added for', { cartOwnerId: variables.cartOwnerId });
+      
+      // Optimistic update - immediately update cart count
+      queryClient.setQueryData(['cart-count', variables.cartOwnerId], (old: number | undefined) => (old || 0) + 1);
+      
       // Realtime subscription in useCartCount will handle the update automatically
       // Only invalidate the main cart query for immediate UI feedback
       queryClient.invalidateQueries({ queryKey: ['cart'] });

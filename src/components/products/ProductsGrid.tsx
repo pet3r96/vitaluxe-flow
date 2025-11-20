@@ -849,7 +849,7 @@ export const ProductsGrid = () => {
       )}
 
       {/* Practice Shipping Address Missing Alert */}
-      {!viewingAsAdmin && isProvider && !isLoadingAddress && (!practiceAddress || !practiceAddress.shipping_address_state) && (
+      {!viewingAsAdmin && (isProvider || (isStaffAccount && canOrder)) && !isLoadingAddress && (!practiceAddress || !practiceAddress.shipping_address_state) && (
         <Alert className="bg-destructive/10 border-destructive">
           <AlertTriangle className="h-4 w-4 text-destructive" />
           <AlertDescription className="text-sm">
