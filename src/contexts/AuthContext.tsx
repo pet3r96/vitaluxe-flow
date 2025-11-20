@@ -1182,25 +1182,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { mustChangePassword: false, termsAccepted: true };
     }
 
-    // If uid is not yet available due to initialization race, avoid blocking UI
+    // CRITICAL FIX: If uid is not yet available, BLOCK access until we can verify
     if (!uid) {
       setMustChangePassword(false);
-      setTermsAccepted(true);
-      setPasswordStatusChecked(true);
-      logger.warn('checkPasswordStatus no uid yet - using safe defaults');
-      return { mustChangePassword: false, termsAccepted: true };
+      setTermsAccepted(false); // Block until we know for sure
+      setPasswordStatusChecked(false); // Keep checking
+      logger.error('[SECURITY] checkPasswordStatus called without uid - BLOCKING access until verified', {
+        hasUser: !!user,
+        effectiveUserId,
+        roleToCheck
+      });
+      return { mustChangePassword: false, termsAccepted: false };
     }
 
-    // Check session storage for "just accepted" flag
-    const sessionKey = `vitaluxe_terms_ok_${uid}`;
-    const sessionFlag = sessionStorage.getItem(sessionKey);
-    if (sessionFlag) {
-      logger.info('checkPasswordStatus session flag found, treating terms as accepted for this session');
-      setTermsAccepted(true);
-      setMustChangePassword(false);
-      setPasswordStatusChecked(true);
-      // Continue to background recheck below
-    }
+    // REMOVED: Session storage bypass - always check database for security
+    // Session storage is only used in ProtectedRoute to prevent redirect loops
+    logger.info('[SECURITY] checkPasswordStatus - always checking database, no session bypass', { uid });
 
     try {
       // If impersonating and not checking the admin's own status, use admin function
@@ -1212,13 +1209,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
 
         if (error) {
-          logger.error('admin-get-password-status error:', error);
-          // Safe fallback for admins: don't block them
-          logger.info('Falling back: setting termsAccepted=true for admin impersonation');
-          setTermsAccepted(true);
+          logger.error('[SECURITY] admin-get-password-status error - BLOCKING impersonated user', error, {
+            adminUserId: user?.id,
+            targetUserId: uid,
+            error: error.message
+          });
+          // CRITICAL FIX: Block on error instead of allowing through
+          setTermsAccepted(false);
           setMustChangePassword(false);
           setPasswordStatusChecked(true);
-          return { mustChangePassword: false, termsAccepted: true };
+          toast.error('Unable to verify impersonated user status. Access blocked for security.');
+          return { mustChangePassword: false, termsAccepted: false };
         }
 
         logger.info('admin-get-password-status result:', data);
@@ -1310,11 +1311,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         path: 'directQuery'
       });
 
-      logger.info('checkPasswordStatus done', { finalMustChange, termsAccept, hasTempPassword });
+      logger.info('[SECURITY] checkPasswordStatus complete', { 
+        uid,
+        finalMustChange, 
+        termsAccept, 
+        hasTempPassword,
+        hasUserTermsAcceptance,
+        acceptedAt: userTermsResult.data?.accepted_at 
+      });
       return { mustChangePassword: finalMustChange, termsAccepted: termsAccept };
     } catch (error) {
-      logger.error('Error in checkPasswordStatus', error);
+      logger.error('[SECURITY] Error in checkPasswordStatus - BLOCKING access', error, { uid });
       setPasswordStatusChecked(true);
+      // CRITICAL: Block access on any error
+      setTermsAccepted(false);
+      setMustChangePassword(false);
       return { mustChangePassword: false, termsAccepted: false };
     }
   };

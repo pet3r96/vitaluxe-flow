@@ -80,19 +80,40 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         effectiveRole !== 'admin' &&
         location.pathname !== '/accept-terms'
       ) {
-        // Check session storage for "just accepted" flag
+        // STRICT session check: Only bypass redirect if JUST accepted in this exact session
         const sessionKey = `vitaluxe_terms_ok_${effectiveUserId || user?.id}`;
         const sessionFlag = sessionStorage.getItem(sessionKey);
+        const sessionTimestamp = sessionFlag ? parseInt(sessionFlag) : 0;
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
         
-        if (sessionFlag) {
+        // Only skip redirect if accepted within last 5 minutes (same session navigation)
+        if (sessionFlag && (now - sessionTimestamp) < fiveMinutes) {
           import('@/lib/logger').then(({ logger }) => {
-            logger.info('Terms accepted flag in session, skipping redirect');
+            logger.info('[SECURITY] Terms accepted recently in session, allowing navigation', {
+              sessionTimestamp,
+              ageMs: now - sessionTimestamp
+            });
           });
           return;
         }
         
+        // Clear expired session flag
+        if (sessionFlag) {
+          sessionStorage.removeItem(sessionKey);
+          import('@/lib/logger').then(({ logger }) => {
+            logger.warn('[SECURITY] Session flag expired, cleared', { 
+              ageMs: now - sessionTimestamp 
+            });
+          });
+        }
+        
         import('@/lib/logger').then(({ logger }) => {
-          logger.info('Redirecting to /accept-terms - terms not accepted');
+          logger.info('[SECURITY] Redirecting to /accept-terms - terms not accepted', {
+            effectiveRole,
+            effectiveUserId,
+            termsAccepted
+          });
         });
         navigate("/accept-terms");
       }
