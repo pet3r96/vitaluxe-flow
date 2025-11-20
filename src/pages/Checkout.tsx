@@ -528,10 +528,12 @@ export default function Checkout() {
         });
         
         // Force refetch orders (not just invalidate) to ensure fresh data
+        // ✅ FIX: Only refetch the main orders query with full key structure
         await queryClient.refetchQueries({ 
           predicate: (query) => {
             const key = query.queryKey[0];
-            return key === 'orders';
+            // Match the exact query key structure used by OrdersDataTable: ["orders", role, userId, practiceId]
+            return key === 'orders' && query.queryKey.length >= 2;
           }
         });
 

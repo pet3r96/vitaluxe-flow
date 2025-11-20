@@ -10,20 +10,7 @@ export const useQueryPrefetch = () => {
   const queryClient = useQueryClient();
 
   // Prefetch functions now use prefetchQuery for proactive loading
-  const prefetchOrders = () => {
-    queryClient.prefetchQuery({
-      queryKey: ["orders"],
-      queryFn: async () => {
-        const { data } = await supabase
-          .from("orders")
-          .select("id, order_number, status, created_at, total_price, patient_id")
-          .order("created_at", { ascending: false })
-          .limit(50);
-        return data || [];
-      },
-      staleTime: 10000, // 10 seconds
-    });
-  };
+  // ✅ REMOVED: prefetchOrders - causes auth errors by bypassing edge function security
 
   const prefetchPatients = () => {
     queryClient.prefetchQuery({
@@ -72,7 +59,6 @@ export const useQueryPrefetch = () => {
   };
 
   return {
-    prefetchOrders,
     prefetchPatients,
     prefetchPractices,
     prefetchProducts,
@@ -83,10 +69,9 @@ export const useQueryPrefetch = () => {
  * Hook to prefetch data when hovering over navigation links
  */
 export const usePrefetchOnHover = () => {
-  const { prefetchOrders, prefetchPatients, prefetchPractices, prefetchProducts } = useQueryPrefetch();
+  const { prefetchPatients, prefetchPractices, prefetchProducts } = useQueryPrefetch();
 
   return {
-    onOrdersHover: prefetchOrders,
     onPatientsHover: prefetchPatients,
     onPracticesHover: prefetchPractices,
     onProductsHover: prefetchProducts,
