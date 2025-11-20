@@ -191,7 +191,6 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           patient_id: patientAccountId, // In medical vault context, these are the same
           title: data.nka ? "No Known Allergies" : (data.allergen_name || "Allergy"),
           created_by_user_id: user?.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
           is_active: true,
         });
         

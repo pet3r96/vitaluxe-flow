@@ -83,7 +83,6 @@ export function SurgeryDialog({ open, onOpenChange, patientAccountId, surgery, m
           patient_id: patientAccountId,
           title: data.surgery_type,
           created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
         });
         
         if (error) {

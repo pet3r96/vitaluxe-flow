@@ -188,7 +188,6 @@ export function MedicationDialog({ open, onOpenChange, patientAccountId, medicat
           patient_id: patientAccountId,
           title: data.medication_name,
           created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
           is_active: true,
         });
         

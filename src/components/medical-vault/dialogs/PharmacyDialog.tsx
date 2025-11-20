@@ -143,7 +143,6 @@ export function PharmacyDialog({ open, onOpenChange, patientAccountId, pharmacy,
           patient_id: patientAccountId,
           title: data.pharmacy_name || "Pharmacy",
           created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
         });
         
         if (error) {

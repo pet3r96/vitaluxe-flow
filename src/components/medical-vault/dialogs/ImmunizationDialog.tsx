@@ -94,7 +94,6 @@ export function ImmunizationDialog({ open, onOpenChange, patientAccountId, immun
           patient_id: patientAccountId,
           title: data.vaccine_name,
           created_by_user_id: authUser.id,
-          created_by_role: mapRoleToAuditRole(effectiveRole),
         });
         
         if (error) {

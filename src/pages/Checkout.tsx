@@ -235,6 +235,14 @@ export default function Checkout() {
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
+      console.log('[CHECKOUT] Mutation starting', {
+        timestamp: new Date().toISOString(),
+        isMounted,
+        hasCart: !!cart,
+        cartId: cart?.id,
+        cartLines: cart?.lines?.length
+      });
+      
       // Prevent mutation during navigation/unmount
       if (!isMounted) {
         throw new Error("Navigation in progress. Please wait and try again.");
@@ -358,6 +366,13 @@ export default function Checkout() {
         timestamp: new Date().toISOString()
       });
 
+      console.log('[CHECKOUT] Calling place-order edge function', {
+        cartId: cart.id,
+        paymentMethodId: selectedPaymentMethodId,
+        hasDiscountCode: !!discountCode,
+        timestamp: new Date().toISOString()
+      });
+      
       // Call the optimized edge function
       const { data, error } = await supabase.functions.invoke('place-order', {
         body: {
@@ -374,6 +389,7 @@ export default function Checkout() {
         success: data?.success,
         orderId: data?.order_id,
         failedPayments: data?.failed_payments?.length || 0,
+        hasError: !!error,
         timestamp: new Date().toISOString()
       });
 
@@ -396,7 +412,26 @@ export default function Checkout() {
         deletedCartLineIds: data.deleted_cart_line_ids || [],
       };
     },
+    onError: (error: any) => {
+      console.error('[CHECKOUT] Mutation error:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        timestamp: new Date().toISOString()
+      });
+      
+      toast({
+        title: "Order Placement Failed",
+        description: error?.message || "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    },
     onSuccess: async (result) => {
+      console.log('[CHECKOUT] Mutation success', {
+        createdOrders: result.createdOrders?.length,
+        failedPayments: result.failedPayments?.length,
+        timestamp: new Date().toISOString()
+      });
       const { createdOrders, failedPayments, failedOrders, deletedCartLineIds } = result;
       
       if (failedPayments.length === 0) {
@@ -512,26 +547,23 @@ export default function Checkout() {
         }, 300);
       }
     },
-    onError: (error: any) => {
-      console.log('[Checkout] Payment failed', {
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
-      
-      toast({
-        title: "Payment Declined",
-        description: error.message || "Payment was declined. Please check your payment method and try again.",
-        variant: "destructive",
-      });
-      
-      // Stay on checkout page - user can fix payment and retry
-      // DO NOT redirect to orders page for declined payments
-    },
   });
 
   // Safe mutation trigger that checks mount state
   const handlePlaceOrder = () => {
+    console.log('[CHECKOUT] Place Order clicked', {
+      timestamp: new Date().toISOString(),
+      isMounted,
+      agreed,
+      selectedPaymentMethodId,
+      isLoading,
+      hasCart: !!cart,
+      hasCartLines: !!(cart?.lines && cart.lines.length > 0),
+      isPending: checkoutMutation.isPending,
+    });
+
     if (!isMounted) {
+      console.error('[CHECKOUT] Not mounted');
       toast({
         title: "Please wait",
         description: "Page is still loading. Please try again in a moment.",
@@ -539,6 +571,28 @@ export default function Checkout() {
       });
       return;
     }
+
+    if (!agreed) {
+      console.error('[CHECKOUT] Attestation not checked');
+      toast({
+        title: "Agreement Required",
+        description: "Please check the attestation box to confirm you agree to the terms.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedPaymentMethodId) {
+      console.error('[CHECKOUT] No payment method selected');
+      toast({
+        title: "Payment Method Required",
+        description: "Please select a payment method before placing your order.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('[CHECKOUT] All checks passed, triggering mutation...');
     checkoutMutation.mutate();
   };
 
@@ -1121,7 +1175,10 @@ export default function Checkout() {
               <Checkbox
                 id="medical-attestation"
                 checked={agreed}
-                onCheckedChange={(checked) => setAgreed(checked as boolean)}
+                onCheckedChange={(checked) => {
+                  console.log('[CHECKOUT] Attestation changed:', checked);
+                  setAgreed(checked === true);
+                }}
                 className="mt-1"
               />
               <div className="flex-1">
@@ -1154,7 +1211,11 @@ export default function Checkout() {
         <Button
           size="lg"
           className="flex-1"
-          onClick={handlePlaceOrder}
+          onClick={(e) => {
+            console.log('[CHECKOUT] Button clicked');
+            e.preventDefault();
+            handlePlaceOrder();
+          }}
           disabled={
             checkoutMutation.isPending || 
             !selectedPaymentMethodId ||
@@ -1165,7 +1226,10 @@ export default function Checkout() {
           }
         >
           {checkoutMutation.isPending ? (
-            "Processing Order..."
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Processing Order...
+            </>
           ) : (
             <>
               <CheckCircle2 className="h-4 w-4 mr-2" />
