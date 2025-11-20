@@ -37,56 +37,29 @@ export function DocumentsTab() {
 
       logger.info('[DocumentsTab] Fetching practice and patient-shared documents', { practiceId: effectivePracticeId });
 
-      // Fetch practice documents AND patient-shared documents in parallel
-      const [practiceResult, patientSharedResult] = await Promise.allSettled([
-        // 1. Practice documents via RPC
-        supabase.rpc('get_provider_documents', {
-          p_practice_id: effectivePracticeId
-        }),
-        
-        // 2. Patient-shared documents via RPC
-        supabase.rpc('get_provider_documents', {
-          p_practice_id: effectivePracticeId
-        })
-      ]);
+      // Fetch all documents via single RPC call
+      const { data, error } = await supabase.rpc('get_provider_documents', {
+        p_practice_id: effectivePracticeId
+      });
 
-      // Process practice documents
+      if (error) {
+        logger.error('[DocumentsTab] Error fetching documents', error, { practiceId: effectivePracticeId });
+        throw error;
+      }
+
+      // Process documents
       let practiceDocuments: Array<Document> = [];
-      if (practiceResult.status === 'fulfilled') {
-        const { data, error } = practiceResult.value;
-        if (error) {
-          logger.error('[DocumentsTab] Error fetching practice documents', error, { practiceId: effectivePracticeId });
-        } else {
-          practiceDocuments = (data || []).map((doc: any) => ({
-            ...doc,
-            source_type: 'practice_shared',
-            assigned_patient_ids: (doc.provider_document_patients || [])
-              .map((p: any) => p.patient_id)
-              .filter(Boolean),
-          }));
-          logger.info('[DocumentsTab] Practice documents loaded', { count: practiceDocuments.length, practiceId: effectivePracticeId });
-        }
-      } else {
-        logger.warn('[DocumentsTab] Practice documents promise rejected', { reason: practiceResult.reason });
-      }
+      practiceDocuments = (data || []).map((doc: any) => ({
+        ...doc,
+        source_type: 'practice_shared',
+        assigned_patient_ids: (doc.provider_document_patients || [])
+          .map((p: any) => p.patient_id)
+          .filter(Boolean),
+      }));
+      logger.info('[DocumentsTab] Practice documents loaded', { count: practiceDocuments.length, practiceId: effectivePracticeId });
 
-      // Process patient-shared documents
+      // For now, we only have practice documents (patient-shared not implemented yet)
       let patientSharedDocuments: Record<string, unknown>[] = [];
-      if (patientSharedResult.status === 'fulfilled') {
-        const { data, error } = patientSharedResult.value;
-        if (error) {
-          logger.warn('[DocumentsTab] RPC get_provider_documents failed (patient-shared docs unavailable)', error);
-        } else {
-          const parsed = data ? (typeof data === 'string' ? JSON.parse(data) : data) : [];
-          patientSharedDocuments = parsed.map((d: Record<string, unknown>) => ({ 
-            ...d, 
-            source_type: d.source_type || 'patient_shared' 
-          }));
-          logger.info('[DocumentsTab] Patient-shared documents loaded', { count: patientSharedDocuments.length });
-        }
-      } else {
-        logger.warn('[DocumentsTab] Patient-shared RPC promise rejected', { reason: patientSharedResult.reason });
-      }
 
       // Merge both document sources
       let allDocs = [...practiceDocuments, ...patientSharedDocuments];

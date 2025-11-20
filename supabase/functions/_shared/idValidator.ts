@@ -11,22 +11,38 @@ import { edgeLogger } from './logger.ts';
  * Checks both profiles table (for practice owners/providers) and practice_staff table (for staff)
  */
 async function getUserPracticeId(supabase: any, userId: string): Promise<string | null> {
-  // Check profiles first (practice owners, providers)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('practice_id')
-    .eq('id', userId)
-    .single();
+  // Check user_roles to determine role type
+  const { data: userRoles } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId);
+
+  const roles = userRoles?.map((r: { role: string }) => r.role) || [];
   
-  if (profile?.practice_id) return profile.practice_id;
+  // If user is a doctor (practice owner), their user_id IS their practice_id
+  if (roles.includes('doctor')) {
+    return userId;
+  }
   
-  // Check practice_staff (staff members)
+  // If user is a provider, check providers table
+  if (roles.includes('provider')) {
+    const { data: provider } = await supabase
+      .from('providers')
+      .select('practice_id')
+      .eq('user_id', userId)
+      .eq('active', true)
+      .maybeSingle();
+    
+    if (provider?.practice_id) return provider.practice_id;
+  }
+  
+  // If user is staff, check practice_staff table
   const { data: staffRecord } = await supabase
     .from('practice_staff')
     .select('practice_id')
     .eq('user_id', userId)
     .eq('active', true)
-    .single();
+    .maybeSingle();
   
   return staffRecord?.practice_id || null;
 }
