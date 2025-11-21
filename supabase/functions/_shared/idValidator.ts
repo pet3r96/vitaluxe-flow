@@ -54,6 +54,24 @@ async function getUserPracticeId(supabase: any, userId: string): Promise<string 
     if (provider?.practice_id) return provider.practice_id;
   }
   
+  // If user is a patient, check patient_accounts table
+  if (roles.includes('patient')) {
+    const { data: patient, error } = await supabase
+      .from('patient_accounts')
+      .select('practice_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    edgeLogger.info('[ID_VALIDATOR] Patient lookup', {
+      userId,
+      found: !!patient,
+      practice_id: patient?.practice_id,
+      error: error?.message
+    });
+
+    if (patient?.practice_id) return patient.practice_id;
+  }
+  
   // If user is staff, check practice_staff table
   const { data: staffRecord, error } = await supabase
     .from('practice_staff')
