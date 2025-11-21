@@ -99,6 +99,7 @@ export function EditDocumentDialog({ open, onOpenChange, document }: EditDocumen
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["provider-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["patient-unified-documents"] });
       toast.success("Document updated successfully");
       onOpenChange(false);
     },

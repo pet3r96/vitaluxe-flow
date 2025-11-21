@@ -106,6 +106,7 @@ export function useCreatePatientNote() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['patient-notes', data.patient_account_id] });
+      queryClient.invalidateQueries({ queryKey: ['patient-chart', data.patient_account_id] });
       if (data.share_with_patient) {
         queryClient.invalidateQueries({ queryKey: ['patient-shared-notes', data.patient_account_id] });
       }
@@ -144,6 +145,7 @@ export function useUpdatePatientNote() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['patient-notes', data.patient_account_id] });
+      queryClient.invalidateQueries({ queryKey: ['patient-chart', data.patient_account_id] });
       queryClient.invalidateQueries({ queryKey: ['patient-shared-notes', data.patient_account_id] });
       toast.success('Note updated successfully');
     },
@@ -173,6 +175,7 @@ export function useDeletePatientNote() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['patient-notes', data.patientAccountId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-chart', data.patientAccountId] });
       queryClient.invalidateQueries({ queryKey: ['patient-shared-notes', data.patientAccountId] });
       toast.success('Note deleted successfully');
     },
