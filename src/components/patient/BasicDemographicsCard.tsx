@@ -99,6 +99,7 @@ export const BasicDemographicsCard = ({ patientAccount, effectiveUserId }: Basic
       queryClient.invalidateQueries({ queryKey: ["patient-account"] });
       queryClient.invalidateQueries({ queryKey: ["patient-account-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["patient-profile", effectiveUserId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-dashboard-data', effectiveUserId] });
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update demographics");

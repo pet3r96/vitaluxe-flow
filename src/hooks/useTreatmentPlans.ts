@@ -199,6 +199,7 @@ export function useCreateTreatmentPlan() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['treatment-plans', variables.plan.patient_account_id] });
+      queryClient.invalidateQueries({ queryKey: ['patient-chart', variables.plan.patient_account_id] });
       toast.success("Treatment plan created successfully");
     },
     onError: (error) => {

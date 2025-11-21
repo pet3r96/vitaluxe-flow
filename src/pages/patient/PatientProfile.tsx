@@ -125,6 +125,7 @@ export default function PatientProfile() {
       refetch();
       // Also invalidate dashboard query to sync
       queryClient.invalidateQueries({ queryKey: ["patient-account-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ['patient-dashboard-data', effectiveUserId] });
     },
     onError: (error: any) => {
       console.error('[PatientProfile] Update failed:', error);
