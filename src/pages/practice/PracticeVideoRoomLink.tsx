@@ -67,8 +67,8 @@ const PracticeVideoRoomLink = () => {
         logger.info('Practice room resolved, redirecting', logger.sanitize({ sessionId: data.sessionId }));
 
         if (mounted) {
-          // Redirect to the unified video room
-          navigate('/video/room', { replace: true });
+          // Redirect to the practice video session with sessionId
+          navigate(`/practice/video/${data.sessionId}`, { replace: true });
         }
       } catch (e: any) {
         logger.error('Practice room resolution error', e);
