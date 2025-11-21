@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, User, Paperclip, AlertTriangle } from "lucide-react";
+import { MessageCircle, User, Users, Paperclip, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +34,8 @@ export function MessageCard({ message, selected, onClick }: MessageCardProps) {
     .toUpperCase()
     .slice(0, 2);
 
+  const isPatientRelated = !!message.patient;
+
   const priorityBorderColor = {
     urgent: 'border-l-red-500',
     high: 'border-l-orange-500',
@@ -56,7 +58,8 @@ export function MessageCard({ message, selected, onClick }: MessageCardProps) {
         priorityBorderWidth[message.priority],
         priorityBorderColor[message.priority],
         selected && "bg-accent",
-        message.unread_count > 0 && "bg-accent/50"
+        message.unread_count > 0 && "bg-accent/50",
+        isPatientRelated && "bg-blue-50/20 dark:bg-blue-950/20"
       )}
     >
       <Avatar className="h-10 w-10">
@@ -65,12 +68,22 @@ export function MessageCard({ message, selected, onClick }: MessageCardProps) {
 
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between mb-1">
-          <h4 className={cn(
-            "text-sm truncate flex-1",
-            message.unread_count > 0 ? "font-semibold" : "font-medium"
-          )}>
-            {message.subject}
-          </h4>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <h4 className={cn(
+              "text-sm truncate",
+              message.unread_count > 0 ? "font-semibold" : "font-medium"
+            )}>
+              {message.subject}
+            </h4>
+            <Badge 
+              size="sm"
+              variant={isPatientRelated ? "info" : "secondary"}
+              className="flex-shrink-0"
+            >
+              {isPatientRelated ? <User className="w-3 h-3 mr-1" /> : <Users className="w-3 h-3 mr-1" />}
+              {isPatientRelated ? "Patient Case" : "Team Only"}
+            </Badge>
+          </div>
           <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
             {format(new Date(message.created_at), 'MMM dd')}
           </span>
@@ -88,7 +101,10 @@ export function MessageCard({ message, selected, onClick }: MessageCardProps) {
             </Badge>
           )}
           {message.patient && (
-            <Badge variant="outline" className="text-xs">
+            <Badge 
+              size="sm"
+              className="text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+            >
               <User className="w-3 h-3 mr-1" />
               {message.patient.name}
             </Badge>
