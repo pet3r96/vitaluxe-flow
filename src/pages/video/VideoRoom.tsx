@@ -69,6 +69,12 @@ export default function VideoRoom() {
         setIsProvider(providerFlag);
 
         // Get Agora tokens
+        console.log('[VideoRoom] Requesting Agora token', {
+          channel: videoSession.channelName,
+          role: providerFlag ? 'publisher' : 'publisher',
+          route: '/video/room'
+        });
+
         const { data: tokenData, error: tokenError } = await supabase.functions.invoke(
           'agora-token',
           {
@@ -82,7 +88,15 @@ export default function VideoRoom() {
 
         if (tokenError) throw tokenError;
 
-        if (!tokenData?.ok) {
+        console.log('[VideoRoom] Agora token response', {
+          success: tokenData?.success,
+          hasRtcToken: !!tokenData?.rtcToken,
+          hasRtmToken: !!tokenData?.rtmToken,
+          hasAppId: !!tokenData?.appId,
+          error: tokenError?.message
+        });
+
+        if (!tokenData?.success || !tokenData?.rtcToken || !tokenData?.rtmToken) {
           throw new Error(tokenData?.error || 'Failed to generate Agora tokens');
         }
 
