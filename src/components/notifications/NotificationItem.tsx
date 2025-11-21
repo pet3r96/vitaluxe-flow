@@ -40,9 +40,7 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
   const Icon = config.icon;
 
   const handleClick = () => {
-    if (!notification.read) {
-      onMarkAsRead(notification.id);
-    }
+    // Navigate first to ensure immediate response
     if (notification.action_url) {
       // Handle follow-up notifications specially to navigate to patient chart
       if (notification.entity_type === 'follow_up' && isFollowUpMetadata(notification.metadata)) {
@@ -50,6 +48,11 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
       } else {
         navigate(notification.action_url);
       }
+    }
+    
+    // Mark as read after navigation
+    if (!notification.read) {
+      onMarkAsRead(notification.id);
     }
   };
 
