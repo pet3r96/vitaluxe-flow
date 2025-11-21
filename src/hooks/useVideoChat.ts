@@ -56,7 +56,6 @@ export const useVideoChat = ({
         try {
           await client.login({ uid: rtmUid, token: rtmToken });
           logger.info("RTM logged in successfully");
-          // Clear any previous errors on successful login
           setRtmErrorCode(null);
           setRtmErrorMessage(null);
         } catch (err: any) {
@@ -67,11 +66,8 @@ export const useVideoChat = ({
             rtmUid,
             rtmTokenLength: rtmToken.length
           });
-          
-          // Capture error for parent component
           setRtmErrorCode(err.code || null);
           setRtmErrorMessage(err.message || String(err));
-          
           throw err;
         }
 
@@ -81,21 +77,42 @@ export const useVideoChat = ({
         logger.info("RTM attempting to join channel", { channelName });
         try {
           await channel.join();
-        logger.info("RTM joined channel successfully");
+          logger.info("RTM joined channel successfully");
         
-        // Monitor RTM connection errors
-        client.on('ConnectionStateChanged', (newState, reason) => {
-          logger.info("RTM connection state changed", { newState, reason });
-          
-          if (reason === 'TOKEN_EXPIRED') {
-            logger.error("RTM token expired");
-          }
-          
-          if (newState === 'ABORTED') {
-            logger.error("RTM connection aborted", null, { reason });
-          }
-        });
-      } catch (err: any) {
+          client.on('ConnectionStateChanged', (newState, reason) => {
+            logger.info("RTM connection state changed", { newState, reason });
+            if (reason === 'TOKEN_EXPIRED') {
+              logger.error("RTM token expired");
+            }
+            if (newState === 'ABORTED') {
+              logger.error("RTM connection aborted", null, { reason });
+            }
+          });
+
+          channel.on("ChannelMessage", async (message: any, memberId: string) => {
+            const text = decodeMessage(message.text);
+            const newMessage: ChatMessage = {
+              id: `${memberId}-${Date.now()}`,
+              text,
+              senderId: memberId,
+              senderName: memberId === rtmUid ? userName : "Other User",
+              timestamp: new Date(),
+              type: "user",
+            };
+            setMessages((prev) => [...prev, newMessage]);
+
+            await supabase.from("video_session_logs").insert({
+              session_id: sessionId,
+              event_type: "chat_message",
+              user_type: userType,
+              event_data: {
+                message: text,
+                sender_name: newMessage.senderName,
+                timestamp: new Date().toISOString(),
+              },
+            });
+          });
+        } catch (err: any) {
           logger.error("Agora RTM channel join failed", err, {
             errorCode: err.code,
             errorName: err.name
@@ -115,32 +132,6 @@ export const useVideoChat = ({
           type: "system",
         };
         setMessages((prev) => [...prev, joinMessage]);
-
-        // Handle incoming messages
-        channel.on("ChannelMessage", async (message: any, memberId: string) => {
-          const text = decodeMessage(message.text);
-          const newMessage: ChatMessage = {
-            id: `${memberId}-${Date.now()}`,
-            text,
-            senderId: memberId,
-            senderName: memberId === rtmUid ? userName : "Other User",
-            timestamp: new Date(),
-            type: "user",
-          };
-          setMessages((prev) => [...prev, newMessage]);
-
-          // Store message in database
-          await supabase.from("video_session_logs").insert({
-            session_id: sessionId,
-            event_type: "chat_message",
-            user_type: userType,
-            event_data: {
-              message: text,
-              sender_name: newMessage.senderName,
-              timestamp: new Date().toISOString(),
-            },
-          });
-        });
 
         // Load message history
         const { data: logs } = await supabase
