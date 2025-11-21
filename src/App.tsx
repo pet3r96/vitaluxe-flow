@@ -390,15 +390,14 @@ const App = () => {
                                                 </SubscriptionProtectedRoute>
                                               }
                                             />
-                                            {/* Video Consultations temporarily disabled - feature coming soon */}
-                                            {/* <Route
+                                            <Route
                                               path="/video-consultations"
                                               element={
                                                 <SubscriptionProtectedRoute>
                                                   <VideoConsultations />
                                                 </SubscriptionProtectedRoute>
                                               }
-                                            /> */}
+                                            />
                                             <Route
                                               path="/video-test"
                                               element={
