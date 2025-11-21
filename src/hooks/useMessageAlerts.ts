@@ -129,6 +129,19 @@ export function useMessageAlerts() {
             fetchUnreadCount();
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'patient_messages',
+          },
+          async (payload) => {
+            logger.info('[useMessageAlerts] patient_messages change detected', payload);
+            // Refresh count whenever patient messages change
+            await fetchUnreadCount();
+          }
+        )
         .subscribe();
     };
 
