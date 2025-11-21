@@ -269,14 +269,6 @@ const App = () => {
                           </ProtectedRoute>
                         }
                       />
-                      <Route
-                        path="/video/room"
-                        element={
-                          <ProtectedRoute>
-                            <VideoRoom />
-                          </ProtectedRoute>
-                        }
-                      />
                       
                       {/* ========================================== */}
                       {/* VIDEO SESSION ROUTES - Patient & Provider */}
