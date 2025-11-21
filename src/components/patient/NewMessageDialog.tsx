@@ -143,6 +143,7 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
       toast.success("Message sent to your practice");
       setSubject("");
       setMessage("");
+      onOpenChange(false); // Close dialog immediately
       onSuccess();
     },
     onError: (error: any) => {
