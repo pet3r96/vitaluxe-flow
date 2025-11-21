@@ -204,6 +204,19 @@ serve(async (req) => {
           }
         }));
 
+        // Detailed logging for message debugging
+        console.log('[get-patient-dashboard-data] RECENT MESSAGES DETAIL', {
+          count: recentMessagesFormatted.length,
+          messages: recentMessagesFormatted.map(m => ({
+            id: m.id,
+            subject: m.subject,
+            sender: m.sender.name,
+            created_at: m.created_at,
+            has_read_at: !!m.read_at,
+            body_preview: m.body.substring(0, 50)
+          }))
+        });
+
         // Log final structure for debugging
         console.log('[get-patient-dashboard-data] FINAL RETURN STRUCTURE', {
           hasPatientAccount: !!patientAccount,
@@ -229,7 +242,7 @@ serve(async (req) => {
           recentMessages: recentMessagesFormatted
         };
       },
-      120 // 120 seconds TTL
+      30 // 30 seconds TTL for fresher data
     );
 
     return new Response(
