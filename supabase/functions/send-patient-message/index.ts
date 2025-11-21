@@ -508,12 +508,10 @@ Deno.serve(async (req) => {
     const patientPayload = {
       patient_id: patientAccount.id,
       practice_id: patientAccount.practice_id,
-      sender_id: effectiveUserId,
       sender_type: 'patient',
       body: message,
       subject: subject || 'Patient Message',
       read_at: null,
-      // ✅ PHASE 1: Removed thread_id (table doesn't have this column)
       ...(parent_message_id && { parent_message_id: parent_message_id })
     };
 
