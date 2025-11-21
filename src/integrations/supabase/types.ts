@@ -8259,6 +8259,10 @@ export type Database = {
           uploader_role: string
         }[]
       }
+      get_patient_unread_message_count: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       get_patient_vault_counts: {
         Args: { p_patient_account_id: string }
         Returns: Json

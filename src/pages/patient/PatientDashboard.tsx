@@ -26,6 +26,19 @@ export default function PatientDashboard() {
   // Use batched dashboard data hook
   const { data: dashboardData, isLoading: loadingDashboard } = usePatientDashboard(effectiveUserId, effectiveRole);
 
+  // Debug logging for dashboard data
+  useEffect(() => {
+    if (dashboardData) {
+      logger.info('[PatientDashboard] Dashboard data received', {
+        hasMedicalVault: !!dashboardData.medicalVault,
+        vaultHasData: dashboardData.medicalVault?.has_data,
+        vaultKeys: Object.keys(dashboardData.medicalVault || {}),
+        recentMessagesCount: dashboardData.recentMessages?.length || 0,
+        recentMessagesStructure: dashboardData.recentMessages?.[0] || null
+      });
+    }
+  }, [dashboardData]);
+
   // Extract data from batched response
   const patientAccount = dashboardData?.patientAccount;
   const medicalVault = dashboardData?.medicalVault;
@@ -266,15 +279,15 @@ export default function PatientDashboard() {
         </Card>
       </div>
 
-      {/* Video Appointments Section */}
-      {patientAccount?.id && (
-        <div className="mt-6">
-          <PatientVirtualWaitingRoom 
-            patientId={patientAccount.id}
-            onJoinSession={(sessionId) => navigate(`/video-room/${sessionId}`)}
-          />
-        </div>
-      )}
+        {/* Video Appointments Section - Hidden until video feature is fully enabled */}
+        {false && patientAccount?.id && (
+          <div className="mt-6">
+            <PatientVirtualWaitingRoom 
+              patientId={patientAccount.id}
+              onJoinSession={(sessionId) => navigate(`/video-room/${sessionId}`)}
+            />
+          </div>
+        )}
 
       {/* Recent Activity Section */}
       <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
