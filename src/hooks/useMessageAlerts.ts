@@ -20,7 +20,18 @@ export function useMessageAlerts() {
     }
 
     try {
-      const { data, error } = await supabase.rpc('get_unread_message_count', {
+      // Determine which RPC to use based on user role
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      const hasPatientRole = userRoles?.some(r => r.role === 'patient');
+
+      // Use patient-specific RPC for patients, regular RPC for others
+      const rpcFunction = hasPatientRole ? 'get_patient_unread_message_count' : 'get_unread_message_count';
+
+      const { data, error } = await supabase.rpc(rpcFunction, {
         p_user_id: user.id
       });
 
