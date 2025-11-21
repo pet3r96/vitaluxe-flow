@@ -8251,7 +8251,6 @@ export type Database = {
           practice_id: string
           share_with_practice: boolean
           source: string
-          status: string
           storage_path: string
           uploaded_at: string
           uploader_id: string
