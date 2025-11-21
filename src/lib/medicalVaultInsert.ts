@@ -196,31 +196,44 @@ export async function insertVaultRecord(
     throw new Error("Not authenticated");
   }
 
-  // Check if user is practice owner, provider, or staff for this practice
-  const isPracticeOwner = authUser.id === practiceId;
-  
-  if (!isPracticeOwner) {
-    const { data: providerCheck } = await supabase
-      .from('providers')
-      .select('id')
-      .eq('user_id', authUser.id)
-      .eq('practice_id', practiceId)
-      .eq('active', true)
-      .maybeSingle();
+  // ✅ PATIENT ROLE CHECK - Allow patient to add to their own vault
+  const { data: patientCheck } = await supabase
+    .from('patient_accounts')
+    .select('id')
+    .eq('id', payload.patient_account_id)
+    .eq('user_id', authUser.id)
+    .maybeSingle();
 
-    const { data: staffCheck } = await supabase
-      .from('practice_staff')
-      .select('id')
-      .eq('user_id', authUser.id)
-      .eq('practice_id', practiceId)
-      .eq('active', true)
-      .maybeSingle();
+  if (patientCheck) {
+    // Patient owns this vault - allow insert
+    console.log('[MEDICAL_VAULT] Patient authorized for own vault');
+  } else {
+    // Check if user is practice owner, provider, or staff for this practice
+    const isPracticeOwner = authUser.id === practiceId;
+    
+    if (!isPracticeOwner) {
+      const { data: providerCheck } = await supabase
+        .from('providers')
+        .select('id')
+        .eq('user_id', authUser.id)
+        .eq('practice_id', practiceId)
+        .eq('active', true)
+        .maybeSingle();
 
-    if (!providerCheck && !staffCheck) {
-      throw new Error(
-        'You are not authorized to add medical records for this practice. ' +
-        'Please contact your practice administrator if you believe this is an error.'
-      );
+      const { data: staffCheck } = await supabase
+        .from('practice_staff')
+        .select('id')
+        .eq('user_id', authUser.id)
+        .eq('practice_id', practiceId)
+        .eq('active', true)
+        .maybeSingle();
+
+      if (!providerCheck && !staffCheck) {
+        throw new Error(
+          'You are not authorized to add medical records for this practice. ' +
+          'Please contact your practice administrator if you believe this is an error.'
+        );
+      }
     }
   }
 

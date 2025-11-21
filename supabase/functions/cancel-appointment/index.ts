@@ -75,7 +75,6 @@ Deno.serve(async (req) => {
       .from('active_impersonation_sessions')
       .select('impersonated_user_id')
       .eq('admin_user_id', user.id)
-      .eq('revoked', false)
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
