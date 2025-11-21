@@ -70,15 +70,19 @@ serve(async (req) => {
             day_of_week: dayOfWeek,
             start_time: startTime || defaultStartTime,
             end_time: endTime || defaultEndTime,
-            is_closed: !enabled,
-            timezone: defaultTimezone
+            is_closed: !enabled
           }, {
             onConflict: 'practice_id,day_of_week'
           });
 
         if (calendarError) {
-          edgeLogger.error('[update-appointment-settings] Error upserting calendar hours', calendarError, { dayOfWeek });
-          throw calendarError;
+          edgeLogger.error('[update-appointment-settings] Error upserting calendar hours', { 
+            errorMessage: calendarError.message,
+            errorDetails: calendarError.details,
+            errorCode: calendarError.code,
+            dayOfWeek 
+          });
+          throw new Error(`Failed to upsert calendar hours for day ${dayOfWeek}: ${calendarError.message || JSON.stringify(calendarError)}`);
         }
       }
       edgeLogger.info('[update-appointment-settings] Day-specific calendar hours updated successfully');
@@ -93,15 +97,19 @@ serve(async (req) => {
             day_of_week: day,
             start_time: isWorking ? defaultStartTime : '09:00:00',
             end_time: isWorking ? defaultEndTime : '17:00:00',
-            is_closed: !isWorking,
-            timezone: defaultTimezone
+            is_closed: !isWorking
           }, {
             onConflict: 'practice_id,day_of_week'
           });
 
         if (calendarError) {
-          edgeLogger.error('[update-appointment-settings] Error upserting calendar hours', calendarError);
-          throw calendarError;
+          edgeLogger.error('[update-appointment-settings] Error upserting calendar hours', { 
+            errorMessage: calendarError.message,
+            errorDetails: calendarError.details,
+            errorCode: calendarError.code,
+            day 
+          });
+          throw new Error(`Failed to upsert calendar hours for day ${day}: ${calendarError.message || JSON.stringify(calendarError)}`);
         }
       }
       edgeLogger.info('[update-appointment-settings] Default calendar hours updated successfully');
