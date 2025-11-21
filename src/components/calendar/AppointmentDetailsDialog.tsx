@@ -113,6 +113,7 @@ export function AppointmentDetailsDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
       queryClient.invalidateQueries({ queryKey: ['waiting-room'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-appointments'] });
       toast.success("Appointment status updated");
     },
     onError: (error: any) => {

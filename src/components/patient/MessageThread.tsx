@@ -140,6 +140,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient-dashboard-data"] });
       toast.success("Conversation marked as complete");
       // Real-time will handle the update
       onThreadUpdate?.();
@@ -166,6 +167,7 @@ export function MessageThread({ threadId, onThreadUpdate }: MessageThreadProps) 
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient-dashboard-data"] });
       toast.success("Conversation reopened");
       // Real-time will handle the update
       onThreadUpdate?.();

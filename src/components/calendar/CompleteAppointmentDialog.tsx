@@ -177,6 +177,13 @@ export function CompleteAppointmentDialog({
       queryClient.invalidateQueries({ queryKey: ["calendar-data"] });
       queryClient.invalidateQueries({ queryKey: ["patient-follow-ups"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-follow-ups"] });
+      queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });
+      if (appointment?.practice_id) {
+        queryClient.invalidateQueries({ queryKey: ["practice-dashboard", appointment.practice_id] });
+      }
+      if (appointment?.provider_id) {
+        queryClient.invalidateQueries({ queryKey: ["provider-dashboard", appointment.provider_id] });
+      }
 
       const messages = ["Appointment completed"];
       if (scheduleFollowUp === "yes") messages.push("follow-up created");

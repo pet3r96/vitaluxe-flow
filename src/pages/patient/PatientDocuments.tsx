@@ -291,6 +291,7 @@ export default function PatientDocuments() {
       
       // Invalidate immediately and refetch after delay to ensure vault insert completes
       queryClient.invalidateQueries({ queryKey: ["patient-unified-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["patient-dashboard-data"] });
       setTimeout(() => {
         queryClient.invalidateQueries({ 
           queryKey: ["patient-unified-documents"], 

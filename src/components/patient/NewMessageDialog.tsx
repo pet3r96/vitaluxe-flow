@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -27,6 +27,7 @@ interface NewMessageDialogProps {
 
 export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDialogProps) {
   const { session } = useAuth();
+  const queryClient = useQueryClient();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
@@ -140,6 +141,7 @@ export function NewMessageDialog({ open, onOpenChange, onSuccess }: NewMessageDi
       if (data?.error) throw new Error(data.error);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient-dashboard-data"] });
       toast.success("Message sent to your practice");
       setSubject("");
       setMessage("");

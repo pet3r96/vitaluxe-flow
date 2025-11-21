@@ -215,6 +215,7 @@ export default function PatientInbox() {
       queryClient.invalidateQueries({ queryKey: ["patient-messages-inbox", practiceId] });
       queryClient.invalidateQueries({ queryKey: ["thread-messages"] });
       queryClient.invalidateQueries({ queryKey: ['inbox-unread-threads', practiceId] });
+      queryClient.invalidateQueries({ queryKey: ["patient-message-threads"] });
       toast.success("Reply sent");
       setReplyText("");
     },
