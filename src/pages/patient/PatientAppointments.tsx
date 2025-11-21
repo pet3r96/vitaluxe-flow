@@ -106,24 +106,17 @@ export default function PatientAppointments() {
         let profilesById: Record<string, any> = {};
         let brandingByPracticeId: Record<string, any> = {};
         if (practiceIds.length > 0) {
-          const [{ data: profilesData }, { data: brandingData }] = await Promise.all([
-            supabase
-              .from('profiles')
-              .select('id, address_street, address_city, address_state, address_zip, name')
-              .in('id', practiceIds as string[]),
-            (supabase as any)  // Helper boundary cast - practice_branding table not in generated types
-              .from('practice_branding' as any)
-              .select('practice_id, practice_name')
-              .in('practice_id', practiceIds as string[])
-          ]) as any;
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, address_street, address_city, address_state, address_zip, name, company')
+            .in('id', practiceIds as string[]);
+          
           (profilesData || []).forEach((p: any) => { profilesById[p.id] = p; });
-          (brandingData || []).forEach((b: any) => { brandingByPracticeId[b.practice_id] = b; });
         }
 
         const enhanced = rows.map((r: any) => {
           const pid = r.practice_id || r.practice?.id;
           const profile = pid ? profilesById[pid] : null;
-          const branding = pid ? brandingByPracticeId[pid] : null;
           const addrStreet = r.street || r.practice?.address_street || profile?.address_street || null;
           const addrCity = r.city || r.practice?.address_city || profile?.address_city || null;
           const addrState = r.state || r.practice?.address_state || profile?.address_state || null;
@@ -134,7 +127,7 @@ export default function PatientAppointments() {
             ...r,
             practice: {
               id: pid,
-              name: r.practice?.name || branding?.practice_name || profile?.name || 'Practice',
+              name: r.practice?.name || profile?.company || profile?.name || 'Practice',
               address_formatted: formatted,
               address_street: addrStreet,
               address_city: addrCity,
@@ -204,17 +197,10 @@ export default function PatientAppointments() {
           }
         }
 
-        // Fetch practice branding for name
-        const { data: branding } = await (supabase as any)
-          .from('practice_branding' as any)
-          .select('practice_id, practice_name')
-          .eq('practice_id', patientAccount.practice_id)
-          .maybeSingle() as any;
-
-        // Fetch practice address from profiles
+        // Fetch practice address and name from profiles
         const { data: practiceProfile } = await supabase
           .from('profiles')
-          .select('name, address_street, address_city, address_state, address_zip')
+          .select('name, company, address_street, address_city, address_state, address_zip')
           .eq('id', patientAccount.practice_id)
           .maybeSingle();
 
@@ -235,7 +221,7 @@ export default function PatientAppointments() {
             ...r,
             practice: {
               id: r.practice_id,
-              name: (branding as any)?.practice_name || practiceProfile?.name || 'Practice',
+              name: practiceProfile?.company || practiceProfile?.name || 'Practice',
               address_formatted: formatted,
               address_street: addrStreet,
               address_city: addrCity,

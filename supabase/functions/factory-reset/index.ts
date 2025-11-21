@@ -145,7 +145,6 @@ serve(async (req) => {
         
         // Communication
         messages: await getCount('messages'),
-        thread_participants: await getCount('thread_participants'),
         message_threads: await getCount('message_threads'),
         notifications: await getCount('notifications', 'non_admin'),
         
@@ -305,7 +304,6 @@ serve(async (req) => {
 
     // Phase 5: Communication
     deleted_counts.messages = await deleteRecords('messages', 'all');
-    deleted_counts.thread_participants = await deleteRecords('thread_participants', 'all');
     deleted_counts.message_threads = await deleteRecords('message_threads', 'all');
     deleted_counts.notifications = await deleteRecords('notifications', 'non_admin');
 
