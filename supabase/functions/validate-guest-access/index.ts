@@ -7,7 +7,6 @@ import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { createAgoraTokens } from '../_shared/agoraTokenService.ts';
 import { getClientIP } from '../_shared/rateLimiter.ts';
-import { buildRtcToken, buildRtmToken, Role } from '../_shared/agoraTokenBuilder.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {

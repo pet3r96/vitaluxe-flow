@@ -5,7 +5,7 @@
 
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
-import { RtcTokenBuilder, RtcRole } from 'https://esm.sh/agora-token@2.0.4';
+import { createAgoraTokens } from '../_shared/agoraTokenService.ts';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
@@ -164,28 +164,26 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('Video session created', { sessionId: session.id });
 
-    // Generate Agora tokens
-    const appId = Deno.env.get('VITE_AGORA_APP_ID')!;
-    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE') || '';
-    const uid = Math.floor(Math.random() * 1000000);
-    const ttl = 3600; // 1 hour
-    const currentTimestamp = Math.floor(Date.now() / 1000);
-    const privilegeExpire = currentTimestamp + ttl;
-
-    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
-      appId,
-      appCertificate,
+    // Generate Agora tokens using shared service
+    const appId = Deno.env.get('AGORA_APP_ID')!;
+    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE')!;
+    const uid = Math.floor(Math.random() * 1000000).toString();
+    const { rtcToken, rtmToken, expiresAt } = await createAgoraTokens(
       channelName,
       uid,
-      RtcRole.PUBLISHER,
-      ttl,
-      privilegeExpire
+      'publisher',
+      3600
     );
 
-    const rtmUid = `${uid}`;
-    const rtmToken = rtcToken; // Using same token for RTM
-
-    edgeLogger.info('Tokens generated successfully');
+    // Sanitized logging - no secrets, masked IDs
+    edgeLogger.info('Agora tokens generated for new session', {
+      appIdPrefix: appId.substring(0, 8) + '***',  // First 8 chars only
+      sessionId: session.id,
+      channelName: session.channel_name,
+      uid,
+      ttl: 3600,
+      expiresAt: new Date(expiresAt * 1000).toISOString()
+    });
 
     // PHASE 2: Audit logging for video_session_created
     await supabaseAdmin.from('audit_logs').insert({
@@ -226,9 +224,10 @@ Deno.serve(async (req) => {
         credentials: {
           rtcToken,
           rtmToken,
-          uid: uid.toString(),
-          rtmUid,
-          appId,
+          uid,
+          rtmUid: uid,
+          appId: appId.substring(0, 8) + '***', // Masked for security
+          expiresAt,
         },
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
