@@ -157,6 +157,8 @@ const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
 const AgoraDebugSuite = lazy(() => import("./pages/dev/AgoraDebugSuite"));
+const PatientVideoRoom = lazy(() => import("./pages/patient/PatientVideoRoom"));
+const VideoConsultationRoom = lazy(() => import("./pages/practice/VideoConsultationRoom"));
 
 <Route
   path="/dev/agora-debug"
@@ -272,6 +274,26 @@ const App = () => {
                         element={
                           <ProtectedRoute>
                             <VideoRoom />
+                          </ProtectedRoute>
+                        }
+                      />
+                      
+                      {/* ========================================== */}
+                      {/* VIDEO SESSION ROUTES - Patient & Provider */}
+                      {/* ========================================== */}
+                      <Route
+                        path="/patient/video/:sessionId"
+                        element={
+                          <ProtectedRoute>
+                            <PatientVideoRoom />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/practice/video/:sessionId"
+                        element={
+                          <ProtectedRoute>
+                            <VideoConsultationRoom />
                           </ProtectedRoute>
                         }
                       />

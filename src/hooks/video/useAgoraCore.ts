@@ -152,7 +152,20 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
   }, [client]);
 
   const join = useCallback(async (channel: string, token: string, uid: string | number) => {
+    if (!client) return;
+    
     try {
+      // Frontend console logging for diagnostics
+      console.log('[useAgoraCore] Joining Agora channel', {
+        appIdPrefix: appId?.substring(0, 8) + '***',
+        channel,
+        uid,
+        tokenPreview: token?.substring(0, 20) + '...',
+        timestamp: new Date().toISOString()
+      });
+      
+      setConnectionState('CONNECTING');
+      
       logger.info('[useAgoraCore] Joining channel', { channel, uid });
       
       if (!appId) {
@@ -173,7 +186,15 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
       setLocalVideoTrack(videoTrack);
 
       logger.info('[useAgoraCore] Joined successfully');
-    } catch (error) {
+      setConnectionState('CONNECTED');
+    } catch (error: any) {
+      console.error('[useAgoraCore] Join failed', {
+        error: error?.message || String(error),
+        code: error?.code || 'unknown',
+        channel,
+        uid
+      });
+      setConnectionState('DISCONNECTED');
       logger.error('[useAgoraCore] Join error', error);
       onError?.(error as Error);
       throw error;
