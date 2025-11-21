@@ -288,8 +288,19 @@ Deno.serve(async (req) => {
           .single();
         
         if (appointmentDetails) {
-          const appointmentDateFormatted = new Date(appointmentDetails.start_time).toLocaleDateString();
-          const appointmentTimeFormatted = new Date(appointmentDetails.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          // Format time in America/New_York timezone (EST/EDT)
+          const appointmentDateFormatted = new Date(appointmentDetails.start_time).toLocaleDateString('en-US', {
+            timeZone: 'America/New_York',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          });
+          const appointmentTimeFormatted = new Date(appointmentDetails.start_time).toLocaleTimeString('en-US', {
+            timeZone: 'America/New_York',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
           
           if (patientWithUser.user_id) {
             // Patient has portal access - use handleNotifications

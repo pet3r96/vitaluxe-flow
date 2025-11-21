@@ -121,8 +121,20 @@ Deno.serve(async (req) => {
       edgeLogger.error('[create-instant-video-session] Error fetching patient user data', patientUserError);
     } else if (patientWithUser) {
       const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
-      const appointmentDateFormatted = new Date(appointment.start_time).toLocaleDateString();
-      const appointmentTimeFormatted = new Date(appointment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      // Format time in America/New_York timezone (EST/EDT)
+      const appointmentDateFormatted = new Date(appointment.start_time).toLocaleDateString('en-US', {
+        timeZone: 'America/New_York',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      const appointmentTimeFormatted = new Date(appointment.start_time).toLocaleTimeString('en-US', {
+        timeZone: 'America/New_York',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
       
       if (patientWithUser.user_id) {
         // Patient has portal access - use handleNotifications
