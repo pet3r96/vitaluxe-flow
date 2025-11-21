@@ -182,7 +182,7 @@ serve(async (req) => {
         // 6. Get recent messages (last 5 root messages)
         const { data: recentMessages, error: recentMsgError } = await supabase
           .from('patient_messages')
-          .select('id, subject, message_body, created_at, read_at, sender_type, practice_id')
+          .select('id, subject, body, created_at, read_at, sender_type, practice_id')
           .eq('patient_id', patientAccount.id)
           .is('parent_message_id', null)
           .order('created_at', { ascending: false })
@@ -196,7 +196,7 @@ serve(async (req) => {
         const recentMessagesFormatted = (recentMessages || []).map(msg => ({
           id: msg.id,
           subject: msg.subject,
-          message_body: msg.message_body,
+          body: msg.body,
           created_at: msg.created_at,
           read_at: msg.read_at,
           sender: {
