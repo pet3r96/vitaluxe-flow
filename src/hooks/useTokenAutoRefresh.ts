@@ -61,7 +61,20 @@ export const useTokenAutoRefresh = ({
     });
 
     try {
+      // Verify authentication before refreshing tokens
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        logger.error('No Supabase session available for token refresh');
+        throw new Error("Authentication required for token refresh");
+      }
+
+      logger.info('Token refresh auth attached. User:', { userId: session.user.id });
+
       const { data, error } = await supabase.functions.invoke('agora-token', {
+        headers: { 
+          Authorization: `Bearer ${session.access_token}` 
+        },
         body: { 
           channel: channelName,
           uid,
