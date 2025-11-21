@@ -50,8 +50,22 @@ const PatientVideoRoom = () => {
         setChannelName(normalized);
         setPatientId(session.patient_id);
 
+        // Verify authentication before requesting tokens
+        const { data: { session: authSession } } = await supabase.auth.getSession();
+
+        if (!authSession) {
+          logger.error('[PatientVideoRoom] No Supabase session available');
+          setError("You must be logged in to join video sessions.");
+          return;
+        }
+
+        logger.info('[PatientVideoRoom] Auth attached. User:', { userId: authSession.user.id });
+
         // Patient always joins as audience, not publisher
         const { data, error } = await supabase.functions.invoke("agora-token", {
+          headers: { 
+            Authorization: `Bearer ${authSession.access_token}` 
+          },
           body: {
             channel: normalized,
             role: "audience",

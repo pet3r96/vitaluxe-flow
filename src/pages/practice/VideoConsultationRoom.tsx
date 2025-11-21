@@ -79,7 +79,21 @@ const VideoConsultationRoom = () => {
           setTimeout(() => reject(new Error("Token request timed out")), 10000)
         );
 
+        // Verify authentication before requesting tokens
+        const { data: { session: authSession } } = await supabase.auth.getSession();
+
+        if (!authSession) {
+          logger.error('No Supabase session available before calling agora-token');
+          setError("You must be logged in to join video sessions.");
+          return;
+        }
+
+        logger.info('Auth attached. User:', { userId: authSession.user.id });
+
         const tokenRequest = supabase.functions.invoke("agora-token", {
+          headers: { 
+            Authorization: `Bearer ${authSession.access_token}` 
+          },
           body: {
             channel: normalized,
             role: "publisher",

@@ -52,7 +52,21 @@ export default function AgoraDebugSuite() {
     debug("Requesting Agora tokens", { channel });
 
     try {
+      // Verify authentication for debug suite
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        setError("You must be logged in to fetch tokens");
+        debug("No Supabase session available");
+        return;
+      }
+
+      debug("Auth attached. User:", { userId: session.user.id });
+
       const { data, error } = await supabase.functions.invoke("agora-token", {
+        headers: { 
+          Authorization: `Bearer ${session.access_token}` 
+        },
         body: {
           channel,
           role: "publisher",
