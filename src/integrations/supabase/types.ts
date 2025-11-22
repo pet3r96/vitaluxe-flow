@@ -7185,7 +7185,7 @@ export type Database = {
           {
             foreignKeyName: "video_sessions_appointment_id_fkey"
             columns: ["appointment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "patient_appointments"
             referencedColumns: ["id"]
           },

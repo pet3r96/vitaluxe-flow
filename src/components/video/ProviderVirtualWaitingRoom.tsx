@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { logger } from "@/lib/logger";
 import { time, timeEnd } from "@/diag";
+import { getCSRFToken } from "@/lib/csrf";
 import {
   Dialog,
   DialogContent,
@@ -501,8 +502,17 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
     try {
       logger.info('🔥 [UI] Cancelling appointment', { appointmentId });
 
+      // Get CSRF token for security
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Unable to obtain CSRF token. Please refresh the page.");
+      }
+
       const { error } = await supabase.functions.invoke("cancel-appointment", {
-        body: { appointmentId },
+        body: { 
+          appointmentId,
+          csrf_token: csrfToken
+        },
       });
 
       if (error) throw error;
@@ -571,8 +581,17 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
     try {
       logger.info('🎉 [UI] Completing appointment', { appointmentId });
 
+      // Get CSRF token for security
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Unable to obtain CSRF token. Please refresh the page.");
+      }
+
       const { error } = await supabase.functions.invoke("complete-video-appointment", {
-        body: { appointmentId },
+        body: { 
+          appointmentId,
+          csrf_token: csrfToken
+        },
       });
 
       if (error) {
