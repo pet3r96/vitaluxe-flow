@@ -81,6 +81,44 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('Creating video session', { practiceId, sessionType });
 
+    // ========== VALIDATE PATIENT AND PROVIDER IDs ==========
+    if (patientId) {
+      const { data: patientCheck, error: patientError } = await supabase
+        .from('patient_accounts')
+        .select('id, practice_id')
+        .eq('id', patientId)
+        .eq('practice_id', practiceId)
+        .single();
+
+      if (patientError || !patientCheck) {
+        edgeLogger.error('Invalid patient or patient does not belong to practice', undefined, { patientId, practiceId });
+        return new Response(
+          JSON.stringify({ error: 'Invalid patient or patient does not belong to practice' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (providerId) {
+      const { data: providerCheck, error: providerError } = await supabase
+        .from('providers')
+        .select('id, practice_id')
+        .eq('id', providerId)
+        .eq('practice_id', practiceId)
+        .single();
+
+      if (providerError || !providerCheck) {
+        edgeLogger.error('Invalid provider or provider does not belong to practice', undefined, { providerId, practiceId });
+        return new Response(
+          JSON.stringify({ error: 'Invalid provider or provider does not belong to practice' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    edgeLogger.info('Patient/Provider validation passed');
+    // ========== END VALIDATION ==========
+
     // PHASE 3: ID validation for practice
     const { valid: idValid, error: idError } = await validateUserOwnsResource(
       supabaseAdmin,

@@ -26,6 +26,7 @@ interface Props {
   patientId: string;
   isGuest?: boolean;
   sessionType?: "instant" | "scheduled" | "practice_room";
+  tokenExpiresAt?: number | null;
 }
 
 export default function TelehealthRoomUnified({
@@ -38,6 +39,7 @@ export default function TelehealthRoomUnified({
   patientId,
   isGuest = false,
   sessionType,
+  tokenExpiresAt: initialTokenExpiresAt,
 }: Props) {
   const navigate = useNavigate();
 
@@ -95,7 +97,7 @@ export default function TelehealthRoomUnified({
   // ============================================================================
   // TOKEN REFRESH LOGIC (prevents calls > 1hr from failing)
   // ============================================================================
-  const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(null);
+  const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(initialTokenExpiresAt || null);
 
   useEffect(() => {
     if (!agora.isJoined || !tokenExpiresAt) return;

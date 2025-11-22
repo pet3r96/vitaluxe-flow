@@ -14,6 +14,7 @@ interface AgoraVideoRoomProps {
 interface ExtendedAgoraVideoRoomProps extends AgoraVideoRoomProps {
   sessionId: string;
   patientId: string;
+  tokenExpiresAt?: number | null;
 }
 
 export function AgoraVideoRoom({ 
@@ -23,7 +24,8 @@ export function AgoraVideoRoom({
   uid, 
   userType,
   sessionId,
-  patientId
+  patientId,
+  tokenExpiresAt
 }: ExtendedAgoraVideoRoomProps) {
   const isProvider = userType === "practice";
 
@@ -36,6 +38,7 @@ export function AgoraVideoRoom({
       isProvider={isProvider}
       sessionId={sessionId}
       patientId={patientId}
+      tokenExpiresAt={tokenExpiresAt}
     />
   );
 }

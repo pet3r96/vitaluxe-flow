@@ -94,6 +94,20 @@ Deno.serve(async (req) => {
     console.log('Session access validated:', { userId: user.id, channel });
     // ========== END VALIDATION ==========
 
+    // ========== UPDATE SESSION STATUS TO LIVE ==========
+    // Transition scheduled sessions to live when someone joins
+    await supabase
+      .from('video_sessions')
+      .update({ 
+        status: 'live', 
+        actual_start: new Date().toISOString() 
+      })
+      .eq('channel_name', channel)
+      .eq('status', 'scheduled');
+    
+    console.log('Session status updated to live if scheduled');
+    // ========== END STATUS UPDATE ==========
+
     // Use authenticated user ID as UID (consistent with create-video-session)
     const finalUid = user.id;
     const finalRole = role || 'publisher';
