@@ -29,6 +29,15 @@ export function AgoraVideoRoom({
 }: ExtendedAgoraVideoRoomProps) {
   const isProvider = userType === "practice";
 
+  // 🟢 DIAGNOSTIC: Passing App ID to TelehealthRoomUnified
+  console.log('🟢 [AgoraVideoRoom] Passing App ID to TelehealthRoomUnified:', {
+    appId,
+    appIdFull: JSON.stringify(appId),
+    appIdType: typeof appId,
+    appIdLength: appId?.length,
+    timestamp: new Date().toISOString()
+  });
+
   return (
     <TelehealthRoomUnified
       appId={appId}

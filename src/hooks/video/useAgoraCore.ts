@@ -47,9 +47,15 @@ export interface UseAgoraCoreReturn {
 }
 
 export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCoreReturn => {
-  const [client] = useState<IAgoraRTCClient>(() => 
-    AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' })
-  );
+  // React Strict Mode protection: use ref to prevent multiple client creations
+  const clientRef = useRef<IAgoraRTCClient | null>(null);
+  const [client] = useState<IAgoraRTCClient>(() => {
+    if (!clientRef.current) {
+      console.log('🔵 [useAgoraCore] Creating NEW Agora client');
+      clientRef.current = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+    }
+    return clientRef.current;
+  });
   const [isJoined, setIsJoined] = useState(false);
   const [localAudioTrack, setLocalAudioTrack] = useState<ILocalAudioTrack | null>(null);
   const [localVideoTrack, setLocalVideoTrack] = useState<ILocalVideoTrack | null>(null);
@@ -155,15 +161,6 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
     if (!client) return;
     
     try {
-      // Frontend console logging for diagnostics
-      console.log('[useAgoraCore] Joining Agora channel', {
-        appIdPrefix: appId?.substring(0, 8) + '***',
-        channel,
-        uid,
-        tokenPreview: token?.substring(0, 20) + '...',
-        timestamp: new Date().toISOString()
-      });
-      
       setConnectionState('CONNECTING');
       
       logger.info('[useAgoraCore] Joining channel', { channel, uid });
@@ -171,6 +168,29 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
       if (!appId) {
         throw new Error('Agora App ID is required');
       }
+
+      // 🔴 CRITICAL VALIDATION: Ensure App ID is correct
+      if (!appId || appId.length !== 32 || !appId.startsWith('2443')) {
+        const errorMsg = `INVALID AGORA APP ID: Expected "2443c37d5f97424c8b7e1c08e3a3032e", got "${appId}"`;
+        console.error('🔴 [useAgoraCore] ' + errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      // 🔴 DIAGNOSTIC: RIGHT BEFORE client.join() call
+      console.log('🔴 [useAgoraCore] ABOUT TO CALL client.join() with:', {
+        appId,
+        appIdFull: JSON.stringify(appId),
+        appIdType: typeof appId,
+        appIdLength: appId?.length,
+        appIdBytes: Array.from(appId || '').map(c => c.charCodeAt(0)),
+        appIdStartsWith: appId?.substring(0, 8),
+        expectedAppId: '2443c37d5f97424c8b7e1c08e3a3032e',
+        matches: appId === '2443c37d5f97424c8b7e1c08e3a3032e',
+        channel,
+        uid,
+        tokenPreview: token?.substring(0, 20) + '...',
+        timestamp: new Date().toISOString()
+      });
 
       // Join the channel
       await client.join(appId, channel, token, uid);
