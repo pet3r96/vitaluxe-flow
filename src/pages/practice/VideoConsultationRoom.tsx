@@ -120,6 +120,12 @@ const VideoConsultationRoom = () => {
           hasRtmToken: !!data.rtmToken
         });
 
+        console.log('🟢 [VideoConsultationRoom] Received from backend:', {
+          appId: data.appId,
+          appIdMatch: data.appId === '2443c37d5f97424c8b7e1c08e3a3032e',
+          timestamp: new Date().toISOString()
+        });
+
         setAppId(data.appId);
         setRtcToken(data.rtcToken);
         setRtmToken(data.rtmToken);
