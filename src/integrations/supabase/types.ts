@@ -4756,6 +4756,58 @@ export type Database = {
           },
         ]
       }
+      practice_video_rooms: {
+        Row: {
+          active_session_id: string | null
+          channel_name: string
+          created_at: string
+          id: string
+          practice_id: string
+          room_key: string
+          updated_at: string
+        }
+        Insert: {
+          active_session_id?: string | null
+          channel_name: string
+          created_at?: string
+          id?: string
+          practice_id: string
+          room_key: string
+          updated_at?: string
+        }
+        Update: {
+          active_session_id?: string | null
+          channel_name?: string
+          created_at?: string
+          id?: string
+          practice_id?: string
+          room_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_video_rooms_active_session_id_fkey"
+            columns: ["active_session_id"]
+            isOneToOne: false
+            referencedRelation: "video_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_video_rooms_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_video_rooms_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_masked_for_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prescription_refills: {
         Row: {
           created_at: string | null
