@@ -142,11 +142,29 @@ serve(async (req) => {
         }
       }
       
+      case 'credentials': {
+        // Returns backend credentials for diagnostics (masked certificate)
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              backendAppId: appId,
+              backendCertFirst4: appCert.substring(0, 4),
+              backendCertLast4: appCert.substring(appCert.length - 4),
+              backendCertLength: appCert.length,
+              serverTime: Date.now(),
+              timestamp: new Date().toISOString()
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       default: {
         return new Response(
           JSON.stringify({
             success: false,
-            error: `Unknown action: ${action}. Valid actions: echo, health, config, debug`
+            error: `Unknown action: ${action}. Valid actions: echo, health, config, debug, credentials`
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
