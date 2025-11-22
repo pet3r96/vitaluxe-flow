@@ -269,7 +269,12 @@ Deno.serve(async (req) => {
 
     // Return the session. Frontend will start the session (ensures proper user authorization)
     return new Response(
-      JSON.stringify({ success: true, sessionId: videoSession.id, appointmentId: appointment.id }),
+      JSON.stringify({ 
+        success: true, 
+        sessionId: videoSession.id, 
+        appointmentId: appointment.id,
+        channelName: channelName 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

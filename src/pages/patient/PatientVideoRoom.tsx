@@ -18,6 +18,7 @@ const PatientVideoRoom = () => {
   const [channelName, setChannelName] = useState<string | null>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
+  const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(null);
 
   logger.info("[PatientVideoRoom] Session ID", { sessionId });
 
@@ -85,6 +86,7 @@ const PatientVideoRoom = () => {
         setRtmToken(data.rtmToken);
         setUid(data.uid);
         setRtmUid(data.rtmUid);
+        setTokenExpiresAt(data.expiresAt);
       } catch (e: any) {
         setError(e?.message ?? "Unexpected error occurred.");
       } finally {
@@ -138,6 +140,7 @@ const PatientVideoRoom = () => {
         userType="patient"
         sessionId={sessionId!}
         patientId={patientId!}
+        tokenExpiresAt={tokenExpiresAt}
       />
     </>
   );

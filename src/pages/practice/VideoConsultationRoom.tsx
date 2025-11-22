@@ -18,6 +18,7 @@ const VideoConsultationRoom = () => {
   const [channelName, setChannelName] = useState<string | null>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
+  const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(null);
 
   logger.info('Video consultation room initialized', logger.sanitize({ sessionId }));
 
@@ -108,6 +109,7 @@ const VideoConsultationRoom = () => {
         setRtmToken(data.rtmToken);
         setUid(data.uid);
         setRtmUid(data.rtmUid);
+        setTokenExpiresAt(data.expiresAt);
       } catch (err) {
         if (!isMounted) return;
         
@@ -174,6 +176,7 @@ const VideoConsultationRoom = () => {
         userType="practice"
         sessionId={sessionId!}
         patientId={patientId!}
+        tokenExpiresAt={tokenExpiresAt}
       />
     </>
   );
