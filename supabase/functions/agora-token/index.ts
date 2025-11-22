@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       .from('video_sessions')
       .update({ 
         status: 'live', 
-        actual_start: new Date().toISOString() 
+        actual_start_time: new Date().toISOString() 
       })
       .eq('channel_name', channel)
       .eq('status', 'scheduled');

@@ -21,7 +21,6 @@ interface CreateSessionRequest {
   patientId?: string;
   sessionType: 'instant' | 'scheduled' | 'practice_room';
   scheduledStart?: string; // ISO timestamp
-  scheduledEnd?: string;   // ISO timestamp
 }
 
 Deno.serve(async (req) => {
@@ -77,7 +76,7 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body: CreateSessionRequest = await req.json();
-    const { practiceId, providerId, patientId, sessionType, scheduledStart, scheduledEnd } = body;
+    const { practiceId, providerId, patientId, sessionType, scheduledStart } = body;
 
     edgeLogger.info('Creating video session', { practiceId, sessionType });
 
@@ -212,10 +211,9 @@ Deno.serve(async (req) => {
         patient_id: patientId,
         channel_name: channelName,
         session_type: sessionType,
-        scheduled_start: scheduledStart,
-        scheduled_end: scheduledEnd,
+        scheduled_start_time: scheduledStart,
         status,
-        actual_start: status === 'live' ? new Date().toISOString() : null,
+        actual_start_time: status === 'live' ? new Date().toISOString() : null,
       })
       .select()
       .single();
