@@ -2,6 +2,40 @@ import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
+/**
+ * Extract provider display name with fallback logic
+ * Priority: prescriber_name > full_name > name (if not email) > derived from email
+ */
+function getProviderDisplayName(provider: any): string {
+  if (!provider?.user) return 'Provider';
+  
+  // Try prescriber_name first (most reliable)
+  if (provider.user.prescriber_name?.trim()) {
+    return provider.user.prescriber_name.trim();
+  }
+  
+  // Try full_name
+  if (provider.user.full_name?.trim()) {
+    return provider.user.full_name.trim();
+  }
+  
+  // Try name field, but skip if it's an email
+  if (provider.user.name?.trim() && !provider.user.name.includes('@')) {
+    return provider.user.name.trim();
+  }
+  
+  // Last resort: derive a name from email
+  if (provider.user.name?.includes('@')) {
+    const localPart = provider.user.name.split('@')[0];
+    return localPart
+      .split(/[._-]/)
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+  
+  return 'Provider';
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -86,7 +120,7 @@ Deno.serve(async (req) => {
         patient:patient_accounts(first_name, last_name),
         provider:providers!patient_appointments_provider_id_fkey(
           id,
-          user:profiles!providers_user_id_fkey(name, full_name)
+          user:profiles!providers_user_id_fkey(name, full_name, prescriber_name)
         ),
         room:practice_rooms(name)
       `)
@@ -128,7 +162,7 @@ Deno.serve(async (req) => {
     let providerName = 'All Providers';
     if (providerId && appointments && appointments.length > 0) {
       const firstAppt = appointments[0] as any;
-      providerName = firstAppt?.provider?.user?.name || 'Unknown Provider';
+      providerName = getProviderDisplayName(firstAppt?.provider);
     }
 
     // Generate PDF using jsPDF
@@ -342,7 +376,7 @@ Deno.serve(async (req) => {
           // Provider (if showing all providers)
           if (showProviderColumn) {
             xPos += colWidths.room;
-            const provName = appt.provider?.user?.name || '-';
+            const provName = getProviderDisplayName(appt.provider);
             const truncatedProv = provName.length > 15 ? provName.substring(0, 12) + '...' : provName;
             doc.text(truncatedProv, xPos, yPosition);
           }
