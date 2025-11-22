@@ -124,12 +124,36 @@ Deno.serve(async (req) => {
     // Get App ID from environment
     const appId = Deno.env.get('AGORA_APP_ID');
 
+    // DIAGNOSTIC: Log App ID details for debugging
+    console.log('🔍 App ID Diagnostic:', {
+      appId,
+      appIdDefined: appId !== undefined,
+      appIdLength: appId?.length || 0,
+      appIdFirstChars: appId?.substring(0, 4) || 'N/A',
+      appIdLastChars: appId?.substring(appId.length - 4) || 'N/A',
+      appIdTrimmed: appId?.trim() === appId,
+      expectedAppId: '2443c37d5f97424c8b7e1c08e3a3032e'
+    });
+
+    // Validate App ID before returning
+    if (!appId || appId.trim() === '') {
+      console.error('CRITICAL: AGORA_APP_ID is missing or empty from backend secrets');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Backend configuration error - AGORA_APP_ID not set',
+          details: 'The Agora App ID secret is not configured in backend'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Log successful token generation (no sensitive data)
     console.log('Agora tokens generated successfully', {
       channel,
       uid: finalUid,
       role: finalRole,
-      expiresIn: finalTtl
+      expiresIn: finalTtl,
+      appIdValid: true
     });
 
     // Return response in exact format expected by frontend

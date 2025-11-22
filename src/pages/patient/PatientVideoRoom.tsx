@@ -81,6 +81,22 @@ const PatientVideoRoom = () => {
           return;
         }
 
+        // Validate App ID before using it
+        if (!data.appId || data.appId.trim() === '') {
+          logger.error('[PatientVideoRoom] Invalid App ID received from backend', { 
+            appId: data.appId,
+            appIdType: typeof data.appId 
+          });
+          setError("Backend configuration error: Invalid Agora App ID. Please contact support.");
+          return;
+        }
+
+        logger.info('[PatientVideoRoom] Valid credentials received', {
+          appId: data.appId,
+          hasRtcToken: !!data.rtcToken,
+          hasRtmToken: !!data.rtmToken
+        });
+
         setAppId(data.appId);
         setRtcToken(data.rtcToken);
         setRtmToken(data.rtmToken);
