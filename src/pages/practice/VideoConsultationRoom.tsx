@@ -167,7 +167,7 @@ const VideoConsultationRoom = () => {
     );
   }
 
-  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid || !patientId) {
+  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid || !patientId || !appId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>Loading secure video room…</div>

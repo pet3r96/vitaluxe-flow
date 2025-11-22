@@ -143,9 +143,10 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Use upsert to handle duplicate session creation gracefully
     const { data: videoSession, error: sessionError } = await supabase
       .from('video_sessions')
-      .insert({
+      .upsert({
         appointment_id: appointment.id,
         patient_id: patientId,
         provider_id: providerId,
@@ -155,15 +156,27 @@ Deno.serve(async (req) => {
         status: 'live',
         scheduled_start_time: scheduledTime.toISOString(),
         actual_start_time: new Date().toISOString(),
+      }, {
+        onConflict: 'appointment_id',
+        ignoreDuplicates: false  // Update if exists
       })
       .select()
       .single();
 
     if (sessionError || !videoSession) {
-      edgeLogger.error('[create-instant-video-session] Video session creation failed', sessionError);
+      // Log the error but distinguish between real errors and duplicate attempts
+      const isDuplicateError = sessionError?.code === '23505';
+      edgeLogger.error('[create-instant-video-session] Video session creation failed', {
+        error: sessionError,
+        isDuplicate: isDuplicateError
+      });
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to create video session', details: sessionError?.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: isDuplicateError ? 'Session already exists for this appointment' : 'Failed to create video session',
+          details: sessionError?.message 
+        }),
+        { status: isDuplicateError ? 409 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
