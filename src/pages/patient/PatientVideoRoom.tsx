@@ -61,14 +61,14 @@ const PatientVideoRoom = () => {
 
         logger.info('[PatientVideoRoom] Auth attached. User:', { userId: authSession.user.id });
 
-        // Patient always joins as audience, not publisher
+        // Patient always joins as subscriber (view-only), not publisher
         const { data, error } = await supabase.functions.invoke("agora-token", {
           headers: { 
             Authorization: `Bearer ${authSession.access_token}` 
           },
           body: {
             channel: normalized,
-            role: "audience",
+            role: "subscriber",
             ttl: 3600,
           },
         });

@@ -75,6 +75,7 @@ Deno.serve(async (req) => {
         rtcToken,
         rtmToken,
         uid: finalUid,
+        rtmUid: finalUid,
         expiresAt
       }),
       {
