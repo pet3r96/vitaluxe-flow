@@ -128,8 +128,36 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('Authorization successful', { effectiveUserId, isPracticeOwner });
 
-    // Generate unique channel name
-    const channelName = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    // ========== GENERATE UNIQUE CHANNEL NAME WITH COLLISION CHECK ==========
+    let channelName: string;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    do {
+      channelName = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      const { data: existing } = await supabase
+        .from('video_sessions')
+        .select('id')
+        .eq('channel_name', channelName)
+        .maybeSingle();
+      
+      if (!existing) break;
+      
+      attempts++;
+      edgeLogger.warn('Channel name collision detected, retrying', { attempt: attempts, channelName });
+    } while (attempts < maxAttempts);
+
+    if (attempts >= maxAttempts) {
+      edgeLogger.error('Failed to generate unique channel name after retries');
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate unique channel name' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    edgeLogger.info('Unique channel name generated', { channelName, attempts });
+    // ========== END CHANNEL GENERATION ==========
 
     // Determine initial status
     const status = sessionType === 'scheduled' && scheduledStart ? 'scheduled' : 'live';
@@ -166,8 +194,10 @@ Deno.serve(async (req) => {
 
     // Generate Agora tokens using shared service
     const appId = Deno.env.get('AGORA_APP_ID')!;
-    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE')!;
-    const uid = Math.floor(Math.random() * 1000000).toString();
+    
+    // Use authenticated user ID as UID (consistent with agora-token)
+    const uid = effectiveUserId;
+    
     const { rtcToken, rtmToken, expiresAt } = await createAgoraTokens(
       channelName,
       uid,

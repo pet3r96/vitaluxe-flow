@@ -93,6 +93,54 @@ export default function TelehealthRoomUnified({
   }, []);
 
   // ============================================================================
+  // TOKEN REFRESH LOGIC (prevents calls > 1hr from failing)
+  // ============================================================================
+  const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!agora.isJoined || !tokenExpiresAt) return;
+    
+    const checkTokenExpiration = setInterval(async () => {
+      const currentTime = Date.now() / 1000; // Convert to seconds
+      const timeUntilExpiry = tokenExpiresAt - currentTime;
+      
+      // Refresh token if less than 5 minutes remaining
+      if (timeUntilExpiry < 300 && timeUntilExpiry > 0) {
+        logger.info('[TelehealthRoom] Token expiring soon, refreshing...', { 
+          timeRemaining: timeUntilExpiry 
+        });
+        
+        try {
+          const { supabase } = await import("@/integrations/supabase/client");
+          
+          // Call agora-token to get new token
+          const { data, error } = await supabase.functions.invoke('agora-token', {
+            body: {
+              channel,
+              role: isProvider ? 'publisher' : 'subscriber',
+              ttl: 3600,
+            },
+          });
+          
+          if (error) throw error;
+          
+          // Renew token in Agora client
+          await agora.renewToken(data.rtcToken);
+          setTokenExpiresAt(data.expiresAt);
+          
+          logger.info('[TelehealthRoom] Token refreshed successfully', {
+            newExpiresAt: data.expiresAt,
+          });
+        } catch (err) {
+          logger.error('[TelehealthRoom] Failed to refresh token', err);
+        }
+      }
+    }, 60000); // Check every minute
+    
+    return () => clearInterval(checkTokenExpiration);
+  }, [agora.isJoined, tokenExpiresAt, channel, isProvider]);
+
+  // ============================================================================
   // PATIENT ADMISSION FLOW
   // ============================================================================
   useEffect(() => {
