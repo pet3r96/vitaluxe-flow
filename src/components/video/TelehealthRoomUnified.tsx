@@ -43,6 +43,15 @@ export default function TelehealthRoomUnified({
 }: Props) {
   const navigate = useNavigate();
 
+  // 🟡 DIAGNOSTIC: Received App ID
+  console.log('🟡 [TelehealthRoomUnified] Received App ID:', {
+    appId,
+    appIdFull: JSON.stringify(appId),
+    appIdType: typeof appId,
+    appIdLength: appId?.length,
+    timestamp: new Date().toISOString()
+  });
+
   // Core hooks
   const agora = useAgoraCore({ appId });
   const events = useVideoEvents({ sessionId, userUid: String(uid) });

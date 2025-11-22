@@ -126,6 +126,16 @@ const VideoConsultationRoom = () => {
         setUid(data.uid);
         setRtmUid(data.rtmUid);
         setTokenExpiresAt(data.expiresAt);
+
+        // 🔵 DIAGNOSTIC: Backend returned App ID
+        console.log('🔵 [VideoConsultationRoom] Backend returned App ID:', {
+          appId: data.appId,
+          appIdFull: JSON.stringify(data.appId),
+          appIdType: typeof data.appId,
+          appIdLength: data.appId?.length,
+          channel: data.channel,
+          timestamp: new Date().toISOString()
+        });
       } catch (err) {
         if (!isMounted) return;
         
