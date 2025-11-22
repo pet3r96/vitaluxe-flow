@@ -22,7 +22,7 @@ export default function TokenVerificationTest() {
   const [role, setRole] = useState<"publisher" | "subscriber">("publisher");
 
   // Manual hardcoded token inputs (no mutation!)
-  const [manualAppId, setManualAppId] = useState("2443c37d5f97424c8b7e1c08e3a3032e");
+  const [manualAppId, setManualAppId] = useState("8dc08cf9660343a4bf2fd90279736418");
   const [manualChannel, setManualChannel] = useState("vlx-debug");
   const [manualUid, setManualUid] = useState("debug-user-1");
   const [manualRtcToken, setManualRtcToken] = useState("");
