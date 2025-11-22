@@ -122,7 +122,7 @@ const VideoConsultationRoom = () => {
 
         console.log('🟢 [VideoConsultationRoom] Received from backend:', {
           appId: data.appId,
-          appIdMatch: data.appId === '2443c37d5f97424c8b7e1c08e3a3032e',
+          appIdFormat: /^[a-f0-9]{32}$/.test(data.appId) ? 'valid' : 'invalid',
           timestamp: new Date().toISOString()
         });
 
