@@ -4,6 +4,15 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeChannel } from "@/lib/video/normalizeChannel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -68,6 +77,7 @@ export function CreateAppointmentDialog({
   const { effectiveUserId } = useAuth();
   const [selectedPatientId, setSelectedPatientId] = useState(defaultPatientId || "");
   const [createFollowUp, setCreateFollowUp] = useState(false);
+  const [showComingSoonDialog, setShowComingSoonDialog] = useState(false);
 
   // Debug logging for providers
   useEffect(() => {
@@ -464,6 +474,12 @@ export function CreateAppointmentDialog({
       return;
     }
     
+    // Prevent video appointments - coming soon
+    if (values.visitType === 'video') {
+      toast.error("Video consultations are coming soon. Please select an in-person appointment.");
+      return;
+    }
+    
     // Prevent creating scheduled appointments in the past
     if (!isWalkIn) {
       const startDateTime = new Date(`${values.appointmentDate}T${values.startTime}`);
@@ -648,8 +664,16 @@ export function CreateAppointmentDialog({
             <Select 
               value={watch("serviceType")} 
               onValueChange={(value) => {
-                setValue("serviceType", value);
                 const serviceType = serviceTypes?.find(st => st.id === value);
+                
+                // Check if video appointment selected - show coming soon dialog
+                if (serviceType?.name?.toLowerCase().includes('video')) {
+                  setShowComingSoonDialog(true);
+                  setValue("serviceType", "");
+                  return;
+                }
+                
+                setValue("serviceType", value);
                 
                 // Auto-derive visit_type based on service selection
                 if (serviceType?.name?.toLowerCase().includes('video')) {
@@ -668,11 +692,23 @@ export function CreateAppointmentDialog({
                 <SelectValue placeholder="Select appointment type (optional)" />
               </SelectTrigger>
               <SelectContent>
-                {serviceTypes?.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
-                    {type.name}
-                  </SelectItem>
-                ))}
+                {serviceTypes?.map((type) => {
+                  const isVideo = type.name?.toLowerCase().includes('video');
+                  return (
+                    <SelectItem 
+                      key={type.id} 
+                      value={type.id}
+                      disabled={isVideo}
+                    >
+                      <div className="flex items-center gap-2">
+                        {type.name}
+                        {isVideo && (
+                          <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -733,6 +769,22 @@ export function CreateAppointmentDialog({
           </div>
         </form>
       </DialogContent>
+
+      {/* Coming Soon Dialog for Video Consultations */}
+      <AlertDialog open={showComingSoonDialog} onOpenChange={setShowComingSoonDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Video Consultations - Coming Soon!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Video consultation features are currently being enhanced and will be available soon. 
+              Please schedule an in-person appointment for now.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Got it</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
