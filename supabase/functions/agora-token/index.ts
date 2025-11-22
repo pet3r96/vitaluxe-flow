@@ -147,6 +147,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Get App Certificate from environment
+    const appCert = Deno.env.get('AGORA_APP_CERTIFICATE');
+
+    // DIAGNOSTIC: Log App Certificate details for debugging
+    console.log('🔍 App Certificate Diagnostic:', {
+      certDefined: appCert !== undefined,
+      certLength: appCert?.length || 0,
+      certFirstChars: appCert?.substring(0, 4) || 'N/A',
+      certLastChars: appCert?.substring(appCert.length - 4) || 'N/A',
+      certTrimmed: appCert?.trim() === appCert
+    });
+
+    // Validate App Certificate before returning
+    if (!appCert || appCert.trim() === '') {
+      console.error('CRITICAL: AGORA_APP_CERTIFICATE is missing or empty from backend secrets');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Backend configuration error - AGORA_APP_CERTIFICATE not set',
+          details: 'The Agora App Certificate secret is not configured in backend. It must match the certificate from the same Agora project as the App ID.'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Log successful token generation (no sensitive data)
     console.log('Agora tokens generated successfully', {
       channel,
