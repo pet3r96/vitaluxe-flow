@@ -156,6 +156,7 @@ const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultation
 const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
+const VideoDiagnostics = lazy(() => import("./pages/practice/VideoDiagnostics"));
 const AgoraDebugSuite = lazy(() => import("./pages/dev/AgoraDebugSuite"));
 const PatientVideoRoom = lazy(() => import("./pages/patient/PatientVideoRoom"));
 const VideoConsultationRoom = lazy(() => import("./pages/practice/VideoConsultationRoom"));
@@ -405,9 +406,13 @@ const App = () => {
                                                   <TokenVerificationTest />
                                                 </DeveloperRoute>
                                               }
-                                            />
-                                            <Route
-                                              path="/dev/agora-debug"
+                                             />
+                                             <Route
+                                               path="/practice/video-diagnostics"
+                                               element={<VideoDiagnostics />}
+                                             />
+                                             <Route
+                                               path="/dev/agora-debug"
                                               element={
                                                 <DeveloperRoute>
                                                   <AgoraDebugSuite />
