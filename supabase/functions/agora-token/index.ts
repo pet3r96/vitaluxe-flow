@@ -43,8 +43,59 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use provided values or defaults
-    const finalUid = uid || user.id;
+    // ========== SESSION ACCESS VALIDATION ==========
+    // Validate user has legitimate access to this video session
+    const { data: sessionRecord, error: sessionErr } = await supabase
+      .from('video_sessions')
+      .select('patient_id, provider_id, practice_id')
+      .eq('channel_name', channel)
+      .single();
+
+    if (!sessionRecord || sessionErr) {
+      console.error('Session not found:', sessionErr);
+      return new Response(
+        JSON.stringify({ error: 'Session not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get user's role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    // Check if user is the patient
+    const { data: patientMatch } = await supabase
+      .from('patient_accounts')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('id', sessionRecord.patient_id)
+      .maybeSingle();
+
+    // Check if user is a provider in the practice
+    const { data: providerMatch } = await supabase
+      .from('providers')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('practice_id', sessionRecord.practice_id)
+      .maybeSingle();
+
+    // Deny access if user is not authorized
+    if (!patientMatch && !providerMatch && profile?.role !== 'admin') {
+      console.error('Access denied:', { userId: user.id, sessionId: sessionRecord });
+      return new Response(
+        JSON.stringify({ error: 'Access denied - Not authorized for this session' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Session access validated:', { userId: user.id, channel });
+    // ========== END VALIDATION ==========
+
+    // Use authenticated user ID as UID (consistent with create-video-session)
+    const finalUid = user.id;
     const finalRole = role || 'publisher';
     const finalTtl = ttl || 3600;
 
