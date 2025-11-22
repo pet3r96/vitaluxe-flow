@@ -8,8 +8,6 @@ import AgoraRTC, {
 import { supabase } from "@/integrations/supabase/client";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
 
-const APP_ID = import.meta.env.VITE_AGORA_APP_ID;
-
 export default function AgoraDebugSuite() {
   usePagePerformance('AgoraDebugSuite');
   const [sessionId, setSessionId] = useState("");
@@ -89,15 +87,17 @@ export default function AgoraDebugSuite() {
   // START PUBLISHER
   // ============================
   async function startPublisher() {
-    if (!tokenData?.rtcToken) {
-      setError("No RTC token found");
+    if (!tokenData?.rtcToken || !tokenData?.appId) {
+      setError("No RTC token or App ID found");
       return;
     }
+
+    debug("🟢 Using App ID from backend:", { appId: tokenData.appId });
 
     const rtc = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
     setClient(rtc);
 
-    await rtc.join(APP_ID, channelName, tokenData.rtcToken, null);
+    await rtc.join(tokenData.appId, channelName, tokenData.rtcToken, null);
 
     debug("Creating tracks...");
 

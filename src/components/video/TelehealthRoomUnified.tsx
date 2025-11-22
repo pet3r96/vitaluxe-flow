@@ -43,6 +43,31 @@ export default function TelehealthRoomUnified({
 }: Props) {
   const navigate = useNavigate();
 
+  // 🔴 CRITICAL: Validate App ID before rendering
+  if (!appId || appId.length !== 32) {
+    console.error('🔴 [TelehealthRoomUnified] Invalid App ID detected:', {
+      appId,
+      appIdLength: appId?.length,
+      expectedLength: 32
+    });
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <div className="text-lg font-semibold text-destructive">Invalid Configuration</div>
+          <p className="text-sm text-muted-foreground">
+            Unable to join video session due to invalid credentials.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // 🟡 DIAGNOSTIC: Received App ID
   console.log('🟡 [TelehealthRoomUnified] Received App ID:', {
     appId,
