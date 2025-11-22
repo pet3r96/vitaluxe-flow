@@ -188,12 +188,26 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
       logger.info('[useAgoraCore] Joined successfully');
       setConnectionState('CONNECTED');
     } catch (error: any) {
-      console.error('[useAgoraCore] Join failed', {
-        error: error?.message || String(error),
-        code: error?.code || 'unknown',
-        channel,
-        uid
-      });
+      // Enhanced error logging for App ID/Certificate mismatch
+      if (error?.code === 'CAN_NOT_GET_GATEWAY_SERVER' || 
+          error?.message?.includes('invalid vendor key')) {
+        console.error('[useAgoraCore] AGORA APP ID/CERTIFICATE MISMATCH', {
+          error: error?.message,
+          code: error?.code,
+          appIdUsed: appId?.substring(0, 8) + '***',
+          hint: 'The App ID and Certificate in backend secrets do not match. Verify they are from the same Agora project.',
+          channel,
+          uid
+        });
+      } else {
+        console.error('[useAgoraCore] Join failed', {
+          error: error?.message || String(error),
+          code: error?.code || 'unknown',
+          channel,
+          uid
+        });
+      }
+      
       setConnectionState('DISCONNECTED');
       logger.error('[useAgoraCore] Join error', error);
       onError?.(error as Error);
