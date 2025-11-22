@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
         channel_name: channelName,
         session_type: 'instant',
         status: 'live',
-        actual_start: new Date().toISOString(),
+        actual_start_time: new Date().toISOString(),
       })
       .select()
       .single();
