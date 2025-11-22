@@ -81,6 +81,8 @@ Deno.serve(async (req) => {
         notes,
         service_type,
         service_description,
+        visit_type,
+        video_session_id,
         patient:patient_accounts(first_name, last_name),
         provider:providers!patient_appointments_provider_id_fkey(
           id,
@@ -167,12 +169,24 @@ Deno.serve(async (req) => {
 
     let yPosition = 70;
 
-    // Generate hour-by-hour time slots from 8 AM to 6 PM
+    // Generate time slots dynamically based on appointments or default to 7 AM - 7 PM
     const generateTimeSlots = () => {
       const slots = [];
-      for (let hour = 8; hour <= 18; hour++) {
+      let startHour = 7;
+      let endHour = 19;
+      
+      // If we have appointments, expand range to cover them
+      if (appointments && appointments.length > 0) {
+        const times = appointments.map((appt: any) => new Date(appt.start_time).getHours());
+        const minHour = Math.min(...times);
+        const maxHour = Math.max(...times);
+        startHour = Math.max(0, minHour - 1); // Start 1 hour before earliest
+        endHour = Math.min(23, maxHour + 2); // End 2 hours after latest
+      }
+      
+      for (let hour = startHour; hour <= endHour; hour++) {
         slots.push({ hour, minute: 0 });
-        if (hour < 18) {
+        if (hour < endHour) {
           slots.push({ hour, minute: 30 });
         }
       }
@@ -305,8 +319,18 @@ Deno.serve(async (req) => {
           doc.text(truncatedPatient, xPos, yPosition);
           xPos += colWidths.patient;
           
-          // Service
-          const serviceName = appt.service_type || 'N/A';
+          // Service - show type based on visit_type and service_description
+          let serviceName = 'N/A';
+          if (appt.video_session_id || appt.visit_type === 'video') {
+            serviceName = 'Video Consultation';
+          } else if (appt.service_description) {
+            serviceName = appt.service_description;
+          } else if (appt.visit_type === 'in_person') {
+            serviceName = 'Office Visit';
+          } else if (appt.service_type && !appt.service_type.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            // Only show service_type if it's not a UUID
+            serviceName = appt.service_type;
+          }
           const truncatedService = serviceName.length > 18 ? serviceName.substring(0, 15) + '...' : serviceName;
           doc.text(truncatedService, xPos, yPosition);
           xPos += colWidths.service;

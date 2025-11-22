@@ -48,15 +48,20 @@ export function AppointmentsList({
   };
 
   const getAppointmentTypeLabel = (apt: any) => {
-    if (apt.visit_type === 'video') return 'Video consultation';
+    if (apt.video_session_id || apt.visit_type === 'video') return 'Video consultation';
     if (apt.appointment_type === 'walk_in') return 'Walk-in';
     if (apt.visit_type === 'in_person') return 'Office visit';
-    return 'Appointment';
+    return 'Office visit';
   };
 
   const getAppointmentTypeBadge = (apt: any) => {
-    if (apt.visit_type === 'video') {
-      return <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">Video consultation</Badge>;
+    if (apt.video_session_id || apt.visit_type === 'video') {
+      return (
+        <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 flex items-center gap-1">
+          <Video className="h-3 w-3" />
+          Video consultation
+        </Badge>
+      );
     }
     if (apt.appointment_type === 'walk_in') {
       return <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">Walk-in</Badge>;
@@ -64,7 +69,12 @@ export function AppointmentsList({
     if (apt.status === 'pending') {
       return <Badge variant="outline" className="text-xs bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800">Pending</Badge>;
     }
-    return <Badge variant="outline" className="text-xs">Office visit</Badge>;
+    return (
+      <Badge variant="outline" className="text-xs flex items-center gap-1">
+        <MapPin className="h-3 w-3" />
+        Office visit
+      </Badge>
+    );
   };
 
   const getPatientName = (apt: any) => {
