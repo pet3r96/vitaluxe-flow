@@ -124,6 +124,11 @@ Deno.serve(async (req) => {
     // Get App ID from environment
     const appId = Deno.env.get('AGORA_APP_ID');
 
+    console.log("BACKEND CHECK", {
+      appId: Deno.env.get("AGORA_APP_ID"),
+      cert: Deno.env.get("AGORA_APP_CERTIFICATE")
+    });
+
     // DIAGNOSTIC: Log App ID details for debugging
     console.log('🔍 App ID Diagnostic:', {
       appId,
@@ -132,7 +137,7 @@ Deno.serve(async (req) => {
       appIdFirstChars: appId?.substring(0, 4) || 'N/A',
       appIdLastChars: appId?.substring(appId.length - 4) || 'N/A',
       appIdTrimmed: appId?.trim() === appId,
-      expectedAppId: '2443c37d5f97424c8b7e1c08e3a3032e'
+      appIdFormat: /^[a-f0-9]{32}$/.test(appId || '') ? 'valid' : 'invalid'
     });
 
     // Validate App ID before returning
