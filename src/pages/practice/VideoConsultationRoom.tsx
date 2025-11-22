@@ -33,21 +33,6 @@ const VideoConsultationRoom = () => {
       try {
         setLoading(true);
 
-        // Preflight: Verify Agora config before proceeding
-        try {
-          const { data: configData, error: configError } = await supabase.functions.invoke("verify-agora-config", {
-            body: { appId: import.meta.env.VITE_AGORA_APP_ID }
-          });
-          
-          if (configError || !configData?.match) {
-            logger.error('Agora config mismatch', configError);
-            setError("Configuration error. Please contact support.");
-            return;
-          }
-        } catch (configErr) {
-          logger.warn('Config verification unavailable, continuing');
-        }
-
         // Fetch channel name + patient ID
         const { data: session, error: sessionError } = await supabase
           .from("video_sessions")
