@@ -170,8 +170,8 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
       }
 
       // 🔴 CRITICAL VALIDATION: Ensure App ID is correct
-      if (!appId || appId.length !== 32 || !appId.startsWith('2443')) {
-        const errorMsg = `INVALID AGORA APP ID: Expected "2443c37d5f97424c8b7e1c08e3a3032e", got "${appId}"`;
+      if (!appId || appId.length !== 32) {
+        const errorMsg = `INVALID AGORA APP ID: App ID must be 32 characters, got "${appId}"`;
         console.error('🔴 [useAgoraCore] ' + errorMsg);
         throw new Error(errorMsg);
       }
@@ -184,13 +184,14 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
         appIdLength: appId?.length,
         appIdBytes: Array.from(appId || '').map(c => c.charCodeAt(0)),
         appIdStartsWith: appId?.substring(0, 8),
-        expectedAppId: '2443c37d5f97424c8b7e1c08e3a3032e',
-        matches: appId === '2443c37d5f97424c8b7e1c08e3a3032e',
+        appIdFormat: /^[a-f0-9]{32}$/.test(appId) ? 'valid' : 'invalid',
         channel,
         uid,
         tokenPreview: token?.substring(0, 20) + '...',
         timestamp: new Date().toISOString()
       });
+
+      console.log("FRONTEND USING:", appId);
 
       // Join the channel
       await client.join(appId, channel, token, uid);
