@@ -5,7 +5,7 @@
 
 export const emailStyles = `
   body { 
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+    font-family: Arial, sans-serif; 
     line-height: 1.6; 
     color: #E2C977; 
     background-color: #0B0B0B; 
@@ -18,17 +18,17 @@ export const emailStyles = `
     background-color: #0B0B0B;
   }
   .header { 
-    background-color: #0B0B0B;
+    background: linear-gradient(135deg, #C8A64B 0%, #E2C977 100%); 
     padding: 40px 20px; 
     text-align: center; 
-    border-bottom: 1px solid #292929;
+    border-bottom: none;
   }
-  .logo {
-    height: 80px;
-    width: auto;
-    max-width: 300px;
-    margin: 0 auto;
-    display: block;
+  .header h1 { 
+    margin: 0; 
+    color: #0B0B0B; 
+    font-size: 32px; 
+    font-weight: bold; 
+    letter-spacing: 4px; 
   }
   .content { 
     background-color: #1A1A1A; 
@@ -37,22 +37,15 @@ export const emailStyles = `
   }
   .content h2 { 
     color: #E2C977; 
-    margin-top: 0;
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 20px;
+    margin-top: 0; 
   }
   .content p { 
-    color: #E2C977;
-    font-size: 15px;
-    line-height: 1.7;
-    margin: 16px 0;
+    color: #E2C977; 
   }
   .greeting { 
     color: #E2C977; 
     font-size: 16px; 
-    margin-bottom: 24px;
-    font-weight: 500;
+    margin-bottom: 20px; 
   }
   .button { 
     display: inline-block; 
@@ -62,37 +55,27 @@ export const emailStyles = `
     text-decoration: none; 
     border-radius: 6px; 
     margin: 25px 0; 
-    font-weight: 600;
-    font-size: 15px;
-    transition: background-color 0.2s ease;
+    font-weight: bold; 
   }
   .button:hover { 
     background-color: #E2C977; 
   }
   .footer { 
     text-align: center; 
-    padding: 30px 20px; 
+    padding: 25px 20px; 
     color: #8E6E1E; 
-    font-size: 13px; 
-    background-color: #0B0B0B;
-    border-top: 1px solid #292929;
+    font-size: 12px; 
+    background-color: #0B0B0B; 
   }
   .footer a { 
     color: #C8A64B; 
     text-decoration: none; 
   }
-  .footer a:hover {
-    color: #E2C977;
-  }
 `;
 
 export const emailHeader = `
   <div class="header">
-    <img 
-      src="https://app.vitaluxeservices.com/images/vitaluxe-logo.png" 
-      alt="Vitaluxe Services" 
-      class="logo"
-    />
+    <h1>VITALUXE</h1>
   </div>
 `;
 

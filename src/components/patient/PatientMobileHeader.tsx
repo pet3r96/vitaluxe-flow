@@ -38,7 +38,7 @@ export function PatientMobileHeader() {
   return (
     <>
       <header 
-        className={`sticky z-30 w-full border-b bg-background md:hidden ${
+        className={`sticky z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden ${
           isImpersonating ? 'top-[48px]' : 'top-0'
         }`}
         style={{ touchAction: 'auto' }}>

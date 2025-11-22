@@ -3,7 +3,6 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { RateLimiter, getClientIP } from '../_shared/rateLimiter.ts';
 import { validateInput, joinVideoSessionSchema } from '../_shared/zodSchemas.ts';
-import { createAgoraTokens } from '../_shared/agoraTokenService.ts';
 
 const agoraAppCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
 
@@ -243,43 +242,42 @@ Deno.serve(async (req) => {
 
     // Generate Agora token for this user
     edgeLogger.info('🎫 [join-video-session] Generating Agora token...');
-    
-    // Generate Agora tokens directly using unified service
-    const uid = effectiveUserId;
-    const channelName = session.channel_name;
+    const { data: tokenData, error: tokenError } = await supabase.functions.invoke('generate-agora-token', {
+      body: {
+        sessionId,
+        role: 'publisher' // Both provider and patient can publish
+      },
+      headers: {
+        Authorization: authHeader
+      }
+    });
 
-    let tokenData;
-    try {
-      const { rtcToken, rtmToken, expiresAt } = await createAgoraTokens(
-        channelName,
-        uid,
-        'publisher',
-        3600
-      );
-
-      const appId = Deno.env.get('AGORA_APP_ID')!;
-
-      tokenData = {
-        token: rtcToken,
-        rtmToken: rtmToken,
-        channelName: channelName,
-        uid: uid,
-        appId: appId,
-        rtmUid: uid,
-        expiresAt: expiresAt
-      };
-
-      edgeLogger.info('✅ [join-video-session] Token generated successfully');
-    } catch (tokenError) {
+    if (tokenError) {
       edgeLogger.error('❌ [join-video-session] Token generation failed', tokenError);
+      const errorDetails = tokenError.context || tokenError.details || tokenError.message;
       return new Response(JSON.stringify({ 
         error: 'Failed to generate video token',
-        details: tokenError instanceof Error ? tokenError.message : String(tokenError)
+        details: errorDetails,
+        message: `Token generation error: ${tokenError.message}`
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    if (!tokenData) {
+      edgeLogger.error('❌ [join-video-session] No token data received');
+      return new Response(JSON.stringify({ 
+        error: 'Failed to generate video token',
+        details: 'No data received from token generation service',
+        message: 'Token generation returned empty response'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    edgeLogger.info('✅ [join-video-session] Token generated successfully');
 
     // Enhanced diagnostic logging for comparison with frontend
     edgeLogger.info('=== TOKEN GENERATION PARAMETERS (BACKEND) ===');

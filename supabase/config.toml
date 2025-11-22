@@ -342,9 +342,6 @@ verify_jwt = true
 [functions.generate-agora-token]
 verify_jwt = true
 
-[functions.agora-token]
-verify_jwt = true
-
 [functions.start-video-session]
 verify_jwt = true
 

@@ -14,7 +14,6 @@ interface AgoraVideoRoomProps {
 interface ExtendedAgoraVideoRoomProps extends AgoraVideoRoomProps {
   sessionId: string;
   patientId: string;
-  tokenExpiresAt?: number | null;
 }
 
 export function AgoraVideoRoom({ 
@@ -24,19 +23,9 @@ export function AgoraVideoRoom({
   uid, 
   userType,
   sessionId,
-  patientId,
-  tokenExpiresAt
+  patientId
 }: ExtendedAgoraVideoRoomProps) {
   const isProvider = userType === "practice";
-
-  // 🟢 DIAGNOSTIC: Passing App ID to TelehealthRoomUnified
-  console.log('🟢 [AgoraVideoRoom] Passing App ID to TelehealthRoomUnified:', {
-    appId,
-    appIdFull: JSON.stringify(appId),
-    appIdType: typeof appId,
-    appIdLength: appId?.length,
-    timestamp: new Date().toISOString()
-  });
 
   return (
     <TelehealthRoomUnified
@@ -47,7 +36,6 @@ export function AgoraVideoRoom({
       isProvider={isProvider}
       sessionId={sessionId}
       patientId={patientId}
-      tokenExpiresAt={tokenExpiresAt}
     />
   );
 }

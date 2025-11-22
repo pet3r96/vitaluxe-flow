@@ -5,7 +5,7 @@
 
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { successResponse, errorResponse } from '../_shared/responses.ts';
-import { createAgoraTokens } from '../_shared/agoraTokenService.ts';
+import { RtcTokenBuilder, RtcRole } from 'https://esm.sh/agora-token@2.0.4';
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { validateUserOwnsResource } from '../_shared/idValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
@@ -21,6 +21,7 @@ interface CreateSessionRequest {
   patientId?: string;
   sessionType: 'instant' | 'scheduled' | 'practice_room';
   scheduledStart?: string; // ISO timestamp
+  scheduledEnd?: string;   // ISO timestamp
 }
 
 Deno.serve(async (req) => {
@@ -76,47 +77,9 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body: CreateSessionRequest = await req.json();
-    const { practiceId, providerId, patientId, sessionType, scheduledStart } = body;
+    const { practiceId, providerId, patientId, sessionType, scheduledStart, scheduledEnd } = body;
 
     edgeLogger.info('Creating video session', { practiceId, sessionType });
-
-    // ========== VALIDATE PATIENT AND PROVIDER IDs ==========
-    if (patientId) {
-      const { data: patientCheck, error: patientError } = await supabase
-        .from('patient_accounts')
-        .select('id, practice_id')
-        .eq('id', patientId)
-        .eq('practice_id', practiceId)
-        .single();
-
-      if (patientError || !patientCheck) {
-        edgeLogger.error('Invalid patient or patient does not belong to practice', undefined, { patientId, practiceId });
-        return new Response(
-          JSON.stringify({ error: 'Invalid patient or patient does not belong to practice' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    if (providerId) {
-      const { data: providerCheck, error: providerError } = await supabase
-        .from('providers')
-        .select('id, practice_id')
-        .eq('id', providerId)
-        .eq('practice_id', practiceId)
-        .single();
-
-      if (providerError || !providerCheck) {
-        edgeLogger.error('Invalid provider or provider does not belong to practice', undefined, { providerId, practiceId });
-        return new Response(
-          JSON.stringify({ error: 'Invalid provider or provider does not belong to practice' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    edgeLogger.info('Patient/Provider validation passed');
-    // ========== END VALIDATION ==========
 
     // PHASE 3: ID validation for practice
     const { valid: idValid, error: idError } = await validateUserOwnsResource(
@@ -165,36 +128,8 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('Authorization successful', { effectiveUserId, isPracticeOwner });
 
-    // ========== GENERATE UNIQUE CHANNEL NAME WITH COLLISION CHECK ==========
-    let channelName: string;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    do {
-      channelName = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-      
-      const { data: existing } = await supabase
-        .from('video_sessions')
-        .select('id')
-        .eq('channel_name', channelName)
-        .maybeSingle();
-      
-      if (!existing) break;
-      
-      attempts++;
-      edgeLogger.warn('Channel name collision detected, retrying', { attempt: attempts, channelName });
-    } while (attempts < maxAttempts);
-
-    if (attempts >= maxAttempts) {
-      edgeLogger.error('Failed to generate unique channel name after retries');
-      return new Response(
-        JSON.stringify({ error: 'Failed to generate unique channel name' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    edgeLogger.info('Unique channel name generated', { channelName, attempts });
-    // ========== END CHANNEL GENERATION ==========
+    // Generate unique channel name
+    const channelName = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
     // Determine initial status
     const status = sessionType === 'scheduled' && scheduledStart ? 'scheduled' : 'live';
@@ -211,9 +146,10 @@ Deno.serve(async (req) => {
         patient_id: patientId,
         channel_name: channelName,
         session_type: sessionType,
-        scheduled_start_time: scheduledStart,
+        scheduled_start: scheduledStart,
+        scheduled_end: scheduledEnd,
         status,
-        actual_start_time: status === 'live' ? new Date().toISOString() : null,
+        actual_start: status === 'live' ? new Date().toISOString() : null,
       })
       .select()
       .single();
@@ -228,28 +164,28 @@ Deno.serve(async (req) => {
 
     edgeLogger.info('Video session created', { sessionId: session.id });
 
-    // Generate Agora tokens using shared service
-    const appId = Deno.env.get('AGORA_APP_ID')!;
-    
-    // Use authenticated user ID as UID (consistent with agora-token)
-    const uid = effectiveUserId;
-    
-    const { rtcToken, rtmToken, expiresAt } = await createAgoraTokens(
+    // Generate Agora tokens
+    const appId = Deno.env.get('VITE_AGORA_APP_ID')!;
+    const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE') || '';
+    const uid = Math.floor(Math.random() * 1000000);
+    const ttl = 3600; // 1 hour
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpire = currentTimestamp + ttl;
+
+    const rtcToken = RtcTokenBuilder.buildTokenWithUid(
+      appId,
+      appCertificate,
       channelName,
       uid,
-      'publisher',
-      3600
+      RtcRole.PUBLISHER,
+      ttl,
+      privilegeExpire
     );
 
-    // Sanitized logging - no secrets, masked IDs
-    edgeLogger.info('Agora tokens generated for new session', {
-      appIdPrefix: appId.substring(0, 8) + '***',  // First 8 chars only
-      sessionId: session.id,
-      channelName: session.channel_name,
-      uid,
-      ttl: 3600,
-      expiresAt: new Date(expiresAt * 1000).toISOString()
-    });
+    const rtmUid = `${uid}`;
+    const rtmToken = rtcToken; // Using same token for RTM
+
+    edgeLogger.info('Tokens generated successfully');
 
     // PHASE 2: Audit logging for video_session_created
     await supabaseAdmin.from('audit_logs').insert({
@@ -290,10 +226,9 @@ Deno.serve(async (req) => {
         credentials: {
           rtcToken,
           rtmToken,
-          uid,
-          rtmUid: uid,
-          appId: appId.substring(0, 8) + '***', // Masked for security
-          expiresAt,
+          uid: uid.toString(),
+          rtmUid,
+          appId,
         },
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -18,7 +18,6 @@ const PatientVideoRoom = () => {
   const [channelName, setChannelName] = useState<string | null>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
-  const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(null);
 
   logger.info("[PatientVideoRoom] Session ID", { sessionId });
 
@@ -51,25 +50,11 @@ const PatientVideoRoom = () => {
         setChannelName(normalized);
         setPatientId(session.patient_id);
 
-        // Verify authentication before requesting tokens
-        const { data: { session: authSession } } = await supabase.auth.getSession();
-
-        if (!authSession) {
-          logger.error('[PatientVideoRoom] No Supabase session available');
-          setError("You must be logged in to join video sessions.");
-          return;
-        }
-
-        logger.info('[PatientVideoRoom] Auth attached. User:', { userId: authSession.user.id });
-
-        // Patient always joins as subscriber (view-only), not publisher
+        // Patient always joins as audience, not publisher
         const { data, error } = await supabase.functions.invoke("agora-token", {
-          headers: { 
-            Authorization: `Bearer ${authSession.access_token}` 
-          },
           body: {
             channel: normalized,
-            role: "subscriber",
+            role: "audience",
             ttl: 3600,
           },
         });
@@ -81,34 +66,11 @@ const PatientVideoRoom = () => {
           return;
         }
 
-        // Validate App ID before using it
-        if (!data.appId || data.appId.trim() === '') {
-          logger.error('[PatientVideoRoom] Invalid App ID received from backend', { 
-            appId: data.appId,
-            appIdType: typeof data.appId 
-          });
-          setError("Backend configuration error: Invalid Agora App ID. Please contact support.");
-          return;
-        }
-
-        logger.info('[PatientVideoRoom] Valid credentials received', {
-          appId: data.appId,
-          hasRtcToken: !!data.rtcToken,
-          hasRtmToken: !!data.rtmToken
-        });
-
-        console.log('🟢 [PatientVideoRoom] Received from backend:', {
-          appId: data.appId,
-          appIdFormat: /^[a-f0-9]{32}$/.test(data.appId) ? 'valid' : 'invalid',
-          timestamp: new Date().toISOString()
-        });
-
         setAppId(data.appId);
         setRtcToken(data.rtcToken);
         setRtmToken(data.rtmToken);
         setUid(data.uid);
         setRtmUid(data.rtmUid);
-        setTokenExpiresAt(data.expiresAt);
       } catch (e: any) {
         setError(e?.message ?? "Unexpected error occurred.");
       } finally {
@@ -162,7 +124,6 @@ const PatientVideoRoom = () => {
         userType="patient"
         sessionId={sessionId!}
         patientId={patientId!}
-        tokenExpiresAt={tokenExpiresAt}
       />
     </>
   );

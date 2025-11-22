@@ -47,15 +47,9 @@ export interface UseAgoraCoreReturn {
 }
 
 export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCoreReturn => {
-  // React Strict Mode protection: use ref to prevent multiple client creations
-  const clientRef = useRef<IAgoraRTCClient | null>(null);
-  const [client] = useState<IAgoraRTCClient>(() => {
-    if (!clientRef.current) {
-      console.log('🔵 [useAgoraCore] Creating NEW Agora client');
-      clientRef.current = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-    }
-    return clientRef.current;
-  });
+  const [client] = useState<IAgoraRTCClient>(() => 
+    AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' })
+  );
   const [isJoined, setIsJoined] = useState(false);
   const [localAudioTrack, setLocalAudioTrack] = useState<ILocalAudioTrack | null>(null);
   const [localVideoTrack, setLocalVideoTrack] = useState<ILocalVideoTrack | null>(null);
@@ -158,40 +152,12 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
   }, [client]);
 
   const join = useCallback(async (channel: string, token: string, uid: string | number) => {
-    if (!client) return;
-    
     try {
-      setConnectionState('CONNECTING');
-      
       logger.info('[useAgoraCore] Joining channel', { channel, uid });
       
       if (!appId) {
         throw new Error('Agora App ID is required');
       }
-
-      // 🔴 CRITICAL VALIDATION: Ensure App ID is correct
-      if (!appId || appId.length !== 32) {
-        const errorMsg = `INVALID AGORA APP ID: App ID must be 32 characters, got "${appId}"`;
-        console.error('🔴 [useAgoraCore] ' + errorMsg);
-        throw new Error(errorMsg);
-      }
-
-      // 🔴 DIAGNOSTIC: RIGHT BEFORE client.join() call
-      console.log('🔴 [useAgoraCore] ABOUT TO CALL client.join() with:', {
-        appId,
-        appIdFull: JSON.stringify(appId),
-        appIdType: typeof appId,
-        appIdLength: appId?.length,
-        appIdBytes: Array.from(appId || '').map(c => c.charCodeAt(0)),
-        appIdStartsWith: appId?.substring(0, 8),
-        appIdFormat: /^[a-f0-9]{32}$/.test(appId) ? 'valid' : 'invalid',
-        channel,
-        uid,
-        tokenPreview: token?.substring(0, 20) + '...',
-        timestamp: new Date().toISOString()
-      });
-
-      console.log("FRONTEND USING:", appId);
 
       // Join the channel
       await client.join(appId, channel, token, uid);
@@ -207,29 +173,7 @@ export const useAgoraCore = ({ appId, onError }: UseAgoraCoreParams): UseAgoraCo
       setLocalVideoTrack(videoTrack);
 
       logger.info('[useAgoraCore] Joined successfully');
-      setConnectionState('CONNECTED');
-    } catch (error: any) {
-      // Enhanced error logging for App ID/Certificate mismatch
-      if (error?.code === 'CAN_NOT_GET_GATEWAY_SERVER' || 
-          error?.message?.includes('invalid vendor key')) {
-        console.error('[useAgoraCore] AGORA APP ID/CERTIFICATE MISMATCH', {
-          error: error?.message,
-          code: error?.code,
-          appIdUsed: appId?.substring(0, 8) + '***',
-          hint: 'The App ID and Certificate in backend secrets do not match. Verify they are from the same Agora project.',
-          channel,
-          uid
-        });
-      } else {
-        console.error('[useAgoraCore] Join failed', {
-          error: error?.message || String(error),
-          code: error?.code || 'unknown',
-          channel,
-          uid
-        });
-      }
-      
-      setConnectionState('DISCONNECTED');
+    } catch (error) {
       logger.error('[useAgoraCore] Join error', error);
       onError?.(error as Error);
       throw error;

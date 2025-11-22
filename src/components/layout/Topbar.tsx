@@ -29,7 +29,7 @@ export function Topbar() {
   }, []);
 
   return (
-    <div className={`${isPatientMobile ? 'hidden md:flex' : 'flex'} sticky top-0 z-10 items-center justify-between gap-1.5 sm:gap-2 md:gap-4 border-b border-border bg-background px-2 sm:px-3 md:px-4 lg:px-6 py-1.5 sm:py-2 md:py-3 transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_12px_rgba(190,155,75,0.15)]' : ''}`}>
+    <div className={`${isPatientMobile ? 'hidden md:flex' : 'flex'} sticky top-0 z-10 items-center justify-between gap-1.5 sm:gap-2 md:gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-3 md:px-4 lg:px-6 py-1.5 sm:py-2 md:py-3 transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_12px_rgba(190,155,75,0.15)]' : ''}`}>
       <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 flex-1 min-w-0">
         <Tooltip>
           <TooltipTrigger asChild>

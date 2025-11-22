@@ -26,7 +26,6 @@ interface Props {
   patientId: string;
   isGuest?: boolean;
   sessionType?: "instant" | "scheduled" | "practice_room";
-  tokenExpiresAt?: number | null;
 }
 
 export default function TelehealthRoomUnified({
@@ -39,43 +38,8 @@ export default function TelehealthRoomUnified({
   patientId,
   isGuest = false,
   sessionType,
-  tokenExpiresAt: initialTokenExpiresAt,
 }: Props) {
   const navigate = useNavigate();
-
-  // 🔴 CRITICAL: Validate App ID before rendering
-  if (!appId || appId.length !== 32) {
-    console.error('🔴 [TelehealthRoomUnified] Invalid App ID detected:', {
-      appId,
-      appIdLength: appId?.length,
-      expectedLength: 32
-    });
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <div className="text-lg font-semibold text-destructive">Invalid Configuration</div>
-          <p className="text-sm text-muted-foreground">
-            Unable to join video session due to invalid credentials.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-          >
-            Reload Page
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // 🟡 DIAGNOSTIC: Received App ID
-  console.log('🟡 [TelehealthRoomUnified] Received App ID:', {
-    appId,
-    appIdFull: JSON.stringify(appId),
-    appIdType: typeof appId,
-    appIdLength: appId?.length,
-    timestamp: new Date().toISOString()
-  });
 
   // Core hooks
   const agora = useAgoraCore({ appId });
@@ -127,54 +91,6 @@ export default function TelehealthRoomUnified({
       timer.stop();
     };
   }, []);
-
-  // ============================================================================
-  // TOKEN REFRESH LOGIC (prevents calls > 1hr from failing)
-  // ============================================================================
-  const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(initialTokenExpiresAt || null);
-
-  useEffect(() => {
-    if (!agora.isJoined || !tokenExpiresAt) return;
-    
-    const checkTokenExpiration = setInterval(async () => {
-      const currentTime = Date.now() / 1000; // Convert to seconds
-      const timeUntilExpiry = tokenExpiresAt - currentTime;
-      
-      // Refresh token if less than 5 minutes remaining
-      if (timeUntilExpiry < 300 && timeUntilExpiry > 0) {
-        logger.info('[TelehealthRoom] Token expiring soon, refreshing...', { 
-          timeRemaining: timeUntilExpiry 
-        });
-        
-        try {
-          const { supabase } = await import("@/integrations/supabase/client");
-          
-          // Call agora-token to get new token
-          const { data, error } = await supabase.functions.invoke('agora-token', {
-            body: {
-              channel,
-              role: isProvider ? 'publisher' : 'subscriber',
-              ttl: 3600,
-            },
-          });
-          
-          if (error) throw error;
-          
-          // Renew token in Agora client
-          await agora.renewToken(data.rtcToken);
-          setTokenExpiresAt(data.expiresAt);
-          
-          logger.info('[TelehealthRoom] Token refreshed successfully', {
-            newExpiresAt: data.expiresAt,
-          });
-        } catch (err) {
-          logger.error('[TelehealthRoom] Failed to refresh token', err);
-        }
-      }
-    }, 60000); // Check every minute
-    
-    return () => clearInterval(checkTokenExpiration);
-  }, [agora.isJoined, tokenExpiresAt, channel, isProvider]);
 
   // ============================================================================
   // PATIENT ADMISSION FLOW

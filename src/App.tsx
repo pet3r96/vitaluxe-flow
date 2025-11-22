@@ -156,11 +156,7 @@ const VideoConsultations = lazy(() => import("./pages/practice/VideoConsultation
 const VideoGuestJoin = lazy(() => import("./pages/public/VideoGuestJoin"));
 const VideoTestRoom = lazy(() => import("./pages/practice/VideoTestRoom"));
 const TokenVerificationTest = lazy(() => import("./pages/practice/TokenVerificationTest"));
-const VideoDiagnostics = lazy(() => import("./pages/practice/VideoDiagnostics"));
-const AgoraCredentialsDebug = lazy(() => import("./pages/debug/AgoraCredentialsDebug"));
 const AgoraDebugSuite = lazy(() => import("./pages/dev/AgoraDebugSuite"));
-const PatientVideoRoom = lazy(() => import("./pages/patient/PatientVideoRoom"));
-const VideoConsultationRoom = lazy(() => import("./pages/practice/VideoConsultationRoom"));
 
 <Route
   path="/dev/agora-debug"
@@ -271,23 +267,11 @@ const App = () => {
                           </ProtectedRoute>
                         }
                       />
-                      
-                      {/* ========================================== */}
-                      {/* VIDEO SESSION ROUTES - Patient & Provider */}
-                      {/* ========================================== */}
                       <Route
-                        path="/patient/video/:sessionId"
+                        path="/video/room"
                         element={
                           <ProtectedRoute>
-                            <PatientVideoRoom />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/practice/video/:sessionId"
-                        element={
-                          <ProtectedRoute>
-                            <VideoConsultationRoom />
+                            <VideoRoom />
                           </ProtectedRoute>
                         }
                       />
@@ -384,14 +368,15 @@ const App = () => {
                                                 </SubscriptionProtectedRoute>
                                               }
                                             />
-                                            <Route
+                                            {/* Video Consultations temporarily disabled - feature coming soon */}
+                                            {/* <Route
                                               path="/video-consultations"
                                               element={
                                                 <SubscriptionProtectedRoute>
                                                   <VideoConsultations />
                                                 </SubscriptionProtectedRoute>
                                               }
-                                            />
+                                            /> */}
                                             <Route
                                               path="/video-test"
                                               element={
@@ -407,17 +392,9 @@ const App = () => {
                                                   <TokenVerificationTest />
                                                 </DeveloperRoute>
                                               }
-                                             />
-                                             <Route
-                                               path="/practice/video-diagnostics"
-                                               element={<VideoDiagnostics />}
-                                             />
-                                             <Route
-                                               path="/debug/agora"
-                                               element={<AgoraCredentialsDebug />}
-                                             />
-                                             <Route
-                                               path="/dev/agora-debug"
+                                            />
+                                            <Route
+                                              path="/dev/agora-debug"
                                               element={
                                                 <DeveloperRoute>
                                                   <AgoraDebugSuite />

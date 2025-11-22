@@ -23,33 +23,27 @@ export function generateNotificationEmailHTML(params: NotificationEmailParams): 
     <html>
     <head>
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif; line-height: 1.6; color: #E2C977; background-color: #0B0B0B; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #E2C977; background-color: #0B0B0B; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; background-color: #0B0B0B; }
-        .header { background-color: #0B0B0B; padding: 40px 20px; text-align: center; border-bottom: 1px solid #292929; }
-        .logo { height: 80px; width: auto; max-width: 300px; margin: 0 auto; display: block; }
+        .header { background: linear-gradient(135deg, #C8A64B 0%, #E2C977 100%); padding: 40px 20px; text-align: center; border-bottom: none; }
+        .header h1 { margin: 0; color: #0B0B0B; font-size: 32px; font-weight: bold; letter-spacing: 4px; }
         .content { background-color: #1A1A1A; padding: 40px 30px; border: none; }
-        .content h2 { color: #E2C977; margin-top: 0; font-size: 24px; font-weight: 600; margin-bottom: 20px; }
-        .content p { color: #E2C977; font-size: 15px; line-height: 1.7; margin: 16px 0; }
-        .greeting { color: #E2C977; font-size: 16px; margin-bottom: 24px; font-weight: 500; }
+        .content h2 { color: #E2C977; margin-top: 0; }
+        .content p { color: #E2C977; }
+        .greeting { color: #E2C977; font-size: 16px; margin-bottom: 20px; }
         .sender-context { color: #C8A64B; font-size: 14px; margin-bottom: 20px; font-style: italic; }
-        .button { display: inline-block; background-color: #C8A64B; color: #0B0B0B; padding: 14px 35px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: 600; font-size: 15px; transition: background-color 0.2s ease; }
+        .button { display: inline-block; background-color: #C8A64B; color: #0B0B0B; padding: 14px 35px; text-decoration: none; border-radius: 6px; margin: 25px 0; font-weight: bold; }
         .button:hover { background-color: #E2C977; }
         .preferences { border-top: 1px solid #292929; padding-top: 20px; margin-top: 30px; color: #8E6E1E; font-size: 12px; }
         .preferences a { color: #C8A64B; text-decoration: none; }
-        .preferences a:hover { color: #E2C977; }
-        .footer { text-align: center; padding: 30px 20px; color: #8E6E1E; font-size: 13px; background-color: #0B0B0B; border-top: 1px solid #292929; }
+        .footer { text-align: center; padding: 25px 20px; color: #8E6E1E; font-size: 12px; background-color: #0B0B0B; }
         .footer a { color: #C8A64B; text-decoration: none; }
-        .footer a:hover { color: #E2C977; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <img 
-            src="https://app.vitaluxeservices.com/images/vitaluxe-logo.png" 
-            alt="Vitaluxe Services" 
-            class="logo"
-          />
+          <h1>VITALUXE</h1>
         </div>
         <div class="content">
           <p class="greeting">Dear ${params.recipientName},</p>

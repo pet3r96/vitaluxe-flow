@@ -181,8 +181,6 @@ Deno.serve(async (req) => {
     }
 
     // Update appointment status to completed
-    // Note: The database trigger (trigger_notify_patient_appointment) will automatically
-    // send the completion notification to the patient. No manual notification call needed.
     await supabase
       .from('patient_appointments')
       .update({ status: 'completed' })
@@ -212,6 +210,27 @@ Deno.serve(async (req) => {
       end_time: endTime.toISOString(),
       session_type: 'video'
     });
+
+    // Send completion notification to patient (optional)
+    try {
+      await supabase.functions.invoke('handleNotifications', {
+        body: {
+          user_id: session.patient_id,
+          notification_type: 'appointment_confirmed',
+          title: 'Video Session Complete',
+          message: 'Your video session has ended. Summary and follow-up information are available in your dashboard.',
+          action_url: '/appointments',
+          metadata: {
+            session_id: sessionId,
+            appointment_id: session.appointment_id,
+            duration_minutes: durationMinutes,
+            session_type: 'video'
+          }
+        }
+      });
+    } catch (error) {
+      edgeLogger.error('Failed to send video completion notification', error);
+    }
 
     // Log successful operation
     edgeLogger.logOperation({

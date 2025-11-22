@@ -8,6 +8,8 @@ import AgoraRTC, {
 import { supabase } from "@/integrations/supabase/client";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
 
+const APP_ID = import.meta.env.VITE_AGORA_APP_ID;
+
 export default function AgoraDebugSuite() {
   usePagePerformance('AgoraDebugSuite');
   const [sessionId, setSessionId] = useState("");
@@ -50,21 +52,7 @@ export default function AgoraDebugSuite() {
     debug("Requesting Agora tokens", { channel });
 
     try {
-      // Verify authentication for debug suite
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        setError("You must be logged in to fetch tokens");
-        debug("No Supabase session available");
-        return;
-      }
-
-      debug("Auth attached. User:", { userId: session.user.id });
-
       const { data, error } = await supabase.functions.invoke("agora-token", {
-        headers: { 
-          Authorization: `Bearer ${session.access_token}` 
-        },
         body: {
           channel,
           role: "publisher",
@@ -87,17 +75,15 @@ export default function AgoraDebugSuite() {
   // START PUBLISHER
   // ============================
   async function startPublisher() {
-    if (!tokenData?.rtcToken || !tokenData?.appId) {
-      setError("No RTC token or App ID found");
+    if (!tokenData?.rtcToken) {
+      setError("No RTC token found");
       return;
     }
-
-    debug("🟢 Using App ID from backend:", { appId: tokenData.appId });
 
     const rtc = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
     setClient(rtc);
 
-    await rtc.join(tokenData.appId, channelName, tokenData.rtcToken, null);
+    await rtc.join(APP_ID, channelName, tokenData.rtcToken, null);
 
     debug("Creating tracks...");
 

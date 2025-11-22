@@ -18,7 +18,6 @@ const VideoConsultationRoom = () => {
   const [channelName, setChannelName] = useState<string | null>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
-  const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(null);
 
   logger.info('Video consultation room initialized', logger.sanitize({ sessionId }));
 
@@ -33,6 +32,21 @@ const VideoConsultationRoom = () => {
     const initializeSession = async () => {
       try {
         setLoading(true);
+
+        // Preflight: Verify Agora config before proceeding
+        try {
+          const { data: configData, error: configError } = await supabase.functions.invoke("verify-agora-config", {
+            body: { appId: import.meta.env.VITE_AGORA_APP_ID }
+          });
+          
+          if (configError || !configData?.match) {
+            logger.error('Agora config mismatch', configError);
+            setError("Configuration error. Please contact support.");
+            return;
+          }
+        } catch (configErr) {
+          logger.warn('Config verification unavailable, continuing');
+        }
 
         // Fetch channel name + patient ID
         const { data: session, error: sessionError } = await supabase
@@ -65,21 +79,7 @@ const VideoConsultationRoom = () => {
           setTimeout(() => reject(new Error("Token request timed out")), 10000)
         );
 
-        // Verify authentication before requesting tokens
-        const { data: { session: authSession } } = await supabase.auth.getSession();
-
-        if (!authSession) {
-          logger.error('No Supabase session available before calling agora-token');
-          setError("You must be logged in to join video sessions.");
-          return;
-        }
-
-        logger.info('Auth attached. User:', { userId: authSession.user.id });
-
         const tokenRequest = supabase.functions.invoke("agora-token", {
-          headers: { 
-            Authorization: `Bearer ${authSession.access_token}` 
-          },
           body: {
             channel: normalized,
             role: "publisher",
@@ -104,44 +104,11 @@ const VideoConsultationRoom = () => {
           return;
         }
 
-        // Validate App ID before using it
-        if (!data.appId || data.appId.trim() === '') {
-          logger.error('Invalid App ID received from backend', { 
-            appId: data.appId,
-            appIdType: typeof data.appId 
-          });
-          setError("Backend configuration error: Invalid Agora App ID. Please contact support.");
-          return;
-        }
-
-        logger.info('Valid credentials received', {
-          appId: data.appId,
-          hasRtcToken: !!data.rtcToken,
-          hasRtmToken: !!data.rtmToken
-        });
-
-        console.log('🟢 [VideoConsultationRoom] Received from backend:', {
-          appId: data.appId,
-          appIdFormat: /^[a-f0-9]{32}$/.test(data.appId) ? 'valid' : 'invalid',
-          timestamp: new Date().toISOString()
-        });
-
         setAppId(data.appId);
         setRtcToken(data.rtcToken);
         setRtmToken(data.rtmToken);
         setUid(data.uid);
         setRtmUid(data.rtmUid);
-        setTokenExpiresAt(data.expiresAt);
-
-        // 🔵 DIAGNOSTIC: Backend returned App ID
-        console.log('🔵 [VideoConsultationRoom] Backend returned App ID:', {
-          appId: data.appId,
-          appIdFull: JSON.stringify(data.appId),
-          appIdType: typeof data.appId,
-          appIdLength: data.appId?.length,
-          channel: data.channel,
-          timestamp: new Date().toISOString()
-        });
       } catch (err) {
         if (!isMounted) return;
         
@@ -183,7 +150,7 @@ const VideoConsultationRoom = () => {
     );
   }
 
-  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid || !patientId || !appId) {
+  if (loading || !rtcToken || !rtmToken || !uid || !rtmUid || !patientId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div>Loading secure video room…</div>
@@ -208,7 +175,6 @@ const VideoConsultationRoom = () => {
         userType="practice"
         sessionId={sessionId!}
         patientId={patientId!}
-        tokenExpiresAt={tokenExpiresAt}
       />
     </>
   );

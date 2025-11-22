@@ -111,7 +111,8 @@ export const menus: MenuConfig = {
       icon: CalendarCheck,
       items: [
         { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
-        { label: "Video Consultations", href: "/video-consultations", icon: Video, isPro: true },
+        // Video Consultations temporarily disabled - coming soon
+        // { label: "Video Consultations", href: "/video-consultations", icon: Video, isPro: true },
       ],
     },
     {
@@ -169,7 +170,8 @@ export const menus: MenuConfig = {
       icon: CalendarCheck,
       items: [
         { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar, isPro: true },
-        { label: "Video Consultations", href: "/video-consultations", icon: Video, isPro: true },
+        // Video Consultations temporarily disabled for providers - coming soon
+        // { label: "Video Consultations", href: "/video-consultations", icon: Video, isPro: true },
       ],
     },
     {
@@ -289,7 +291,8 @@ export const menus: MenuConfig = {
       icon: CalendarCheck,
       items: [
         { label: "Practice Calendar", href: "/practice-calendar", icon: Calendar },
-        { label: "Video Consultations", href: "/video-consultations", icon: Video },
+        // Video Consultations temporarily disabled - coming soon
+        // { label: "Video Consultations", href: "/video-consultations", icon: Video },
       ],
     },
     {

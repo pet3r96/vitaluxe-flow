@@ -2,40 +2,6 @@ import { createAuthClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 
-/**
- * Extract provider display name with fallback logic
- * Priority: prescriber_name > full_name > name (if not email) > derived from email
- */
-function getProviderDisplayName(provider: any): string {
-  if (!provider?.user) return 'Provider';
-  
-  // Try prescriber_name first (most reliable)
-  if (provider.user.prescriber_name?.trim()) {
-    return provider.user.prescriber_name.trim();
-  }
-  
-  // Try full_name
-  if (provider.user.full_name?.trim()) {
-    return provider.user.full_name.trim();
-  }
-  
-  // Try name field, but skip if it's an email
-  if (provider.user.name?.trim() && !provider.user.name.includes('@')) {
-    return provider.user.name.trim();
-  }
-  
-  // Last resort: derive a name from email
-  if (provider.user.name?.includes('@')) {
-    const localPart = provider.user.name.split('@')[0];
-    return localPart
-      .split(/[._-]/)
-      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  }
-  
-  return 'Provider';
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -115,12 +81,10 @@ Deno.serve(async (req) => {
         notes,
         service_type,
         service_description,
-        visit_type,
-        video_session_id,
         patient:patient_accounts(first_name, last_name),
         provider:providers!patient_appointments_provider_id_fkey(
           id,
-          user:profiles!providers_user_id_fkey(name, full_name, prescriber_name)
+          user:profiles!providers_user_id_fkey(name, full_name)
         ),
         room:practice_rooms(name)
       `)
@@ -162,7 +126,7 @@ Deno.serve(async (req) => {
     let providerName = 'All Providers';
     if (providerId && appointments && appointments.length > 0) {
       const firstAppt = appointments[0] as any;
-      providerName = getProviderDisplayName(firstAppt?.provider);
+      providerName = firstAppt?.provider?.user?.name || 'Unknown Provider';
     }
 
     // Generate PDF using jsPDF
@@ -203,24 +167,12 @@ Deno.serve(async (req) => {
 
     let yPosition = 70;
 
-    // Generate time slots dynamically based on appointments or default to 7 AM - 7 PM
+    // Generate hour-by-hour time slots from 8 AM to 6 PM
     const generateTimeSlots = () => {
       const slots = [];
-      let startHour = 7;
-      let endHour = 19;
-      
-      // If we have appointments, expand range to cover them
-      if (appointments && appointments.length > 0) {
-        const times = appointments.map((appt: any) => new Date(appt.start_time).getHours());
-        const minHour = Math.min(...times);
-        const maxHour = Math.max(...times);
-        startHour = Math.max(0, minHour - 1); // Start 1 hour before earliest
-        endHour = Math.min(23, maxHour + 2); // End 2 hours after latest
-      }
-      
-      for (let hour = startHour; hour <= endHour; hour++) {
+      for (let hour = 8; hour <= 18; hour++) {
         slots.push({ hour, minute: 0 });
-        if (hour < endHour) {
+        if (hour < 18) {
           slots.push({ hour, minute: 30 });
         }
       }
@@ -353,18 +305,8 @@ Deno.serve(async (req) => {
           doc.text(truncatedPatient, xPos, yPosition);
           xPos += colWidths.patient;
           
-          // Service - show type based on visit_type and service_description
-          let serviceName = 'N/A';
-          if (appt.video_session_id || appt.visit_type === 'video') {
-            serviceName = 'Video Consultation';
-          } else if (appt.service_description) {
-            serviceName = appt.service_description;
-          } else if (appt.visit_type === 'in_person') {
-            serviceName = 'Office Visit';
-          } else if (appt.service_type && !appt.service_type.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            // Only show service_type if it's not a UUID
-            serviceName = appt.service_type;
-          }
+          // Service
+          const serviceName = appt.service_type || 'N/A';
           const truncatedService = serviceName.length > 18 ? serviceName.substring(0, 15) + '...' : serviceName;
           doc.text(truncatedService, xPos, yPosition);
           xPos += colWidths.service;
@@ -376,7 +318,7 @@ Deno.serve(async (req) => {
           // Provider (if showing all providers)
           if (showProviderColumn) {
             xPos += colWidths.room;
-            const provName = getProviderDisplayName(appt.provider);
+            const provName = appt.provider?.user?.name || '-';
             const truncatedProv = provName.length > 15 ? provName.substring(0, 12) + '...' : provName;
             doc.text(truncatedProv, xPos, yPosition);
           }

@@ -31,63 +31,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ========== VALIDATE IDs ==========
-    // Validate patient exists and belongs to practice
-    const { data: patientCheck, error: patientError } = await supabase
-      .from('patient_accounts')
-      .select('id, practice_id')
-      .eq('id', patientId)
-      .eq('practice_id', practiceId)
-      .single();
-
-    if (patientError || !patientCheck) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid patient or patient does not belong to practice' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate provider exists and belongs to practice
-    const { data: providerCheck, error: providerError } = await supabase
-      .from('providers')
-      .select('id, practice_id')
-      .eq('id', providerId)
-      .eq('practice_id', practiceId)
-      .single();
-
-    if (providerError || !providerCheck) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid provider or provider does not belong to practice' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate practice exists
-    const { data: practiceCheck, error: practiceError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', practiceId)
-      .single();
-
-    if (practiceError || !practiceCheck) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid practice' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    edgeLogger.info('[create-instant-video-session] ID validation passed');
-    // ========== END VALIDATION ==========
-
-    // ========== CREATE APPOINTMENT ==========
+    // Create appointment scheduled ~1 minute from now
     const now = new Date();
     const scheduledTime = new Date(now.getTime() + 60_000);
-    const endTime = new Date(scheduledTime.getTime() + 30 * 60_000);
+    const endTime = new Date(scheduledTime.getTime() + 30 * 60_000); // +30 mins default
 
-    edgeLogger.info('[create-instant-video-session] Creating appointment', {
+    edgeLogger.info('[create-instant-video-session] Creating appointment with payload', {
       patient_id: patientId,
       provider_id: providerId,
       practice_id: practiceId,
+      start_time: scheduledTime.toISOString(),
+      end_time: endTime.toISOString(),
+      visit_type: 'video',
+      status: 'confirmed',
     });
 
     const { data: appointment, error: appointmentError } = await supabase
@@ -107,84 +63,50 @@ Deno.serve(async (req) => {
       .select()
       .single();
 
+    if (appointmentError) {
+      edgeLogger.error('[create-instant-video-session] Insert error', appointmentError);
+    }
+
     if (appointmentError || !appointment) {
-      edgeLogger.error('[create-instant-video-session] Appointment creation failed', appointmentError);
       return new Response(
         JSON.stringify({ error: 'Failed to create appointment', details: appointmentError?.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // ========== CREATE VIDEO SESSION DIRECTLY (NO TRIGGER) ==========
-    let channelName: string;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    do {
-      channelName = `vlx_instant_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    // Wait for trigger to create video_session with retry logic
+    let videoSession = null;
+    let retries = 0;
+    const maxRetries = 3;
+    
+    while (retries < maxRetries && !videoSession) {
+      await new Promise((resolve) => setTimeout(resolve, retries === 0 ? 1500 : 500));
       
-      const { data: existing } = await supabase
+      edgeLogger.info(`[create-instant-video-session] Attempt ${retries + 1} to fetch video_session`, { appointmentId: appointment.id });
+      
+      const { data, error: sessionError } = await supabase
         .from('video_sessions')
-        .select('id')
-        .eq('channel_name', channelName)
-        .maybeSingle();
-      
-      if (!existing) break;
-      
-      attempts++;
-      edgeLogger.warn('[create-instant-video-session] Channel collision, retrying', { attempt: attempts });
-    } while (attempts < maxAttempts);
+        .select('*')
+        .eq('appointment_id', appointment.id)
+        .single();
 
-    if (attempts >= maxAttempts) {
-      edgeLogger.error('[create-instant-video-session] Failed to generate unique channel name');
+      if (data) {
+        videoSession = data;
+        edgeLogger.info('[create-instant-video-session] Video session found', { sessionId: videoSession.id });
+      } else if (sessionError) {
+        edgeLogger.info('[create-instant-video-session] Session error', { error: sessionError.message });
+      }
+      
+      retries++;
+    }
+
+    if (!videoSession) {
+      edgeLogger.error('[create-instant-video-session] Failed to create video session after retries');
       return new Response(
-        JSON.stringify({ error: 'Failed to generate unique channel name' }),
+        JSON.stringify({ error: 'Video session not created after multiple retries' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Use upsert to handle duplicate session creation gracefully
-    const { data: videoSession, error: sessionError } = await supabase
-      .from('video_sessions')
-      .upsert({
-        appointment_id: appointment.id,
-        patient_id: patientId,
-        provider_id: providerId,
-        practice_id: practiceId,
-        channel_name: channelName,
-        session_type: 'instant',
-        status: 'live',
-        scheduled_start_time: scheduledTime.toISOString(),
-        actual_start_time: new Date().toISOString(),
-      }, {
-        onConflict: 'appointment_id',
-        ignoreDuplicates: false  // Update if exists
-      })
-      .select()
-      .single();
-
-    if (sessionError || !videoSession) {
-      // Log the error but distinguish between real errors and duplicate attempts
-      const isDuplicateError = sessionError?.code === '23505';
-      edgeLogger.error('[create-instant-video-session] Video session creation failed', {
-        error: sessionError,
-        isDuplicate: isDuplicateError
-      });
-      
-      return new Response(
-        JSON.stringify({ 
-          error: isDuplicateError ? 'Session already exists for this appointment' : 'Failed to create video session',
-          details: sessionError?.message 
-        }),
-        { status: isDuplicateError ? 409 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    edgeLogger.info('[create-instant-video-session] Video session created', { 
-      sessionId: videoSession.id,
-      channelName 
-    });
-    // ========== END SESSION CREATION ==========
 
     // Send instant video notification to patient
     edgeLogger.info('[create-instant-video-session] Sending notification for instant video session');
@@ -199,20 +121,8 @@ Deno.serve(async (req) => {
       edgeLogger.error('[create-instant-video-session] Error fetching patient user data', patientUserError);
     } else if (patientWithUser) {
       const patientName = `${patientWithUser.first_name || ''} ${patientWithUser.last_name || ''}`.trim() || 'Patient';
-      
-      // Format time in America/New_York timezone (EST/EDT)
-      const appointmentDateFormatted = new Date(appointment.start_time).toLocaleDateString('en-US', {
-        timeZone: 'America/New_York',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-      });
-      const appointmentTimeFormatted = new Date(appointment.start_time).toLocaleTimeString('en-US', {
-        timeZone: 'America/New_York',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
+      const appointmentDateFormatted = new Date(appointment.start_time).toLocaleDateString();
+      const appointmentTimeFormatted = new Date(appointment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
       if (patientWithUser.user_id) {
         // Patient has portal access - use handleNotifications
@@ -283,12 +193,7 @@ Deno.serve(async (req) => {
 
     // Return the session. Frontend will start the session (ensures proper user authorization)
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        sessionId: videoSession.id, 
-        appointmentId: appointment.id,
-        channelName: channelName 
-      }),
+      JSON.stringify({ success: true, sessionId: videoSession.id, appointmentId: appointment.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

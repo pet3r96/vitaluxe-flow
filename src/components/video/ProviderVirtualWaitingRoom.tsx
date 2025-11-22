@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { logger } from "@/lib/logger";
 import { time, timeEnd } from "@/diag";
-import { getCSRFToken } from "@/lib/csrf";
 import {
   Dialog,
   DialogContent,
@@ -360,8 +359,8 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
         description: "Patient has been notified via SMS",
       });
 
-      // Navigate to provider video session with sessionId
-      navigate(`/practice/video/${realSessionId}`);
+      // Auto-join the provider to the unified video room
+      navigate('/video/room');
     } catch (error: any) {
       timeEnd(`ProviderVirtualWaitingRoom start-video-session-${sessionId}`);
       logger.error('Error starting session', error);
@@ -421,8 +420,7 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       }
     }
 
-    // Navigate to provider video session with sessionId
-    navigate(`/practice/video/${realSessionId}`);
+    navigate('/video/room');
   };
 
   const handleGenerateGuestLink = async (sessionId: string) => {
@@ -502,17 +500,8 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
     try {
       logger.info('🔥 [UI] Cancelling appointment', { appointmentId });
 
-      // Get CSRF token for security
-      const csrfToken = getCSRFToken();
-      if (!csrfToken) {
-        throw new Error("Unable to obtain CSRF token. Please refresh the page.");
-      }
-
       const { error } = await supabase.functions.invoke("cancel-appointment", {
-        body: { 
-          appointmentId,
-          csrf_token: csrfToken
-        },
+        body: { appointmentId },
       });
 
       if (error) throw error;
@@ -581,17 +570,8 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
     try {
       logger.info('🎉 [UI] Completing appointment', { appointmentId });
 
-      // Get CSRF token for security
-      const csrfToken = getCSRFToken();
-      if (!csrfToken) {
-        throw new Error("Unable to obtain CSRF token. Please refresh the page.");
-      }
-
       const { error } = await supabase.functions.invoke("complete-video-appointment", {
-        body: { 
-          appointmentId,
-          csrf_token: csrfToken
-        },
+        body: { appointmentId },
       });
 
       if (error) {
@@ -752,8 +732,8 @@ export const ProviderVirtualWaitingRoom = ({ practiceId, onStartSession }: Provi
       await queryClient.invalidateQueries({ queryKey: ["provider-video-sessions", practiceId] });
       await queryClient.refetchQueries({ queryKey: ["provider-video-sessions", practiceId] });
 
-      // Navigate to the provider video session with sessionId
-      navigate(`/practice/video/${(data as { sessionId: string }).sessionId}`);
+      // Navigate to the unified video room
+      navigate('/video/room');
 
       // Close dialog and reset
       setShowCreateDialog(false);
