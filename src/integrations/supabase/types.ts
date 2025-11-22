@@ -153,6 +153,42 @@ export type Database = {
         }
         Relationships: []
       }
+      alerts: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          message: string
+          severity: string
+          triggered_at: string
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          message: string
+          severity: string
+          triggered_at?: string
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          message?: string
+          severity?: string
+          triggered_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       amazon_tracking_api_calls: {
         Row: {
           called_at: string
