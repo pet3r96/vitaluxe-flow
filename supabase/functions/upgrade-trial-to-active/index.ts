@@ -63,16 +63,35 @@ serve(async (req) => {
       throw new Error("Subscription not found");
     }
 
-    // Verify subscription is in trial status
-    if (subscription.status !== "trial") {
+    // CRITICAL: Verify subscription is in trial or suspended status
+    if (subscription.status !== "trial" && subscription.status !== "suspended") {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Subscription is not in trial status" 
+          error: "Subscription must be in trial or suspended status to enroll" 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
+
+    // CRITICAL: Verify user has accepted terms and authorized payment
+    if (!subscription.paid_terms_accepted_at) {
+      edgeLogger.error('[upgrade-trial-to-active] Enrollment attempted without consent', { 
+        subscriptionId: subscription.id 
+      });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "You must accept the subscription terms and authorize payment before enrolling. Please try again." 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    edgeLogger.info('[upgrade-trial-to-active] Terms consent verified', { 
+      subscriptionId: subscription.id,
+      termsAcceptedAt: subscription.paid_terms_accepted_at 
+    });
 
     // Check for active payment method
     const { data: paymentMethods, error: paymentError } = await supabaseClient

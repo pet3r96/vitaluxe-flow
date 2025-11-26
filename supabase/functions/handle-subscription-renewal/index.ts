@@ -60,6 +60,42 @@ serve(async (req) => {
 
         edgeLogger.info('Processing renewal for subscription', { subscriptionId: subscription.id, hasPayment: hasPaymentMethod });
 
+        // CRITICAL: Verify original enrollment consent exists
+        if (!subscription.paid_terms_accepted_at) {
+          edgeLogger.error('Subscription missing enrollment consent - suspending', { 
+            subscriptionId: subscription.id 
+          });
+          
+          const gracePeriodEnd = new Date();
+          gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 3);
+
+          await supabaseClient
+            .from("practice_subscriptions")
+            .update({
+              status: "suspended",
+              grace_period_ends_at: gracePeriodEnd.toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", subscription.id);
+
+          await supabaseClient.functions.invoke('handleNotifications', {
+            body: {
+              user_id: subscription.practice_id,
+              notification_type: 'subscription_suspended',
+              title: '⚠️ Subscription Suspended - Consent Required',
+              message: `Your subscription requires re-enrollment with consent. Please go to Profile → Subscription to enroll.`,
+              action_url: '/profile'
+            }
+          });
+
+          results.push({ 
+            subscriptionId: subscription.id, 
+            status: "suspended", 
+            reason: "missing_enrollment_consent"
+          });
+          continue;
+        }
+
         // Check if payment method exists BEFORE attempting charge
         if (!hasPaymentMethod) {
           edgeLogger.info('No payment method for subscription, suspending', { subscriptionId: subscription.id });
