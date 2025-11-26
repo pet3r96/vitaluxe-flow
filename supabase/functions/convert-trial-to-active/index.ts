@@ -53,153 +53,51 @@ serve(async (req) => {
 
     const results = [];
 
+    // CRITICAL: NEVER auto-bill when trial ends - always suspend and require manual enrollment
     for (const trial of expiredTrials || []) {
       const profile = trial.profiles as any;
-      const hasPaymentMethod = profile.authorizenet_customer_profile_id != null;
 
-      edgeLogger.info('Processing expired trial', { practiceName: profile.name, hasPaymentMethod });
+      edgeLogger.info('Trial expired - suspending for manual enrollment', { 
+        practiceName: profile.name, 
+        subscriptionId: trial.id 
+      });
 
-      if (hasPaymentMethod) {
-        // Attempt to charge first payment
-        try {
-          edgeLogger.info('Attempting to charge first payment', { subscriptionId: trial.id });
-          
-          const paymentResponse = await supabaseClient.functions.invoke(
-            "process-subscription-payment",
-            { body: { subscriptionId: trial.id } }
-          );
+      // ALWAYS suspend - regardless of payment method
+      // User MUST manually click "Enroll in VitaLuxe Pro" to authorize billing
+      const gracePeriodEnd = new Date(now);
+      gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 7); // 7-day grace period to enroll
 
-          if (paymentResponse.data?.success) {
-            // Payment successful - convert to active
-            const nextPeriodEnd = new Date(now);
-            nextPeriodEnd.setDate(nextPeriodEnd.getDate() + 30);
+      await supabaseClient
+        .from("practice_subscriptions")
+        .update({
+          status: "suspended",
+          grace_period_ends_at: gracePeriodEnd.toISOString(),
+          updated_at: now.toISOString()
+        })
+        .eq("id", trial.id);
 
-            await supabaseClient
-              .from("practice_subscriptions")
-              .update({
-                status: "active",
-                current_period_start: now.toISOString(),
-                current_period_end: nextPeriodEnd.toISOString(),
-                updated_at: now.toISOString()
-              })
-              .eq("id", trial.id);
-
-            // Create success notification
-            await supabaseClient.functions.invoke('handleNotifications', {
-              body: {
-                user_id: trial.practice_id,
-                notification_type: 'subscription_activated',
-                title: '✅ VitaLuxePro Subscription Activated',
-                message: `Your trial has ended and your subscription is now active. Your next billing date is ${nextPeriodEnd.toLocaleDateString()}.`,
-                metadata: {
-                  subscription_id: trial.id,
-                  billing_amount: 500.00,
-                  next_billing_date: nextPeriodEnd.toISOString()
-                }
-              }
-            });
-
-            results.push({ 
-              subscription_id: trial.id, 
-              status: "activated", 
-              next_billing_date: nextPeriodEnd.toISOString() 
-            });
-            
-            edgeLogger.info('Successfully activated subscription', { subscriptionId: trial.id });
-          } else {
-            throw new Error(paymentResponse.data?.error || "Payment failed");
-          }
-        } catch (error: any) {
-          edgeLogger.error('Payment failed for subscription', error, { subscriptionId: trial.id });
-          
-          // Payment failed - suspend subscription with grace period
-          const gracePeriodEnd = new Date(now);
-          gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 3); // 3-day grace period
-
-          await supabaseClient
-            .from("practice_subscriptions")
-            .update({
-              status: "suspended",
-              grace_period_ends_at: gracePeriodEnd.toISOString(),
-              last_payment_attempt_at: now.toISOString(),
-              updated_at: now.toISOString()
-            })
-            .eq("id", trial.id);
-
-          // Create urgent notification
-          await supabaseClient.functions.invoke('handleNotifications', {
-            body: {
-              user_id: trial.practice_id,
-              notification_type: 'payment_failed',
-              title: '⚠️ Payment Failed - Action Required',
-              message: `We couldn't process your payment. Please update your payment method within 3 days to avoid service interruption.`,
-              action_url: '/profile',
-              metadata: {
-                subscription_id: trial.id,
-                grace_period_ends: gracePeriodEnd.toISOString(),
-                error: error.message
-              }
-            }
-          });
-
-          results.push({ 
-            subscription_id: trial.id, 
-            status: "suspended", 
-            reason: "payment_failed",
-            grace_period_ends: gracePeriodEnd.toISOString() 
-          });
-        }
-      } else {
-        // No payment method - suspend with grace period
-        edgeLogger.info('No payment method for subscription, suspending', { subscriptionId: trial.id });
-        
-        const gracePeriodEnd = new Date(now);
-        gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 3);
-
-        await supabaseClient
-          .from("practice_subscriptions")
-          .update({
-            status: "suspended",
-            grace_period_ends_at: gracePeriodEnd.toISOString(),
-            updated_at: now.toISOString()
-          })
-          .eq("id", trial.id);
-
-        // Create urgent notification
-        await supabaseClient.functions.invoke('handleNotifications', {
-          body: {
-            user_id: trial.practice_id,
-            notification_type: 'subscription_suspended',
-            title: '⚠️ Subscription Suspended - Add Payment Method',
-            message: `Your trial has ended but no payment method is on file. Add a payment method within 3 days to reactivate your subscription.`,
-            action_url: '/profile',
-            metadata: {
-              subscription_id: trial.id,
-              grace_period_ends: gracePeriodEnd.toISOString()
-            }
-          }
-        });
-
-        // Mark reminder as sent
-        const { error: reminderError } = await supabaseClient
-          .from("trial_payment_reminders")
-          .insert({
-            practice_id: trial.practice_id,
+      // Notify user to MANUALLY enroll if they want to continue
+      await supabaseClient.functions.invoke('handleNotifications', {
+        body: {
+          user_id: trial.practice_id,
+          notification_type: 'trial_ended_action_required',
+          title: '⚠️ Trial Ended - Manual Enrollment Required',
+          message: `Your 14-day trial has ended. To continue using VitaLuxePro, please go to your Profile → Subscription and click "Enroll in VitaLuxe Pro" to activate your subscription. You have 7 days to enroll before your account is deactivated.`,
+          action_url: '/profile',
+          metadata: {
             subscription_id: trial.id,
-            reminder_type: "suspended"
-          });
-        
-        if (reminderError) {
-          edgeLogger.error('Error recording suspension reminder', reminderError);
+            grace_period_ends: gracePeriodEnd.toISOString()
+          }
         }
+      });
 
-        results.push({ 
-          subscription_id: trial.id, 
-          status: "suspended", 
-          reason: "no_payment_method",
-          grace_period_ends: gracePeriodEnd.toISOString() 
-        });
-      }
+      results.push({ 
+        subscription_id: trial.id, 
+        status: "suspended", 
+        reason: "trial_ended_requires_manual_enrollment",
+        grace_period_ends: gracePeriodEnd.toISOString(),
+        message: "Trial ended - user must manually enroll to activate subscription"
+      });
     }
 
     return new Response(

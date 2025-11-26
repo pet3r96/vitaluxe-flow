@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ArrowUpCircle, XCircle, Loader2 } from "lucide-react";
 import { CancelSubscriptionDialog } from "./CancelSubscriptionDialog";
+import { EnrollSubscriptionDialog } from "./EnrollSubscriptionDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,15 +15,32 @@ interface SubscriptionActionsCardProps {
 
 export function SubscriptionActionsCard({ subscription }: SubscriptionActionsCardProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [showEnrollDialog, setShowEnrollDialog] = useState(false);
   const { toast } = useToast();
   const { effectivePracticeId } = useAuth();
   const queryClient = useQueryClient();
 
-  const handleUpgrade = async () => {
+  const handleEnrollClick = () => {
+    // Open the enrollment consent dialog
+    setShowEnrollDialog(true);
+  };
+
+  const handleConfirmEnroll = async (termsVersion: string) => {
     try {
-      setIsUpgrading(true);
-      
+      // First, record terms acceptance and authorization
+      const { error: updateError } = await supabase
+        .from('practice_subscriptions')
+        .update({
+          paid_terms_accepted_at: new Date().toISOString(),
+          paid_terms_version: termsVersion
+        })
+        .eq('practice_id', effectivePracticeId);
+
+      if (updateError) {
+        throw new Error('Failed to record consent');
+      }
+
+      // Then process the payment
       const { data, error } = await supabase.functions.invoke(
         'upgrade-trial-to-active',
         { body: { practiceId: effectivePracticeId } }
@@ -44,12 +62,11 @@ export function SubscriptionActionsCard({ subscription }: SubscriptionActionsCar
       }
     } catch (error: any) {
       toast({
-        title: "Upgrade Failed",
-        description: error.message || "Unable to process upgrade. Please try again.",
+        title: "Enrollment Failed",
+        description: error.message || "Unable to process enrollment. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsUpgrading(false);
+      throw error;
     }
   };
 
@@ -65,20 +82,10 @@ export function SubscriptionActionsCard({ subscription }: SubscriptionActionsCar
             <Button
               variant="outline"
               className="w-full justify-start"
-              onClick={handleUpgrade}
-              disabled={isUpgrading}
+              onClick={handleEnrollClick}
             >
-              {isUpgrading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing Payment...
-                </>
-              ) : (
-                <>
-                  <ArrowUpCircle className="h-4 w-4 mr-2" />
-                  Enroll in VitaLuxe Pro
-                </>
-              )}
+              <ArrowUpCircle className="h-4 w-4 mr-2" />
+              Enroll in VitaLuxe Pro
             </Button>
           )}
           
@@ -105,6 +112,13 @@ export function SubscriptionActionsCard({ subscription }: SubscriptionActionsCar
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
         subscription={subscription}
+      />
+
+      <EnrollSubscriptionDialog
+        open={showEnrollDialog}
+        onOpenChange={setShowEnrollDialog}
+        onConfirmEnroll={handleConfirmEnroll}
+        practiceId={effectivePracticeId || ''}
       />
     </>
   );
