@@ -78,7 +78,7 @@ export function SubscriptionActionsCard({ subscription }: SubscriptionActionsCar
           <CardDescription>Manage your subscription settings</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {subscription && subscription.status === 'trial' && (
+          {subscription && (subscription.status === 'trial' || subscription.status === 'suspended') && (
             <Button
               variant="outline"
               className="w-full justify-start"
