@@ -8251,11 +8251,11 @@ export type Database = {
       get_effective_product_price: {
         Args: { p_product_id: string; p_user_id: string }
         Returns: {
+          base_price: number
           effective_downline_price: number
           effective_retail_price: number
           effective_topline_price: number
           has_override: boolean
-          override_source: string
         }[]
       }
       get_encryption_coverage: {

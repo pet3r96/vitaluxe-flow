@@ -29,7 +29,7 @@ export function MessagesAndChatWidget() {
           .from("patient_messages")
           .select(`
             id,
-            thread_id,
+            parent_message_id,
             subject,
             message_body,
             created_at,
@@ -49,7 +49,7 @@ export function MessagesAndChatWidget() {
         // Group by thread_id to show unique conversations
         const threadsMap = new Map();
         (messages || []).forEach((msg: any) => {
-          const threadId = msg.thread_id || msg.id;
+          const threadId = msg.parent_message_id || msg.id;
           if (!threadsMap.has(threadId)) {
             threadsMap.set(threadId, msg);
           }
