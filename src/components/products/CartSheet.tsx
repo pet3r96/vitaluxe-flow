@@ -183,8 +183,9 @@ export const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-sm line-clamp-2">
                       {item.product?.name || "Unknown Product"}
+                      {item.variant?.dosage_label && ` - ${item.variant.dosage_label}`}
                     </h4>
-                    {item.product?.dosage && (
+                    {!item.variant?.dosage_label && item.product?.dosage && (
                       <p className="text-xs text-muted-foreground mt-1">
                         {item.product.dosage}
                       </p>
