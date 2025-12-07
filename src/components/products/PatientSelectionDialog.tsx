@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePracticeRxPrivileges } from "@/hooks/usePracticeRxPrivileges";
 import { usePracticeProviders } from "@/hooks/useProvidersAndStaff";
+import { useActiveProductVariants } from "@/hooks/useProductVariants";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ import { useNavigate } from "react-router-dom";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { PatientAccount } from '@/types/database-queries';
 import { PrescriptionWriterDialog } from "./PrescriptionWriterDialog";
+import { VariantSelectionStep } from "./VariantSelectionStep";
 import { logger } from "@/lib/logger";
 
 interface PatientSelectionDialogProps {
@@ -44,7 +46,8 @@ interface PatientSelectionDialogProps {
     customSig?: string | null,
     customDosage?: string | null,
     orderNotes?: string | null,
-    prescriptionMethod?: string | null
+    prescriptionMethod?: string | null,
+    variantId?: string | null
   ) => void;
 }
 
@@ -66,7 +69,15 @@ export const PatientSelectionDialog = ({
   // Practice ID is already resolved in AuthContext, no need for additional query
   const finalPracticeId = effectivePracticeId;
   
-  const [currentStep, setCurrentStep] = useState<'details' | 'prescription'>('details');
+  // Fetch active variants for product
+  const { data: variants, isLoading: loadingVariants } = useActiveProductVariants(product?.id);
+  
+  // Determine if we need to show variant step
+  const hasMultipleVariants = (variants?.length || 0) >= 2;
+  const hasSingleVariant = variants?.length === 1;
+  
+  const [currentStep, setCurrentStep] = useState<'variant' | 'details' | 'prescription'>('details');
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [shipTo, setShipTo] = useState<'patient' | 'practice'>(effectiveRole === 'staff' ? 'practice' : 'patient');
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
@@ -82,6 +93,20 @@ export const PatientSelectionDialog = ({
   const [customDosage, setCustomDosage] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const [providerSignature, setProviderSignature] = useState("");
+  
+  // Auto-select single variant or set initial step for multiple variants
+  useEffect(() => {
+    if (!open || loadingVariants) return;
+    
+    if (hasSingleVariant && variants?.[0]) {
+      setSelectedVariantId(variants[0].id);
+      setCurrentStep('details');
+    } else if (hasMultipleVariants) {
+      setCurrentStep('variant');
+    } else {
+      setCurrentStep('details');
+    }
+  }, [open, loadingVariants, hasMultipleVariants, hasSingleVariant, variants]);
 
   // Block RX orders if practice doesn't have provider with NPI
   if (product?.requires_prescription && !canOrderRx) {
@@ -262,6 +287,7 @@ export const PatientSelectionDialog = ({
     if (!open) {
       // Reset all dialog state when closing
       setCurrentStep('details');
+      setSelectedVariantId(null);
       setShipTo('patient');
       setSelectedPatientId("");
       setQuantity(1);
@@ -432,7 +458,8 @@ export const PatientSelectionDialog = ({
       customSig || null,
       customDosage || null,
       orderNotes || null,
-      prescriptionMethod || null
+      prescriptionMethod || null,
+      selectedVariantId || null
     );
     onOpenChange(false);
   };
@@ -514,14 +541,36 @@ export const PatientSelectionDialog = ({
       <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {currentStep === 'details' ? 'Add Product to Cart' : 'Prescription Details'}
+            {currentStep === 'variant' ? 'Select Dosage' : currentStep === 'details' ? 'Add Product to Cart' : 'Prescription Details'}
           </DialogTitle>
           <DialogDescription>
-            {currentStep === 'details' ? `Product: ${product?.name}` : 'Complete prescription information'}
+            {currentStep === 'variant' ? `Product: ${product?.name}` : currentStep === 'details' ? `Product: ${product?.name}` : 'Complete prescription information'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
+          {/* VARIANT SELECTION STEP */}
+          {currentStep === 'variant' && variants && (
+            <>
+              <VariantSelectionStep
+                variants={variants}
+                selectedVariantId={selectedVariantId}
+                onSelect={setSelectedVariantId}
+              />
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => setCurrentStep('details')}
+                  disabled={!selectedVariantId}
+                >
+                  Continue
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+          
           {/* PAGE 1: Details Section */}
           {currentStep === 'details' && (
             <>
@@ -1014,39 +1063,46 @@ export const PatientSelectionDialog = ({
           />
         )}
 
-        <DialogFooter>
-          {currentStep === 'prescription' && (
-            <Button variant="ghost" onClick={() => setCurrentStep('details')}>
-              ← Back
+        {currentStep !== 'variant' && (
+          <DialogFooter>
+            {currentStep === 'prescription' && (
+              <Button variant="ghost" onClick={() => setCurrentStep('details')}>
+                ← Back
+              </Button>
+            )}
+            {currentStep === 'details' && hasMultipleVariants && (
+              <Button variant="ghost" onClick={() => setCurrentStep('variant')}>
+                ← Back
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
             </Button>
-          )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          
-          {currentStep === 'details' ? (
-            <Button onClick={handleContinue}>
-              {product?.requires_prescription ? 'Review Prescription' : 'Continue'}
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleAddToCart}
-              disabled={
-                uploadingPrescription || 
-                (product?.requires_prescription && !prescriptionFile && !prescriptionPreview)
-              }
-            >
-              {uploadingPrescription ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                'Add to Cart'
-              )}
-            </Button>
-          )}
-        </DialogFooter>
+            
+            {currentStep === 'details' ? (
+              <Button onClick={handleContinue}>
+                {product?.requires_prescription ? 'Review Prescription' : 'Continue'}
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleAddToCart}
+                disabled={
+                  uploadingPrescription || 
+                  (product?.requires_prescription && !prescriptionFile && !prescriptionPreview)
+                }
+              >
+                {uploadingPrescription ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  'Add to Cart'
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -216,7 +216,8 @@ serve(async (req) => {
           destination_state,
           prescription_method,
           refills_allowed,
-          refills_total
+          refills_total,
+          variant_id
         )
       `)
       .eq("id", cart_id)
@@ -399,6 +400,7 @@ serve(async (req) => {
         refills_allowed: line.refills_allowed || false,
         refills_total: line.refills_total || 0,
         refills_remaining: line.refills_total || 0,
+        variant_id: line.variant_id || null,
       }]);
     }
 
@@ -458,6 +460,7 @@ serve(async (req) => {
         refills_allowed: line.refills_allowed || false,
         refills_total: line.refills_total || 0,
         refills_remaining: line.refills_total || 0,
+        variant_id: line.variant_id || null,
       }]);
     }
 

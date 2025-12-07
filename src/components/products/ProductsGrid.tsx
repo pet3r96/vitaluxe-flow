@@ -345,7 +345,8 @@ export const ProductsGrid = () => {
     customSig: string | null = null,
     customDosage: string | null = null,
     orderNotes: string | null = null,
-    prescriptionMethod: string | null = null
+    prescriptionMethod: string | null = null,
+    variantId: string | null = null
   ) => {
     if (!effectiveUserId || !productForCart) return;
 
@@ -561,6 +562,7 @@ export const ProductsGrid = () => {
             customDosage: customDosage,
             orderNotes: orderNotes,
             prescriptionMethod: prescriptionMethod,
+            variantId: variantId,
           }
         }).then(({ error }) => {
           if (error) {
@@ -716,6 +718,7 @@ export const ProductsGrid = () => {
             customDosage: customDosage,
             orderNotes: orderNotes,
             prescriptionMethod: prescriptionMethod,
+            variantId: variantId,
           }
         }).then(({ error }) => {
           if (error) {
