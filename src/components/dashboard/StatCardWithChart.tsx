@@ -43,7 +43,9 @@ export function StatCardWithChart({
     userId
   );
 
-  const displayValue = currentValue !== undefined ? currentValue : valueFormatter(calculatedValue);
+  const displayValue = isLoading 
+    ? (currentValue !== undefined ? currentValue : '...') 
+    : valueFormatter(calculatedValue);
   
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
   const trendColorClass = trend === 'up' 
