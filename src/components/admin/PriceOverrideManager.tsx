@@ -58,7 +58,7 @@ export const PriceOverrideManager = () => {
         .from('reps')
         .select('id, user_id, role, profiles!reps_user_id_fkey(name, email)')
         .order('role', { ascending: false })
-        .order('profiles(name)');
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;

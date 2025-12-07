@@ -80,12 +80,6 @@ export function CreateSupportTicketDialog() {
   });
 
   const ticketType = form.watch("ticketType");
-  
-  // Debug form state changes
-  const formValues = form.watch();
-  console.log('[CreateSupportTicket] Form values:', formValues);
-  console.log('[CreateSupportTicket] Form errors:', form.formState.errors);
-  console.log('[CreateSupportTicket] Form valid:', form.formState.isValid);
 
   // Fetch recent orders for dropdown with improved error handling
   const { data: userOrders, isLoading: ordersLoading } = useQuery({

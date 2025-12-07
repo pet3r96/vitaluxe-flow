@@ -48,7 +48,6 @@ export function TabbedCommunicationsWidget() {
           .from("patient_messages")
           .select(`
             id,
-            thread_id,
             subject,
             patient:patient_accounts(first_name, last_name)
           `)
