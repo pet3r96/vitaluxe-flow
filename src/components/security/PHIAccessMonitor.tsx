@@ -11,7 +11,7 @@ import { format } from "date-fns";
 
 export const PHIAccessMonitor = () => {
   const [entityFilter, setEntityFilter] = useState<string>("all");
-  const [dateFilter, setDateFilter] = useState<string>("24h");
+  const [dateFilter, setDateFilter] = useState<string>("12m");
 
   const { data: accessLogs, isLoading } = useQuery({
     queryKey: ["phi-access-logs", entityFilter, dateFilter],
