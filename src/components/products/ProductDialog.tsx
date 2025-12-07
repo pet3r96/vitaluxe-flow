@@ -23,8 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Loader2, Upload, X, AlertCircle } from "lucide-react";
+import { Loader2, Upload, X, AlertCircle, ChevronDown } from "lucide-react";
+import { ProductVariantsEditor } from "./ProductVariantsEditor";
+import { useProductVariants, useSyncProductVariants } from "@/hooks/useProductVariants";
+import type { ProductVariantFormData } from "@/types/domain/productVariant";
+import { createEmptyVariant } from "@/types/domain/productVariant";
 
 interface ProductDialogProps {
   open: boolean;
@@ -40,6 +45,12 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
   const [pharmacies, setPharmacies] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<{ id: string; name: string }[]>([]);
   const [toplineReps, setToplineReps] = useState<any[]>([]);
+  const [variantsOpen, setVariantsOpen] = useState(false);
+  const [variants, setVariants] = useState<ProductVariantFormData[]>([]);
+  
+  const { data: existingVariants } = useProductVariants(product?.id);
+  const syncVariants = useSyncProductVariants();
+  
   const [formData, setFormData] = useState({
     name: "",
     dosage: "",
@@ -169,6 +180,25 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       resetForm();
     }
   }, [product]);
+  
+  // Load existing variants when editing
+  useEffect(() => {
+    if (existingVariants && existingVariants.length > 0) {
+      setVariants(existingVariants.map(v => ({
+        id: v.id,
+        dosage_label: v.dosage_label,
+        base_price: v.base_price?.toString() || '',
+        topline_price: v.topline_price?.toString() || '',
+        downline_price: v.downline_price?.toString() || '',
+        retail_price: v.retail_price?.toString() || '',
+        active: v.active,
+        isNew: false,
+      })));
+      setVariantsOpen(true);
+    } else if (!product) {
+      setVariants([]);
+    }
+  }, [existingVariants, product]);
 
   // Auto-sync prices when Rx toggle changes
   useEffect(() => {
@@ -343,6 +373,11 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         
         if (repAssignError) throw repAssignError;
       }
+      
+      // Sync product variants
+      if (variants.length > 0) {
+        await syncVariants.mutateAsync({ productId, variants });
+      }
 
       onSuccess();
       onOpenChange(false);
@@ -372,6 +407,8 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     });
     setImageFile(null);
     setImagePreview("");
+    setVariants([]);
+    setVariantsOpen(false);
   };
 
   return (
@@ -713,6 +750,34 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             </div>
           </div>
 
+          {/* Product Variants Section */}
+          <Collapsible open={variantsOpen} onOpenChange={setVariantsOpen} className="border rounded-lg">
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/50"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">Dosage Variants</span>
+                  {variants.filter(v => !v.toDelete).length > 0 && (
+                    <Badge variant="secondary">
+                      {variants.filter(v => !v.toDelete).length} variant(s)
+                    </Badge>
+                  )}
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${variantsOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="p-4 pt-0 border-t">
+              <ProductVariantsEditor
+                variants={variants}
+                onChange={setVariants}
+                requiresPrescription={formData.requires_prescription}
+                disabled={loading}
+              />
+            </CollapsibleContent>
+          </Collapsible>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

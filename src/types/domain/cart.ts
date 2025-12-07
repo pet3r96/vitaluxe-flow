@@ -45,6 +45,7 @@ export interface CartLine {
   refills_remaining?: number | null;
   expires_at?: string | null;
   created_at?: string | null;
+  variant_id?: string | null; // NEW: Product variant ID for dosage selection
   
   // Hydrated relationships (optional - may be joined)
   product?: {
@@ -55,8 +56,16 @@ export interface CartLine {
     category?: string | null;
     active?: boolean;
     requires_prescription?: boolean;
+    dosage?: string | null;
     [key: string]: unknown;
   };
+  
+  // NEW: Hydrated variant data
+  variant?: {
+    id: string;
+    dosage_label: string;
+    retail_price?: number | null;
+  } | null;
   
   patient_accounts?: {
     id: string;
