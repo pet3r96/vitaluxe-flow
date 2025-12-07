@@ -11,7 +11,7 @@ import { FileText, Download, Search, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 export const PrescriptionAccessAudit = () => {
-  const [dateFilter, setDateFilter] = useState<string>("30d");
+  const [dateFilter, setDateFilter] = useState<string>("12m");
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: prescriptionLogs, isLoading } = useQuery({

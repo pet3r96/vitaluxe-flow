@@ -20,7 +20,7 @@ export const AuditLogsViewer = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("24h");
+  const [dateFilter, setDateFilter] = useState("12m");
 
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ["audit-logs", searchTerm, actionFilter, dateFilter],

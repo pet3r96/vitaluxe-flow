@@ -9,7 +9,7 @@ import { CreditCard, AlertTriangle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 export const PaymentMethodAuditLog = () => {
-  const [dateFilter, setDateFilter] = useState<string>("7d");
+  const [dateFilter, setDateFilter] = useState<string>("12m");
 
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ["payment-method-audit-logs", dateFilter],

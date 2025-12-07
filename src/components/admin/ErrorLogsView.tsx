@@ -16,7 +16,7 @@ export const ErrorLogsView = () => {
   const [selectedError, setSelectedError] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [errorTypeFilter, setErrorTypeFilter] = useState<string>("all");
-  const [dateFilter, setDateFilter] = useState<string>("24h");
+  const [dateFilter, setDateFilter] = useState<string>("12m");
 
   const { data: errorLogs, isLoading } = useQuery({
     queryKey: ["error-logs", errorTypeFilter, dateFilter],

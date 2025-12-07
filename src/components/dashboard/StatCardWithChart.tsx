@@ -34,7 +34,7 @@ export function StatCardWithChart({
   userId,
   valueFormatter = (v) => v.toString(),
 }: StatCardWithChartProps) {
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('7d');
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('12m');
   
   const { data, currentValue: calculatedValue, percentChange, trend, isLoading } = useMetricTimeSeries(
     metricKey,
