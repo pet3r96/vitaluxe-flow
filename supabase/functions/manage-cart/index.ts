@@ -71,7 +71,7 @@ serve(async (req) => {
           patientAddressState, patientAddressZip, patientAddressValidated,
           patientAddressValidationSource, priceSnapshot, assignedPharmacyId,
           prescriptionUrl, customSig, customDosage, orderNotes,
-          prescriptionMethod, genderAtBirth
+          prescriptionMethod, genderAtBirth, variantId // NEW: variant support
         } = body;
 
         if (!cartOwnerId || !productId || !patientName || !destinationState) {
@@ -81,7 +81,7 @@ serve(async (req) => {
           );
         }
 
-        edgeLogger.info('manage-cart adding item', { productId, quantity });
+        edgeLogger.info('manage-cart adding item', { productId, quantity, variantId });
 
         // Validate product exists and is active
         const { data: product, error: productError } = await supabase
@@ -95,6 +95,22 @@ serve(async (req) => {
             JSON.stringify({ error: 'Product not found or inactive' }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
+        }
+        
+        // Validate variant if provided
+        if (variantId) {
+          const { data: variant, error: variantError } = await supabase
+            .from("product_variants")
+            .select("id, product_id, active")
+            .eq("id", variantId)
+            .single();
+          
+          if (variantError || !variant || !variant.active || variant.product_id !== productId) {
+            return new Response(
+              JSON.stringify({ error: 'Invalid or inactive variant' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
 
         // Find or create cart
@@ -147,6 +163,7 @@ serve(async (req) => {
         if (orderNotes !== undefined) insertData.order_notes = orderNotes;
         if (prescriptionMethod !== undefined) insertData.prescription_method = prescriptionMethod;
         if (genderAtBirth !== undefined) insertData.gender_at_birth = genderAtBirth;
+        if (variantId !== undefined) insertData.variant_id = variantId; // NEW: Store variant ID
 
         const { data: newLine, error: insertError } = await supabase
           .from("cart_lines")

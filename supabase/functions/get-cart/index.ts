@@ -65,7 +65,7 @@ serve(async (req) => {
 
     // Build select query
     const fields = productFields || "name, dosage, sig, image_url, base_price, requires_prescription";
-    let selectFields = `*, product:products(${fields})`;
+    let selectFields = `*, product:products(${fields}), variant:product_variants(id, dosage_label, retail_price)`;
 
     if (includePharmacy) {
       selectFields += `,pharmacy:pharmacies(name)`;

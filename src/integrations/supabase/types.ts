@@ -474,6 +474,7 @@ export type Database = {
           refills_remaining: number | null
           refills_total: number | null
           shipping_speed: Database["public"]["Enums"]["shipping_speed"] | null
+          variant_id: string | null
         }
         Insert: {
           assigned_pharmacy_id?: string | null
@@ -514,6 +515,7 @@ export type Database = {
           refills_remaining?: number | null
           refills_total?: number | null
           shipping_speed?: Database["public"]["Enums"]["shipping_speed"] | null
+          variant_id?: string | null
         }
         Update: {
           assigned_pharmacy_id?: string | null
@@ -554,6 +556,7 @@ export type Database = {
           refills_remaining?: number | null
           refills_total?: number | null
           shipping_speed?: Database["public"]["Enums"]["shipping_speed"] | null
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -624,6 +627,13 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_lines_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -1675,6 +1685,7 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"] | null
           tracking_number: string | null
           updated_at: string | null
+          variant_id: string | null
         }
         Insert: {
           assigned_pharmacy_id?: string | null
@@ -1725,6 +1736,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"] | null
           tracking_number?: string | null
           updated_at?: string | null
+          variant_id?: string | null
         }
         Update: {
           assigned_pharmacy_id?: string | null
@@ -1775,6 +1787,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"] | null
           tracking_number?: string | null
           updated_at?: string | null
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -1859,6 +1872,13 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_lines_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -5108,6 +5128,66 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      product_variants: {
+        Row: {
+          active: boolean | null
+          base_price: number
+          created_at: string | null
+          dosage_label: string
+          downline_price: number | null
+          id: string
+          product_id: string
+          retail_price: number | null
+          sku: string | null
+          sort_order: number | null
+          topline_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          base_price: number
+          created_at?: string | null
+          dosage_label: string
+          downline_price?: number | null
+          id?: string
+          product_id: string
+          retail_price?: number | null
+          sku?: string | null
+          sort_order?: number | null
+          topline_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          base_price?: number
+          created_at?: string | null
+          dosage_label?: string
+          downline_price?: number | null
+          id?: string
+          product_id?: string
+          retail_price?: number | null
+          sku?: string | null
+          sort_order?: number | null
+          topline_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {

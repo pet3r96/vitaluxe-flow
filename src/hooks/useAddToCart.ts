@@ -11,6 +11,7 @@ interface AddToCartParams {
   patientName: string;
   destinationState: string;
   providerId?: string;
+  variantId?: string; // NEW: Optional variant ID for dosage selection
 }
 
 export const useAddToCart = () => {
@@ -56,6 +57,7 @@ export const useAddToCart = () => {
             patient_name: variables.patientName,
             quantity: variables.quantity || 1,
             destination_state: variables.destinationState,
+            variant_id: variables.variantId,
           } as any],
         };
       });
