@@ -4,6 +4,36 @@ import type { PracticeSubscription, SubscriptionStatus as SubscriptionStatusType
 import type { SubscriptionUpgradePrompt, SubscriptionUpgradePromptInsert, SubscriptionUpgradePromptUpdate } from "@/types/manual-schema";
 import { logger } from "@/lib/logger";
 
+/**
+ * Auto-extend subscription period for active subscriptions
+ * This ensures users with active status don't lose access due to billing period expiration
+ */
+const extendSubscriptionPeriod = async (practiceId: string): Promise<void> => {
+  const now = new Date();
+  const oneMonthFromNow = new Date(now);
+  oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+  
+  const { error } = await supabase
+    .from('practice_subscriptions')
+    .update({
+      current_period_start: now.toISOString(),
+      current_period_end: oneMonthFromNow.toISOString(),
+      updated_at: now.toISOString()
+    })
+    .eq('practice_id', practiceId)
+    .eq('status', 'active'); // Only extend if still active
+    
+  if (error) {
+    logger.error("Failed to extend subscription period", error, { practiceId });
+    throw error;
+  }
+  
+  logger.info("Auto-extended subscription period", { 
+    practiceId, 
+    newPeriodEnd: oneMonthFromNow.toISOString() 
+  });
+};
+
 export interface SubscriptionStatus {
   isSubscribed: boolean;
   status: SubscriptionStatusType | null;
@@ -81,8 +111,19 @@ export const getSubscriptionStatus = async (practiceId: string): Promise<Subscri
     }
   }
   
-  if (subscription.status === 'active' && subscription.current_period_end) {
-    isSubscribed = new Date(subscription.current_period_end) > now;
+  if (subscription.status === 'active') {
+    // Active subscriptions always have access - the status itself indicates they're subscribed
+    // Period end is for billing purposes, not access control
+    // If payment fails, the status should change to 'past_due' or 'suspended'
+    isSubscribed = true;
+    
+    // Auto-extend period if it's expired but status is still active (no payment failure recorded)
+    if (subscription.current_period_end && new Date(subscription.current_period_end) < now) {
+      // Trigger background period extension for active subscriptions
+      extendSubscriptionPeriod(practiceId).catch(err => 
+        logger.warn("Failed to auto-extend subscription period", { practiceId, error: err })
+      );
+    }
   }
 
   // Suspended subscriptions are NOT subscribed - force upgrade decision
