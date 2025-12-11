@@ -1,4 +1,5 @@
 import { AlertCircle } from "lucide-react";
+import { PRO_MONTHLY_PRICE_STR } from "@/lib/pricing";
 import {
   Dialog,
   DialogContent,
@@ -98,7 +99,7 @@ export const TrialExpiredDialog = ({
           </div>
 
           <p className="text-xs text-center text-muted-foreground">
-            After upgrade: $99/month billed monthly
+            After upgrade: {PRO_MONTHLY_PRICE_STR}/month billed monthly
           </p>
         </div>
       </DialogContent>
