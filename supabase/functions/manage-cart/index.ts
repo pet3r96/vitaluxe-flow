@@ -146,6 +146,24 @@ serve(async (req) => {
           expires_at: expiresAt.toISOString()
         };
 
+        // Auto-select default shipping speed (fastest first: overnight → 2day → ground)
+        if (assignedPharmacyId) {
+          const { data: rates } = await supabase
+            .from('pharmacy_shipping_rates')
+            .select('shipping_speed')
+            .eq('pharmacy_id', assignedPharmacyId)
+            .eq('enabled', true);
+          
+          if (rates && rates.length > 0) {
+            const speeds = rates.map(r => r.shipping_speed);
+            const defaultSpeed = speeds.includes('overnight') ? 'overnight' :
+                                 speeds.includes('2day') ? '2day' : 
+                                 speeds[0];
+            insertData.shipping_speed = defaultSpeed;
+            edgeLogger.info('Auto-selected shipping speed', { defaultSpeed, pharmacyId: assignedPharmacyId });
+          }
+        }
+
         if (patientEmail !== undefined) insertData.patient_email = patientEmail;
         if (patientPhone !== undefined) insertData.patient_phone = patientPhone;
         if (patientAddress !== undefined) insertData.patient_address = patientAddress;

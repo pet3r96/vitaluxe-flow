@@ -157,7 +157,7 @@ const Cart = React.memo(function Cart() {
           patient_id: line.patient_id,
           patient_name: line.patient_name,
           pharmacy_id: line.assigned_pharmacy_id,
-          shipping_speed: line.shipping_speed || 'standard',
+          shipping_speed: line.shipping_speed || 'overnight',
           lines: []
         });
       }
@@ -332,7 +332,7 @@ const Cart = React.memo(function Cart() {
         groups.set(key, {
           patient_id: line.patient_id,
           pharmacy_id: line.assigned_pharmacy_id,
-          shipping_speed: line.shipping_speed || 'standard',
+          shipping_speed: line.shipping_speed || 'overnight',
           lines: []
         });
       }
@@ -359,11 +359,20 @@ const Cart = React.memo(function Cart() {
 
       const enabledSpeeds = Object.keys(rates) as ('ground' | '2day' | 'overnight')[];
       
-      if (enabledSpeeds.length > 0 && !enabledSpeeds.includes(group.shipping_speed)) {
-        const targetSpeed = enabledSpeeds[0];
+      // Normalize if shipping_speed is missing, invalid ('standard'), or not in enabled list
+      const needsNormalization = !group.shipping_speed || 
+        group.shipping_speed === 'standard' || 
+        !enabledSpeeds.includes(group.shipping_speed);
+
+      if (needsNormalization && enabledSpeeds.length > 0) {
+        // Pick default in priority order: fastest/most expensive first (overnight → 2day → ground)
+        const targetSpeed = enabledSpeeds.includes('overnight') ? 'overnight' :
+                            enabledSpeeds.includes('2day') ? '2day' : 
+                            enabledSpeeds.includes('ground') ? 'ground' :
+                            enabledSpeeds[0];
         const lineIds = group.lines.map((l: any) => l.id);
         normalizationPlan.push({ lineIds, targetSpeed, groupKey: key });
-        logger.info('Cart group will be normalized', { lineCount: lineIds.length });
+        logger.info('Cart group will be normalized', { lineCount: lineIds.length, targetSpeed });
       }
     });
 
