@@ -8172,6 +8172,16 @@ export type Database = {
       create_user_with_role:
         | {
             Args: {
+              p_email: string
+              p_name: string
+              p_role: Database["public"]["Enums"]["app_role"]
+              p_role_data?: Json
+              p_user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
               p_created_by?: string
               p_email: string
               p_name: string
@@ -8194,16 +8204,6 @@ export type Database = {
               p_role_data?: Json
               p_status?: string
               p_temp_password?: boolean
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_email: string
-              p_name: string
-              p_role: Database["public"]["Enums"]["app_role"]
-              p_role_data?: Json
               p_user_id: string
             }
             Returns: Json
