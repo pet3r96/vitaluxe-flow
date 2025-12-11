@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { PRO_MONTHLY_PRICE_STR } from "@/lib/pricing";
 import {
   Dialog,
   DialogContent,
@@ -90,7 +91,7 @@ export const PaymentWithTermsDialog = ({
             <>
               <div className="bg-muted rounded-lg p-4">
                 <h4 className="font-semibold mb-2">VitaLuxePro Subscription</h4>
-                <p className="text-sm text-muted-foreground">$99/month, billed monthly</p>
+                <p className="text-sm text-muted-foreground">{PRO_MONTHLY_PRICE_STR}/month, billed monthly</p>
               </div>
 
               <div className="space-y-2">
