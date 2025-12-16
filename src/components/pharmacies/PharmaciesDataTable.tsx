@@ -219,9 +219,8 @@ export const PharmaciesDataTable = () => {
           })) || []}
         />
       ) : (
-        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="min-w-[1200px]">
-            <Table className="table-fixed">
+        <div className="w-full">
+          <Table className="table-fixed min-w-[1200px]">
             <colgroup>
               <col style={{ width: '160px' }} />
               <col style={{ width: '220px' }} />
@@ -366,7 +365,6 @@ export const PharmaciesDataTable = () => {
             )}
             </TableBody>
           </Table>
-          </div>
         </div>
       )}
 
