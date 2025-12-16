@@ -9,8 +9,29 @@ const corsHeaders = {
 
 interface SendOrderRequest {
   order_id: string;
-  order_line_ids: string[]; // Now accepts array of order line IDs
+  order_line_ids: string[];
   pharmacy_id: string;
+}
+
+// Template variable replacement
+function applyPayloadTemplate(template: any, data: Record<string, any>): any {
+  if (typeof template === 'string') {
+    // Replace {{variable}} placeholders
+    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+      return data[key] !== undefined ? String(data[key]) : '';
+    });
+  }
+  if (Array.isArray(template)) {
+    return template.map(item => applyPayloadTemplate(item, data));
+  }
+  if (typeof template === 'object' && template !== null) {
+    const result: Record<string, any> = {};
+    for (const [key, value] of Object.entries(template)) {
+      result[key] = applyPayloadTemplate(value, data);
+    }
+    return result;
+  }
+  return template;
 }
 
 serve(async (req) => {
@@ -25,7 +46,7 @@ serve(async (req) => {
 
     edgeLogger.info("Sending order to pharmacy", { order_id, lineCount: order_line_ids.length, pharmacy_id });
 
-    // Fetch pharmacy API configuration
+    // Fetch pharmacy API configuration including new fields
     const { data: pharmacy, error: pharmacyError } = await supabaseAdmin
       .from("pharmacies")
       .select("*")
@@ -42,6 +63,13 @@ serve(async (req) => {
         JSON.stringify({ success: true, message: "Pharmacy API not enabled" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
+    }
+
+    // Check handler type - route to specific handler if needed
+    if (pharmacy.api_handler_type === 'baremeds') {
+      edgeLogger.info("Routing to BareMeds handler", { pharmacy_id });
+      // For BareMeds, we could invoke a separate function or handle inline
+      // For now, we continue with generic handling but could add special logic
     }
 
     // Fetch order data with practice info
@@ -109,13 +137,11 @@ serve(async (req) => {
       .select("*")
       .eq("pharmacy_id", pharmacy_id);
 
-    // Build payload with all order lines
-    const payload = {
+    // Build default payload structure
+    const defaultPayload = {
       order_id: order.id,
       vitaluxe_order_number: order.order_number,
       created_at: order.created_at,
-      
-      // Array of order lines for batching
       order_lines: unsent_lines.map(line => {
         const shipToPractice = line.ship_to === "practice";
         const shippingAddress = shipToPractice 
@@ -151,11 +177,60 @@ serve(async (req) => {
       }),
     };
 
+    // Apply custom payload template if configured
+    let payload = defaultPayload;
+    if (pharmacy.api_payload_template) {
+      try {
+        // Flatten data for template substitution
+        const templateData: Record<string, any> = {
+          order_id: order.id,
+          order_number: order.order_number,
+          created_at: order.created_at,
+          practice_name: order.profiles?.name,
+          practice_email: order.profiles?.email,
+          practice_address: order.profiles?.address_formatted || order.profiles?.address,
+        };
+        
+        // For single-line orders, add line-specific data
+        if (unsent_lines.length === 1) {
+          const line = unsent_lines[0];
+          templateData.patient_name = line.patient_name;
+          templateData.patient_address = line.patient_address;
+          templateData.patient_phone = line.patient_phone;
+          templateData.patient_email = line.patient_email;
+          templateData.product_name = line.products?.name;
+          templateData.quantity = line.quantity;
+          templateData.custom_sig = line.custom_sig;
+          templateData.custom_dosage = line.custom_dosage;
+          templateData.shipping_speed = line.shipping_speed;
+          templateData.destination_state = line.destination_state;
+          templateData.provider_name = line.providers?.profiles?.name;
+          templateData.provider_npi = line.providers?.profiles?.npi;
+          templateData.provider_dea = line.providers?.profiles?.dea;
+        }
+        
+        payload = applyPayloadTemplate(pharmacy.api_payload_template, templateData);
+        edgeLogger.info("Applied custom payload template");
+      } catch (templateError) {
+        edgeLogger.error("Failed to apply payload template, using default", templateError);
+      }
+    }
+
     // Build auth headers
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
 
+    // Add custom headers if configured
+    if (pharmacy.api_custom_headers && typeof pharmacy.api_custom_headers === 'object') {
+      for (const [key, value] of Object.entries(pharmacy.api_custom_headers)) {
+        if (typeof value === 'string') {
+          headers[key] = value;
+        }
+      }
+    }
+
+    // Add authentication headers
     if (pharmacy.api_auth_type === "bearer" && credentials?.length) {
       const token = credentials.find(c => c.credential_type === "bearer_token")?.credential_key;
       if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -171,6 +246,9 @@ serve(async (req) => {
       }
     }
 
+    // Use configured HTTP method (default to POST)
+    const httpMethod = pharmacy.api_http_method || "POST";
+
     // Send with retry logic
     const maxRetries = pharmacy.api_retry_count || 3;
     const timeout = (pharmacy.api_timeout_seconds || 30) * 1000;
@@ -180,13 +258,18 @@ serve(async (req) => {
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        edgeLogger.info("Attempting to send order to pharmacy", { attempt: attempt + 1, maxRetries, endpoint: pharmacy.api_endpoint_url });
+        edgeLogger.info("Attempting to send order to pharmacy", { 
+          attempt: attempt + 1, 
+          maxRetries, 
+          endpoint: pharmacy.api_endpoint_url,
+          method: httpMethod 
+        });
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
         const response = await fetch(pharmacy.api_endpoint_url, {
-          method: "POST",
+          method: httpMethod,
           headers,
           body: JSON.stringify(payload),
           signal: controller.signal,
@@ -195,7 +278,7 @@ serve(async (req) => {
         clearTimeout(timeoutId);
         responseStatus = response.status;
 
-        // Read response body once as text to avoid "Body already consumed" error
+        // Read response body once
         const responseText = await response.text();
         try {
           responseBody = JSON.parse(responseText);
@@ -206,7 +289,7 @@ serve(async (req) => {
         if (response.ok) {
           edgeLogger.info("Successfully sent batched order to pharmacy", { attempt: attempt + 1 });
           
-          // Extract pharmacy order ID from response (could be single or array)
+          // Extract pharmacy order ID from response
           const pharmacyOrderId =
             responseBody?.order_id ||
             responseBody?.pharmacy_order_id ||
