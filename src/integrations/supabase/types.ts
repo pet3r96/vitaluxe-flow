@@ -3830,13 +3830,20 @@ export type Database = {
           address_zip: string | null
           api_auth_key_name: string | null
           api_auth_type: string | null
+          api_custom_headers: Json | null
           api_enabled: boolean | null
           api_endpoint_url: string | null
+          api_handler_type: string | null
+          api_http_method: string | null
+          api_payload_template: Json | null
           api_retry_count: number | null
+          api_status_mapping: Json | null
           api_timeout_seconds: number | null
           contact_email: string
           created_at: string | null
           id: string
+          inbound_webhook_enabled: boolean | null
+          inbound_webhook_path: string | null
           name: string
           parent_id: string | null
           phone: string | null
@@ -3860,13 +3867,20 @@ export type Database = {
           address_zip?: string | null
           api_auth_key_name?: string | null
           api_auth_type?: string | null
+          api_custom_headers?: Json | null
           api_enabled?: boolean | null
           api_endpoint_url?: string | null
+          api_handler_type?: string | null
+          api_http_method?: string | null
+          api_payload_template?: Json | null
           api_retry_count?: number | null
+          api_status_mapping?: Json | null
           api_timeout_seconds?: number | null
           contact_email: string
           created_at?: string | null
           id?: string
+          inbound_webhook_enabled?: boolean | null
+          inbound_webhook_path?: string | null
           name: string
           parent_id?: string | null
           phone?: string | null
@@ -3890,13 +3904,20 @@ export type Database = {
           address_zip?: string | null
           api_auth_key_name?: string | null
           api_auth_type?: string | null
+          api_custom_headers?: Json | null
           api_enabled?: boolean | null
           api_endpoint_url?: string | null
+          api_handler_type?: string | null
+          api_http_method?: string | null
+          api_payload_template?: Json | null
           api_retry_count?: number | null
+          api_status_mapping?: Json | null
           api_timeout_seconds?: number | null
           contact_email?: string
           created_at?: string | null
           id?: string
+          inbound_webhook_enabled?: boolean | null
+          inbound_webhook_path?: string | null
           name?: string
           parent_id?: string | null
           phone?: string | null

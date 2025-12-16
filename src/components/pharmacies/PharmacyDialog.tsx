@@ -21,6 +21,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getCurrentCSRFToken } from "@/lib/csrf";
+import { PharmacyApiConfigSection, type ApiConfigData } from "./PharmacyApiConfigSection";
 
 const US_STATES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -36,6 +37,23 @@ interface PharmacyDialogProps {
   pharmacy: any | null;
   onSuccess: () => void;
 }
+
+const DEFAULT_API_CONFIG: ApiConfigData = {
+  api_enabled: false,
+  api_handler_type: "generic",
+  api_endpoint_url: "",
+  api_http_method: "POST",
+  api_auth_type: "none",
+  api_auth_key_name: "X-API-Key",
+  api_retry_count: 3,
+  api_timeout_seconds: 30,
+  api_custom_headers: {},
+  api_payload_template: null,
+  inbound_webhook_enabled: false,
+  inbound_webhook_path: "",
+  webhook_secret: "",
+  api_status_mapping: {},
+};
 
 export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: PharmacyDialogProps) => {
   const [loading, setLoading] = useState(false);
@@ -53,6 +71,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
     scope_type: "global" as "global" | "scoped",
     assigned_topline_reps: [] as string[],
   });
+  const [apiConfig, setApiConfig] = useState<ApiConfigData>(DEFAULT_API_CONFIG);
 
   // Fetch topline reps
   useEffect(() => {
@@ -101,8 +120,27 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
           scope_type: assignedReps.length > 0 ? "scoped" : "global",
           assigned_topline_reps: assignedReps,
         });
+        
+        // Set API config from pharmacy data
+        setApiConfig({
+          api_enabled: pharmacy.api_enabled || false,
+          api_handler_type: pharmacy.api_handler_type || "generic",
+          api_endpoint_url: pharmacy.api_endpoint_url || "",
+          api_http_method: pharmacy.api_http_method || "POST",
+          api_auth_type: pharmacy.api_auth_type || "none",
+          api_auth_key_name: pharmacy.api_auth_key_name || "X-API-Key",
+          api_retry_count: pharmacy.api_retry_count || 3,
+          api_timeout_seconds: pharmacy.api_timeout_seconds || 30,
+          api_custom_headers: pharmacy.api_custom_headers || {},
+          api_payload_template: pharmacy.api_payload_template || null,
+          inbound_webhook_enabled: pharmacy.inbound_webhook_enabled || false,
+          inbound_webhook_path: pharmacy.inbound_webhook_path || "",
+          webhook_secret: pharmacy.webhook_secret || "",
+          api_status_mapping: pharmacy.api_status_mapping || {},
+        });
       } else {
         resetForm();
+        setApiConfig(DEFAULT_API_CONFIG);
       }
     };
     fetchAssignments();
@@ -136,7 +174,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
 
     try {
       if (pharmacy) {
-        // Update existing pharmacy
+        // Update existing pharmacy with API config
         const pharmacyData = {
           name: formData.name,
           contact_email: formData.contact_email,
@@ -148,6 +186,21 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
           address: `${formData.address_street}, ${formData.address_city}, ${formData.address_state} ${formData.address_zip}`.trim(),
           states_serviced: formData.states_serviced,
           priority_map: formData.priority_map,
+          // API Configuration
+          api_enabled: apiConfig.api_enabled,
+          api_handler_type: apiConfig.api_handler_type,
+          api_endpoint_url: apiConfig.api_endpoint_url || null,
+          api_http_method: apiConfig.api_http_method,
+          api_auth_type: apiConfig.api_auth_type,
+          api_auth_key_name: apiConfig.api_auth_key_name || null,
+          api_retry_count: apiConfig.api_retry_count,
+          api_timeout_seconds: apiConfig.api_timeout_seconds,
+          api_custom_headers: Object.keys(apiConfig.api_custom_headers || {}).length > 0 ? apiConfig.api_custom_headers : null,
+          api_payload_template: apiConfig.api_payload_template,
+          inbound_webhook_enabled: apiConfig.inbound_webhook_enabled,
+          inbound_webhook_path: apiConfig.inbound_webhook_path || null,
+          webhook_secret: apiConfig.webhook_secret || null,
+          api_status_mapping: Object.keys(apiConfig.api_status_mapping || {}).length > 0 ? apiConfig.api_status_mapping : null,
         };
 
         const { error } = await supabase
@@ -191,7 +244,7 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
 
         if (error) throw new Error(getEdgeFunctionError(data, error));
 
-        // Update the pharmacy record with additional fields
+        // Update the pharmacy record with additional fields and API config
         const { error: updateError } = await supabase
           .from("pharmacies")
           .update({
@@ -201,6 +254,21 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             address_state: formData.address_state,
             address_zip: formData.address_zip,
             priority_map: formData.priority_map,
+            // API Configuration for new pharmacy
+            api_enabled: apiConfig.api_enabled,
+            api_handler_type: apiConfig.api_handler_type,
+            api_endpoint_url: apiConfig.api_endpoint_url || null,
+            api_http_method: apiConfig.api_http_method,
+            api_auth_type: apiConfig.api_auth_type,
+            api_auth_key_name: apiConfig.api_auth_key_name || null,
+            api_retry_count: apiConfig.api_retry_count,
+            api_timeout_seconds: apiConfig.api_timeout_seconds,
+            api_custom_headers: Object.keys(apiConfig.api_custom_headers || {}).length > 0 ? apiConfig.api_custom_headers : null,
+            api_payload_template: apiConfig.api_payload_template,
+            inbound_webhook_enabled: apiConfig.inbound_webhook_enabled,
+            inbound_webhook_path: apiConfig.inbound_webhook_path || null,
+            webhook_secret: apiConfig.webhook_secret || null,
+            api_status_mapping: Object.keys(apiConfig.api_status_mapping || {}).length > 0 ? apiConfig.api_status_mapping : null,
           })
           .eq('contact_email', formData.contact_email)
           .eq('active', true);
@@ -507,6 +575,13 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
               </ul>
             </div>
           </div>
+
+          {/* API Integration Section */}
+          <PharmacyApiConfigSection
+            config={apiConfig}
+            onChange={setApiConfig}
+            isEditing={!!pharmacy}
+          />
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
