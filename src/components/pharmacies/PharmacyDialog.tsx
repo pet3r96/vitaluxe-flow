@@ -40,7 +40,6 @@ interface PharmacyDialogProps {
 
 const DEFAULT_API_CONFIG: ApiConfigData = {
   api_enabled: false,
-  api_handler_type: "generic",
   api_endpoint_url: "",
   api_http_method: "POST",
   api_auth_type: "none",
@@ -124,7 +123,6 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         // Set API config from pharmacy data
         setApiConfig({
           api_enabled: pharmacy.api_enabled || false,
-          api_handler_type: pharmacy.api_handler_type || "generic",
           api_endpoint_url: pharmacy.api_endpoint_url || "",
           api_http_method: pharmacy.api_http_method || "POST",
           api_auth_type: pharmacy.api_auth_type || "none",
@@ -188,7 +186,6 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
           priority_map: formData.priority_map,
           // API Configuration
           api_enabled: apiConfig.api_enabled,
-          api_handler_type: apiConfig.api_handler_type,
           api_endpoint_url: apiConfig.api_endpoint_url || null,
           api_http_method: apiConfig.api_http_method,
           api_auth_type: apiConfig.api_auth_type,
@@ -256,7 +253,6 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             priority_map: formData.priority_map,
             // API Configuration for new pharmacy
             api_enabled: apiConfig.api_enabled,
-            api_handler_type: apiConfig.api_handler_type,
             api_endpoint_url: apiConfig.api_endpoint_url || null,
             api_http_method: apiConfig.api_http_method,
             api_auth_type: apiConfig.api_auth_type,

@@ -12,7 +12,6 @@ import { toast } from "sonner";
 
 export interface ApiConfigData {
   api_enabled: boolean;
-  api_handler_type: string;
   api_endpoint_url: string;
   api_http_method: string;
   api_auth_type: string;
@@ -129,28 +128,6 @@ export const PharmacyApiConfigSection = ({ config, onChange, isEditing }: Pharma
       
       {config.api_enabled && (
         <div className="space-y-4 pt-2">
-          {/* Handler Type Selection */}
-          <div className="space-y-2">
-            <Label>Handler Type</Label>
-            <Select
-              value={config.api_handler_type}
-              onValueChange={(value) => updateConfig({ api_handler_type: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select handler type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="generic">Generic (Configurable)</SelectItem>
-                <SelectItem value="baremeds">BareMeds</SelectItem>
-                <SelectItem value="custom">Custom Handler</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {config.api_handler_type === "generic" && "Uses configurable endpoint with custom payload template"}
-              {config.api_handler_type === "baremeds" && "Uses BareMeds-specific API format and credentials"}
-              {config.api_handler_type === "custom" && "Uses custom edge function for special handling"}
-            </p>
-          </div>
 
           {/* Outbound API Configuration */}
           <Collapsible open={isApiOpen} onOpenChange={setIsApiOpen}>

@@ -65,13 +65,6 @@ serve(async (req) => {
       );
     }
 
-    // Check handler type - route to specific handler if needed
-    if (pharmacy.api_handler_type === 'baremeds') {
-      edgeLogger.info("Routing to BareMeds handler", { pharmacy_id });
-      // For BareMeds, we could invoke a separate function or handle inline
-      // For now, we continue with generic handling but could add special logic
-    }
-
     // Fetch order data with practice info
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
