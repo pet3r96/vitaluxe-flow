@@ -8369,6 +8369,14 @@ export type Database = {
         Args: { p_encrypted_data: string; p_field_type: string }
         Returns: string
       }
+      decrypt_order_line_contact_service: {
+        Args: { p_order_line_id: string }
+        Returns: {
+          patient_address: string
+          patient_email: string
+          patient_phone: string
+        }[]
+      }
       decrypt_pharmacy_credential: {
         Args: { p_encrypted_text: string }
         Returns: string
