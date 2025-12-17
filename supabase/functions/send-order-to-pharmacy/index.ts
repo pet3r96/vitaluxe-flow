@@ -13,7 +13,334 @@ interface SendOrderRequest {
   pharmacy_id: string;
 }
 
-// Template variable replacement
+// VIOS shipping service code mapping
+const VIOS_SHIPPING_CODES: Record<string, number> = {
+  'ground': 1,
+  '2day': 2,
+  'overnight': 3,
+  'priority': 4
+};
+
+// Format phone number to VIOS format: (XXX) XXX-XXXX
+function formatPhoneForVios(phone: string | null): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  return phone; // Return original if can't format
+}
+
+// Format date to VIOS format: yyyy-MM-dd
+function formatDateForVios(date: string | Date | null): string | null {
+  if (!date) return null;
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().split('T')[0];
+}
+
+// Map gender to VIOS format
+function mapGenderForVios(gender: string | null): string {
+  if (!gender) return 'u';
+  const g = gender.toLowerCase();
+  if (g === 'm' || g === 'male') return 'm';
+  if (g === 'f' || g === 'female') return 'f';
+  return 'u';
+}
+
+// Parse address into components
+function parseAddress(address: string | null): { 
+  address1: string | null; 
+  city: string | null; 
+  state: string | null; 
+  zip: string | null; 
+} {
+  if (!address) return { address1: null, city: null, state: null, zip: null };
+  
+  // Try to parse formatted address like "123 Main St, City, ST 12345"
+  const parts = address.split(',').map(p => p.trim());
+  if (parts.length >= 3) {
+    const address1 = parts[0];
+    const city = parts[1];
+    // Last part often has state and zip
+    const stateZipMatch = parts[parts.length - 1].match(/([A-Z]{2})\s*(\d{5}(-\d{4})?)?/i);
+    if (stateZipMatch) {
+      return {
+        address1,
+        city,
+        state: stateZipMatch[1]?.toUpperCase() || null,
+        zip: stateZipMatch[2] || null
+      };
+    }
+  }
+  
+  return { address1: address, city: null, state: null, zip: null };
+}
+
+// Get VIOS JWT token
+async function getViosToken(baseUrl: string, clientId: string, clientSecret: string): Promise<string> {
+  const tokenUrl = `${baseUrl}/api/auth/token`;
+  
+  edgeLogger.info("Fetching VIOS JWT token", { tokenUrl });
+  
+  const response = await fetch(tokenUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'ClientId': clientId,
+      'ClientSecret': clientSecret
+    }
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`VIOS auth failed (${response.status}): ${errorText}`);
+  }
+  
+  const data = await response.json();
+  if (!data.accessToken) {
+    throw new Error('VIOS auth response missing accessToken');
+  }
+  
+  edgeLogger.info("Successfully obtained VIOS JWT token");
+  return data.accessToken;
+}
+
+// Transform order to VIOS CreateOrderRequest format
+function transformToViosPayload(
+  order: any, 
+  orderLine: any, 
+  prescriptionBase64: string | null
+): any {
+  const patientAddress = parseAddress(orderLine.patient_address);
+  const providerAddress = parseAddress(orderLine.providers?.profiles?.address_formatted || orderLine.providers?.profiles?.address);
+  const shippingAddress = parseAddress(orderLine.shipping_address || orderLine.patient_address);
+  
+  // Parse patient name into first/last
+  const patientNameParts = (orderLine.patient_name || '').split(' ');
+  const patientFirstName = patientNameParts[0] || 'Unknown';
+  const patientLastName = patientNameParts.slice(1).join(' ') || 'Patient';
+  
+  // Parse provider name into first/last
+  const providerName = orderLine.providers?.profiles?.name || '';
+  const providerNameParts = providerName.split(' ');
+  const providerFirstName = providerNameParts[0] || 'Unknown';
+  const providerLastName = providerNameParts.slice(1).join(' ') || 'Provider';
+  
+  const payload: any = {
+    general: {
+      referenceId: orderLine.id, // Use order_line_id as reference
+      memo: orderLine.order_notes || `VitaLuxe Order ${order.order_number}`,
+      isTestOrder: false
+    },
+    prescriber: {
+      npi: orderLine.providers?.profiles?.npi || '',
+      firstName: providerFirstName,
+      lastName: providerLastName,
+      dea: orderLine.providers?.profiles?.dea || undefined,
+      address1: providerAddress.address1 || undefined,
+      city: providerAddress.city || undefined,
+      state: providerAddress.state || undefined,
+      zip: providerAddress.zip || undefined,
+      phone: formatPhoneForVios(orderLine.providers?.profiles?.phone) || undefined,
+      email: orderLine.providers?.profiles?.email || undefined
+    },
+    patient: {
+      firstName: patientFirstName,
+      lastName: patientLastName,
+      gender: mapGenderForVios(orderLine.gender_at_birth),
+      dateOfBirth: formatDateForVios(orderLine.patient_dob) || '1900-01-01', // Required field
+      address1: patientAddress.address1 || undefined,
+      city: patientAddress.city || undefined,
+      state: patientAddress.state || orderLine.destination_state || undefined,
+      zip: patientAddress.zip || undefined,
+      phoneHome: formatPhoneForVios(orderLine.patient_phone) || undefined,
+      email: orderLine.patient_email || undefined
+    },
+    shipping: {
+      addressLine1: shippingAddress.address1 || patientAddress.address1 || 'Address Required',
+      city: shippingAddress.city || patientAddress.city || 'City Required',
+      state: (shippingAddress.state || patientAddress.state || orderLine.destination_state || 'CA').toUpperCase(),
+      zipCode: shippingAddress.zip || patientAddress.zip || '00000',
+      service: VIOS_SHIPPING_CODES[orderLine.shipping_speed] || VIOS_SHIPPING_CODES['ground'],
+      recipientType: 'patient',
+      recipientFirstName: patientFirstName,
+      recipientLastName: patientLastName,
+      recipientPhone: formatPhoneForVios(orderLine.patient_phone) || undefined,
+      recipientEmail: orderLine.patient_email || undefined
+    },
+    rxs: [{
+      rxType: orderLine.is_refill ? 'refill' : 'new',
+      drugName: orderLine.products?.name || 'Unknown Product',
+      quantity: String(orderLine.quantity || 1),
+      directions: orderLine.custom_sig || 'As directed',
+      drugStrength: orderLine.custom_dosage || undefined,
+      refills: orderLine.refills_remaining || 0,
+      dateWritten: formatDateForVios(order.created_at) || formatDateForVios(new Date()),
+      specialInstructions: orderLine.order_notes || undefined
+    }]
+  };
+  
+  // Add prescription PDF if available
+  if (prescriptionBase64) {
+    payload.document = {
+      pdfBase64: prescriptionBase64
+    };
+  }
+  
+  return payload;
+}
+
+// Send order via VIOS API
+async function sendViosOrder(
+  pharmacy: any,
+  credentials: any[],
+  order: any,
+  orderLines: any[],
+  supabaseAdmin: any
+): Promise<{ success: boolean; response?: any; error?: string }> {
+  
+  // Get VIOS credentials
+  const clientId = credentials.find(c => c.credential_type === 'vios_client_key')?.credential_key;
+  const clientSecret = credentials.find(c => c.credential_type === 'vios_client_secret')?.credential_key;
+  
+  if (!clientId || !clientSecret) {
+    return { success: false, error: 'VIOS credentials not configured (missing client_key or client_secret)' };
+  }
+  
+  // Get base URL from pharmacy config
+  const baseUrl = pharmacy.api_endpoint_url?.replace(/\/+$/, '') || 'https://integrations.vioscompounding.com';
+  
+  try {
+    // Get JWT token
+    const jwtToken = await getViosToken(baseUrl, clientId, clientSecret);
+    
+    const results: any[] = [];
+    let allSuccess = true;
+    
+    // Send each order line as a separate VIOS order
+    for (const orderLine of orderLines) {
+      try {
+        // Get prescription PDF as base64 if available
+        let prescriptionBase64: string | null = null;
+        if (orderLine.prescription_url) {
+          try {
+            const pdfResponse = await fetch(orderLine.prescription_url);
+            if (pdfResponse.ok) {
+              const pdfBuffer = await pdfResponse.arrayBuffer();
+              prescriptionBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
+            }
+          } catch (pdfError) {
+            edgeLogger.warn("Failed to fetch prescription PDF", { error: pdfError });
+          }
+        }
+        
+        // Transform to VIOS payload
+        const viosPayload = transformToViosPayload(order, orderLine, prescriptionBase64);
+        
+        edgeLogger.info("Sending order to VIOS", { 
+          orderLineId: orderLine.id, 
+          referenceId: viosPayload.general.referenceId 
+        });
+        
+        // Send to VIOS
+        const response = await fetch(`${baseUrl}/api/orders`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`
+          },
+          body: JSON.stringify(viosPayload)
+        });
+        
+        const responseText = await response.text();
+        let responseBody: any;
+        try {
+          responseBody = JSON.parse(responseText);
+        } catch {
+          responseBody = { text: responseText };
+        }
+        
+        if (response.ok) {
+          const viosOrderId = responseBody.orderId;
+          
+          edgeLogger.info("VIOS order created successfully", { 
+            orderLineId: orderLine.id, 
+            viosOrderId 
+          });
+          
+          // Update order line with VIOS order ID
+          await supabaseAdmin
+            .from("order_lines")
+            .update({
+              pharmacy_order_id: String(viosOrderId),
+              pharmacy_order_metadata: responseBody
+            })
+            .eq("id", orderLine.id);
+          
+          // Log successful transmission
+          await supabaseAdmin.from("pharmacy_order_transmissions").insert({
+            order_id: order.id,
+            order_line_id: orderLine.id,
+            pharmacy_id: pharmacy.id,
+            transmission_type: "new_order",
+            api_endpoint: `${baseUrl}/api/orders`,
+            request_payload: viosPayload,
+            response_status: response.status,
+            response_body: responseBody,
+            pharmacy_order_id: String(viosOrderId),
+            success: true,
+            retry_count: 0,
+          });
+          
+          results.push({ orderLineId: orderLine.id, success: true, viosOrderId });
+        } else {
+          allSuccess = false;
+          const errorMsg = `VIOS API error (${response.status}): ${JSON.stringify(responseBody)}`;
+          edgeLogger.error("VIOS order failed", { orderLineId: orderLine.id, error: errorMsg });
+          
+          // Log failed transmission
+          await supabaseAdmin.from("pharmacy_order_transmissions").insert({
+            order_id: order.id,
+            order_line_id: orderLine.id,
+            pharmacy_id: pharmacy.id,
+            transmission_type: "new_order",
+            api_endpoint: `${baseUrl}/api/orders`,
+            request_payload: viosPayload,
+            response_status: response.status,
+            response_body: responseBody,
+            pharmacy_order_id: null,
+            success: false,
+            error_message: errorMsg,
+            retry_count: 0,
+          });
+          
+          results.push({ orderLineId: orderLine.id, success: false, error: errorMsg });
+        }
+      } catch (lineError) {
+        allSuccess = false;
+        const errorMsg = lineError instanceof Error ? lineError.message : String(lineError);
+        edgeLogger.error("Error processing VIOS order line", { orderLineId: orderLine.id, error: errorMsg });
+        results.push({ orderLineId: orderLine.id, success: false, error: errorMsg });
+      }
+    }
+    
+    return { 
+      success: allSuccess, 
+      response: { results, totalLines: orderLines.length, successfulLines: results.filter(r => r.success).length }
+    };
+    
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    edgeLogger.error("VIOS API error", { error: errorMsg });
+    return { success: false, error: errorMsg };
+  }
+}
+
+// Template variable replacement for generic handler
 function applyPayloadTemplate(template: any, data: Record<string, any>): any {
   if (typeof template === 'string') {
     // Replace {{variable}} placeholders
@@ -98,7 +425,9 @@ serve(async (req) => {
             npi,
             dea,
             address,
-            address_formatted
+            address_formatted,
+            phone,
+            email
           )
         )
       `)
@@ -130,6 +459,50 @@ serve(async (req) => {
       .select("*")
       .eq("pharmacy_id", pharmacy_id);
 
+    // ==========================================
+    // VIOS-SPECIFIC HANDLER
+    // ==========================================
+    if (pharmacy.api_handler_type === 'vios') {
+      edgeLogger.info("Using VIOS API handler", { pharmacy_id, pharmacy_name: pharmacy.name });
+      
+      const viosResult = await sendViosOrder(
+        pharmacy,
+        credentials || [],
+        order,
+        unsent_lines,
+        supabaseAdmin
+      );
+      
+      // Check for alerts after transmission
+      try {
+        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/check-pharmacy-alerts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+          },
+          body: JSON.stringify({
+            pharmacy_id: pharmacy.id,
+            check_types: viosResult.success ? ['consecutive_failures'] : ['consecutive_failures', 'high_failure_rate']
+          })
+        });
+      } catch (alertError) {
+        edgeLogger.error('Error checking alerts', alertError);
+      }
+      
+      return new Response(
+        JSON.stringify(viosResult),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+          status: viosResult.success ? 200 : 500 
+        }
+      );
+    }
+
+    // ==========================================
+    // GENERIC HANDLER (existing logic)
+    // ==========================================
+    
     // Build default payload structure
     const defaultPayload = {
       order_id: order.id,
