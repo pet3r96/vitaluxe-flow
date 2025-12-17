@@ -12,7 +12,8 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope } from "lucide-react";
+import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope, Pill } from "lucide-react";
+import { PharmaciesDataTable } from "@/components/pharmacies/PharmaciesDataTable";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
@@ -92,6 +93,10 @@ const AdminSettings = () => {
           <TabsTrigger value="usage" className="gap-2">
             <Clock className="h-4 w-4" />
             Usage & Billing
+          </TabsTrigger>
+          <TabsTrigger value="pharmacy-api" className="gap-2">
+            <Pill className="h-4 w-4" />
+            Pharmacy API
           </TabsTrigger>
           
           <TabsTrigger value="danger-zone" className="gap-2 text-destructive">
@@ -257,6 +262,20 @@ const AdminSettings = () => {
 
         <TabsContent value="usage" className="space-y-4">
           <UsageBillingDashboard />
+        </TabsContent>
+
+        <TabsContent value="pharmacy-api" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pharmacy API Configuration</CardTitle>
+              <CardDescription>
+                Manage pharmacy integrations, API endpoints, and webhook configurations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PharmaciesDataTable />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="danger-zone" className="space-y-4">
