@@ -7,12 +7,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronUp, Copy, RefreshCw, Plus, Trash2, Webhook, Settings2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, RefreshCw, Plus, Trash2, Webhook, Settings2, Server, TestTube, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 export interface ApiConfigData {
   api_enabled: boolean;
+  api_environment: 'sandbox' | 'production';
   api_endpoint_url: string;
+  api_sandbox_endpoint_url: string;
+  api_production_endpoint_url: string;
+  api_token_endpoint_url: string;
+  api_client_id: string;
   api_http_method: string;
   api_auth_type: string;
   api_auth_key_name: string;
@@ -128,6 +133,40 @@ export const PharmacyApiConfigSection = ({ config, onChange, isEditing }: Pharma
       
       {config.api_enabled && (
         <div className="space-y-4 pt-2">
+          {/* Environment Selector */}
+          <div className="p-3 border rounded-lg bg-background">
+            <div className="flex items-center gap-2 mb-3">
+              <Server className="h-4 w-4 text-muted-foreground" />
+              <Label className="font-medium">Environment</Label>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={config.api_environment === 'sandbox' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateConfig({ api_environment: 'sandbox' })}
+                className="flex-1"
+              >
+                <TestTube className="h-4 w-4 mr-2" />
+                Sandbox
+              </Button>
+              <Button
+                type="button"
+                variant={config.api_environment === 'production' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateConfig({ api_environment: 'production' })}
+                className="flex-1"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Production
+              </Button>
+            </div>
+            {config.api_environment === 'production' && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                ⚠️ Production mode - orders will be sent to live pharmacy systems
+              </p>
+            )}
+          </div>
 
           {/* Outbound API Configuration */}
           <Collapsible open={isApiOpen} onOpenChange={setIsApiOpen}>
@@ -138,14 +177,36 @@ export const PharmacyApiConfigSection = ({ config, onChange, isEditing }: Pharma
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 pt-2">
-              {/* API Endpoint */}
+              {/* Environment-specific Endpoints */}
               <div className="space-y-2">
-                <Label>API Endpoint URL</Label>
+                <Label>Sandbox Endpoint URL</Label>
+                <Input
+                  placeholder="https://sandbox.pharmacy-api.example.com/orders"
+                  value={config.api_sandbox_endpoint_url}
+                  onChange={(e) => updateConfig({ api_sandbox_endpoint_url: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Production Endpoint URL</Label>
+                <Input
+                  placeholder="https://pharmacy-api.example.com/orders"
+                  value={config.api_production_endpoint_url}
+                  onChange={(e) => updateConfig({ api_production_endpoint_url: e.target.value })}
+                />
+              </div>
+
+              {/* Legacy/Default API Endpoint */}
+              <div className="space-y-2">
+                <Label>Default API Endpoint URL</Label>
                 <Input
                   placeholder="https://pharmacy-api.example.com/orders"
                   value={config.api_endpoint_url}
                   onChange={(e) => updateConfig({ api_endpoint_url: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Used when environment-specific URLs are not set
+                </p>
               </div>
 
               {/* HTTP Method */}
@@ -178,12 +239,39 @@ export const PharmacyApiConfigSection = ({ config, onChange, isEditing }: Pharma
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="oauth2">OAuth 2.0 (Client Credentials)</SelectItem>
                     <SelectItem value="bearer">Bearer Token</SelectItem>
                     <SelectItem value="api_key">API Key</SelectItem>
                     <SelectItem value="basic">Basic Auth</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* OAuth 2.0 Configuration */}
+              {config.api_auth_type === "oauth2" && (
+                <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                  <Label className="font-medium">OAuth 2.0 Configuration</Label>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Token Endpoint URL</Label>
+                    <Input
+                      placeholder="https://auth.pharmacy-api.example.com/oauth/token"
+                      value={config.api_token_endpoint_url}
+                      onChange={(e) => updateConfig({ api_token_endpoint_url: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Client ID</Label>
+                    <Input
+                      placeholder="your-client-id"
+                      value={config.api_client_id}
+                      onChange={(e) => updateConfig({ api_client_id: e.target.value })}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Client secret should be stored securely via API credentials
+                  </p>
+                </div>
+              )}
 
               {config.api_auth_type === "api_key" && (
                 <div className="space-y-2">

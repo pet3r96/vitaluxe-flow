@@ -3830,15 +3830,21 @@ export type Database = {
           address_zip: string | null
           api_auth_key_name: string | null
           api_auth_type: string | null
+          api_client_id: string | null
+          api_client_secret_encrypted: string | null
           api_custom_headers: Json | null
           api_enabled: boolean | null
           api_endpoint_url: string | null
+          api_environment: string | null
           api_handler_type: string | null
           api_http_method: string | null
           api_payload_template: Json | null
+          api_production_endpoint_url: string | null
           api_retry_count: number | null
+          api_sandbox_endpoint_url: string | null
           api_status_mapping: Json | null
           api_timeout_seconds: number | null
+          api_token_endpoint_url: string | null
           contact_email: string
           created_at: string | null
           id: string
@@ -3867,15 +3873,21 @@ export type Database = {
           address_zip?: string | null
           api_auth_key_name?: string | null
           api_auth_type?: string | null
+          api_client_id?: string | null
+          api_client_secret_encrypted?: string | null
           api_custom_headers?: Json | null
           api_enabled?: boolean | null
           api_endpoint_url?: string | null
+          api_environment?: string | null
           api_handler_type?: string | null
           api_http_method?: string | null
           api_payload_template?: Json | null
+          api_production_endpoint_url?: string | null
           api_retry_count?: number | null
+          api_sandbox_endpoint_url?: string | null
           api_status_mapping?: Json | null
           api_timeout_seconds?: number | null
+          api_token_endpoint_url?: string | null
           contact_email: string
           created_at?: string | null
           id?: string
@@ -3904,15 +3916,21 @@ export type Database = {
           address_zip?: string | null
           api_auth_key_name?: string | null
           api_auth_type?: string | null
+          api_client_id?: string | null
+          api_client_secret_encrypted?: string | null
           api_custom_headers?: Json | null
           api_enabled?: boolean | null
           api_endpoint_url?: string | null
+          api_environment?: string | null
           api_handler_type?: string | null
           api_http_method?: string | null
           api_payload_template?: Json | null
+          api_production_endpoint_url?: string | null
           api_retry_count?: number | null
+          api_sandbox_endpoint_url?: string | null
           api_status_mapping?: Json | null
           api_timeout_seconds?: number | null
+          api_token_endpoint_url?: string | null
           contact_email?: string
           created_at?: string | null
           id?: string
@@ -3987,6 +4005,109 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "pharmacy_api_credentials_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_api_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          environment: string
+          expires_at: string
+          id: string
+          pharmacy_id: string
+          refresh_token: string | null
+          scope: string | null
+          token_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          environment: string
+          expires_at: string
+          id?: string
+          pharmacy_id: string
+          refresh_token?: string | null
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          environment?: string
+          expires_at?: string
+          id?: string
+          pharmacy_id?: string
+          refresh_token?: string | null
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_api_tokens_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_idempotency_keys: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          idempotency_key: string
+          order_id: string
+          order_line_id: string | null
+          pharmacy_id: string
+          pharmacy_order_id: string | null
+          request_hash: string
+          response_body: Json | null
+          response_status: number | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          idempotency_key: string
+          order_id: string
+          order_line_id?: string | null
+          pharmacy_id: string
+          pharmacy_order_id?: string | null
+          request_hash: string
+          response_body?: Json | null
+          response_status?: number | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          idempotency_key?: string
+          order_id?: string
+          order_line_id?: string | null
+          pharmacy_id?: string
+          pharmacy_order_id?: string | null
+          request_hash?: string
+          response_body?: Json | null
+          response_status?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_idempotency_keys_pharmacy_id_fkey"
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
@@ -8170,6 +8291,7 @@ export type Database = {
       check_rls_integrity: { Args: never; Returns: undefined }
       cleanup_expired_cart_lines: { Args: never; Returns: number }
       cleanup_expired_csrf_tokens: { Args: never; Returns: number }
+      cleanup_expired_idempotency_keys: { Args: never; Returns: number }
       cleanup_expired_impersonation_sessions: { Args: never; Returns: number }
       cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
       cleanup_expired_sms_attempts: { Args: never; Returns: undefined }
