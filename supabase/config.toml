@@ -421,3 +421,9 @@ verify_jwt = true
 
 [functions.manage-documents]
 verify_jwt = true
+
+[functions.send-order-to-pharmacy]
+verify_jwt = false
+
+[functions.get-order-details]
+verify_jwt = true
