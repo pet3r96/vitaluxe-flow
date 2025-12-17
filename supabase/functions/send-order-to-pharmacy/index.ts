@@ -178,7 +178,7 @@ function transformToViosPayload(
   const payload: any = {
     general: {
       referenceId: orderLine.id, // Use order_line_id as reference
-      memo: orderLine.order_notes || `VitaLuxe Order ${order.order_number}`,
+      memo: orderLine.order_notes || `VitaLuxe Order ${order.id}`,
       isTestOrder: isTestMode // Use test mode flag
     },
     prescriber: {
