@@ -741,7 +741,7 @@ Deno.serve(async (req) => {
       }
 
       case 'usage': {
-        // From get-practice-usage-stats
+        // From get-practice-usage-stats - uses video_sessions table
         const supabaseClient = createAuthClient(req.headers.get('Authorization'));
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) throw new Error('Not authenticated');
@@ -752,13 +752,20 @@ Deno.serve(async (req) => {
           throw new Error('Practice ID is required');
         }
 
-        // Build query for usage logs
+        // Build query for video sessions (usage tracking)
         let query = supabaseClient
-          .from('usage_logs')
+          .from('video_sessions')
           .select(`
-            *,
-            providers!usage_logs_provider_id_fkey(id, user_id),
-            patient_accounts!usage_logs_patient_id_fkey(id, first_name, last_name)
+            id,
+            practice_id,
+            provider_id,
+            patient_id,
+            status,
+            start_time,
+            end_time,
+            created_at,
+            providers(id, user_id, profiles(name)),
+            patient_accounts(id, first_name, last_name)
           `)
           .eq('practice_id', practiceId)
           .order('created_at', { ascending: false });
@@ -766,17 +773,28 @@ Deno.serve(async (req) => {
         if (startDate) query = query.gte('start_time', startDate);
         if (endDate) query = query.lte('end_time', endDate);
 
-        const { data: usageLogs, error: usageError } = await query;
-        if (usageError) throw usageError;
+        const { data: sessions, error: sessionsError } = await query;
+        if (sessionsError) throw sessionsError;
 
-        const totalMinutes = usageLogs?.reduce((sum, log) => sum + log.duration_minutes, 0) || 0;
-        const totalSessions = usageLogs?.length || 0;
+        // Calculate duration in minutes for each session
+        const sessionsWithDuration = (sessions || []).map(session => {
+          let durationMinutes = 0;
+          if (session.start_time && session.end_time) {
+            const start = new Date(session.start_time).getTime();
+            const end = new Date(session.end_time).getTime();
+            durationMinutes = Math.round((end - start) / 60000);
+          }
+          return { ...session, duration_minutes: durationMinutes };
+        });
+
+        const totalMinutes = sessionsWithDuration.reduce((sum, s) => sum + s.duration_minutes, 0);
+        const totalSessions = sessionsWithDuration.length;
 
         return new Response(
           JSON.stringify({
             totalMinutes,
             totalSessions,
-            usageLogs: usageLogs || []
+            usageLogs: sessionsWithDuration
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
