@@ -546,6 +546,46 @@ serve(async (req) => {
 
     edgeLogger.info("Processing unsent order lines", { count: unsent_lines.length });
 
+    // Decrypt patient contact data for each order line using service role function
+    for (const line of unsent_lines) {
+      try {
+        const { data: decryptedContact, error: decryptContactError } = await supabaseAdmin.rpc(
+          'decrypt_order_line_contact_service',
+          { p_order_line_id: line.id }
+        );
+        
+        if (!decryptContactError && decryptedContact && decryptedContact.length > 0) {
+          const contact = decryptedContact[0];
+          // Replace encrypted values with decrypted ones
+          if (contact.patient_email && contact.patient_email !== '[ENCRYPTED]') {
+            line.patient_email = contact.patient_email;
+          }
+          if (contact.patient_phone && contact.patient_phone !== '[ENCRYPTED]') {
+            line.patient_phone = contact.patient_phone;
+          }
+          if (contact.patient_address && contact.patient_address !== '[ENCRYPTED]') {
+            line.patient_address = contact.patient_address;
+          }
+          edgeLogger.info("Decrypted patient contact", { 
+            orderLineId: line.id,
+            hasEmail: !!contact.patient_email,
+            hasPhone: !!contact.patient_phone,
+            hasAddress: !!contact.patient_address
+          });
+        } else if (decryptContactError) {
+          edgeLogger.warn("Failed to decrypt patient contact", { 
+            orderLineId: line.id, 
+            error: decryptContactError.message 
+          });
+        }
+      } catch (decryptErr) {
+        edgeLogger.warn("Error decrypting patient contact", { 
+          orderLineId: line.id, 
+          error: decryptErr instanceof Error ? decryptErr.message : String(decryptErr)
+        });
+      }
+    }
+
     // Fetch API credentials with decryption
     let credentials: any[] = [];
     try {
