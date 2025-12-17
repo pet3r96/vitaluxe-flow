@@ -160,6 +160,10 @@ function transformToViosPayload(
   isTestMode: boolean = false,
   shippingServiceCode: number = 1 // Default to ground (1)
 ): any {
+  // Get prescriber info - prefer order line provider, fallback to order's doctor (practice)
+  const providerProfile = orderLine.providers?.profiles;
+  const doctorProfile = order.profiles;
+  const prescriberProfile = providerProfile || doctorProfile;
   // Get patient account data if available
   const patientAccount = orderLine.patient_accounts;
   
@@ -172,7 +176,7 @@ function transformToViosPayload(
     zip: patientAccount.address_zip || parseAddress(patientAddressFormatted).zip
   } : parseAddress(orderLine.patient_address);
   
-  const providerAddress = parseAddress(orderLine.providers?.profiles?.address_formatted || orderLine.providers?.profiles?.address);
+  const prescriberAddress = parseAddress(prescriberProfile?.address_formatted || prescriberProfile?.address);
   const shippingAddress = parseAddress(orderLine.shipping_address || patientAddressFormatted || orderLine.patient_address);
   
   // Get patient name - prefer patient account, fall back to order line
@@ -187,11 +191,11 @@ function transformToViosPayload(
     patientLastName = patientNameParts.slice(1).join(' ') || 'Patient';
   }
   
-  // Parse provider name into first/last
-  const providerName = orderLine.providers?.profiles?.name || '';
-  const providerNameParts = providerName.split(' ');
-  const providerFirstName = providerNameParts[0] || 'Unknown';
-  const providerLastName = providerNameParts.slice(1).join(' ') || 'Provider';
+  // Parse prescriber name into first/last (from provider or fallback to doctor/practice)
+  const prescriberName = prescriberProfile?.name || '';
+  const prescriberNameParts = prescriberName.split(' ');
+  const prescriberFirstName = prescriberNameParts[0] || 'Unknown';
+  const prescriberLastName = prescriberNameParts.slice(1).join(' ') || 'Provider';
   
   // Get patient DOB - check multiple sources
   const patientDob = patientAccount?.date_of_birth || patientAccount?.birth_date || orderLine.patient_dob;
@@ -216,16 +220,16 @@ function transformToViosPayload(
       isTestOrder: isTestMode // Use test mode flag
     },
     prescriber: {
-      npi: orderLine.providers?.profiles?.npi || '',
-      firstName: providerFirstName,
-      lastName: providerLastName,
-      dea: orderLine.providers?.profiles?.dea || undefined,
-      address1: providerAddress.address1 || undefined,
-      city: providerAddress.city || undefined,
-      state: providerAddress.state || undefined,
-      zip: providerAddress.zip || undefined,
-      phone: formatPhoneForVios(orderLine.providers?.profiles?.phone) || undefined,
-      email: orderLine.providers?.profiles?.email || undefined
+      npi: prescriberProfile?.npi || '',
+      firstName: prescriberFirstName,
+      lastName: prescriberLastName,
+      dea: prescriberProfile?.dea || undefined,
+      address1: prescriberAddress.address1 || undefined,
+      city: prescriberAddress.city || undefined,
+      state: prescriberAddress.state || undefined,
+      zip: prescriberAddress.zip || undefined,
+      phone: formatPhoneForVios(prescriberProfile?.phone) || undefined,
+      email: prescriberProfile?.email || undefined
     },
     patient: {
       firstName: patientFirstName,
@@ -577,7 +581,7 @@ serve(async (req) => {
       );
     }
 
-    // Fetch order data with practice info
+    // Fetch order data with practice info including credentials for fallback
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
       .select(`
@@ -587,7 +591,10 @@ serve(async (req) => {
           email,
           address,
           address_formatted,
-          shipping_address_formatted
+          shipping_address_formatted,
+          npi,
+          dea,
+          phone
         )
       `)
       .eq("id", order_id)
