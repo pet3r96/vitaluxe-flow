@@ -123,7 +123,7 @@ export function OrdersBreakdown({ data: externalData }: OrdersBreakdownProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[200px]">
+        <div className="h-[180px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -131,10 +131,7 @@ export function OrdersBreakdown({ data: externalData }: OrdersBreakdownProps) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) =>
-                  `${name} ${(percent * 100).toFixed(0)}%`
-                }
-                outerRadius={60}
+                outerRadius={70}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -142,18 +139,28 @@ export function OrdersBreakdown({ data: externalData }: OrdersBreakdownProps) {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip 
+                formatter={(value: number, name: string) => [
+                  `${value} (${((value / total) * 100).toFixed(0)}%)`,
+                  name
+                ]}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
           {chartData.map((item) => (
-            <div key={item.name} className="flex items-center gap-2">
+            <div key={item.name} className="flex items-center gap-2 min-w-0">
               <div
-                className="w-3 h-3 rounded-full"
+                className="w-3 h-3 rounded-full flex-shrink-0"
                 style={{ backgroundColor: item.color }}
               />
-              <span className="text-muted-foreground">
+              <span className="text-muted-foreground truncate">
                 {item.name}: {item.value}
               </span>
             </div>
