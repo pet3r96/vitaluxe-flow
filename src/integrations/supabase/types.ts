@@ -4295,6 +4295,7 @@ export type Database = {
           pharmacy_id: string
           rate: number
           shipping_speed: string
+          vios_service_code: number | null
         }
         Insert: {
           created_at?: string | null
@@ -4303,6 +4304,7 @@ export type Database = {
           pharmacy_id: string
           rate: number
           shipping_speed: string
+          vios_service_code?: number | null
         }
         Update: {
           created_at?: string | null
@@ -4311,6 +4313,7 @@ export type Database = {
           pharmacy_id?: string
           rate?: number
           shipping_speed?: string
+          vios_service_code?: number | null
         }
         Relationships: [
           {
