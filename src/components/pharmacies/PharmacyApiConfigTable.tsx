@@ -113,11 +113,11 @@ export const PharmacyApiConfigTable = () => {
               },
               {
                 label: 'API Type',
-                value: pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
-                       pharmacy.api_handler_type === 'custom' ? 'Custom' :
-                       pharmacy.api_handler_type === 'generic' ? 'Generic' : 'None',
+                value: !pharmacy.api_enabled ? 'Disabled' :
+                       pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
+                       pharmacy.api_handler_type === 'custom' ? 'Custom' : 'Generic',
                 badge: true,
-                badgeVariant: pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'
+                badgeVariant: pharmacy.api_enabled && pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'
               },
               { 
                 label: 'Webhook', 
@@ -189,12 +189,12 @@ export const PharmacyApiConfigTable = () => {
                     </TableCell>
                     <TableCell>
                       <Badge 
-                        variant={pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'}
+                        variant={pharmacy.api_enabled && pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'}
                         className="text-xs"
                       >
-                        {pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
-                         pharmacy.api_handler_type === 'custom' ? 'Custom' :
-                         pharmacy.api_handler_type === 'generic' ? 'Generic' : 'None'}
+                        {!pharmacy.api_enabled ? 'Disabled' :
+                         pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
+                         pharmacy.api_handler_type === 'custom' ? 'Custom' : 'Generic'}
                       </Badge>
                     </TableCell>
                     <TableCell>
