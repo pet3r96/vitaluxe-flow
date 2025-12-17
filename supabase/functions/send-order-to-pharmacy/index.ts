@@ -546,11 +546,25 @@ serve(async (req) => {
 
     edgeLogger.info("Processing unsent order lines", { count: unsent_lines.length });
 
-    // Fetch API credentials
-    const { data: credentials } = await supabaseAdmin
-      .from("pharmacy_api_credentials")
-      .select("*")
-      .eq("pharmacy_id", pharmacy_id);
+    // Fetch API credentials with decryption
+    let credentials: any[] = [];
+    try {
+      const { data: decrypted, error: decryptError } = await supabaseAdmin.rpc('decrypt_pharmacy_credentials_batch', {
+        p_pharmacy_id: pharmacy_id
+      });
+      
+      if (decryptError) {
+        edgeLogger.error("Failed to decrypt credentials", { error: decryptError.message });
+      } else {
+        credentials = decrypted || [];
+        edgeLogger.info("Decrypted credentials", { 
+          count: credentials.length,
+          types: credentials.map((c: any) => c.credential_type)
+        });
+      }
+    } catch (err) {
+      edgeLogger.error("RPC decrypt error", { error: err instanceof Error ? err.message : String(err) });
+    }
 
     // ==========================================
     // VIOS-SPECIFIC HANDLER

@@ -3984,6 +3984,7 @@ export type Database = {
         Row: {
           created_at: string | null
           credential_key: string
+          credential_key_encrypted: string | null
           credential_type: string
           id: string
           pharmacy_id: string
@@ -3992,6 +3993,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           credential_key: string
+          credential_key_encrypted?: string | null
           credential_type: string
           id?: string
           pharmacy_id: string
@@ -4000,6 +4002,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           credential_key?: string
+          credential_key_encrypted?: string | null
           credential_type?: string
           id?: string
           pharmacy_id?: string
@@ -8366,6 +8369,19 @@ export type Database = {
         Args: { p_encrypted_data: string; p_field_type: string }
         Returns: string
       }
+      decrypt_pharmacy_credential: {
+        Args: { p_encrypted_text: string }
+        Returns: string
+      }
+      decrypt_pharmacy_credentials_batch: {
+        Args: { p_pharmacy_id: string }
+        Returns: {
+          credential_key: string
+          credential_type: string
+          id: string
+          pharmacy_id: string
+        }[]
+      }
       decrypt_plaid_token: {
         Args: { p_encrypted_token: string }
         Returns: string
@@ -8379,6 +8395,10 @@ export type Database = {
         Returns: string
       }
       disable_auth_user: { Args: { p_user_id: string }; Returns: undefined }
+      encrypt_pharmacy_credential: {
+        Args: { p_plain_text: string }
+        Returns: string
+      }
       encrypt_plaid_token: { Args: { p_token: string }; Returns: string }
       fix_orphaned_patient_accounts: {
         Args: never
