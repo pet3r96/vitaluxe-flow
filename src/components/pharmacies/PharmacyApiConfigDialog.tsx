@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { Loader2, CheckCircle, XCircle, AlertCircle, Activity } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface PharmacyApiConfigDialogProps {
@@ -27,6 +27,7 @@ export const PharmacyApiConfigDialog = ({
   onOpenChange,
 }: PharmacyApiConfigDialogProps) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
@@ -158,6 +159,9 @@ export const PharmacyApiConfigDialog = ({
         title: "Configuration saved",
         description: "Pharmacy API settings have been updated",
       });
+
+      // Invalidate the table query to refresh data
+      await queryClient.invalidateQueries({ queryKey: ["pharmacies-api-config"] });
 
       onOpenChange(false);
     } catch (error: any) {
