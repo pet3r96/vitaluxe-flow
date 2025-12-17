@@ -241,7 +241,21 @@ export async function validateUserOwnsResource(
       }
 
       case 'order': {
-        // ✅ PHARMACY FIX: Check if user is a pharmacy FIRST
+        // ✅ ADMIN FIX: Check if user is admin or super_admin FIRST
+        const { data: adminRoles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId);
+
+        const roles = adminRoles?.map((r: { role: string }) => r.role) || [];
+        const isAdmin = roles.includes('super_admin') || roles.includes('admin');
+
+        if (isAdmin) {
+          edgeLogger.info('Admin access granted for order validation', { userId, orderId: resourceId });
+          return { valid: true };
+        }
+
+        // ✅ PHARMACY FIX: Check if user is a pharmacy
         const { data: pharmacyData } = await supabase
           .from('pharmacies')
           .select('id')
