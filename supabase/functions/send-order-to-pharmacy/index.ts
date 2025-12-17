@@ -13,13 +13,41 @@ interface SendOrderRequest {
   pharmacy_id: string;
 }
 
-// VIOS shipping service code mapping
-const VIOS_SHIPPING_CODES: Record<string, number> = {
+// Default VIOS shipping service code mapping (used as fallback)
+const DEFAULT_VIOS_SHIPPING_CODES: Record<string, number> = {
   'ground': 1,
   '2day': 2,
   'overnight': 3,
   'priority': 4
 };
+
+// Get VIOS shipping service code from database or use default
+async function getViosShippingCode(
+  supabaseAdmin: any,
+  pharmacyId: string,
+  shippingSpeed: string
+): Promise<{ code: number; enabled: boolean }> {
+  // Try to get configured code from database
+  const { data: rateData } = await supabaseAdmin
+    .from('pharmacy_shipping_rates')
+    .select('vios_service_code, enabled')
+    .eq('pharmacy_id', pharmacyId)
+    .eq('shipping_speed', shippingSpeed)
+    .single();
+
+  if (rateData?.vios_service_code) {
+    return { 
+      code: rateData.vios_service_code, 
+      enabled: rateData.enabled === true 
+    };
+  }
+
+  // Fallback to default mapping
+  return { 
+    code: DEFAULT_VIOS_SHIPPING_CODES[shippingSpeed] || DEFAULT_VIOS_SHIPPING_CODES['ground'],
+    enabled: true // Assume enabled if not in database
+  };
+}
 
 // Format phone number to VIOS format: (XXX) XXX-XXXX
 function formatPhoneForVios(phone: string | null): string | null {
@@ -129,7 +157,8 @@ function transformToViosPayload(
   order: any, 
   orderLine: any, 
   prescriptionBase64: string | null,
-  isTestMode: boolean = false
+  isTestMode: boolean = false,
+  shippingServiceCode: number = 1 // Default to ground (1)
 ): any {
   const patientAddress = parseAddress(orderLine.patient_address);
   const providerAddress = parseAddress(orderLine.providers?.profiles?.address_formatted || orderLine.providers?.profiles?.address);
@@ -181,7 +210,7 @@ function transformToViosPayload(
       city: shippingAddress.city || patientAddress.city || 'City Required',
       state: (shippingAddress.state || patientAddress.state || orderLine.destination_state || 'CA').toUpperCase(),
       zipCode: shippingAddress.zip || patientAddress.zip || '00000',
-      service: VIOS_SHIPPING_CODES[orderLine.shipping_speed] || VIOS_SHIPPING_CODES['ground'],
+      service: shippingServiceCode,
       recipientType: 'patient',
       recipientFirstName: patientFirstName,
       recipientLastName: patientLastName,
@@ -293,8 +322,36 @@ async function sendViosOrder(
           }
         }
         
-        // Transform to VIOS payload with test mode flag
-        const viosPayload = transformToViosPayload(order, orderLine, prescriptionBase64, isTestMode);
+        // Get shipping service code from database with validation
+        const shippingSpeed = orderLine.shipping_speed || 'ground';
+        const { code: shippingServiceCode, enabled: shippingEnabled } = await getViosShippingCode(
+          supabaseAdmin, 
+          pharmacy.id, 
+          shippingSpeed
+        );
+        
+        // Validate shipping speed is enabled for this pharmacy
+        if (!shippingEnabled) {
+          const errorMsg = `Shipping speed '${shippingSpeed}' (service code ${shippingServiceCode}) is not enabled for ${pharmacy.name}. ` +
+            `Please contact VIOS to enable this shipping option or select a different speed.`;
+          edgeLogger.warn("VIOS: Shipping speed not enabled", { 
+            orderLineId: orderLine.id, 
+            shippingSpeed,
+            serviceCode: shippingServiceCode
+          });
+          allSuccess = false;
+          results.push({ orderLineId: orderLine.id, success: false, error: errorMsg });
+          continue;
+        }
+        
+        edgeLogger.info("VIOS: Shipping service code resolved", { 
+          orderLineId: orderLine.id,
+          shippingSpeed,
+          serviceCode: shippingServiceCode 
+        });
+        
+        // Transform to VIOS payload with test mode flag and shipping service code
+        const viosPayload = transformToViosPayload(order, orderLine, prescriptionBase64, isTestMode, shippingServiceCode);
         
         // Log sanitized payload (remove sensitive data)
         const sanitizedPayload = {
