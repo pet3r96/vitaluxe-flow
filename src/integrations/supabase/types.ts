@@ -3843,6 +3843,7 @@ export type Database = {
           api_retry_count: number | null
           api_sandbox_endpoint_url: string | null
           api_status_mapping: Json | null
+          api_test_mode: boolean
           api_timeout_seconds: number | null
           api_token_endpoint_url: string | null
           contact_email: string
@@ -3886,6 +3887,7 @@ export type Database = {
           api_retry_count?: number | null
           api_sandbox_endpoint_url?: string | null
           api_status_mapping?: Json | null
+          api_test_mode?: boolean
           api_timeout_seconds?: number | null
           api_token_endpoint_url?: string | null
           contact_email: string
@@ -3929,6 +3931,7 @@ export type Database = {
           api_retry_count?: number | null
           api_sandbox_endpoint_url?: string | null
           api_status_mapping?: Json | null
+          api_test_mode?: boolean
           api_timeout_seconds?: number | null
           api_token_endpoint_url?: string | null
           contact_email?: string
