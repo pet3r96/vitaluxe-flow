@@ -40,7 +40,12 @@ interface PharmacyDialogProps {
 
 const DEFAULT_API_CONFIG: ApiConfigData = {
   api_enabled: false,
+  api_environment: 'sandbox',
   api_endpoint_url: "",
+  api_sandbox_endpoint_url: "",
+  api_production_endpoint_url: "",
+  api_token_endpoint_url: "",
+  api_client_id: "",
   api_http_method: "POST",
   api_auth_type: "none",
   api_auth_key_name: "X-API-Key",
@@ -123,7 +128,12 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
         // Set API config from pharmacy data
         setApiConfig({
           api_enabled: pharmacy.api_enabled || false,
+          api_environment: pharmacy.api_environment || 'sandbox',
           api_endpoint_url: pharmacy.api_endpoint_url || "",
+          api_sandbox_endpoint_url: pharmacy.api_sandbox_endpoint_url || "",
+          api_production_endpoint_url: pharmacy.api_production_endpoint_url || "",
+          api_token_endpoint_url: pharmacy.api_token_endpoint_url || "",
+          api_client_id: pharmacy.api_client_id || "",
           api_http_method: pharmacy.api_http_method || "POST",
           api_auth_type: pharmacy.api_auth_type || "none",
           api_auth_key_name: pharmacy.api_auth_key_name || "X-API-Key",
@@ -253,7 +263,12 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
             priority_map: formData.priority_map,
             // API Configuration for new pharmacy
             api_enabled: apiConfig.api_enabled,
+            api_environment: apiConfig.api_environment,
             api_endpoint_url: apiConfig.api_endpoint_url || null,
+            api_sandbox_endpoint_url: apiConfig.api_sandbox_endpoint_url || null,
+            api_production_endpoint_url: apiConfig.api_production_endpoint_url || null,
+            api_token_endpoint_url: apiConfig.api_token_endpoint_url || null,
+            api_client_id: apiConfig.api_client_id || null,
             api_http_method: apiConfig.api_http_method,
             api_auth_type: apiConfig.api_auth_type,
             api_auth_key_name: apiConfig.api_auth_key_name || null,
