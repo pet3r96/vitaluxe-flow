@@ -80,11 +80,15 @@ function parseAddress(address: string | null): {
   return { address1: address, city: null, state: null, zip: null };
 }
 
-// Get VIOS JWT token
+// Get VIOS JWT token with enhanced logging
 async function getViosToken(baseUrl: string, clientId: string, clientSecret: string): Promise<string> {
   const tokenUrl = `${baseUrl}/api/auth/token`;
+  const startTime = Date.now();
   
-  edgeLogger.info("Fetching VIOS JWT token", { tokenUrl });
+  edgeLogger.info("VIOS: Fetching JWT token", { 
+    tokenUrl,
+    clientIdPrefix: clientId?.substring(0, 8) + '...' 
+  });
   
   const response = await fetch(tokenUrl, {
     method: 'POST',
@@ -95,17 +99,28 @@ async function getViosToken(baseUrl: string, clientId: string, clientSecret: str
     }
   });
   
+  const duration = Date.now() - startTime;
+  
   if (!response.ok) {
     const errorText = await response.text();
+    edgeLogger.error("VIOS: Token request failed", { 
+      status: response.status, 
+      duration,
+      error: errorText.substring(0, 500) 
+    });
     throw new Error(`VIOS auth failed (${response.status}): ${errorText}`);
   }
   
   const data = await response.json();
   if (!data.accessToken) {
+    edgeLogger.error("VIOS: Token response missing accessToken", { responseKeys: Object.keys(data) });
     throw new Error('VIOS auth response missing accessToken');
   }
   
-  edgeLogger.info("Successfully obtained VIOS JWT token");
+  edgeLogger.info("VIOS: JWT token obtained successfully", { 
+    duration,
+    tokenLength: data.accessToken.length 
+  });
   return data.accessToken;
 }
 
@@ -113,7 +128,8 @@ async function getViosToken(baseUrl: string, clientId: string, clientSecret: str
 function transformToViosPayload(
   order: any, 
   orderLine: any, 
-  prescriptionBase64: string | null
+  prescriptionBase64: string | null,
+  isTestMode: boolean = false
 ): any {
   const patientAddress = parseAddress(orderLine.patient_address);
   const providerAddress = parseAddress(orderLine.providers?.profiles?.address_formatted || orderLine.providers?.profiles?.address);
@@ -134,7 +150,7 @@ function transformToViosPayload(
     general: {
       referenceId: orderLine.id, // Use order_line_id as reference
       memo: orderLine.order_notes || `VitaLuxe Order ${order.order_number}`,
-      isTestOrder: false
+      isTestOrder: isTestMode // Use test mode flag
     },
     prescriber: {
       npi: orderLine.providers?.profiles?.npi || '',
@@ -194,25 +210,52 @@ function transformToViosPayload(
   return payload;
 }
 
-// Send order via VIOS API
+// Send order via VIOS API with enhanced logging and test mode support
 async function sendViosOrder(
   pharmacy: any,
   credentials: any[],
   order: any,
   orderLines: any[],
   supabaseAdmin: any
-): Promise<{ success: boolean; response?: any; error?: string }> {
+): Promise<{ success: boolean; response?: any; error?: string; testMode?: boolean }> {
+  
+  const startTime = Date.now();
+  
+  // Determine if test mode is enabled
+  // Check: 1) pharmacy.api_test_mode, 2) environment variable, 3) order metadata
+  const isTestMode = pharmacy.api_test_mode === true || 
+                     Deno.env.get('VIOS_TEST_MODE') === 'true' ||
+                     order.metadata?.testOrder === true;
+  
+  edgeLogger.info("VIOS: Starting order transmission", {
+    pharmacyId: pharmacy.id,
+    pharmacyName: pharmacy.name,
+    orderId: order.id,
+    orderLineCount: orderLines.length,
+    testMode: isTestMode
+  });
   
   // Get VIOS credentials
   const clientId = credentials.find(c => c.credential_type === 'vios_client_key')?.credential_key;
   const clientSecret = credentials.find(c => c.credential_type === 'vios_client_secret')?.credential_key;
   
   if (!clientId || !clientSecret) {
+    edgeLogger.error("VIOS: Missing credentials", {
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      credentialTypes: credentials.map(c => c.credential_type)
+    });
     return { success: false, error: 'VIOS credentials not configured (missing client_key or client_secret)' };
   }
   
   // Get base URL from pharmacy config
   const baseUrl = pharmacy.api_endpoint_url?.replace(/\/+$/, '') || 'https://integrations.vioscompounding.com';
+  
+  edgeLogger.info("VIOS: Configuration", { 
+    baseUrl, 
+    testMode: isTestMode,
+    hasEndpointUrl: !!pharmacy.api_endpoint_url 
+  });
   
   try {
     // Get JWT token
@@ -223,27 +266,52 @@ async function sendViosOrder(
     
     // Send each order line as a separate VIOS order
     for (const orderLine of orderLines) {
+      const lineStartTime = Date.now();
       try {
         // Get prescription PDF as base64 if available
         let prescriptionBase64: string | null = null;
         if (orderLine.prescription_url) {
           try {
+            edgeLogger.info("VIOS: Fetching prescription PDF", { 
+              orderLineId: orderLine.id,
+              url: orderLine.prescription_url.substring(0, 50) + '...'
+            });
             const pdfResponse = await fetch(orderLine.prescription_url);
             if (pdfResponse.ok) {
               const pdfBuffer = await pdfResponse.arrayBuffer();
               prescriptionBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
+              edgeLogger.info("VIOS: Prescription PDF fetched", { 
+                orderLineId: orderLine.id,
+                pdfSize: pdfBuffer.byteLength 
+              });
             }
           } catch (pdfError) {
-            edgeLogger.warn("Failed to fetch prescription PDF", { error: pdfError });
+            edgeLogger.warn("VIOS: Failed to fetch prescription PDF", { 
+              orderLineId: orderLine.id,
+              error: pdfError instanceof Error ? pdfError.message : String(pdfError) 
+            });
           }
         }
         
-        // Transform to VIOS payload
-        const viosPayload = transformToViosPayload(order, orderLine, prescriptionBase64);
+        // Transform to VIOS payload with test mode flag
+        const viosPayload = transformToViosPayload(order, orderLine, prescriptionBase64, isTestMode);
         
-        edgeLogger.info("Sending order to VIOS", { 
+        // Log sanitized payload (remove sensitive data)
+        const sanitizedPayload = {
+          ...viosPayload,
+          patient: {
+            ...viosPayload.patient,
+            socialSecurityNumber: viosPayload.patient?.socialSecurityNumber ? '[REDACTED]' : undefined,
+            driverLicenseNumber: viosPayload.patient?.driverLicenseNumber ? '[REDACTED]' : undefined
+          },
+          document: viosPayload.document ? { pdfBase64: `[${prescriptionBase64?.length || 0} chars]` } : undefined
+        };
+        
+        edgeLogger.info("VIOS: Sending order request", { 
           orderLineId: orderLine.id, 
-          referenceId: viosPayload.general.referenceId 
+          referenceId: viosPayload.general.referenceId,
+          testMode: isTestMode,
+          payload: sanitizedPayload
         });
         
         // Send to VIOS
@@ -264,12 +332,16 @@ async function sendViosOrder(
           responseBody = { text: responseText };
         }
         
+        const lineDuration = Date.now() - lineStartTime;
+        
         if (response.ok) {
           const viosOrderId = responseBody.orderId;
           
-          edgeLogger.info("VIOS order created successfully", { 
+          edgeLogger.info("VIOS: Order created successfully", { 
             orderLineId: orderLine.id, 
-            viosOrderId 
+            viosOrderId,
+            testMode: isTestMode,
+            duration: lineDuration
           });
           
           // Update order line with VIOS order ID
@@ -277,7 +349,7 @@ async function sendViosOrder(
             .from("order_lines")
             .update({
               pharmacy_order_id: String(viosOrderId),
-              pharmacy_order_metadata: responseBody
+              pharmacy_order_metadata: { ...responseBody, testMode: isTestMode }
             })
             .eq("id", orderLine.id);
           
@@ -288,7 +360,7 @@ async function sendViosOrder(
             pharmacy_id: pharmacy.id,
             transmission_type: "new_order",
             api_endpoint: `${baseUrl}/api/orders`,
-            request_payload: viosPayload,
+            request_payload: { ...viosPayload, document: viosPayload.document ? '[PDF_INCLUDED]' : null },
             response_status: response.status,
             response_body: responseBody,
             pharmacy_order_id: String(viosOrderId),
@@ -296,11 +368,17 @@ async function sendViosOrder(
             retry_count: 0,
           });
           
-          results.push({ orderLineId: orderLine.id, success: true, viosOrderId });
+          results.push({ orderLineId: orderLine.id, success: true, viosOrderId, testMode: isTestMode });
         } else {
           allSuccess = false;
           const errorMsg = `VIOS API error (${response.status}): ${JSON.stringify(responseBody)}`;
-          edgeLogger.error("VIOS order failed", { orderLineId: orderLine.id, error: errorMsg });
+          
+          edgeLogger.error("VIOS: Order failed", { 
+            orderLineId: orderLine.id, 
+            status: response.status,
+            error: responseBody,
+            duration: lineDuration
+          });
           
           // Log failed transmission
           await supabaseAdmin.from("pharmacy_order_transmissions").insert({
@@ -309,7 +387,7 @@ async function sendViosOrder(
             pharmacy_id: pharmacy.id,
             transmission_type: "new_order",
             api_endpoint: `${baseUrl}/api/orders`,
-            request_payload: viosPayload,
+            request_payload: { ...viosPayload, document: viosPayload.document ? '[PDF_INCLUDED]' : null },
             response_status: response.status,
             response_body: responseBody,
             pharmacy_order_id: null,
@@ -323,13 +401,28 @@ async function sendViosOrder(
       } catch (lineError) {
         allSuccess = false;
         const errorMsg = lineError instanceof Error ? lineError.message : String(lineError);
-        edgeLogger.error("Error processing VIOS order line", { orderLineId: orderLine.id, error: errorMsg });
+        edgeLogger.error("VIOS: Error processing order line", { 
+          orderLineId: orderLine.id, 
+          error: errorMsg,
+          stack: lineError instanceof Error ? lineError.stack : undefined
+        });
         results.push({ orderLineId: orderLine.id, success: false, error: errorMsg });
       }
     }
     
+    const totalDuration = Date.now() - startTime;
+    edgeLogger.info("VIOS: Transmission complete", {
+      orderId: order.id,
+      totalLines: orderLines.length,
+      successfulLines: results.filter(r => r.success).length,
+      failedLines: results.filter(r => !r.success).length,
+      testMode: isTestMode,
+      duration: totalDuration
+    });
+    
     return { 
       success: allSuccess, 
+      testMode: isTestMode,
       response: { results, totalLines: orderLines.length, successfulLines: results.filter(r => r.success).length }
     };
     
