@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Download, XCircle, AlertCircle } from "lucide-react";
+import { Download, XCircle, AlertCircle, Send } from "lucide-react";
 import { ShippingInfoForm } from "./ShippingInfoForm";
 import { ShippingAuditLog } from "./ShippingAuditLog";
 import { ShipmentTrackingCard } from "./ShipmentTrackingCard";
@@ -55,6 +55,122 @@ export const OrderDetailsDialog = ({
   const [regeneratingUrls, setRegeneratingUrls] = useState(false);
   const [notesModified, setNotesModified] = useState(false);
   const [pendingNotes, setPendingNotes] = useState<string | null>(null);
+  const [isSendingToPharmacy, setIsSendingToPharmacy] = useState(false);
+
+  // Check if any order line is assigned to an API-enabled pharmacy
+  const { data: pharmacyApiStatus } = useQuery({
+    queryKey: ["pharmacy-api-status", order.id],
+    queryFn: async () => {
+      // Get unique pharmacy IDs from order lines
+      const pharmacyIds = [...new Set(
+        order.order_lines
+          ?.map((line: any) => line.assigned_pharmacy_id)
+          .filter(Boolean) || []
+      )];
+
+      if (pharmacyIds.length === 0) return { hasApiEnabled: false, pharmacies: [] };
+
+      const { data, error } = await supabase
+        .from('pharmacies')
+        .select('id, name, api_enabled, api_handler_type')
+        .in('id', pharmacyIds)
+        .eq('api_enabled', true);
+
+      if (error) {
+        logger.error('Error checking pharmacy API status', error);
+        return { hasApiEnabled: false, pharmacies: [] };
+      }
+
+      return {
+        hasApiEnabled: data && data.length > 0,
+        pharmacies: data || []
+      };
+    },
+    enabled: open && ['admin', 'pharmacy'].includes(effectiveRole || ''),
+    staleTime: 60 * 1000,
+  });
+
+  const canSendToPharmacy = ['admin', 'pharmacy'].includes(effectiveRole || '') && 
+    pharmacyApiStatus?.hasApiEnabled && 
+    order.status !== 'cancelled';
+
+  const handleSendToPharmacy = async () => {
+    if (!pharmacyApiStatus?.pharmacies?.length) {
+      toast({
+        title: "No API-Enabled Pharmacy",
+        description: "No order lines are assigned to pharmacies with API integration enabled.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingToPharmacy(true);
+
+    try {
+      // Group order lines by pharmacy
+      const linesByPharmacy = new Map<string, string[]>();
+      
+      order.order_lines?.forEach((line: any) => {
+        if (line.assigned_pharmacy_id) {
+          const pharmacy = pharmacyApiStatus.pharmacies.find(
+            (p: any) => p.id === line.assigned_pharmacy_id
+          );
+          if (pharmacy) {
+            const existing = linesByPharmacy.get(line.assigned_pharmacy_id) || [];
+            existing.push(line.id);
+            linesByPharmacy.set(line.assigned_pharmacy_id, existing);
+          }
+        }
+      });
+
+      // Send to each pharmacy
+      const results = await Promise.all(
+        Array.from(linesByPharmacy.entries()).map(async ([pharmacyId, lineIds]) => {
+          const { data, error } = await supabase.functions.invoke('send-order-to-pharmacy', {
+            body: {
+              order_id: order.id,
+              order_line_ids: lineIds,
+              pharmacy_id: pharmacyId
+            }
+          });
+
+          return { pharmacyId, data, error };
+        })
+      );
+
+      const failures = results.filter(r => r.error || !r.data?.success);
+      const successes = results.filter(r => !r.error && r.data?.success);
+
+      if (successes.length > 0) {
+        toast({
+          title: "Order Sent to Pharmacy",
+          description: `Successfully sent ${successes.length} order(s) to pharmacy API.`,
+        });
+        onSuccess();
+      }
+
+      if (failures.length > 0) {
+        const errorMessages = failures.map(f => 
+          f.error?.message || f.data?.error || 'Unknown error'
+        ).join(', ');
+        
+        toast({
+          title: "Some Transmissions Failed",
+          description: errorMessages,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      logger.error('Error sending order to pharmacy', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send order to pharmacy",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingToPharmacy(false);
+    }
+  };
 
   // Auto-save notes if modified before closing
   const saveNotesIfModified = async () => {
@@ -521,17 +637,31 @@ export const OrderDetailsDialog = ({
               />
             )}
           </div>
-          {order.status !== 'cancelled' && canCancelOrder() && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setCancelDialogOpen(true)}
-              className="mt-2 w-fit"
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              Cancel Order
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {canSendToPharmacy && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSendToPharmacy}
+                disabled={isSendingToPharmacy}
+                className="w-fit"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {isSendingToPharmacy ? "Sending..." : "Send to Pharmacy API"}
+              </Button>
+            )}
+            {order.status !== 'cancelled' && canCancelOrder() && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setCancelDialogOpen(true)}
+                className="w-fit"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Cancel Order
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
