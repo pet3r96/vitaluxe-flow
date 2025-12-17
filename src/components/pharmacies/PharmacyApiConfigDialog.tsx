@@ -66,7 +66,9 @@ export const PharmacyApiConfigDialog = ({
 
       // Update form state
       setApiEnabled(data.api_enabled || false);
-      setApiHandlerType(data.api_handler_type || "generic");
+      // Default to 'generic' if no handler type or if it was 'none'
+      const handlerType = data.api_handler_type;
+      setApiHandlerType(handlerType && handlerType !== 'none' ? handlerType : "generic");
       setApiEndpointUrl(data.api_endpoint_url || "");
       setAuthType(data.api_auth_type || "none");
       setAuthKeyName(data.api_auth_key_name || "X-API-Key");
@@ -346,7 +348,6 @@ export const PharmacyApiConfigDialog = ({
                       <SelectValue placeholder="Select integration type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None - No API</SelectItem>
                       <SelectItem value="generic">Generic - Single Endpoint</SelectItem>
                       <SelectItem value="vios">VIOS - Multi-Endpoint</SelectItem>
                       <SelectItem value="custom">Custom Handler</SelectItem>
@@ -356,7 +357,6 @@ export const PharmacyApiConfigDialog = ({
                     {apiHandlerType === 'generic' && 'Single endpoint configuration for standard pharmacy APIs'}
                     {apiHandlerType === 'vios' && 'Multi-endpoint support for VIOS (Orders, Refills, Shipping, Lookups)'}
                     {apiHandlerType === 'custom' && 'Custom handler for pharmacy-specific integrations'}
-                    {apiHandlerType === 'none' && 'No API integration enabled for this pharmacy'}
                   </p>
                 </div>
 
