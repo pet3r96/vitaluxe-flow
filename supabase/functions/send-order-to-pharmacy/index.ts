@@ -303,9 +303,21 @@ async function sendViosOrder(
     testMode: isTestMode
   });
   
-  // Get VIOS credentials
-  const clientId = credentials.find(c => c.credential_type === 'vios_client_key')?.credential_key;
-  const clientSecret = credentials.find(c => c.credential_type === 'vios_client_secret')?.credential_key;
+  // Get VIOS credentials - check environment variables first (freshest), then database
+  const envClientId = Deno.env.get('VIOS_CLIENT_ID');
+  const envClientSecret = Deno.env.get('VIOS_CLIENT_SECRET');
+  
+  const dbClientId = credentials.find(c => c.credential_type === 'vios_client_key')?.credential_key;
+  const dbClientSecret = credentials.find(c => c.credential_type === 'vios_client_secret')?.credential_key;
+  
+  // Prefer environment variables if both are set, otherwise fall back to database
+  const clientId = (envClientId && envClientSecret) ? envClientId : dbClientId;
+  const clientSecret = (envClientId && envClientSecret) ? envClientSecret : dbClientSecret;
+  
+  edgeLogger.info("VIOS: Credential source", {
+    usingEnvVars: !!(envClientId && envClientSecret),
+    hasDbCredentials: !!(dbClientId && dbClientSecret)
+  });
   
   if (!clientId || !clientSecret) {
     edgeLogger.error("VIOS: Missing credentials", {
