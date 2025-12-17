@@ -73,17 +73,44 @@ export async function validatePharmacyWebhookSignature(
 
 /**
  * Validates webhook payload structure
+ * Supports both standard format and VIOS array format
  */
 export function validateWebhookPayload(payload: any): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
+  // Check for VIOS array format first
+  if (Array.isArray(payload)) {
+    if (payload.length === 0) {
+      errors.push('Empty payload array');
+      return { valid: false, errors };
+    }
+    
+    // Validate VIOS format - check first item has required fields
+    const firstItem = payload[0];
+    if (!firstItem || typeof firstItem !== 'object') {
+      errors.push('Invalid VIOS payload structure');
+      return { valid: false, errors };
+    }
+    
+    // VIOS payloads should have orderId and rxStatus
+    if (!firstItem.orderId && !firstItem.rxNumber) {
+      errors.push('Missing orderId or rxNumber in VIOS payload');
+    }
+    if (!firstItem.rxStatus) {
+      errors.push('Missing rxStatus in VIOS payload');
+    }
+    
+    return { valid: errors.length === 0, errors };
+  }
+
+  // Standard payload validation
   if (!payload || typeof payload !== 'object') {
     errors.push('Payload must be a JSON object');
     return { valid: false, errors };
   }
 
-  if (!payload.order_line_id && !payload.vitaluxe_order_number) {
-    errors.push('Missing order_line_id or vitaluxe_order_number');
+  if (!payload.order_line_id && !payload.vitaluxe_order_number && !payload.pharmacy_order_id) {
+    errors.push('Missing order_line_id, vitaluxe_order_number, or pharmacy_order_id');
   }
 
   if (!payload.status) {
