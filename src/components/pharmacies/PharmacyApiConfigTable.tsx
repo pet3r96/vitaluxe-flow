@@ -40,6 +40,7 @@ export const PharmacyApiConfigTable = () => {
           contact_email,
           active,
           api_enabled,
+          api_handler_type,
           api_environment,
           api_endpoint_url,
           api_sandbox_endpoint_url,
@@ -110,6 +111,14 @@ export const PharmacyApiConfigTable = () => {
                 badge: true,
                 badgeVariant: pharmacy.api_enabled ? 'default' : 'secondary'
               },
+              {
+                label: 'API Type',
+                value: pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
+                       pharmacy.api_handler_type === 'custom' ? 'Custom' :
+                       pharmacy.api_handler_type === 'generic' ? 'Generic' : 'None',
+                badge: true,
+                badgeVariant: pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'
+              },
               { 
                 label: 'Webhook', 
                 value: pharmacy.inbound_webhook_enabled ? 'Active' : 'Off',
@@ -136,6 +145,7 @@ export const PharmacyApiConfigTable = () => {
               <TableRow>
                 <TableHead>Pharmacy</TableHead>
                 <TableHead>API Status</TableHead>
+                <TableHead>API Type</TableHead>
                 <TableHead>Endpoint</TableHead>
                 <TableHead>Method</TableHead>
                 <TableHead>Webhook</TableHead>
@@ -145,13 +155,13 @@ export const PharmacyApiConfigTable = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredPharmacies?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No pharmacies found
                   </TableCell>
                 </TableRow>
@@ -176,6 +186,16 @@ export const PharmacyApiConfigTable = () => {
                           Disabled
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'}
+                        className="text-xs"
+                      >
+                        {pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
+                         pharmacy.api_handler_type === 'custom' ? 'Custom' :
+                         pharmacy.api_handler_type === 'generic' ? 'Generic' : 'None'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {pharmacy.api_endpoint_url ? (

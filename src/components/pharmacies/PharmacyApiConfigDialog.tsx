@@ -9,9 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
-import { Loader2, CheckCircle, XCircle, AlertCircle, Activity } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, AlertCircle, Activity, ShieldAlert } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useRole } from "@/hooks/useAuth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PharmacyApiConfigDialogProps {
   pharmacyId: string;
@@ -28,6 +30,9 @@ export const PharmacyApiConfigDialog = ({
 }: PharmacyApiConfigDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { effectiveRole } = useRole();
+  const isAdmin = effectiveRole === 'admin' || effectiveRole === 'super_admin';
+  
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
@@ -36,6 +41,7 @@ export const PharmacyApiConfigDialog = ({
 
   // Form state
   const [apiEnabled, setApiEnabled] = useState(false);
+  const [apiHandlerType, setApiHandlerType] = useState<string>("generic");
   const [apiEndpointUrl, setApiEndpointUrl] = useState("");
   const [authType, setAuthType] = useState<string>("none");
   const [authKeyName, setAuthKeyName] = useState("X-API-Key");
@@ -60,6 +66,7 @@ export const PharmacyApiConfigDialog = ({
 
       // Update form state
       setApiEnabled(data.api_enabled || false);
+      setApiHandlerType(data.api_handler_type || "generic");
       setApiEndpointUrl(data.api_endpoint_url || "");
       setAuthType(data.api_auth_type || "none");
       setAuthKeyName(data.api_auth_key_name || "X-API-Key");
@@ -119,6 +126,15 @@ export const PharmacyApiConfigDialog = ({
   });
 
   const handleSave = async () => {
+    if (!isAdmin) {
+      toast({
+        title: "Permission denied",
+        description: "Only administrators can modify API settings",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSaving(true);
     try {
       // Update pharmacy config
@@ -126,6 +142,7 @@ export const PharmacyApiConfigDialog = ({
         .from("pharmacies")
         .update({
           api_enabled: apiEnabled,
+          api_handler_type: apiHandlerType,
           api_endpoint_url: apiEndpointUrl || null,
           api_auth_type: authType,
           api_auth_key_name: authKeyName || null,
@@ -297,17 +314,69 @@ export const PharmacyApiConfigDialog = ({
           </TabsList>
 
           <TabsContent value="config" className="space-y-4 mt-4">
+            {!isAdmin && (
+              <Alert variant="default" className="mb-4">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertDescription>
+                  Only administrators can modify API settings. You are viewing in read-only mode.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <div className="flex items-center justify-between">
               <Label htmlFor="api-enabled">Enable API Integration</Label>
               <Switch
                 id="api-enabled"
                 checked={apiEnabled}
                 onCheckedChange={setApiEnabled}
+                disabled={!isAdmin}
               />
             </div>
 
             {apiEnabled && (
               <>
+                <div className="space-y-2">
+                  <Label htmlFor="api-handler-type">API Integration Type</Label>
+                  <Select 
+                    value={apiHandlerType} 
+                    onValueChange={setApiHandlerType}
+                    disabled={!isAdmin}
+                  >
+                    <SelectTrigger id="api-handler-type">
+                      <SelectValue placeholder="Select integration type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None - No API</SelectItem>
+                      <SelectItem value="generic">Generic - Single Endpoint</SelectItem>
+                      <SelectItem value="vios">VIOS - Multi-Endpoint</SelectItem>
+                      <SelectItem value="custom">Custom Handler</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {apiHandlerType === 'generic' && 'Single endpoint configuration for standard pharmacy APIs'}
+                    {apiHandlerType === 'vios' && 'Multi-endpoint support for VIOS (Orders, Refills, Shipping, Lookups)'}
+                    {apiHandlerType === 'custom' && 'Custom handler for pharmacy-specific integrations'}
+                    {apiHandlerType === 'none' && 'No API integration enabled for this pharmacy'}
+                  </p>
+                </div>
+
+                {apiHandlerType === 'vios' && (
+                  <div className="p-4 border rounded-lg bg-muted/30">
+                    <p className="text-sm font-medium mb-2">VIOS Multi-Endpoint Integration</p>
+                    <p className="text-sm text-muted-foreground">
+                      VIOS multi-endpoint configuration coming soon. This will support:
+                    </p>
+                    <ul className="text-sm text-muted-foreground mt-2 list-disc list-inside space-y-1">
+                      <li>Orders (Create, Get, Cancel)</li>
+                      <li>Refills</li>
+                      <li>Shipping Updates</li>
+                      <li>Reference Lookups (Allergies, Products)</li>
+                    </ul>
+                  </div>
+                )}
+
+                {(apiHandlerType === 'generic' || apiHandlerType === 'custom') && (
+                  <>
                 <div className="space-y-2">
                   <Label htmlFor="api-endpoint">API Endpoint URL</Label>
                   <Input
@@ -315,12 +384,13 @@ export const PharmacyApiConfigDialog = ({
                     placeholder="https://pharmacy-api.example.com/orders"
                     value={apiEndpointUrl}
                     onChange={(e) => setApiEndpointUrl(e.target.value)}
+                    disabled={!isAdmin}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="auth-type">Authentication Type</Label>
-                  <Select value={authType} onValueChange={setAuthType}>
+                  <Select value={authType} onValueChange={setAuthType} disabled={!isAdmin}>
                     <SelectTrigger id="auth-type">
                       <SelectValue />
                     </SelectTrigger>
@@ -341,6 +411,7 @@ export const PharmacyApiConfigDialog = ({
                       placeholder="X-API-Key"
                       value={authKeyName}
                       onChange={(e) => setAuthKeyName(e.target.value)}
+                      disabled={!isAdmin}
                     />
                   </div>
                 )}
@@ -356,6 +427,7 @@ export const PharmacyApiConfigDialog = ({
                       placeholder="Enter API key or token"
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
+                      disabled={!isAdmin}
                     />
                   </div>
                 )}
@@ -367,6 +439,7 @@ export const PharmacyApiConfigDialog = ({
                     placeholder="https://pharmacy-api.example.com/tracking"
                     value={webhookUrl}
                     onChange={(e) => setWebhookUrl(e.target.value)}
+                    disabled={!isAdmin}
                   />
                 </div>
 
@@ -378,6 +451,7 @@ export const PharmacyApiConfigDialog = ({
                     placeholder="Enter webhook secret for HMAC validation"
                     value={webhookSecret}
                     onChange={(e) => setWebhookSecret(e.target.value)}
+                    disabled={!isAdmin}
                   />
                 </div>
 
@@ -391,6 +465,7 @@ export const PharmacyApiConfigDialog = ({
                       max="10"
                       value={retryCount}
                       onChange={(e) => setRetryCount(e.target.value)}
+                      disabled={!isAdmin}
                     />
                   </div>
 
@@ -403,6 +478,7 @@ export const PharmacyApiConfigDialog = ({
                       max="120"
                       value={timeoutSeconds}
                       onChange={(e) => setTimeoutSeconds(e.target.value)}
+                      disabled={!isAdmin}
                     />
                   </div>
                 </div>
@@ -479,16 +555,20 @@ export const PharmacyApiConfigDialog = ({
                   </div>
                 </div>
               </>
+              )}
+            </>
             )}
 
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {isAdmin ? 'Cancel' : 'Close'}
               </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Configuration
-              </Button>
+              {isAdmin && (
+                <Button onClick={handleSave} disabled={isSaving}>
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Configuration
+                </Button>
+              )}
             </div>
           </TabsContent>
 
