@@ -105,14 +105,14 @@ export const PharmacyApiConfigTable = () => {
             subtitle: pharmacy.contact_email,
             fields: [
               { 
-                label: 'API Enabled', 
-                value: pharmacy.api_enabled ? 'Yes' : 'No',
+                label: 'API Status', 
+                value: pharmacy.api_enabled ? 'Enabled' : 'Disabled',
                 badge: true,
                 badgeVariant: pharmacy.api_enabled ? 'default' : 'secondary'
               },
               { 
-                label: 'Webhook Enabled', 
-                value: pharmacy.inbound_webhook_enabled ? 'Yes' : 'No',
+                label: 'Webhook', 
+                value: pharmacy.inbound_webhook_enabled ? 'Active' : 'Off',
                 badge: true,
                 badgeVariant: pharmacy.inbound_webhook_enabled ? 'default' : 'secondary'
               },
