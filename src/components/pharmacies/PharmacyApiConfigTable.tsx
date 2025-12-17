@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Settings2, Check, X, Webhook } from "lucide-react";
+import { Search, Settings2, Check, X, Webhook, Key } from "lucide-react";
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable } from "@/components/responsive/MobileDataTable";
 import { debounce } from "@/lib/performance";
@@ -66,6 +66,29 @@ export const PharmacyApiConfigTable = () => {
     },
   });
 
+  // Fetch credentials for all pharmacies
+  const { data: allCredentials } = useQuery({
+    queryKey: ["pharmacies-api-credentials-all"],
+    staleTime: 600000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pharmacy_api_credentials")
+        .select("pharmacy_id, credential_type");
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Group credentials by pharmacy_id
+  const credentialsByPharmacy = allCredentials?.reduce((acc, cred) => {
+    if (!acc[cred.pharmacy_id]) {
+      acc[cred.pharmacy_id] = [];
+    }
+    acc[cred.pharmacy_id].push(cred.credential_type);
+    return acc;
+  }, {} as Record<string, string[]>) || {};
+
   const filteredPharmacies = pharmacies?.filter((pharmacy) =>
     pharmacy.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     pharmacy.contact_email?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -104,32 +127,38 @@ export const PharmacyApiConfigTable = () => {
           rows={paginatedPharmacies?.map((pharmacy) => ({
             title: pharmacy.name,
             subtitle: pharmacy.contact_email,
-            fields: [
-              { 
-                label: 'API Status', 
-                value: pharmacy.api_enabled ? 'Enabled' : 'Disabled',
-                badge: true,
-                badgeVariant: pharmacy.api_enabled ? 'default' : 'secondary'
-              },
-              {
-                label: 'API Type',
-                value: !pharmacy.api_enabled ? 'Disabled' :
-                       pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
-                       pharmacy.api_handler_type === 'custom' ? 'Custom' : 'Generic',
-                badge: true,
-                badgeVariant: pharmacy.api_enabled && pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'
-              },
-              { 
-                label: 'Webhook', 
-                value: pharmacy.inbound_webhook_enabled ? 'Active' : 'Off',
-                badge: true,
-                badgeVariant: pharmacy.inbound_webhook_enabled ? 'default' : 'secondary'
-              },
-              { 
-                label: 'Endpoint', 
-                value: pharmacy.api_endpoint_url || 'Not configured'
-              }
-            ],
+              fields: [
+                { 
+                  label: 'API Status', 
+                  value: pharmacy.api_enabled ? 'Enabled' : 'Disabled',
+                  badge: true,
+                  badgeVariant: pharmacy.api_enabled ? 'default' : 'secondary'
+                },
+                {
+                  label: 'API Type',
+                  value: !pharmacy.api_enabled ? 'Disabled' :
+                         pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
+                         pharmacy.api_handler_type === 'custom' ? 'Custom' : 'Generic',
+                  badge: true,
+                  badgeVariant: pharmacy.api_enabled && pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'
+                },
+                {
+                  label: 'Credentials',
+                  value: credentialsByPharmacy[pharmacy.id]?.length > 0 ? 'Configured' : 'Not Set',
+                  badge: true,
+                  badgeVariant: credentialsByPharmacy[pharmacy.id]?.length > 0 ? 'default' : 'destructive'
+                },
+                { 
+                  label: 'Webhook', 
+                  value: pharmacy.inbound_webhook_enabled ? 'Active' : 'Off',
+                  badge: true,
+                  badgeVariant: pharmacy.inbound_webhook_enabled ? 'default' : 'secondary'
+                },
+                { 
+                  label: 'Endpoint', 
+                  value: pharmacy.api_endpoint_url || 'Not configured'
+                }
+              ],
             actions: [
               { label: 'Configure API', onClick: () => {
                 setSelectedPharmacy(pharmacy);
@@ -146,6 +175,7 @@ export const PharmacyApiConfigTable = () => {
                 <TableHead>Pharmacy</TableHead>
                 <TableHead>API Status</TableHead>
                 <TableHead>API Type</TableHead>
+                <TableHead>Credentials</TableHead>
                 <TableHead>Endpoint</TableHead>
                 <TableHead>Method</TableHead>
                 <TableHead>Webhook</TableHead>
@@ -155,13 +185,13 @@ export const PharmacyApiConfigTable = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">
+                  <TableCell colSpan={8} className="text-center">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredPharmacies?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     No pharmacies found
                   </TableCell>
                 </TableRow>
@@ -196,6 +226,19 @@ export const PharmacyApiConfigTable = () => {
                          pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
                          pharmacy.api_handler_type === 'custom' ? 'Custom' : 'Generic'}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {credentialsByPharmacy[pharmacy.id]?.length > 0 ? (
+                        <Badge variant="default" className="gap-1">
+                          <Key className="h-3 w-3" />
+                          Configured
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="gap-1">
+                          <X className="h-3 w-3" />
+                          Not Set
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {pharmacy.api_endpoint_url ? (
