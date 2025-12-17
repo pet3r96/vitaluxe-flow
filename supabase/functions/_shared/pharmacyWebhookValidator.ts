@@ -13,16 +13,28 @@ import { edgeLogger } from './logger.ts';
  */
 export async function validatePharmacyWebhookSignature(
   signature: string | null,
+  apiKey: string | null,
   payload: string,
   signingKey: string | undefined
 ): Promise<{ valid: boolean; reason?: string }> {
-  if (!signature) {
-    return { valid: false, reason: 'Missing signature header' };
-  }
-
+  // If no signing key configured, skip validation with warning
   if (!signingKey) {
     edgeLogger.warn('No signing key configured - webhook validation disabled');
     return { valid: false, reason: 'No signing key configured' };
+  }
+
+  // OPTION 1: Simple API Key validation (for VIOS and systems that can only send static headers)
+  if (apiKey) {
+    if (apiKey === signingKey) {
+      edgeLogger.info('Webhook authenticated via API key');
+      return { valid: true, reason: 'api_key_match' };
+    }
+    return { valid: false, reason: 'API key mismatch' };
+  }
+
+  // OPTION 2: HMAC-SHA512 signature validation (for systems that can compute signatures)
+  if (!signature) {
+    return { valid: false, reason: 'Missing signature or API key header' };
   }
 
   // Parse signature (format: "sha512=<hash>")
