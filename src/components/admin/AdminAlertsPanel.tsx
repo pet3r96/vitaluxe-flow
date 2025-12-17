@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Bell, XCircle, AlertCircle } from "lucide-react";
+import { ShieldAlert, XCircle, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import type { AdminAlert } from "@/types/domain/notifications";
@@ -38,7 +38,7 @@ export const AdminAlertsPanel = () => {
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          <ShieldAlert className="h-5 w-5" />
           {totalCount > 0 && (
             <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-destructive">
               {totalCount}
@@ -57,7 +57,7 @@ export const AdminAlertsPanel = () => {
 
           {totalCount === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <ShieldAlert className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No active alerts</p>
             </div>
           ) : (
