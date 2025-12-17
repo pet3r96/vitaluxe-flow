@@ -160,14 +160,32 @@ function transformToViosPayload(
   isTestMode: boolean = false,
   shippingServiceCode: number = 1 // Default to ground (1)
 ): any {
-  const patientAddress = parseAddress(orderLine.patient_address);
-  const providerAddress = parseAddress(orderLine.providers?.profiles?.address_formatted || orderLine.providers?.profiles?.address);
-  const shippingAddress = parseAddress(orderLine.shipping_address || orderLine.patient_address);
+  // Get patient account data if available
+  const patientAccount = orderLine.patient_accounts;
   
-  // Parse patient name into first/last
-  const patientNameParts = (orderLine.patient_name || '').split(' ');
-  const patientFirstName = patientNameParts[0] || 'Unknown';
-  const patientLastName = patientNameParts.slice(1).join(' ') || 'Patient';
+  // Use patient account address or fall back to order line address
+  const patientAddressFormatted = patientAccount?.address_formatted || orderLine.patient_address;
+  const patientAddress = patientAccount ? {
+    address1: patientAccount.address_street || patientAccount.address || parseAddress(patientAddressFormatted).address1,
+    city: patientAccount.address_city || parseAddress(patientAddressFormatted).city,
+    state: patientAccount.address_state || parseAddress(patientAddressFormatted).state || orderLine.destination_state,
+    zip: patientAccount.address_zip || parseAddress(patientAddressFormatted).zip
+  } : parseAddress(orderLine.patient_address);
+  
+  const providerAddress = parseAddress(orderLine.providers?.profiles?.address_formatted || orderLine.providers?.profiles?.address);
+  const shippingAddress = parseAddress(orderLine.shipping_address || patientAddressFormatted || orderLine.patient_address);
+  
+  // Get patient name - prefer patient account, fall back to order line
+  let patientFirstName: string;
+  let patientLastName: string;
+  if (patientAccount?.first_name && patientAccount?.last_name) {
+    patientFirstName = patientAccount.first_name;
+    patientLastName = patientAccount.last_name;
+  } else {
+    const patientNameParts = (orderLine.patient_name || '').split(' ');
+    patientFirstName = patientNameParts[0] || 'Unknown';
+    patientLastName = patientNameParts.slice(1).join(' ') || 'Patient';
+  }
   
   // Parse provider name into first/last
   const providerName = orderLine.providers?.profiles?.name || '';
@@ -175,10 +193,26 @@ function transformToViosPayload(
   const providerFirstName = providerNameParts[0] || 'Unknown';
   const providerLastName = providerNameParts.slice(1).join(' ') || 'Provider';
   
+  // Get patient DOB - check multiple sources
+  const patientDob = patientAccount?.date_of_birth || patientAccount?.birth_date || orderLine.patient_dob;
+  
+  // Get patient gender - prefer patient account
+  const patientGender = patientAccount?.gender_at_birth || orderLine.gender_at_birth;
+  
+  // Get patient contact info - prefer decrypted order line data, fall back to patient account
+  const patientEmail = orderLine.patient_email || patientAccount?.email;
+  const patientPhone = orderLine.patient_phone || patientAccount?.phone;
+  
+  // Get allergies from patient account
+  const patientAllergies = patientAccount?.allergies;
+  
+  // Create short order reference (first 8 chars of UUID for readability)
+  const orderRef = order.id.substring(0, 8).toUpperCase();
+  
   const payload: any = {
     general: {
       referenceId: orderLine.id, // Use order_line_id as reference
-      memo: orderLine.order_notes || `VitaLuxe Order ${order.id}`,
+      memo: orderLine.order_notes || `VitaLuxe Order #${orderRef}`,
       isTestOrder: isTestMode // Use test mode flag
     },
     prescriber: {
@@ -196,14 +230,15 @@ function transformToViosPayload(
     patient: {
       firstName: patientFirstName,
       lastName: patientLastName,
-      gender: mapGenderForVios(orderLine.gender_at_birth),
-      dateOfBirth: formatDateForVios(orderLine.patient_dob) || '1900-01-01', // Required field
+      gender: mapGenderForVios(patientGender),
+      dateOfBirth: formatDateForVios(patientDob) || '1900-01-01', // Required field
       address1: patientAddress.address1 || undefined,
       city: patientAddress.city || undefined,
       state: patientAddress.state || orderLine.destination_state || undefined,
       zip: patientAddress.zip || undefined,
-      phoneHome: formatPhoneForVios(orderLine.patient_phone) || undefined,
-      email: orderLine.patient_email || undefined
+      phoneHome: formatPhoneForVios(patientPhone) || undefined,
+      email: patientEmail || undefined,
+      allergies: patientAllergies || undefined
     },
     shipping: {
       addressLine1: shippingAddress.address1 || patientAddress.address1 || 'Address Required',
@@ -214,8 +249,8 @@ function transformToViosPayload(
       recipientType: 'patient',
       recipientFirstName: patientFirstName,
       recipientLastName: patientLastName,
-      recipientPhone: formatPhoneForVios(orderLine.patient_phone) || undefined,
-      recipientEmail: orderLine.patient_email || undefined
+      recipientPhone: formatPhoneForVios(patientPhone) || undefined,
+      recipientEmail: patientEmail || undefined
     },
     rxs: [{
       rxType: orderLine.is_refill ? 'refill' : 'new',
@@ -562,7 +597,7 @@ serve(async (req) => {
       throw new Error(`Order not found: ${orderError?.message}`);
     }
 
-    // Fetch all order lines data with provider credentials
+    // Fetch all order lines data with provider credentials and patient account data
     const { data: orderLines, error: linesError } = await supabaseAdmin
       .from("order_lines")
       .select(`
@@ -579,6 +614,22 @@ serve(async (req) => {
             phone,
             email
           )
+        ),
+        patient_accounts!order_lines_patient_id_fkey(
+          first_name,
+          last_name,
+          email,
+          phone,
+          date_of_birth,
+          birth_date,
+          gender_at_birth,
+          allergies,
+          address,
+          address_street,
+          address_city,
+          address_state,
+          address_zip,
+          address_formatted
         )
       `)
       .in("id", order_line_ids);
