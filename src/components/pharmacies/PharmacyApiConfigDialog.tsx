@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
-import { Loader2, CheckCircle, XCircle, AlertCircle, Activity, ShieldAlert } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, AlertCircle, Activity, ShieldAlert, Copy, ChevronDown, ChevronRight, FlaskConical, Zap, ArrowUpFromLine, ArrowDownToLine } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useRole } from "@/hooks/useAuth";
@@ -21,6 +21,8 @@ interface PharmacyApiConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const WEBHOOK_BASE_URL = "https://qbtsfajshnrwwlfzkeog.supabase.co/functions/v1/receive-pharmacy-webhook";
 
 export const PharmacyApiConfigDialog = ({
   pharmacyId,
@@ -38,9 +40,14 @@ export const PharmacyApiConfigDialog = ({
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const [diagnosticsResults, setDiagnosticsResults] = useState<any>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  
+  // Collapsible section states
+  const [outboundOpen, setOutboundOpen] = useState(true);
+  const [inboundOpen, setInboundOpen] = useState(true);
 
   // Form state
   const [apiEnabled, setApiEnabled] = useState(false);
+  const [apiTestMode, setApiTestMode] = useState(true); // Sandbox by default
   const [apiHandlerType, setApiHandlerType] = useState<string>("generic");
   const [apiEndpointUrl, setApiEndpointUrl] = useState("");
   const [authType, setAuthType] = useState<string>("none");
@@ -50,6 +57,11 @@ export const PharmacyApiConfigDialog = ({
   const [webhookSecret, setWebhookSecret] = useState("");
   const [retryCount, setRetryCount] = useState("3");
   const [timeoutSeconds, setTimeoutSeconds] = useState("30");
+  
+  // Inbound webhook state
+  const [inboundWebhookEnabled, setInboundWebhookEnabled] = useState(false);
+  const [inboundWebhookPath, setInboundWebhookPath] = useState("");
+  const [apiStatusMapping, setApiStatusMapping] = useState<Record<string, string>>({});
   
   // VIOS-specific state
   const [viosBaseUrl, setViosBaseUrl] = useState("https://api.viosrx.com/v1");
@@ -71,6 +83,7 @@ export const PharmacyApiConfigDialog = ({
 
       // Update form state
       setApiEnabled(data.api_enabled || false);
+      setApiTestMode(data.api_test_mode ?? true);
       // Default to 'generic' if no handler type or if it was 'none'
       const handlerType = data.api_handler_type;
       setApiHandlerType(handlerType && handlerType !== 'none' ? handlerType : "generic");
@@ -81,6 +94,11 @@ export const PharmacyApiConfigDialog = ({
       setWebhookSecret(data.webhook_secret || "");
       setRetryCount(String(data.api_retry_count || 3));
       setTimeoutSeconds(String(data.api_timeout_seconds || 30));
+      
+      // Inbound webhook settings
+      setInboundWebhookEnabled(data.inbound_webhook_enabled || false);
+      setInboundWebhookPath(data.inbound_webhook_path || "");
+      setApiStatusMapping((data.api_status_mapping as Record<string, string>) || {});
       
       // Set VIOS base URL if handler is VIOS
       if (handlerType === 'vios' && data.api_endpoint_url) {
@@ -141,6 +159,30 @@ export const PharmacyApiConfigDialog = ({
     enabled: open,
   });
 
+  const getInboundWebhookUrl = () => {
+    if (!inboundWebhookPath) return null;
+    return `${WEBHOOK_BASE_URL}/${inboundWebhookPath}`;
+  };
+
+  const handleCopyWebhookUrl = async () => {
+    const url = getInboundWebhookUrl();
+    if (!url) return;
+    
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Copied!",
+        description: "Webhook URL copied to clipboard",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the URL manually",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSave = async () => {
     if (!isAdmin) {
       toast({
@@ -158,6 +200,7 @@ export const PharmacyApiConfigDialog = ({
         .from("pharmacies")
         .update({
           api_enabled: apiEnabled,
+          api_test_mode: apiTestMode,
           api_handler_type: apiHandlerType,
           api_endpoint_url: apiEndpointUrl || null,
           api_auth_type: authType,
@@ -166,6 +209,7 @@ export const PharmacyApiConfigDialog = ({
           webhook_secret: webhookSecret || null,
           api_retry_count: parseInt(retryCount),
           api_timeout_seconds: parseInt(timeoutSeconds),
+          inbound_webhook_enabled: inboundWebhookEnabled,
         })
         .eq("id", pharmacyId);
 
@@ -377,8 +421,12 @@ export const PharmacyApiConfigDialog = ({
               </Alert>
             )}
             
-            <div className="flex items-center justify-between">
-              <Label htmlFor="api-enabled">Enable API Integration</Label>
+            {/* API Integration Toggle */}
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+              <div className="space-y-0.5">
+                <Label htmlFor="api-enabled" className="text-base font-medium">API Integration</Label>
+                <p className="text-sm text-muted-foreground">Enable API communication with this pharmacy</p>
+              </div>
               <Switch
                 id="api-enabled"
                 checked={apiEnabled}
@@ -389,264 +437,427 @@ export const PharmacyApiConfigDialog = ({
 
             {apiEnabled && (
               <>
+                {/* Environment Toggle */}
                 <div className="space-y-2">
-                  <Label htmlFor="api-handler-type">API Integration Type</Label>
-                  <Select 
-                    value={apiHandlerType} 
-                    onValueChange={setApiHandlerType}
-                    disabled={!isAdmin}
-                  >
-                    <SelectTrigger id="api-handler-type">
-                      <SelectValue placeholder="Select integration type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="generic">Generic - Single Endpoint</SelectItem>
-                      <SelectItem value="vios">VIOS - Multi-Endpoint</SelectItem>
-                      <SelectItem value="custom">Custom Handler</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-sm font-medium">Environment</Label>
+                  <div className="flex rounded-lg border p-1 bg-muted/30">
+                    <button
+                      type="button"
+                      onClick={() => isAdmin && setApiTestMode(true)}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        apiTestMode 
+                          ? 'bg-background shadow-sm text-foreground' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                      disabled={!isAdmin}
+                    >
+                      <FlaskConical className="h-4 w-4" />
+                      Sandbox
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => isAdmin && setApiTestMode(false)}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        !apiTestMode 
+                          ? 'bg-background shadow-sm text-foreground' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                      disabled={!isAdmin}
+                    >
+                      <Zap className="h-4 w-4" />
+                      Production
+                    </button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {apiHandlerType === 'generic' && 'Single endpoint configuration for standard pharmacy APIs'}
-                    {apiHandlerType === 'vios' && 'Multi-endpoint support for VIOS (Orders, Refills, Shipping, Lookups)'}
-                    {apiHandlerType === 'custom' && 'Custom handler for pharmacy-specific integrations'}
+                    {apiTestMode 
+                      ? "Orders will be marked as test orders and won't be processed." 
+                      : "Orders will be processed as real transactions."}
                   </p>
                 </div>
 
-                {apiHandlerType === 'vios' && (
-                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                    <p className="text-sm font-medium">VIOS API Configuration</p>
-                    
+                {/* Outbound API Configuration */}
+                <Collapsible open={outboundOpen} onOpenChange={setOutboundOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center justify-between w-full p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <ArrowUpFromLine className="h-5 w-5 text-primary" />
+                        <div className="text-left">
+                          <p className="font-medium">Outbound API Configuration</p>
+                          <p className="text-sm text-muted-foreground">Send orders to pharmacy</p>
+                        </div>
+                      </div>
+                      {outboundOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-4 space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="vios-base-url">VIOS Base URL</Label>
-                      <Input
-                        id="vios-base-url"
-                        placeholder="https://api.viosrx.com/v1"
-                        value={viosBaseUrl}
-                        onChange={(e) => setViosBaseUrl(e.target.value)}
+                      <Label htmlFor="api-handler-type">API Integration Type</Label>
+                      <Select 
+                        value={apiHandlerType} 
+                        onValueChange={setApiHandlerType}
                         disabled={!isAdmin}
-                      />
+                      >
+                        <SelectTrigger id="api-handler-type">
+                          <SelectValue placeholder="Select integration type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="generic">Generic - Single Endpoint</SelectItem>
+                          <SelectItem value="vios">VIOS - Multi-Endpoint</SelectItem>
+                          <SelectItem value="custom">Custom Handler</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <p className="text-xs text-muted-foreground">
-                        Base URL for VIOS API. Endpoints will be appended automatically.
+                        {apiHandlerType === 'generic' && 'Single endpoint configuration for standard pharmacy APIs'}
+                        {apiHandlerType === 'vios' && 'Multi-endpoint support for VIOS (Orders, Refills, Shipping, Lookups)'}
+                        {apiHandlerType === 'custom' && 'Custom handler for pharmacy-specific integrations'}
                       </p>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="vios-client-key">Client Key</Label>
-                      <Input
-                        id="vios-client-key"
-                        placeholder="Enter VIOS client key"
-                        value={viosClientKey}
-                        onChange={(e) => setViosClientKey(e.target.value)}
-                        disabled={!isAdmin}
-                      />
-                    </div>
+                    {apiHandlerType === 'vios' && (
+                      <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                        <p className="text-sm font-medium">VIOS API Configuration</p>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="vios-base-url">VIOS Base URL</Label>
+                          <Input
+                            id="vios-base-url"
+                            placeholder="https://api.viosrx.com/v1"
+                            value={viosBaseUrl}
+                            onChange={(e) => setViosBaseUrl(e.target.value)}
+                            disabled={!isAdmin}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Base URL for VIOS API. Endpoints will be appended automatically.
+                          </p>
+                        </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="vios-client-secret">Client Secret</Label>
-                      <Input
-                        id="vios-client-secret"
-                        type="password"
-                        placeholder="Enter VIOS client secret"
-                        value={viosClientSecret}
-                        onChange={(e) => setViosClientSecret(e.target.value)}
-                        disabled={!isAdmin}
-                      />
-                    </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="vios-client-key">Client Key</Label>
+                          <Input
+                            id="vios-client-key"
+                            placeholder="Enter VIOS client key"
+                            value={viosClientKey}
+                            onChange={(e) => setViosClientKey(e.target.value)}
+                            disabled={!isAdmin}
+                          />
+                        </div>
 
-                    <div className="mt-4 p-3 bg-background rounded border">
-                      <p className="text-xs font-medium mb-2">Supported Endpoints:</p>
-                      <ul className="text-xs text-muted-foreground space-y-1">
-                        <li>• <code>/orders</code> - Create, Get, Cancel orders</li>
-                        <li>• <code>/refills</code> - Process refill requests</li>
-                        <li>• <code>/shipping</code> - Track shipping updates</li>
-                        <li>• <code>/lookups</code> - Reference data (allergies, products)</li>
-                      </ul>
-                    </div>
-                  </div>
-                )}
+                        <div className="space-y-2">
+                          <Label htmlFor="vios-client-secret">Client Secret</Label>
+                          <Input
+                            id="vios-client-secret"
+                            type="password"
+                            placeholder="Enter VIOS client secret"
+                            value={viosClientSecret}
+                            onChange={(e) => setViosClientSecret(e.target.value)}
+                            disabled={!isAdmin}
+                          />
+                        </div>
 
-                {(apiHandlerType === 'generic' || apiHandlerType === 'custom') && (
-                  <>
-                <div className="space-y-2">
-                  <Label htmlFor="api-endpoint">API Endpoint URL</Label>
-                  <Input
-                    id="api-endpoint"
-                    placeholder="https://pharmacy-api.example.com/orders"
-                    value={apiEndpointUrl}
-                    onChange={(e) => setApiEndpointUrl(e.target.value)}
-                    disabled={!isAdmin}
-                  />
-                </div>
+                        <div className="mt-4 p-3 bg-background rounded border">
+                          <p className="text-xs font-medium mb-2">Supported Endpoints:</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            <li>• <code>/orders</code> - Create, Get, Cancel orders</li>
+                            <li>• <code>/refills</code> - Process refill requests</li>
+                            <li>• <code>/shipping</code> - Track shipping updates</li>
+                            <li>• <code>/lookups</code> - Reference data (allergies, products)</li>
+                          </ul>
+                        </div>
+                      </div>
+                    )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="auth-type">Authentication Type</Label>
-                  <Select value={authType} onValueChange={setAuthType} disabled={!isAdmin}>
-                    <SelectTrigger id="auth-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="bearer">Bearer Token</SelectItem>
-                      <SelectItem value="api_key">API Key</SelectItem>
-                      <SelectItem value="basic">Basic Auth</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    {(apiHandlerType === 'generic' || apiHandlerType === 'custom') && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="api-endpoint">API Endpoint URL</Label>
+                          <Input
+                            id="api-endpoint"
+                            placeholder="https://pharmacy-api.example.com/orders"
+                            value={apiEndpointUrl}
+                            onChange={(e) => setApiEndpointUrl(e.target.value)}
+                            disabled={!isAdmin}
+                          />
+                        </div>
 
-                {authType === "api_key" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="auth-key-name">API Key Header Name</Label>
-                    <Input
-                      id="auth-key-name"
-                      placeholder="X-API-Key"
-                      value={authKeyName}
-                      onChange={(e) => setAuthKeyName(e.target.value)}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                )}
+                        <div className="space-y-2">
+                          <Label htmlFor="auth-type">Authentication Type</Label>
+                          <Select value={authType} onValueChange={setAuthType} disabled={!isAdmin}>
+                            <SelectTrigger id="auth-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              <SelectItem value="bearer">Bearer Token</SelectItem>
+                              <SelectItem value="api_key">API Key</SelectItem>
+                              <SelectItem value="basic">Basic Auth</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                {authType !== "none" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="api-key">
-                      {authType === "bearer" ? "Bearer Token" : "API Key"}
-                    </Label>
-                    <Input
-                      id="api-key"
-                      type="password"
-                      placeholder="Enter API key or token"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-url">Webhook URL (optional - for polling)</Label>
-                  <Input
-                    id="webhook-url"
-                    placeholder="https://pharmacy-api.example.com/tracking"
-                    value={webhookUrl}
-                    onChange={(e) => setWebhookUrl(e.target.value)}
-                    disabled={!isAdmin}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-secret">Webhook Secret (optional - for inbound webhooks)</Label>
-                  <Input
-                    id="webhook-secret"
-                    type="password"
-                    placeholder="Enter webhook secret for HMAC validation"
-                    value={webhookSecret}
-                    onChange={(e) => setWebhookSecret(e.target.value)}
-                    disabled={!isAdmin}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="retry-count">Retry Count</Label>
-                    <Input
-                      id="retry-count"
-                      type="number"
-                      min="0"
-                      max="10"
-                      value={retryCount}
-                      onChange={(e) => setRetryCount(e.target.value)}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="timeout">Timeout (seconds)</Label>
-                    <Input
-                      id="timeout"
-                      type="number"
-                      min="5"
-                      max="120"
-                      value={timeoutSeconds}
-                      onChange={(e) => setTimeoutSeconds(e.target.value)}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-3 pt-4 border-t">
-                  <Button
-                    onClick={handleRunDiagnostics}
-                    disabled={isRunningDiagnostics}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {isRunningDiagnostics && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <Activity className="mr-2 h-4 w-4" />
-                    Run Diagnostics
-                  </Button>
-
-                  {diagnosticsResults && (
-                    <Collapsible open={showDiagnostics} onOpenChange={setShowDiagnostics}>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" className="w-full justify-between">
-                          <span className="flex items-center gap-2">
-                            {diagnosticsResults.success ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-destructive" />
-                            )}
-                            Diagnostics Results
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {showDiagnostics ? "Hide" : "Show"}
-                          </span>
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="space-y-2 mt-2">
-                        {diagnosticsResults.results?.map((result: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="p-3 border rounded-md text-sm space-y-1"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">{result.step}</span>
-                              {result.status === "success" && (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                              )}
-                              {result.status === "warning" && (
-                                <AlertCircle className="h-4 w-4 text-amber-500" />
-                              )}
-                              {result.status === "error" && (
-                                <XCircle className="h-4 w-4 text-destructive" />
-                              )}
-                            </div>
-                            <p className="text-muted-foreground">{result.message}</p>
-                            {result.details && (
-                              <pre className="text-xs bg-muted p-2 rounded mt-1 overflow-x-auto">
-                                {JSON.stringify(result.details, null, 2)}
-                              </pre>
-                            )}
+                        {authType === "api_key" && (
+                          <div className="space-y-2">
+                            <Label htmlFor="auth-key-name">API Key Header Name</Label>
+                            <Input
+                              id="auth-key-name"
+                              placeholder="X-API-Key"
+                              value={authKeyName}
+                              onChange={(e) => setAuthKeyName(e.target.value)}
+                              disabled={!isAdmin}
+                            />
                           </div>
-                        ))}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
+                        )}
 
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleTestConnection}
-                      disabled={isTesting || !apiEndpointUrl}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Test Connection
-                    </Button>
-                  </div>
-                </div>
+                        {authType !== "none" && (
+                          <div className="space-y-2">
+                            <Label htmlFor="api-key">
+                              {authType === "bearer" ? "Bearer Token" : "API Key"}
+                            </Label>
+                            <Input
+                              id="api-key"
+                              type="password"
+                              placeholder="Enter API key or token"
+                              value={apiKey}
+                              onChange={(e) => setApiKey(e.target.value)}
+                              disabled={!isAdmin}
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="retry-count">Retry Count</Label>
+                        <Input
+                          id="retry-count"
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={retryCount}
+                          onChange={(e) => setRetryCount(e.target.value)}
+                          disabled={!isAdmin}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="timeout">Timeout (seconds)</Label>
+                        <Input
+                          id="timeout"
+                          type="number"
+                          min="5"
+                          max="120"
+                          value={timeoutSeconds}
+                          onChange={(e) => setTimeoutSeconds(e.target.value)}
+                          disabled={!isAdmin}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 pt-4 border-t">
+                      <Button
+                        onClick={handleRunDiagnostics}
+                        disabled={isRunningDiagnostics}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        {isRunningDiagnostics && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Activity className="mr-2 h-4 w-4" />
+                        Run Diagnostics
+                      </Button>
+
+                      {diagnosticsResults && (
+                        <Collapsible open={showDiagnostics} onOpenChange={setShowDiagnostics}>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" className="w-full justify-between">
+                              <span className="flex items-center gap-2">
+                                {diagnosticsResults.success ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-destructive" />
+                                )}
+                                Diagnostics Results
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {showDiagnostics ? "Hide" : "Show"}
+                              </span>
+                            </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-2 mt-2">
+                            {diagnosticsResults.results?.map((result: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="p-3 border rounded-md text-sm space-y-1"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium">{result.step}</span>
+                                  {result.status === "success" && (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  )}
+                                  {result.status === "warning" && (
+                                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                                  )}
+                                  {result.status === "error" && (
+                                    <XCircle className="h-4 w-4 text-destructive" />
+                                  )}
+                                </div>
+                                <p className="text-muted-foreground">{result.message}</p>
+                                {result.details && (
+                                  <pre className="text-xs bg-muted p-2 rounded mt-1 overflow-x-auto">
+                                    {JSON.stringify(result.details, null, 2)}
+                                  </pre>
+                                )}
+                              </div>
+                            ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+
+                      {(apiHandlerType === 'generic' || apiHandlerType === 'custom') && (
+                        <Button
+                          onClick={handleTestConnection}
+                          disabled={isTesting || !apiEndpointUrl}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Test Connection
+                        </Button>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Inbound Webhook Configuration */}
+                <Collapsible open={inboundOpen} onOpenChange={setInboundOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center justify-between w-full p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <ArrowDownToLine className="h-5 w-5 text-primary" />
+                        <div className="text-left">
+                          <p className="font-medium">Inbound Webhook Configuration</p>
+                          <p className="text-sm text-muted-foreground">Receive status updates from pharmacy</p>
+                        </div>
+                      </div>
+                      {inboundOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-4 space-y-4">
+                    <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="inbound-webhook-enabled" className="font-medium">Enable Inbound Webhooks</Label>
+                        <p className="text-xs text-muted-foreground">Allow pharmacy to send status updates</p>
+                      </div>
+                      <Switch
+                        id="inbound-webhook-enabled"
+                        checked={inboundWebhookEnabled}
+                        onCheckedChange={setInboundWebhookEnabled}
+                        disabled={!isAdmin}
+                      />
+                    </div>
+
+                    {inboundWebhookEnabled && inboundWebhookPath && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Webhook URL</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              value={getInboundWebhookUrl() || ''}
+                              readOnly
+                              className="font-mono text-xs bg-muted"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={handleCopyWebhookUrl}
+                              title="Copy to clipboard"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Configure this URL in the pharmacy's webhook settings
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="webhook-secret-inbound">Webhook Secret (optional)</Label>
+                          <Input
+                            id="webhook-secret-inbound"
+                            type="password"
+                            placeholder="Enter webhook secret for HMAC validation"
+                            value={webhookSecret}
+                            onChange={(e) => setWebhookSecret(e.target.value)}
+                            disabled={!isAdmin}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Used to validate webhook authenticity if the pharmacy supports it
+                          </p>
+                        </div>
+
+                        {/* Status Mapping Display */}
+                        {Object.keys(apiStatusMapping).length > 0 && (
+                          <div className="space-y-2">
+                            <Label>Status Mapping</Label>
+                            <div className="border rounded-lg overflow-hidden">
+                              <table className="w-full text-sm">
+                                <thead className="bg-muted/50">
+                                  <tr>
+                                    <th className="text-left px-3 py-2 font-medium">Pharmacy Status</th>
+                                    <th className="text-left px-3 py-2 font-medium">Internal Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {Object.entries(apiStatusMapping).map(([pharmaStatus, internalStatus]) => (
+                                    <tr key={pharmaStatus} className="border-t">
+                                      <td className="px-3 py-2 font-mono text-xs">{pharmaStatus}</td>
+                                      <td className="px-3 py-2">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                          {internalStatus}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Events Info for VIOS */}
+                        {apiHandlerType === 'vios' && (
+                          <div className="p-3 bg-muted/30 rounded-lg border">
+                            <p className="text-xs font-medium mb-2">Events to Subscribe (VIOS Portal):</p>
+                            <ul className="text-xs text-muted-foreground space-y-1">
+                              <li className="flex items-center gap-2">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                Order status changes
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                Shipping updates with tracking
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                Delivery confirmations
+                              </li>
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {inboundWebhookEnabled && !inboundWebhookPath && (
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          Webhook path not configured. Please contact support to set up the webhook endpoint for this pharmacy.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
               </>
-              )}
-            </>
             )}
 
             <div className="flex justify-end gap-2 pt-4 border-t">
