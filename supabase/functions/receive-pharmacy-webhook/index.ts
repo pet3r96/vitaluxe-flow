@@ -5,7 +5,7 @@ import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-pharmacy-signature, x-pharmacy-id",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-pharmacy-signature, x-pharmacy-id, x-api-key",
 };
 
 // Map pharmacy status to our standard order status
@@ -224,6 +224,7 @@ serve(async (req) => {
     // Get raw body and headers
     const rawBody = await req.text();
     const signature = req.headers.get("x-pharmacy-signature");
+    const apiKey = req.headers.get("x-api-key");
     let pharmacyIdHeader = req.headers.get("x-pharmacy-id");
 
     // Try to find pharmacy by webhook path first
@@ -271,10 +272,11 @@ serve(async (req) => {
       );
     }
 
-    // Validate signature if webhook secret is configured
+    // Validate signature/API key if webhook secret is configured
     if (pharmacy.webhook_secret) {
       const signatureValidation = await validatePharmacyWebhookSignature(
         signature,
+        apiKey,
         rawBody,
         pharmacy.webhook_secret
       );
