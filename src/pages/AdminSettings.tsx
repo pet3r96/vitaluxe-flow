@@ -13,8 +13,8 @@ import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope, Pill } from "lucide-react";
-import { PharmaciesDataTable } from "@/components/pharmacies/PharmaciesDataTable";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
+import { PharmacyApiConfigTable } from "@/components/pharmacies/PharmacyApiConfigTable";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
 import { UsageBillingDashboard } from "@/components/admin/UsageBillingDashboard";
@@ -273,7 +273,7 @@ const AdminSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <PharmaciesDataTable />
+              <PharmacyApiConfigTable />
             </CardContent>
           </Card>
         </TabsContent>
