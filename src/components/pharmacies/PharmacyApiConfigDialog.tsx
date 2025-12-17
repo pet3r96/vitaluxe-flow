@@ -51,6 +51,11 @@ export const PharmacyApiConfigDialog = ({
   const [retryCount, setRetryCount] = useState("3");
   const [timeoutSeconds, setTimeoutSeconds] = useState("30");
   
+  // VIOS-specific state
+  const [viosBaseUrl, setViosBaseUrl] = useState("https://api.viosrx.com/v1");
+  const [viosClientKey, setViosClientKey] = useState("");
+  const [viosClientSecret, setViosClientSecret] = useState("");
+  
 
   // Fetch pharmacy config
   const { data: pharmacy, isLoading } = useQuery({
@@ -76,6 +81,11 @@ export const PharmacyApiConfigDialog = ({
       setWebhookSecret(data.webhook_secret || "");
       setRetryCount(String(data.api_retry_count || 3));
       setTimeoutSeconds(String(data.api_timeout_seconds || 30));
+      
+      // Set VIOS base URL if handler is VIOS
+      if (handlerType === 'vios' && data.api_endpoint_url) {
+        setViosBaseUrl(data.api_endpoint_url);
+      }
 
       return data;
     },
@@ -106,6 +116,10 @@ export const PharmacyApiConfigDialog = ({
     credentials.forEach((cred) => {
       if (cred.credential_type === "api_key" || cred.credential_type === "bearer_token") {
         setApiKey(cred.credential_key || "");
+      } else if (cred.credential_type === "vios_client_key") {
+        setViosClientKey(cred.credential_key || "");
+      } else if (cred.credential_type === "vios_client_secret") {
+        setViosClientSecret(cred.credential_key || "");
       }
     });
   }, [credentials]);
@@ -172,6 +186,44 @@ export const PharmacyApiConfigDialog = ({
           });
 
         if (credError) throw credError;
+      }
+
+      // Save VIOS credentials if VIOS handler type
+      if (apiHandlerType === 'vios') {
+        // Save VIOS client key
+        if (viosClientKey) {
+          const { error: viosKeyError } = await supabase
+            .from("pharmacy_api_credentials")
+            .upsert({
+              pharmacy_id: pharmacyId,
+              credential_type: "vios_client_key",
+              credential_key: viosClientKey,
+            }, {
+              onConflict: "pharmacy_id,credential_type",
+            });
+          if (viosKeyError) throw viosKeyError;
+        }
+
+        // Save VIOS client secret
+        if (viosClientSecret) {
+          const { error: viosSecretError } = await supabase
+            .from("pharmacy_api_credentials")
+            .upsert({
+              pharmacy_id: pharmacyId,
+              credential_type: "vios_client_secret",
+              credential_key: viosClientSecret,
+            }, {
+              onConflict: "pharmacy_id,credential_type",
+            });
+          if (viosSecretError) throw viosSecretError;
+        }
+
+        // Save VIOS base URL in the api_endpoint_url field
+        const { error: urlError } = await supabase
+          .from("pharmacies")
+          .update({ api_endpoint_url: viosBaseUrl })
+          .eq("id", pharmacyId);
+        if (urlError) throw urlError;
       }
 
       toast({
@@ -361,17 +413,55 @@ export const PharmacyApiConfigDialog = ({
                 </div>
 
                 {apiHandlerType === 'vios' && (
-                  <div className="p-4 border rounded-lg bg-muted/30">
-                    <p className="text-sm font-medium mb-2">VIOS Multi-Endpoint Integration</p>
-                    <p className="text-sm text-muted-foreground">
-                      VIOS multi-endpoint configuration coming soon. This will support:
-                    </p>
-                    <ul className="text-sm text-muted-foreground mt-2 list-disc list-inside space-y-1">
-                      <li>Orders (Create, Get, Cancel)</li>
-                      <li>Refills</li>
-                      <li>Shipping Updates</li>
-                      <li>Reference Lookups (Allergies, Products)</li>
-                    </ul>
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                    <p className="text-sm font-medium">VIOS API Configuration</p>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="vios-base-url">VIOS Base URL</Label>
+                      <Input
+                        id="vios-base-url"
+                        placeholder="https://api.viosrx.com/v1"
+                        value={viosBaseUrl}
+                        onChange={(e) => setViosBaseUrl(e.target.value)}
+                        disabled={!isAdmin}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Base URL for VIOS API. Endpoints will be appended automatically.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="vios-client-key">Client Key</Label>
+                      <Input
+                        id="vios-client-key"
+                        placeholder="Enter VIOS client key"
+                        value={viosClientKey}
+                        onChange={(e) => setViosClientKey(e.target.value)}
+                        disabled={!isAdmin}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="vios-client-secret">Client Secret</Label>
+                      <Input
+                        id="vios-client-secret"
+                        type="password"
+                        placeholder="Enter VIOS client secret"
+                        value={viosClientSecret}
+                        onChange={(e) => setViosClientSecret(e.target.value)}
+                        disabled={!isAdmin}
+                      />
+                    </div>
+
+                    <div className="mt-4 p-3 bg-background rounded border">
+                      <p className="text-xs font-medium mb-2">Supported Endpoints:</p>
+                      <ul className="text-xs text-muted-foreground space-y-1">
+                        <li>• <code>/orders</code> - Create, Get, Cancel orders</li>
+                        <li>• <code>/refills</code> - Process refill requests</li>
+                        <li>• <code>/shipping</code> - Track shipping updates</li>
+                        <li>• <code>/lookups</code> - Reference data (allergies, products)</li>
+                      </ul>
+                    </div>
                   </div>
                 )}
 
