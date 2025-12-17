@@ -4,6 +4,7 @@ import { TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRevenueData } from "@/hooks/useRevenueData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/formatters";
 
 interface RevenueChartProps {
   className?: string;
@@ -55,7 +56,7 @@ export function RevenueChart({ className }: RevenueChartProps) {
                 borderRadius: "8px",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
               }}
-              formatter={(value: number) => [`$${value}`, "Revenue"]}
+              formatter={(value: number) => [formatCurrency(value), "Revenue"]}
             />
             <Area 
               type="monotone" 
