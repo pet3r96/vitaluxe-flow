@@ -3997,7 +3997,6 @@ export type Database = {
       pharmacy_order_jobs: {
         Row: {
           attempt_count: number | null
-          baremeds_response: Json | null
           completed_at: string | null
           created_at: string | null
           id: string
@@ -4007,11 +4006,11 @@ export type Database = {
           order_id: string
           order_line_id: string
           pharmacy_id: string
+          pharmacy_response: Json | null
           status: string
         }
         Insert: {
           attempt_count?: number | null
-          baremeds_response?: Json | null
           completed_at?: string | null
           created_at?: string | null
           id?: string
@@ -4021,11 +4020,11 @@ export type Database = {
           order_id: string
           order_line_id: string
           pharmacy_id: string
+          pharmacy_response?: Json | null
           status?: string
         }
         Update: {
           attempt_count?: number | null
-          baremeds_response?: Json | null
           completed_at?: string | null
           created_at?: string | null
           id?: string
@@ -4035,6 +4034,7 @@ export type Database = {
           order_id?: string
           order_line_id?: string
           pharmacy_id?: string
+          pharmacy_response?: Json | null
           status?: string
         }
         Relationships: [

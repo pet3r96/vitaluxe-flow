@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         .update({ 
           status: 'completed', 
           completed_at: new Date().toISOString(),
-          baremeds_response: sendResult.response || null
+          pharmacy_response: sendResult.response || null
         })
         .eq('id', job.id);
 

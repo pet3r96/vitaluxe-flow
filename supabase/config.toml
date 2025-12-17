@@ -392,9 +392,6 @@ verify_jwt = true
 [functions.process-pharmacy-order-queue]
 verify_jwt = false
 
-[functions.send-pharmacy-order]
-verify_jwt = false
-
 [functions.get-cart]
 verify_jwt = true
 
