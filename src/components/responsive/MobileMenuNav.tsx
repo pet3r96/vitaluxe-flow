@@ -63,11 +63,11 @@ export const MobileMenuNav = ({
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] p-0">
-              <SheetHeader className="border-b p-4">
+              <SheetHeader className="border-b p-4 pt-8">
                 <img 
                   src={currentLogo} 
                   alt="Vitaluxe Services" 
-                  className="h-12"
+                  className="h-10 w-auto max-w-[180px] object-contain"
                 />
               </SheetHeader>
               
