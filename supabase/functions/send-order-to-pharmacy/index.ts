@@ -223,10 +223,15 @@ function transformToViosPayload(
     prescriberNpi: prescriberProfile?.npi || '[MISSING]'
   });
   
+  // Build memo with allergies info since VIOS allergies field expects integer IDs
+  const allergyNote = patientAllergies ? `Allergies: ${patientAllergies}` : 'Allergies: NKA';
+  const memoBase = orderLine.order_notes || `VitaLuxe Order #${orderRef}`;
+  const fullMemo = `${memoBase} | ${allergyNote}`;
+  
   const payload: any = {
     general: {
       referenceId: orderLine.id, // Use order_line_id as reference
-      memo: orderLine.order_notes || `VitaLuxe Order #${orderRef}`,
+      memo: fullMemo,
       isTestOrder: isTestMode // Use test mode flag
     },
     prescriber: {
@@ -252,13 +257,14 @@ function transformToViosPayload(
       zip: patientAddress.zip || undefined,
       phoneHome: formatPhoneForVios(patientPhone) || undefined,
       phoneMobile: formatPhoneForVios(patientPhone) || undefined, // Also send as mobile
-      email: patientEmail || undefined,
-      allergies: patientAllergies || 'NKA' // Default to No Known Allergies if not set
+      email: patientEmail || undefined
+      // Note: VIOS allergies field expects integer IDs, not text. Allergies included in memo instead.
     },
     shipping: {
       addressLine1: shippingAddress.address1 || patientAddress.address1 || 'Address Required',
       city: shippingAddress.city || patientAddress.city || 'City Required',
-      state: (shippingAddress.state || patientAddress.state || orderLine.destination_state || 'CA').toUpperCase(),
+      // Prefer patient address state over parsed shipping state to avoid "USA" country code being used as state
+      state: (patientAddress.state || shippingAddress.state || orderLine.destination_state || 'CA').toUpperCase(),
       zipCode: shippingAddress.zip || patientAddress.zip || '00000',
       service: shippingServiceCode,
       recipientType: 'patient',
