@@ -175,27 +175,44 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send cancellation notification to pharmacy if API enabled
+    // Send cancellation to VIOS pharmacy if applicable
     try {
       const { data: orderLines } = await supabase
         .from('order_lines')
-        .select('assigned_pharmacy_id')
-        .eq('order_id', orderId)
-        .limit(1)
-        .single();
+        .select('id, assigned_pharmacy_id, pharmacy_order_id')
+        .eq('order_id', orderId);
 
-      if (orderLines?.assigned_pharmacy_id) {
-        edgeLogger.info('Sending cancellation notification to pharmacy');
-        await supabase.functions.invoke('send-cancellation-to-pharmacy', {
-          body: {
-            order_id: orderId,
-            pharmacy_id: orderLines.assigned_pharmacy_id,
-            cancellation_reason: reason || 'Customer cancelled order',
-          }
-        });
+      if (orderLines && orderLines.length > 0) {
+        // Cancel each order line at VIOS that has a pharmacy_order_id
+        const cancelPromises = orderLines
+          .filter(line => line.pharmacy_order_id && line.assigned_pharmacy_id)
+          .map(line => {
+            edgeLogger.info('Sending cancellation to VIOS pharmacy', { 
+              orderLineId: line.id, 
+              pharmacyOrderId: line.pharmacy_order_id 
+            });
+            return supabase.functions.invoke('vios-cancel-order', {
+              body: {
+                order_line_id: line.id,
+                reason: reason || 'Customer cancelled order'
+              }
+            });
+          });
+
+        const results = await Promise.allSettled(cancelPromises);
+        const failures = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value.error));
+        
+        if (failures.length > 0) {
+          edgeLogger.warn('Some VIOS cancellations failed', { 
+            total: cancelPromises.length,
+            failed: failures.length 
+          });
+        } else if (cancelPromises.length > 0) {
+          edgeLogger.info('All VIOS cancellations succeeded', { count: cancelPromises.length });
+        }
       }
     } catch (error) {
-      edgeLogger.error('Failed to send pharmacy cancellation notification', error);
+      edgeLogger.error('Failed to send VIOS pharmacy cancellation', error);
       // Non-fatal, continue with cancellation
     }
 
