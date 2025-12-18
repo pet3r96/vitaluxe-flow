@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LucideIcon, Menu, X, Lock, LogOut, Sparkles } from 'lucide-react';
+import { LucideIcon, Menu, Lock, LogOut, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Sheet,
@@ -64,20 +64,11 @@ export const MobileMenuNav = ({
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] p-0">
               <SheetHeader className="border-b p-4">
-                <div className="flex items-center justify-between">
-                  <img 
-                    src={currentLogo} 
-                    alt="Vitaluxe Services" 
-                    className="h-12"
-                  />
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => setOpen(false)}
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
+                <img 
+                  src={currentLogo} 
+                  alt="Vitaluxe Services" 
+                  className="h-12"
+                />
               </SheetHeader>
               
               <div className="flex flex-col h-[calc(100vh-5rem)]">
