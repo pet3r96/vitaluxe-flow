@@ -3,6 +3,9 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { cacheFetch } from '../_shared/cache.ts';
 
+// Helper function to round monetary values to 2 decimal places
+const roundToTwo = (num: number): number => Math.round(num * 100) / 100;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -89,10 +92,10 @@ Deno.serve(async (req) => {
             const orderCount = profitData.length;
 
             statsData.profitStats = {
-              totalRevenue,
-              totalProfit,
-              pendingProfit,
-              averageOrderValue: orderCount > 0 ? totalRevenue / orderCount : 0
+              totalRevenue: roundToTwo(totalRevenue),
+              totalProfit: roundToTwo(totalProfit),
+              pendingProfit: roundToTwo(pendingProfit),
+              averageOrderValue: roundToTwo(orderCount > 0 ? totalRevenue / orderCount : 0)
             };
           }
         } else if (role === 'downline') {
@@ -136,10 +139,10 @@ Deno.serve(async (req) => {
             const orderCount = profitData.length;
 
             statsData.profitStats = {
-              totalRevenue,
-              totalProfit,
-              pendingProfit,
-              averageOrderValue: orderCount > 0 ? totalRevenue / orderCount : 0
+              totalRevenue: roundToTwo(totalRevenue),
+              totalProfit: roundToTwo(totalProfit),
+              pendingProfit: roundToTwo(pendingProfit),
+              averageOrderValue: roundToTwo(orderCount > 0 ? totalRevenue / orderCount : 0)
             };
           }
         }
