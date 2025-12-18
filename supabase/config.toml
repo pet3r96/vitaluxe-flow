@@ -430,3 +430,15 @@ verify_jwt = true
 
 [functions.receive-pharmacy-webhook]
 verify_jwt = false
+
+[functions.vios-get-orders]
+verify_jwt = true
+
+[functions.vios-refill-order]
+verify_jwt = true
+
+[functions.vios-update-shipping]
+verify_jwt = true
+
+[functions.vios-cancel-order]
+verify_jwt = true
