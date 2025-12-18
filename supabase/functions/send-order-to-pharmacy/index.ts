@@ -213,6 +213,16 @@ function transformToViosPayload(
   // Create short order reference (first 8 chars of UUID for readability)
   const orderRef = order.id.substring(0, 8).toUpperCase();
   
+  // Debug logging for critical fields
+  edgeLogger.info("VIOS payload data sources", {
+    patientAllergies: patientAllergies || 'NKA',
+    patientEmail: patientEmail ? '[SET]' : '[MISSING]',
+    patientPhone: patientPhone ? '[SET]' : '[MISSING]',
+    prescriberPhone: prescriberProfile?.phone ? '[SET]' : '[MISSING]',
+    prescriberName: prescriberName,
+    prescriberNpi: prescriberProfile?.npi || '[MISSING]'
+  });
+  
   const payload: any = {
     general: {
       referenceId: orderLine.id, // Use order_line_id as reference
@@ -241,8 +251,9 @@ function transformToViosPayload(
       state: patientAddress.state || orderLine.destination_state || undefined,
       zip: patientAddress.zip || undefined,
       phoneHome: formatPhoneForVios(patientPhone) || undefined,
+      phoneMobile: formatPhoneForVios(patientPhone) || undefined, // Also send as mobile
       email: patientEmail || undefined,
-      allergies: patientAllergies || undefined
+      allergies: patientAllergies || 'NKA' // Default to No Known Allergies if not set
     },
     shipping: {
       addressLine1: shippingAddress.address1 || patientAddress.address1 || 'Address Required',
@@ -710,6 +721,50 @@ serve(async (req) => {
           orderLineId: line.id, 
           error: decryptErr instanceof Error ? decryptErr.message : String(decryptErr)
         });
+      }
+    }
+
+    // Fetch allergies from patient_medical_vault for each patient
+    const patientIds = [...new Set(unsent_lines.map(l => l.patient_id).filter(Boolean))];
+    const patientAllergiesMap: Record<string, string[]> = {};
+    
+    if (patientIds.length > 0) {
+      const { data: allergyRecords } = await supabaseAdmin
+        .from("patient_medical_vault")
+        .select("patient_account_id, record_data")
+        .in("patient_account_id", patientIds)
+        .eq("record_type", "allergy")
+        .eq("is_active", true);
+      
+      if (allergyRecords && allergyRecords.length > 0) {
+        for (const record of allergyRecords) {
+          const patientId = record.patient_account_id;
+          if (!patientAllergiesMap[patientId]) {
+            patientAllergiesMap[patientId] = [];
+          }
+          const allergenName = (record.record_data as any)?.allergen_name;
+          if (allergenName) {
+            patientAllergiesMap[patientId].push(allergenName);
+          }
+        }
+        edgeLogger.info("Fetched patient allergies", { 
+          patientCount: Object.keys(patientAllergiesMap).length,
+          totalAllergies: Object.values(patientAllergiesMap).flat().length 
+        });
+      }
+    }
+    
+    // Attach allergies to each order line's patient_accounts object
+    for (const line of unsent_lines) {
+      if (line.patient_id && patientAllergiesMap[line.patient_id]) {
+        const allergiesStr = patientAllergiesMap[line.patient_id].join(", ");
+        if (line.patient_accounts) {
+          line.patient_accounts.allergies = allergiesStr || "NKA";
+        } else {
+          line.patient_accounts = { allergies: allergiesStr || "NKA" };
+        }
+      } else if (line.patient_accounts && !line.patient_accounts.allergies) {
+        line.patient_accounts.allergies = "NKA"; // No Known Allergies
       }
     }
 
