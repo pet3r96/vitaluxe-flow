@@ -258,6 +258,11 @@ export const ProductCard = memo(({
                 Rx Required
               </Badge>
             )}
+            {product.dosage_form && (
+              <Badge variant="outline" size="sm" className="text-xs">
+                {product.dosage_form}
+              </Badge>
+            )}
             {product.product_types?.name && (
               <Badge variant="secondary" size="sm" className="text-xs">{product.product_types.name}</Badge>
             )}

@@ -5347,6 +5347,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           dosage: string | null
+          dosage_form: string | null
           downline_price: number | null
           id: string
           image_url: string | null
@@ -5365,6 +5366,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           dosage?: string | null
+          dosage_form?: string | null
           downline_price?: number | null
           id?: string
           image_url?: string | null
@@ -5383,6 +5385,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           dosage?: string | null
+          dosage_form?: string | null
           downline_price?: number | null
           id?: string
           image_url?: string | null

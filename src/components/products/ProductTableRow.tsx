@@ -47,6 +47,7 @@ export const ProductTableRow = memo(({
       </TableCell>
       <TableCell className="capitalize">{product.category || "—"}</TableCell>
       <TableCell className="capitalize">{product.type || "—"}</TableCell>
+      <TableCell className="capitalize">{product.dosage_form || "—"}</TableCell>
       <TableCell className="text-center">
         {product.requires_prescription ? (
           <Badge variant="outline" className="text-xs">Yes</Badge>

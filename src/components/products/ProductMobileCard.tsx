@@ -66,6 +66,13 @@ export const ProductMobileCard = memo(({
           <span className="capitalize">{product.type || "N/A"}</span>
         </div>
 
+        {product.dosage_form && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Dosage Form:</span>
+            <Badge variant="outline" className="text-xs">{product.dosage_form}</Badge>
+          </div>
+        )}
+
         {product.requires_prescription && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Prescription:</span>
