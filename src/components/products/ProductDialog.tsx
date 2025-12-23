@@ -54,6 +54,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
   const [formData, setFormData] = useState({
     name: "",
     dosage: "",
+    dosage_form: "",
     sig: "",
     description: "",
     base_price: "",
@@ -66,6 +67,21 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     scope_type: "global" as "global" | "scoped",
     assigned_topline_reps: [] as string[],
   });
+
+  const DOSAGE_FORMS = [
+    "Cream",
+    "Injection",
+    "Troche",
+    "Capsule",
+    "Tablet",
+    "Nasal Spray",
+    "Topical Gel",
+    "Sublingual",
+    "Patch",
+    "Solution",
+    "Suspension",
+    "Other",
+  ];
 
   // Fetch available pharmacies, product types, and topline reps
   useEffect(() => {
@@ -156,6 +172,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       setFormData({
         name: product.name || "",
         dosage: product.dosage || "",
+        dosage_form: product.dosage_form || "",
         sig: product.sig || "",
         description: product.description || "",
         base_price: product.base_price?.toString() || "",
@@ -296,6 +313,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       const productData = {
         name: formData.name,
         dosage: formData.dosage,
+        dosage_form: formData.dosage_form || null,
         sig: formData.sig,
         description: formData.description || null,
         base_price: parseFloat(formData.base_price),
@@ -393,6 +411,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     setFormData({
       name: "",
       dosage: "",
+      dosage_form: "",
       sig: "",
       description: "",
       base_price: "",
@@ -520,6 +539,30 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="dosage_form">Dosage Form</Label>
+              <Select
+                value={formData.dosage_form}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, dosage_form: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select dosage form" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DOSAGE_FORMS.map((form) => (
+                    <SelectItem key={form} value={form}>
+                      {form}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                The physical form of the medication
+              </p>
             </div>
           </div>
 
