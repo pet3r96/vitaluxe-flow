@@ -386,6 +386,7 @@ verify_jwt = true
 
 [functions.upgrade-trial-to-active]
 verify_jwt = true
+
 [functions.pharmacy-api-diagnostics]
 verify_jwt = true
 
@@ -441,4 +442,10 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.vios-cancel-order]
+verify_jwt = true
+
+[functions.generate-product-image]
+verify_jwt = true
+
+[functions.seed-vios-products]
 verify_jwt = true
