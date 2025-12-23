@@ -145,7 +145,7 @@
   --popover-foreground: 0 0% 98%;
   --muted: 0 0% 15%;          /* Muted surface for dark mode */
   --muted-foreground: 0 0% 100%; /* White text for paragraphs in dark mode */
-  --border: 0 0% 20%;         /* Visible but subtle borders */
+  --border: 0 0% 16%;         /* Subtle borders matching card background */
   --input: 0 0% 16%;          /* Input backgrounds */
   --ring: 46 43% 52%;            /* Focus ring = gold */
 
@@ -171,7 +171,7 @@
   --sidebar-primary-foreground: 0 0% 98%;
   --sidebar-accent: 0 0% 18%;
   --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 20%;
+  --sidebar-border: 0 0% 16%;
   --sidebar-ring: var(--gold-1);
 
   /* Layout */
