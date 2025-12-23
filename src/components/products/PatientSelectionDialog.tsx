@@ -556,6 +556,7 @@ export const PatientSelectionDialog = ({
                 variants={variants}
                 selectedVariantId={selectedVariantId}
                 onSelect={setSelectedVariantId}
+                priceTier="retail"
               />
               <DialogFooter className="gap-2 sm:gap-0">
                 <Button variant="outline" onClick={() => onOpenChange(false)}>

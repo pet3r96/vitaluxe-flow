@@ -375,8 +375,9 @@ export const ProductsGrid = () => {
         .eq("id", practiceIdForPricing)  // ✅ Use practice ID for providers
         .single();
 
-      let correctPrice = productForCart.retail_price || productForCart.base_price;
-
+      // Determine price tier based on linked rep
+      let priceTier: 'topline' | 'downline' | 'retail' = 'retail';
+      
       if (practiceProfile?.linked_topline_id) {
         const { data: linkedRep } = await supabase
           .from("reps")
@@ -384,23 +385,57 @@ export const ProductsGrid = () => {
           .eq("user_id", practiceProfile.linked_topline_id)
           .single();
 
-        if (linkedRep?.role === 'downline') {
-          correctPrice = productForCart.retail_price || productForCart.base_price;
-        } else if (linkedRep?.role === 'topline') {
+        if (linkedRep?.role === 'topline') {
+          priceTier = 'topline';
+        }
+        // downline practices pay retail price
+      }
+
+      // If a variant is selected, fetch variant pricing
+      let correctPrice = productForCart.retail_price || productForCart.base_price;
+      
+      if (variantId) {
+        const { data: variant } = await supabase
+          .from("product_variants")
+          .select("base_price, topline_price, downline_price, retail_price")
+          .eq("id", variantId)
+          .single();
+        
+        if (variant) {
+          switch (priceTier) {
+            case 'topline':
+              correctPrice = variant.topline_price ?? variant.base_price;
+              break;
+            case 'retail':
+            default:
+              correctPrice = variant.retail_price ?? variant.base_price;
+              break;
+          }
+          logger.info('[ProductsGrid] Using variant price', { variantId, priceTier, correctPrice });
+        }
+      } else {
+        // No variant - use product-level pricing
+        if (priceTier === 'topline') {
           correctPrice = productForCart.topline_price || productForCart.base_price;
+        } else {
+          correctPrice = productForCart.retail_price || productForCart.base_price;
         }
       }
 
-      // Fetch effective price with overrides for this user
-      const { data: effectivePriceData } = await supabase.rpc('get_effective_product_price', {
-        p_product_id: productForCart.id,
-        p_user_id: effectiveUserId
-      });
+      // Fetch effective price with overrides for this user (only for non-variant)
+      if (!variantId) {
+        const { data: effectivePriceData } = await supabase.rpc('get_effective_product_price', {
+          p_product_id: productForCart.id,
+          p_user_id: effectiveUserId
+        });
 
-      const effectiveRetailPrice = effectivePriceData?.[0]?.effective_retail_price;
-      
-      // Use effective retail price (with overrides) or fallback to product defaults
-      correctPrice = effectiveRetailPrice ?? productForCart.retail_price ?? productForCart.base_price;
+        const effectiveRetailPrice = effectivePriceData?.[0]?.effective_retail_price;
+        
+        // Use effective retail price (with overrides) or fallback to product defaults
+        if (effectiveRetailPrice != null) {
+          correctPrice = effectiveRetailPrice;
+        }
+      }
 
       // CRITICAL FIX: Use cartOwnerId for cart operations (resolved by cartOwnerResolver)
       // Staff/Practice users share practice cart, Providers use their own cart

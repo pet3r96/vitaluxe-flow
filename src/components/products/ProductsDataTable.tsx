@@ -285,8 +285,9 @@ export const ProductsDataTable = () => {
         .eq("id", practiceIdForPricing)  // ✅ Use practice ID for providers
         .single();
 
-      let correctPrice = productForCart.retail_price || productForCart.base_price;
-
+      // Determine price tier based on linked rep
+      let priceTier: 'topline' | 'downline' | 'retail' = 'retail';
+      
       if (practiceProfile?.linked_topline_id) {
         const { data: linkedRep } = await supabase
           .from("reps")
@@ -294,12 +295,40 @@ export const ProductsDataTable = () => {
           .eq("user_id", practiceProfile.linked_topline_id)
           .single();
 
-        if (linkedRep?.role === 'downline') {
-          // Practice linked to downline → pays retail_price (Practice Price)
-          correctPrice = productForCart.retail_price || productForCart.base_price;
-        } else if (linkedRep?.role === 'topline') {
-          // Practice linked to topline → pays topline_price (unchanged)
+        if (linkedRep?.role === 'topline') {
+          priceTier = 'topline';
+        }
+        // downline practices pay retail price
+      }
+
+      // If a variant is selected, fetch variant pricing
+      let correctPrice = productForCart.retail_price || productForCart.base_price;
+      
+      if (variantId) {
+        const { data: variant } = await supabase
+          .from("product_variants")
+          .select("base_price, topline_price, downline_price, retail_price")
+          .eq("id", variantId)
+          .single();
+        
+        if (variant) {
+          switch (priceTier) {
+            case 'topline':
+              correctPrice = variant.topline_price ?? variant.base_price;
+              break;
+            case 'retail':
+            default:
+              correctPrice = variant.retail_price ?? variant.base_price;
+              break;
+          }
+          logger.info('[ProductsDataTable] Using variant price', { variantId, priceTier, correctPrice });
+        }
+      } else {
+        // No variant - use product-level pricing
+        if (priceTier === 'topline') {
           correctPrice = productForCart.topline_price || productForCart.base_price;
+        } else {
+          correctPrice = productForCart.retail_price || productForCart.base_price;
         }
       }
 
