@@ -12,7 +12,8 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope, Pill } from "lucide-react";
+import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope, Pill, DatabaseZap } from "lucide-react";
+import { SeedViosProducts } from "@/components/admin/SeedViosProducts";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { PharmacyApiConfigTable } from "@/components/pharmacies/PharmacyApiConfigTable";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
@@ -97,6 +98,10 @@ const AdminSettings = () => {
           <TabsTrigger value="pharmacy-api" className="gap-2">
             <Pill className="h-4 w-4" />
             Pharmacy API
+          </TabsTrigger>
+          <TabsTrigger value="catalog-seed" className="gap-2">
+            <DatabaseZap className="h-4 w-4" />
+            Catalog Seed
           </TabsTrigger>
           
           <TabsTrigger value="danger-zone" className="gap-2 text-destructive">
@@ -274,6 +279,20 @@ const AdminSettings = () => {
             </CardHeader>
             <CardContent>
               <PharmacyApiConfigTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="catalog-seed" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Vios Product Catalog Seeder</CardTitle>
+              <CardDescription>
+                Import the complete Vios Compounding product catalog with AI-generated images
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SeedViosProducts />
             </CardContent>
           </Card>
         </TabsContent>
