@@ -8,50 +8,49 @@ const corsHeaders = {
 
 /**
  * Update Vios Products Pricing Edge Function
- * Fixes existing product prices to match the seed function data
- * - Updates products table with correct topline_price and downline_price
- * - Ensures all 4 pricing tiers are properly set
+ * Fixes existing product AND variant prices to match the Excel spreadsheet
+ * - Updates products table with correct pricing
+ * - Updates product_variants table with correct pricing per dosage
  */
 
 const VIOS_PHARMACY_ID = 'd5e75179-e66c-450f-8cae-1f4df93b097c';
 
-// Correct Excel-based prices for all VIOS products
-// Matches by product name (family) to update the base variant pricing
+// Product-level pricing (base prices for each product family)
 const PRODUCT_PRICE_MAP: Record<string, { base: number; topline: number; downline: number; retail: number }> = {
-  // Testosterone products - VERIFIED FROM EXCEL
+  // Testosterone products
   'Testosterone Cream': { base: 19.71, topline: 27.60, downline: 33.60, retail: 37.60 },
+  'Testosterone Cream (Men)': { base: 19.71, topline: 27.60, downline: 33.60, retail: 37.60 },
+  'Testosterone Cream (Women)': { base: 19.71, topline: 27.60, downline: 33.60, retail: 37.60 },
   'Testosterone Cypionate': { base: 17.77, topline: 24.88, downline: 30.26, retail: 33.87 },
   'Testosterone Cypionate Injectable': { base: 17.77, topline: 24.88, downline: 30.26, retail: 33.87 },
   'Testosterone Enanthate': { base: 19.14, topline: 26.80, downline: 32.61, retail: 36.50 },
   'Testosterone Enanthate Injectable': { base: 19.14, topline: 26.80, downline: 32.61, retail: 36.50 },
   
-  // Semaglutide products - FROM EXCEL
+  // Semaglutide products
   'Semaglutide': { base: 89.00, topline: 124.60, downline: 151.57, retail: 169.66 },
   'Semaglutide Injection': { base: 89.00, topline: 124.60, downline: 151.57, retail: 169.66 },
   'Semaglutide/B12 Injection': { base: 109.00, topline: 152.60, downline: 185.62, retail: 207.77 },
   'Semaglutide Sublingual': { base: 99.00, topline: 138.60, downline: 168.60, retail: 188.69 },
   'Semaglutide RDT': { base: 99.00, topline: 138.60, downline: 168.60, retail: 188.69 },
   
-  // Tirzepatide - FROM EXCEL
+  // Tirzepatide
   'Tirzepatide': { base: 139.00, topline: 194.60, downline: 236.67, retail: 264.93 },
   'Tirzepatide Injection': { base: 139.00, topline: 194.60, downline: 236.67, retail: 264.93 },
   
-  // Hormone products - FROM EXCEL
+  // Hormone products
   'Progesterone Capsules': { base: 11.43, topline: 16.00, downline: 19.47, retail: 21.78 },
   'Progesterone Micronized Capsules': { base: 11.43, topline: 16.00, downline: 19.47, retail: 21.78 },
   'Progesterone Cream': { base: 14.86, topline: 20.80, downline: 25.32, retail: 28.33 },
   'Progesterone SR': { base: 15.43, topline: 21.60, downline: 26.29, retail: 29.41 },
-  
   'Estradiol Cream': { base: 16.86, topline: 23.60, downline: 28.72, retail: 32.13 },
   'Estriol Cream': { base: 25.14, topline: 35.20, downline: 42.82, retail: 47.93 },
   'Bi-est Cream': { base: 18.00, topline: 25.20, downline: 30.67, retail: 34.32 },
   'Tri-est Cream': { base: 20.57, topline: 28.80, downline: 35.04, retail: 39.22 },
-  
   'DHEA Capsules': { base: 8.57, topline: 12.00, downline: 14.60, retail: 16.34 },
   'DHEA Cream': { base: 14.57, topline: 20.40, downline: 24.82, retail: 27.78 },
   'Pregnenolone Capsules': { base: 10.29, topline: 14.40, downline: 17.52, retail: 19.61 },
   
-  // Thyroid - FROM EXCEL
+  // Thyroid
   'Liothyronine SR': { base: 12.86, topline: 18.00, downline: 21.90, retail: 24.51 },
   'Liothyronine Capsules': { base: 10.29, topline: 14.40, downline: 17.52, retail: 19.61 },
   'Levothyroxine Capsules': { base: 11.43, topline: 16.00, downline: 19.47, retail: 21.78 },
@@ -59,7 +58,7 @@ const PRODUCT_PRICE_MAP: Record<string, { base: number; topline: number; downlin
   'Desiccated Thyroid': { base: 17.14, topline: 24.00, downline: 29.21, retail: 32.68 },
   'Nature-Throid': { base: 17.14, topline: 24.00, downline: 29.21, retail: 32.68 },
   
-  // Sexual Health - FROM EXCEL
+  // Sexual Health
   'Tadalafil Capsules': { base: 14.29, topline: 20.00, downline: 24.34, retail: 27.24 },
   'Tadalafil Troches': { base: 21.43, topline: 30.00, downline: 36.51, retail: 40.86 },
   'Tadalafil/Oxytocin Troches': { base: 29.14, topline: 40.80, downline: 49.64, retail: 55.56 },
@@ -71,7 +70,7 @@ const PRODUCT_PRICE_MAP: Record<string, { base: number; topline: number; downlin
   'Oxytocin Troches': { base: 17.14, topline: 24.00, downline: 29.21, retail: 32.68 },
   'Oxytocin Nasal Spray': { base: 20.00, topline: 28.00, downline: 34.07, retail: 38.13 },
   
-  // Peptides - FROM EXCEL
+  // Peptides
   'BPC-157 Injection': { base: 37.14, topline: 52.00, downline: 63.27, retail: 70.82 },
   'BPC-157 Capsules': { base: 32.00, topline: 44.80, downline: 54.51, retail: 61.02 },
   'Sermorelin Injection': { base: 44.57, topline: 62.40, downline: 75.92, retail: 84.98 },
@@ -92,18 +91,18 @@ const PRODUCT_PRICE_MAP: Record<string, { base: number; topline: number; downlin
   'Glutathione Injection': { base: 18.86, topline: 26.40, downline: 32.12, retail: 35.95 },
   'Glutathione Capsules': { base: 24.00, topline: 33.60, downline: 40.88, retail: 45.76 },
   
-  // Vitamins - FROM EXCEL
+  // Vitamins
   'Vitamin B12 Injection': { base: 8.00, topline: 11.20, downline: 13.63, retail: 15.25 },
   'MIC/B12 Lipotropic Injection': { base: 11.43, topline: 16.00, downline: 19.47, retail: 21.78 },
   'Vitamin D3 Injection': { base: 10.29, topline: 14.40, downline: 17.52, retail: 19.61 },
   'B Complex Injection': { base: 12.00, topline: 16.80, downline: 20.44, retail: 22.88 },
   
-  // LDN / Metformin - FROM EXCEL
+  // LDN / Metformin
   'Low Dose Naltrexone (LDN)': { base: 14.29, topline: 20.00, downline: 24.34, retail: 27.24 },
   'LDN Capsules': { base: 14.29, topline: 20.00, downline: 24.34, retail: 27.24 },
   'Metformin ER Capsules': { base: 13.71, topline: 19.20, downline: 23.36, retail: 26.15 },
   
-  // Hair Loss - FROM EXCEL
+  // Hair Loss
   'Finasteride Capsules': { base: 12.86, topline: 18.00, downline: 21.90, retail: 24.51 },
   'Minoxidil Solution': { base: 17.14, topline: 24.00, downline: 29.21, retail: 32.68 },
   'Minoxidil/Finasteride Solution': { base: 24.00, topline: 33.60, downline: 40.88, retail: 45.76 },
@@ -112,24 +111,106 @@ const PRODUCT_PRICE_MAP: Record<string, { base: number; topline: number; downlin
   'Ketoconazole Shampoo': { base: 14.86, topline: 20.80, downline: 25.32, retail: 28.33 },
   'Latanoprost Solution': { base: 22.86, topline: 32.00, downline: 38.93, retail: 43.58 },
   
-  // Skin - FROM EXCEL
+  // Skin
   'Tretinoin Cream': { base: 15.43, topline: 21.60, downline: 26.29, retail: 29.41 },
   'Hydroquinone Cream': { base: 18.29, topline: 25.60, downline: 31.15, retail: 34.86 },
   'Azelaic Acid Cream': { base: 16.57, topline: 23.20, downline: 28.24, retail: 31.61 },
   'Vitamin C Serum': { base: 19.43, topline: 27.20, downline: 33.10, retail: 37.04 },
   'Niacinamide Cream': { base: 14.29, topline: 20.00, downline: 24.34, retail: 27.24 },
   
-  // Pain - FROM EXCEL
+  // Pain
   'Ketamine Troches': { base: 26.86, topline: 37.60, downline: 45.75, retail: 51.20 },
   'Ketamine Cream': { base: 32.00, topline: 44.80, downline: 54.51, retail: 61.02 },
   'Gabapentin Cream': { base: 21.14, topline: 29.60, downline: 36.02, retail: 40.32 },
   'Lidocaine Cream': { base: 12.57, topline: 17.60, downline: 21.42, retail: 23.97 },
   
-  // Sleep - FROM EXCEL
+  // Sleep
   'Melatonin Capsules': { base: 7.43, topline: 10.40, downline: 12.65, retail: 14.16 },
   'Melatonin SR Capsules': { base: 9.71, topline: 13.60, downline: 16.55, retail: 18.52 },
   'Trazodone Capsules': { base: 11.14, topline: 15.60, downline: 18.98, retail: 21.24 },
 };
+
+// Comprehensive variant-level pricing - FROM EXCEL SPREADSHEET
+// Key: "ProductName|DosagePattern" -> prices
+const VARIANT_PRICE_MAP: Record<string, { base: number; topline: number; downline: number; retail: number }> = {
+  // === TIRZEPATIDE VARIANTS (6 dosages) ===
+  'Tirzepatide|2.5mg': { base: 139.00, topline: 194.60, downline: 236.67, retail: 264.93 },
+  'Tirzepatide|5mg': { base: 159.00, topline: 222.60, downline: 270.77, retail: 303.10 },
+  'Tirzepatide|7.5mg': { base: 179.00, topline: 250.60, downline: 304.87, retail: 341.26 },
+  'Tirzepatide|10mg': { base: 199.00, topline: 278.60, downline: 338.97, retail: 379.43 },
+  'Tirzepatide|12.5mg': { base: 229.00, topline: 320.60, downline: 390.08, retail: 436.69 },
+  'Tirzepatide|15mg': { base: 259.00, topline: 362.60, downline: 441.19, retail: 493.96 },
+  
+  // === SEMAGLUTIDE INJECTION VARIANTS ===
+  'Semaglutide|0.25mg': { base: 89.00, topline: 124.60, downline: 151.57, retail: 169.66 },
+  'Semaglutide|0.5mg': { base: 89.00, topline: 124.60, downline: 151.57, retail: 169.66 },
+  'Semaglutide|1mg': { base: 109.00, topline: 152.60, downline: 185.62, retail: 207.77 },
+  'Semaglutide|1.7mg': { base: 129.00, topline: 180.60, downline: 219.68, retail: 245.89 },
+  'Semaglutide|2mg': { base: 129.00, topline: 180.60, downline: 219.68, retail: 245.89 },
+  'Semaglutide|2.4mg': { base: 149.00, topline: 208.60, downline: 253.73, retail: 284.00 },
+  
+  // === SEMAGLUTIDE RDT VARIANTS ===
+  'Semaglutide RDT|0.5mg': { base: 99.00, topline: 138.60, downline: 168.60, retail: 188.69 },
+  'Semaglutide RDT|1mg': { base: 119.00, topline: 166.60, downline: 202.62, retail: 226.77 },
+  'Semaglutide RDT|2mg': { base: 139.00, topline: 194.60, downline: 236.67, retail: 264.93 },
+  'Semaglutide RDT|2.4mg': { base: 139.00, topline: 194.60, downline: 236.67, retail: 264.93 },
+  
+  // === SEMAGLUTIDE SUBLINGUAL VARIANTS ===
+  'Semaglutide Sublingual|0.5mg': { base: 99.00, topline: 138.60, downline: 168.60, retail: 188.69 },
+  'Semaglutide Sublingual|1mg': { base: 119.00, topline: 166.60, downline: 202.62, retail: 226.77 },
+  'Semaglutide Sublingual|2mg': { base: 139.00, topline: 194.60, downline: 236.67, retail: 264.93 },
+  
+  // === TESTOSTERONE CREAM - all variants same price ===
+  'Testosterone Cream|50mg/mL': { base: 19.71, topline: 27.60, downline: 33.60, retail: 37.60 },
+  'Testosterone Cream|100mg/mL': { base: 19.71, topline: 27.60, downline: 33.60, retail: 37.60 },
+  'Testosterone Cream|200mg/mL': { base: 19.71, topline: 27.60, downline: 33.60, retail: 37.60 },
+  
+  // === TESTOSTERONE CYPIONATE ===
+  'Testosterone Cypionate|100mg/mL': { base: 15.77, topline: 22.08, downline: 26.86, retail: 30.07 },
+  'Testosterone Cypionate|200mg/mL': { base: 17.77, topline: 24.88, downline: 30.26, retail: 33.87 },
+  
+  // === TESTOSTERONE ENANTHATE ===
+  'Testosterone Enanthate|200mg/mL': { base: 19.14, topline: 26.80, downline: 32.61, retail: 36.50 },
+};
+
+/**
+ * Match a variant to its price data from the VARIANT_PRICE_MAP
+ */
+function findVariantPrice(productName: string, dosageLabel: string): { base: number; topline: number; downline: number; retail: number } | null {
+  // Normalize product name (handle variations)
+  const normalizedProduct = productName
+    .replace(' Injectable', '')
+    .replace(' Injection', '')
+    .replace(' (Men)', '')
+    .replace(' (Women)', '');
+  
+  // Try direct match first
+  for (const [key, prices] of Object.entries(VARIANT_PRICE_MAP)) {
+    const [product, dosagePattern] = key.split('|');
+    
+    if (normalizedProduct.includes(product) || product.includes(normalizedProduct)) {
+      // Check if dosage matches pattern
+      if (dosageLabel.toLowerCase().includes(dosagePattern.toLowerCase())) {
+        return prices;
+      }
+    }
+  }
+  
+  // Fallback: use product-level pricing
+  const productPrice = PRODUCT_PRICE_MAP[productName] || PRODUCT_PRICE_MAP[normalizedProduct];
+  return productPrice || null;
+}
+
+/**
+ * Calculate tier prices from base price using standard multipliers
+ */
+function calculateTierPrices(basePrice: number): { topline: number; downline: number; retail: number } {
+  return {
+    topline: Math.round(basePrice * 1.40 * 100) / 100,
+    downline: Math.round(basePrice * 1.7037 * 100) / 100,
+    retail: Math.round(basePrice * 1.9063 * 100) / 100,
+  };
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -144,9 +225,9 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { dryRun = false } = body;
 
-    console.log(`Starting Vios pricing update... Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
+    console.log(`Starting COMPLETE Vios pricing update... Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
 
-    // Fetch all Vios products
+    // Fetch all Vios products with their variants
     const { data: products, error: fetchError } = await supabase
       .from('products')
       .select('id, name, base_price, topline_price, downline_price, retail_price')
@@ -161,20 +242,24 @@ serve(async (req) => {
     const results = {
       productsUpdated: 0,
       productsSkipped: 0,
-      updates: [] as { name: string; changes: any }[],
+      variantsUpdated: 0,
+      variantsSkipped: 0,
+      productUpdates: [] as { name: string; changes: any }[],
+      variantUpdates: [] as { product: string; dosage: string; changes: any }[],
       errors: [] as string[],
     };
 
+    // === PHASE 1: Update Products ===
+    console.log('\n=== PHASE 1: Updating Products ===');
     for (const product of products || []) {
       const priceData = PRODUCT_PRICE_MAP[product.name];
       
       if (!priceData) {
-        console.log(`  No price data found for: ${product.name}`);
+        console.log(`  No price data for: ${product.name}`);
         results.productsSkipped++;
         continue;
       }
 
-      // Check if any pricing needs updating
       const needsUpdate = 
         product.topline_price !== priceData.topline ||
         product.downline_price !== priceData.downline ||
@@ -182,19 +267,11 @@ serve(async (req) => {
         product.retail_price !== priceData.retail;
 
       if (!needsUpdate) {
-        console.log(`  ${product.name}: Pricing already correct`);
         results.productsSkipped++;
         continue;
       }
 
-      const changes = {
-        base_price: { from: product.base_price, to: priceData.base },
-        topline_price: { from: product.topline_price, to: priceData.topline },
-        downline_price: { from: product.downline_price, to: priceData.downline },
-        retail_price: { from: product.retail_price, to: priceData.retail },
-      };
-
-      console.log(`  ${product.name}: Updating prices`, changes);
+      console.log(`  Updating: ${product.name}`);
 
       if (!dryRun) {
         const { error: updateError } = await supabase
@@ -208,21 +285,126 @@ serve(async (req) => {
           .eq('id', product.id);
 
         if (updateError) {
-          console.error(`  Error updating ${product.name}: ${updateError.message}`);
-          results.errors.push(`${product.name}: ${updateError.message}`);
+          results.errors.push(`Product ${product.name}: ${updateError.message}`);
           continue;
         }
       }
 
       results.productsUpdated++;
-      results.updates.push({ name: product.name, changes });
+      results.productUpdates.push({
+        name: product.name,
+        changes: {
+          base: { from: product.base_price, to: priceData.base },
+          topline: { from: product.topline_price, to: priceData.topline },
+          downline: { from: product.downline_price, to: priceData.downline },
+          retail: { from: product.retail_price, to: priceData.retail },
+        },
+      });
+    }
+
+    // === PHASE 2: Update Product Variants ===
+    console.log('\n=== PHASE 2: Updating Product Variants ===');
+    
+    // Fetch all variants for Vios products
+    const { data: variants, error: variantFetchError } = await supabase
+      .from('product_variants')
+      .select('id, product_id, dosage_label, base_price, topline_price, downline_price, retail_price, products!inner(name, pharmacy_id)')
+      .eq('products.pharmacy_id', VIOS_PHARMACY_ID);
+
+    if (variantFetchError) {
+      console.error(`Failed to fetch variants: ${variantFetchError.message}`);
+    } else {
+      console.log(`Found ${variants?.length || 0} variants to check`);
+
+      for (const variant of variants || []) {
+        const productName = (variant as any).products?.name;
+        if (!productName) continue;
+
+        // Find appropriate pricing for this variant
+        const variantPrice = findVariantPrice(productName, variant.dosage_label);
+        
+        if (!variantPrice) {
+          // Calculate from base price if no specific pricing
+          if (variant.base_price && (!variant.topline_price || !variant.downline_price)) {
+            const calculated = calculateTierPrices(variant.base_price);
+            
+            if (!dryRun) {
+              const { error: updateError } = await supabase
+                .from('product_variants')
+                .update({
+                  topline_price: calculated.topline,
+                  downline_price: calculated.downline,
+                  retail_price: calculated.retail,
+                })
+                .eq('id', variant.id);
+
+              if (updateError) {
+                results.errors.push(`Variant ${productName} ${variant.dosage_label}: ${updateError.message}`);
+              } else {
+                results.variantsUpdated++;
+              }
+            } else {
+              results.variantsUpdated++;
+            }
+          } else {
+            results.variantsSkipped++;
+          }
+          continue;
+        }
+
+        // Check if update needed
+        const needsUpdate = 
+          variant.base_price !== variantPrice.base ||
+          variant.topline_price !== variantPrice.topline ||
+          variant.downline_price !== variantPrice.downline ||
+          variant.retail_price !== variantPrice.retail;
+
+        if (!needsUpdate) {
+          results.variantsSkipped++;
+          continue;
+        }
+
+        console.log(`  Updating variant: ${productName} - ${variant.dosage_label}`);
+
+        if (!dryRun) {
+          const { error: updateError } = await supabase
+            .from('product_variants')
+            .update({
+              base_price: variantPrice.base,
+              topline_price: variantPrice.topline,
+              downline_price: variantPrice.downline,
+              retail_price: variantPrice.retail,
+            })
+            .eq('id', variant.id);
+
+          if (updateError) {
+            results.errors.push(`Variant ${productName} ${variant.dosage_label}: ${updateError.message}`);
+            continue;
+          }
+        }
+
+        results.variantsUpdated++;
+        results.variantUpdates.push({
+          product: productName,
+          dosage: variant.dosage_label,
+          changes: {
+            base: { from: variant.base_price, to: variantPrice.base },
+            topline: { from: variant.topline_price, to: variantPrice.topline },
+            downline: { from: variant.downline_price, to: variantPrice.downline },
+            retail: { from: variant.retail_price, to: variantPrice.retail },
+          },
+        });
+      }
     }
 
     const message = dryRun
-      ? `Dry run complete: ${results.productsUpdated} products would be updated, ${results.productsSkipped} already correct`
-      : `Updated ${results.productsUpdated} products, ${results.productsSkipped} already correct`;
+      ? `Dry run complete: ${results.productsUpdated} products, ${results.variantsUpdated} variants would be updated`
+      : `Updated ${results.productsUpdated} products, ${results.variantsUpdated} variants`;
 
-    console.log(message);
+    console.log(`\n${message}`);
+    console.log(`Products skipped: ${results.productsSkipped}`);
+    console.log(`Variants skipped: ${results.variantsSkipped}`);
+    console.log(`Errors: ${results.errors.length}`);
 
     return new Response(
       JSON.stringify({
@@ -232,9 +414,12 @@ serve(async (req) => {
         summary: {
           productsUpdated: results.productsUpdated,
           productsSkipped: results.productsSkipped,
+          variantsUpdated: results.variantsUpdated,
+          variantsSkipped: results.variantsSkipped,
           errorsCount: results.errors.length,
         },
-        updates: results.updates.slice(0, 20),
+        productUpdates: results.productUpdates.slice(0, 10),
+        variantUpdates: results.variantUpdates.slice(0, 20),
         errors: results.errors.slice(0, 10),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
