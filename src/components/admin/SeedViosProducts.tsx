@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, TestTube, CheckCircle2, XCircle, AlertCircle, Database } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Play, TestTube, CheckCircle2, XCircle, AlertCircle, Database, StopCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -30,7 +31,19 @@ interface SeedResult {
     imagesGenerated: number;
     errors: string[];
     totalFamilies?: number;
+    nextStartIndex?: number;
+    hasMore?: boolean;
   };
+}
+
+interface BatchProgress {
+  currentBatch: number;
+  totalBatches: number;
+  productsProcessed: number;
+  variantsCreated: number;
+  imagesGenerated: number;
+  totalFamilies: number;
+  errors: string[];
 }
 
 export const SeedViosProducts = () => {
@@ -39,6 +52,8 @@ export const SeedViosProducts = () => {
   const [generateImages, setGenerateImages] = useState(true);
   const [currentProductCount, setCurrentProductCount] = useState<number | null>(null);
   const [result, setResult] = useState<SeedResult | null>(null);
+  const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     fetchProductCount();
@@ -61,39 +76,32 @@ export const SeedViosProducts = () => {
       setIsLoading(true);
     }
     setResult(null);
+    setBatchProgress(null);
+    cancelledRef.current = false;
 
     try {
-      const { data, error } = await supabase.functions.invoke('seed-vios-products', {
-        body: { 
-          dryRun, 
-          generateImages: dryRun ? false : generateImages,
-          batchSize: 10
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      setResult(data as SeedResult);
-      
-      if (data?.success) {
-        toast({
-          title: dryRun ? "Dry Run Complete" : "Catalog Seeded Successfully",
-          description: dryRun 
-            ? `Found ${data.summary?.totalFamilies} product families with ${(data.summary?.productsCreated || 0) + (data.summary?.variantsCreated || 0)} total items` 
-            : `Created ${data.summary?.productsCreated} products with ${data.summary?.variantsCreated} variants`,
+      if (dryRun) {
+        // Dry run: fetch all at once with large batch
+        const { data, error } = await supabase.functions.invoke('seed-vios-products', {
+          body: { 
+            dryRun: true, 
+            generateImages: false,
+            batchSize: 1000 // Get all for dry run
+          }
         });
+
+        if (error) throw error;
+        setResult(data as SeedResult);
         
-        if (!dryRun) {
-          fetchProductCount();
+        if (data?.success) {
+          toast({
+            title: "Dry Run Complete",
+            description: `Found ${data.summary?.totalFamilies} product families with ${(data.summary?.productsCreated || 0) + (data.summary?.variantsCreated || 0)} total items`,
+          });
         }
       } else {
-        toast({
-          title: "Error",
-          description: data?.message || "An error occurred",
-          variant: "destructive",
-        });
+        // Live seed: progressive batch processing
+        await runProgressiveSeed();
       }
     } catch (error: any) {
       console.error('Seed error:', error);
@@ -111,6 +119,114 @@ export const SeedViosProducts = () => {
       setIsDryRunning(false);
     }
   };
+
+  const runProgressiveSeed = async () => {
+    let startIndex = 0;
+    let hasMore = true;
+    const batchSize = 3; // Process 3 product families per batch (~45-60s with images)
+    
+    const cumulativeProgress: BatchProgress = {
+      currentBatch: 0,
+      totalBatches: 0,
+      productsProcessed: 0,
+      variantsCreated: 0,
+      imagesGenerated: 0,
+      totalFamilies: 0,
+      errors: [],
+    };
+
+    while (hasMore && !cancelledRef.current) {
+      try {
+        const { data, error } = await supabase.functions.invoke('seed-vios-products', {
+          body: { 
+            dryRun: false, 
+            generateImages,
+            batchSize,
+            startIndex,
+            forceOverwrite: startIndex > 0, // Allow continuation after first batch
+          }
+        });
+
+        if (error) throw error;
+
+        const batchResult = data as SeedResult;
+        
+        if (!batchResult.success) {
+          throw new Error(batchResult.message || 'Batch failed');
+        }
+
+        // Update cumulative progress
+        const summary = batchResult.summary;
+        if (summary) {
+          cumulativeProgress.totalFamilies = summary.totalFamilies || 0;
+          cumulativeProgress.totalBatches = Math.ceil(cumulativeProgress.totalFamilies / batchSize);
+          cumulativeProgress.currentBatch++;
+          cumulativeProgress.productsProcessed += summary.productsCreated || 0;
+          cumulativeProgress.variantsCreated += summary.variantsCreated || 0;
+          cumulativeProgress.imagesGenerated += summary.imagesGenerated || 0;
+          cumulativeProgress.errors = [...cumulativeProgress.errors, ...(summary.errors || [])];
+          
+          startIndex = summary.nextStartIndex || 0;
+          hasMore = summary.hasMore ?? false;
+        } else {
+          hasMore = false;
+        }
+
+        setBatchProgress({ ...cumulativeProgress });
+
+      } catch (batchError: any) {
+        console.error('Batch error:', batchError);
+        cumulativeProgress.errors.push(`Batch ${cumulativeProgress.currentBatch + 1}: ${batchError.message}`);
+        setBatchProgress({ ...cumulativeProgress });
+        
+        // Continue to next batch on error (resilient processing)
+        startIndex += batchSize;
+        
+        // Check if we've exceeded reasonable attempts
+        if (cumulativeProgress.errors.length > 10) {
+          hasMore = false;
+        }
+      }
+    }
+
+    // Final result
+    const finalResult: SeedResult = {
+      success: cumulativeProgress.errors.length < 5,
+      message: cancelledRef.current 
+        ? `Cancelled after ${cumulativeProgress.productsProcessed} products`
+        : `Created ${cumulativeProgress.productsProcessed} products with ${cumulativeProgress.variantsCreated} variants`,
+      dryRun: false,
+      summary: {
+        productsCreated: cumulativeProgress.productsProcessed,
+        variantsCreated: cumulativeProgress.variantsCreated,
+        imagesGenerated: cumulativeProgress.imagesGenerated,
+        errors: cumulativeProgress.errors,
+        totalFamilies: cumulativeProgress.totalFamilies,
+      },
+    };
+
+    setResult(finalResult);
+    fetchProductCount();
+
+    if (finalResult.success && !cancelledRef.current) {
+      toast({
+        title: "Catalog Seeded Successfully",
+        description: `Created ${cumulativeProgress.productsProcessed} products with ${cumulativeProgress.variantsCreated} variants`,
+      });
+    }
+  };
+
+  const handleCancel = () => {
+    cancelledRef.current = true;
+    toast({
+      title: "Cancelling...",
+      description: "Will stop after current batch completes",
+    });
+  };
+
+  const progressPercent = batchProgress 
+    ? Math.round((batchProgress.currentBatch / Math.max(batchProgress.totalBatches, 1)) * 100)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -130,12 +246,64 @@ export const SeedViosProducts = () => {
         </div>
       </div>
 
+      {/* Batch Progress */}
+      {batchProgress && isLoading && (
+        <Card className="border-primary">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Seeding in Progress...
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Batch {batchProgress.currentBatch} of {batchProgress.totalBatches}</span>
+                <span>{progressPercent}%</span>
+              </div>
+              <Progress value={progressPercent} className="h-3" />
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="p-2 bg-accent/30 rounded">
+                <p className="text-xl font-bold text-primary">{batchProgress.productsProcessed}</p>
+                <p className="text-xs text-muted-foreground">Products</p>
+              </div>
+              <div className="p-2 bg-accent/30 rounded">
+                <p className="text-xl font-bold text-primary">{batchProgress.variantsCreated}</p>
+                <p className="text-xs text-muted-foreground">Variants</p>
+              </div>
+              <div className="p-2 bg-accent/30 rounded">
+                <p className="text-xl font-bold text-primary">{batchProgress.imagesGenerated}</p>
+                <p className="text-xs text-muted-foreground">Images</p>
+              </div>
+            </div>
+
+            {batchProgress.errors.length > 0 && (
+              <p className="text-xs text-destructive">
+                {batchProgress.errors.length} error(s) - will continue processing
+              </p>
+            )}
+
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleCancel}
+              className="w-full"
+            >
+              <StopCircle className="h-4 w-4 mr-2" />
+              Cancel After Current Batch
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Catalog Info */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Vios Compounding Catalog</CardTitle>
           <CardDescription>
-            The seed function contains 517 product entries that will be grouped into ~80-100 product families with variants.
+            The seed function contains 517 product entries that will be grouped into ~100 product families with variants.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -170,7 +338,7 @@ export const SeedViosProducts = () => {
             <div className="space-y-0.5">
               <Label htmlFor="generate-images">Generate AI Images</Label>
               <p className="text-sm text-muted-foreground">
-                Creates product images using AI (adds ~5-10 minutes)
+                Creates product images using AI (~35 min for full catalog)
               </p>
             </div>
             <Switch 
@@ -220,7 +388,12 @@ export const SeedViosProducts = () => {
                 This will create ~100 product families with ~517 variants and link them to Vios Compounding pharmacy.
                 {generateImages && (
                   <span className="block mt-2 font-medium">
-                    AI image generation is enabled - this may take 5-15 minutes.
+                    AI image generation is enabled - this will take ~35 minutes with progress tracking.
+                  </span>
+                )}
+                {!generateImages && (
+                  <span className="block mt-2 font-medium">
+                    Without images, this will complete in under 2 minutes.
                   </span>
                 )}
               </AlertDialogDescription>
@@ -236,7 +409,7 @@ export const SeedViosProducts = () => {
       </div>
 
       {/* Results */}
-      {result && (
+      {result && !isLoading && (
         <Alert variant={result.success ? "default" : "destructive"}>
           {result.success ? (
             <CheckCircle2 className="h-4 w-4" />
@@ -287,7 +460,7 @@ export const SeedViosProducts = () => {
       )}
 
       {/* Warning */}
-      {currentProductCount !== null && currentProductCount > 50 && (
+      {currentProductCount !== null && currentProductCount > 50 && !isLoading && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Catalog Already Loaded</AlertTitle>
