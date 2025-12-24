@@ -459,9 +459,8 @@ export const RepPracticesDataTable = () => {
       ) : isLoading ? (
         <TableSkeleton rows={10} columns={10} />
       ) : (
-        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="min-w-[1200px]">
-            <Table>
+        <div className="min-w-[1200px]">
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Practice Name</TableHead>
@@ -525,8 +524,7 @@ export const RepPracticesDataTable = () => {
               ))
             )}
             </TableBody>
-          </Table>
-          </div>
+        </Table>
         </div>
       )}
 
