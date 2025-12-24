@@ -50,7 +50,10 @@ export const CartItem = memo(({ line, onRemove, onShippingSpeedChange }: CartIte
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base">{product?.name || "Unknown Product"}</h3>
+              <h3 className="font-semibold text-base">
+                {product?.name || "Unknown Product"}
+                {line.variant?.dosage_label && ` - ${line.variant.dosage_label}`}
+              </h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {isPracticeOrder ? "Practice Order" : `For: ${line.patient_name}`}
               </p>

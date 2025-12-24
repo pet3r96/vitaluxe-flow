@@ -873,8 +873,13 @@ export default function Checkout() {
                         />
                       )}
                       <div className="flex-1 space-y-1">
-                        <h4 className="font-semibold text-lg">{line.product?.name}</h4>
-                        <p className="text-sm text-muted-foreground">{line.product?.dosage}</p>
+                        <h4 className="font-semibold text-lg">
+                          {line.product?.name}
+                          {line.variant?.dosage_label && ` - ${line.variant.dosage_label}`}
+                        </h4>
+                        {!line.variant?.dosage_label && line.product?.dosage && (
+                          <p className="text-sm text-muted-foreground">{line.product.dosage}</p>
+                        )}
                         
                         {line.order_notes && (
                           <div className="mt-2 p-3 bg-accent/50 rounded-md text-sm border">
@@ -925,8 +930,13 @@ export default function Checkout() {
                   />
                 )}
                 <div className="flex-1 space-y-1">
-                  <h4 className="font-semibold text-lg">{line.product?.name}</h4>
-                  <p className="text-sm text-muted-foreground">{line.product?.dosage}</p>
+                  <h4 className="font-semibold text-lg">
+                    {line.product?.name}
+                    {line.variant?.dosage_label && ` - ${line.variant.dosage_label}`}
+                  </h4>
+                  {!line.variant?.dosage_label && line.product?.dosage && (
+                    <p className="text-sm text-muted-foreground">{line.product.dosage}</p>
+                  )}
                   
                   {(line.custom_sig || line.custom_dosage) && (
                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-md text-sm space-y-1 border border-blue-200 dark:border-blue-800">

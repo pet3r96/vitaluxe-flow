@@ -855,10 +855,10 @@ serve(async (req) => {
         if (category === 'glp1') productTypeId = typeMap.get('glp 1') || typeMap.get('glp-1') || typeMap.get('weight management') || defaultTypeId;
         else if (category === 'peptide') productTypeId = typeMap.get('peptides') || typeMap.get('peptide') || defaultTypeId;
         else if (category === 'vitamin') productTypeId = typeMap.get('vitamins') || typeMap.get('vitamin') || typeMap.get('supplements') || defaultTypeId;
-        else if (category === 'hormone') productTypeId = typeMap.get('hormone') || typeMap.get('hormones') || typeMap.get('hormone therapy') || defaultTypeId;
+        else if (category === 'hormone') productTypeId = typeMap.get('hormone therapy') || typeMap.get('hormone') || typeMap.get('hormones') || defaultTypeId;
         else if (category === 'thyroid') productTypeId = typeMap.get('thyroid') || defaultTypeId;
         else if (category === 'sexual_health') productTypeId = typeMap.get('sexual health') || typeMap.get('mens health') || defaultTypeId;
-        else if (category === 'hair') productTypeId = typeMap.get('hair') || typeMap.get('hair loss') || defaultTypeId;
+        else if (category === 'hair') productTypeId = typeMap.get('hair care') || typeMap.get('hair') || typeMap.get('hair loss') || defaultTypeId;
         else if (category === 'antiaging') productTypeId = typeMap.get('anti-aging') || typeMap.get('longevity') || defaultTypeId;
 
         // Create the main product (using primary/lowest variant)

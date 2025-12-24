@@ -575,10 +575,15 @@ const Cart = React.memo(function Cart() {
                             />
                           )}
                           <div className="flex-1 w-full">
-                            <h3 className="font-semibold text-base sm:text-lg">{line.product?.name}</h3>
-                            <p className="text-xs sm:text-sm text-muted-foreground">
-                              {line.product?.dosage}
-                            </p>
+                            <h3 className="font-semibold text-base sm:text-lg">
+                              {line.product?.name}
+                              {line.variant?.dosage_label && ` - ${line.variant.dosage_label}`}
+                            </h3>
+                            {!line.variant?.dosage_label && line.product?.dosage && (
+                              <p className="text-xs sm:text-sm text-muted-foreground">
+                                {line.product.dosage}
+                              </p>
+                            )}
                             {isExpiringSoon && expiresAt && (
                               <div className="flex items-center gap-2 mt-2 p-2 bg-gold1/10 rounded border border-gold1/30">
                                 <AlertTriangle className="h-4 w-4 text-gold1" />
