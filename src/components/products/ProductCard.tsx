@@ -256,7 +256,7 @@ export const ProductCard = memo(({
         <div className="space-y-3 flex flex-col items-start flex-1">
           <div className="w-full space-y-1">
             <h3 className="font-semibold text-base sm:text-lg lg:text-xl line-clamp-2 leading-tight">{product.name}</h3>
-            {hasVariants ? (
+            {hasMultipleVariants ? (
               <p className="text-sm text-muted-foreground line-clamp-1">Multiple options available</p>
             ) : product.dosage ? (
               <p className="text-sm text-muted-foreground line-clamp-1">{product.dosage}</p>
