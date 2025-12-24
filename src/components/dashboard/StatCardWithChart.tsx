@@ -43,9 +43,13 @@ export function StatCardWithChart({
     userId
   );
 
+  // For 'products' metric, use the passed currentValue (total count) instead of timeseries calculated value
+  // since the timeseries shows "new products" not "total products"
   const displayValue = isLoading 
     ? (currentValue !== undefined ? currentValue : '...') 
-    : valueFormatter(calculatedValue);
+    : (metricKey === 'products' && currentValue !== undefined)
+      ? String(currentValue)
+      : valueFormatter(calculatedValue);
   
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
   const trendColorClass = trend === 'up' 
