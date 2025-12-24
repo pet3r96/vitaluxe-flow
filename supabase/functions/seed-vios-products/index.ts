@@ -735,7 +735,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { generateImages = true, dryRun = false, startIndex = 0, batchSize = 0, forceOverwrite = false } = body;
+    // Reduce default batch size to 3 for progressive processing (fits within 60s edge function timeout)
+    const { generateImages = true, dryRun = false, startIndex = 0, batchSize = 3, forceOverwrite = false } = body;
 
     console.log('Starting Vios product catalog seed...');
     console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}, Generate Images: ${generateImages}`);
@@ -951,6 +952,9 @@ serve(async (req) => {
       ? `Dry run complete: Found ${allFamilies.length} product families with ${results.variantsCreated + results.productsCreated} total items`
       : `Successfully created ${results.productsCreated} products with ${results.variantsCreated} variants`;
 
+    const nextIndex = startIndex + families.length;
+    const hasMore = nextIndex < allFamilies.length;
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -963,8 +967,9 @@ serve(async (req) => {
           productsCreated: results.productsCreated,
           variantsCreated: results.variantsCreated,
           imagesGenerated: results.imagesGenerated,
-          errors: results.errors.slice(0, 10), // First 10 errors as array
-          nextStartIndex: startIndex + families.length,
+          errors: results.errors.slice(0, 10),
+          nextStartIndex: nextIndex,
+          hasMore,
         },
         samples: results.samples,
       }),
