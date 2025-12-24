@@ -81,7 +81,7 @@ export const SeedViosProducts = () => {
         toast({
           title: dryRun ? "Dry Run Complete" : "Catalog Seeded Successfully",
           description: dryRun 
-            ? `Found ${data.summary?.totalFamilies} product families with ${data.summary?.variantsCreated} variants` 
+            ? `Found ${data.summary?.totalFamilies} product families with ${(data.summary?.productsCreated || 0) + (data.summary?.variantsCreated || 0)} total items` 
             : `Created ${data.summary?.productsCreated} products with ${data.summary?.variantsCreated} variants`,
         });
         
@@ -255,7 +255,7 @@ export const SeedViosProducts = () => {
             {result.dryRun && result.summary?.totalFamilies && (
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div>Product Families: <strong>{result.summary.totalFamilies}</strong></div>
-                <div>Total Variants: <strong>{result.summary.variantsCreated}</strong></div>
+                <div>Total Items: <strong>{(result.summary.productsCreated || 0) + (result.summary.variantsCreated || 0)}</strong></div>
               </div>
             )}
 
