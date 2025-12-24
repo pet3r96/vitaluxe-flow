@@ -847,7 +847,7 @@ serve(async (req) => {
           name: family.name,
           dosage: primaryVariant.concentration,
           dosage_form: primaryVariant.dosageForm,
-          sig: 'As directed by prescriber',
+          sig: `As directed by prescriber - ${primaryVariant.dispenseSize}`,
           description: generateDescription(family.name, primaryVariant.dosageForm),
           base_price: primaryVariant.ourPrice,
           topline_price: primaryVariant.toplinePrice,
@@ -857,9 +857,7 @@ serve(async (req) => {
           pharmacy_id: VIOS_PHARMACY_ID,
           product_type_id: productTypeId,
           active: true,
-          approval_status: 'approved',
-          refills_allowed: true,
-          dispense_size: primaryVariant.dispenseSize,
+          requires_prescription: true,
         };
 
         const { data: product, error: productError } = await supabase
