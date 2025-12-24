@@ -449,3 +449,6 @@ verify_jwt = true
 
 [functions.seed-vios-products]
 verify_jwt = true
+
+[functions.update-vios-pricing]
+verify_jwt = true
