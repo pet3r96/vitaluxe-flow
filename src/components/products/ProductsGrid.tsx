@@ -112,6 +112,26 @@ export const ProductsGrid = () => {
   // Use real-time hook for instant updates
   const { data: products, isLoading } = useRealtimeProducts();
 
+  // Fetch all variant stats at once for efficient display
+  const { data: allVariantStats } = useQuery({
+    queryKey: ['all-variant-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_variant_stats')
+        .select('*');
+      if (error) {
+        logger.error('Error fetching variant stats', error);
+        return {};
+      }
+      // Convert to map: productId -> stats
+      return (data || []).reduce((acc, stat) => {
+        acc[stat.product_id] = stat;
+        return acc;
+      }, {} as Record<string, any>);
+    },
+    staleTime: 60000, // 1 minute cache
+  });
+
   // Fetch visibility settings for topline rep to show hidden status
   const { data: visibilitySettings } = useQuery({
     queryKey: ["rep-product-visibility", effectiveUserId, isToplineRep],
@@ -941,6 +961,7 @@ export const ProductsGrid = () => {
               <ProductCard
                 key={product.id}
                 product={product}
+                variantStats={allVariantStats?.[product.id] || null}
                 isAdmin={isAdmin}
                 isProvider={isProvider}
                 isToplineRep={isToplineRep}
