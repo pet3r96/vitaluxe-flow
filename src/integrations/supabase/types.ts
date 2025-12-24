@@ -7824,6 +7824,7 @@ export type Database = {
       }
       product_variant_stats: {
         Row: {
+          first_variant_dosage: string | null
           max_base_price: number | null
           max_downline_price: number | null
           max_retail_price: number | null

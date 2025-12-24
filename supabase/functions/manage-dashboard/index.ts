@@ -464,7 +464,7 @@ Deno.serve(async (req) => {
                       .eq('pharmacy_id', pharmacyData.id);
                     count = productCount || 0;
                   }
-                } else if (role === 'admin' || role === 'staff' || role === 'doctor' || role === 'provider') {
+                } else if (role === 'admin' || role === 'staff' || role === 'doctor' || role === 'provider' || role === 'topline' || role === 'downline') {
                   const { count: productCount } = await supabase
                     .from('products')
                     .select('*', { count: 'exact', head: true })
