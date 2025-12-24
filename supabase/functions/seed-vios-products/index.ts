@@ -8,603 +8,282 @@ const corsHeaders = {
 
 /**
  * Seed Vios Products Edge Function
- * Imports the complete Vios Compounding product catalog (517 products) with:
+ * Imports the complete Vios Compounding product catalog with:
  * - AI-generated product images
  * - 4-tier pricing (base, topline, downline, medspa/retail)
  * - Auto-generated descriptions
  * - Product variants for different concentrations
+ * 
+ * PRICING DATA: Extracted from ART_LIST_1_12112025.xlsx
  */
 
 // Vios Compounding Pharmacy ID
 const VIOS_PHARMACY_ID = 'd5e75179-e66c-450f-8cae-1f4df93b097c';
 
-// Complete Vios Compounding product catalog - ALL 517 products from Excel
+// Complete Vios Compounding product catalog - ALL products from Excel with EXACT pricing
 const VIOS_PRODUCTS = [
-  // ============ GLP-1 / WEIGHT MANAGEMENT ============
-  // Semaglutide/Methylcobalamin/Glycine Injections - 1mL vials
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "0.25mg/mL", dispenseSize: "1mL", ourPrice: 50, toplinePrice: 99, downlinePrice: 139, medspaPrice: 179 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "0.5mg/mL", dispenseSize: "1mL", ourPrice: 60, toplinePrice: 119, downlinePrice: 159, medspaPrice: 199 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "1mg/mL", dispenseSize: "1mL", ourPrice: 80, toplinePrice: 139, downlinePrice: 189, medspaPrice: 229 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "1.25mg/mL", dispenseSize: "1mL", ourPrice: 90, toplinePrice: 149, downlinePrice: 199, medspaPrice: 239 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "1.5mg/mL", dispenseSize: "1mL", ourPrice: 95, toplinePrice: 154, downlinePrice: 209, medspaPrice: 249 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "1.7mg/mL", dispenseSize: "1mL", ourPrice: 98, toplinePrice: 157, downlinePrice: 214, medspaPrice: 254 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "2mg/mL", dispenseSize: "1mL", ourPrice: 100, toplinePrice: 159, downlinePrice: 219, medspaPrice: 259 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "2.25mg/mL", dispenseSize: "1mL", ourPrice: 110, toplinePrice: 169, downlinePrice: 229, medspaPrice: 274 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "1mL", ourPrice: 120, toplinePrice: 179, downlinePrice: 239, medspaPrice: 289 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "3mg/mL", dispenseSize: "1mL", ourPrice: 125, toplinePrice: 184, downlinePrice: 249, medspaPrice: 299 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "3.5mg/mL", dispenseSize: "1mL", ourPrice: 130, toplinePrice: 189, downlinePrice: 254, medspaPrice: 309 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "4mg/mL", dispenseSize: "1mL", ourPrice: 135, toplinePrice: 194, downlinePrice: 264, medspaPrice: 314 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "1mL", ourPrice: 140, toplinePrice: 199, downlinePrice: 269, medspaPrice: 319 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "6mg/mL", dispenseSize: "1mL", ourPrice: 150, toplinePrice: 214, downlinePrice: 284, medspaPrice: 339 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "7mg/mL", dispenseSize: "1mL", ourPrice: 155, toplinePrice: 224, downlinePrice: 294, medspaPrice: 349 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "7.5mg/mL", dispenseSize: "1mL", ourPrice: 160, toplinePrice: 229, downlinePrice: 299, medspaPrice: 359 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "8mg/mL", dispenseSize: "1mL", ourPrice: 165, toplinePrice: 239, downlinePrice: 309, medspaPrice: 369 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "10mg/mL", dispenseSize: "1mL", ourPrice: 180, toplinePrice: 259, downlinePrice: 339, medspaPrice: 399 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "12mg/mL", dispenseSize: "1mL", ourPrice: 195, toplinePrice: 279, downlinePrice: 364, medspaPrice: 429 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "12.5mg/mL", dispenseSize: "1mL", ourPrice: 200, toplinePrice: 289, downlinePrice: 379, medspaPrice: 449 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "15mg/mL", dispenseSize: "1mL", ourPrice: 220, toplinePrice: 319, downlinePrice: 419, medspaPrice: 499 },
-  
-  // Semaglutide/Methylcobalamin/Glycine Injections - 2mL vials
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "0.25mg/mL", dispenseSize: "2mL", ourPrice: 80, toplinePrice: 149, downlinePrice: 199, medspaPrice: 259 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "0.5mg/mL", dispenseSize: "2mL", ourPrice: 100, toplinePrice: 179, downlinePrice: 239, medspaPrice: 299 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "1mg/mL", dispenseSize: "2mL", ourPrice: 140, toplinePrice: 219, downlinePrice: 289, medspaPrice: 359 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "1.25mg/mL", dispenseSize: "2mL", ourPrice: 160, toplinePrice: 239, downlinePrice: 319, medspaPrice: 389 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "1.5mg/mL", dispenseSize: "2mL", ourPrice: 170, toplinePrice: 254, downlinePrice: 339, medspaPrice: 409 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "2mg/mL", dispenseSize: "2mL", ourPrice: 180, toplinePrice: 269, downlinePrice: 359, medspaPrice: 429 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "2mL", ourPrice: 220, toplinePrice: 319, downlinePrice: 419, medspaPrice: 499 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "3mg/mL", dispenseSize: "2mL", ourPrice: 230, toplinePrice: 334, downlinePrice: 439, medspaPrice: 529 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "4mg/mL", dispenseSize: "2mL", ourPrice: 250, toplinePrice: 359, downlinePrice: 469, medspaPrice: 559 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "2mL", ourPrice: 260, toplinePrice: 369, downlinePrice: 479, medspaPrice: 569 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "6mg/mL", dispenseSize: "2mL", ourPrice: 280, toplinePrice: 399, downlinePrice: 519, medspaPrice: 619 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "7.5mg/mL", dispenseSize: "2mL", ourPrice: 300, toplinePrice: 429, downlinePrice: 559, medspaPrice: 669 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "10mg/mL", dispenseSize: "2mL", ourPrice: 340, toplinePrice: 489, downlinePrice: 639, medspaPrice: 769 },
-  
-  // Semaglutide/Methylcobalamin/Glycine Injections - 3mL vials
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "0.5mg/mL", dispenseSize: "3mL", ourPrice: 130, toplinePrice: 229, downlinePrice: 309, medspaPrice: 389 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "1mg/mL", dispenseSize: "3mL", ourPrice: 190, toplinePrice: 299, downlinePrice: 399, medspaPrice: 489 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "2mg/mL", dispenseSize: "3mL", ourPrice: 250, toplinePrice: 379, downlinePrice: 499, medspaPrice: 599 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "3mL", ourPrice: 300, toplinePrice: 439, downlinePrice: 579, medspaPrice: 699 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "3mL", ourPrice: 360, toplinePrice: 519, downlinePrice: 679, medspaPrice: 819 },
-  
-  // Semaglutide/Methylcobalamin/Glycine Injections - 5mL vials
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "0.5mg/mL", dispenseSize: "5mL", ourPrice: 180, toplinePrice: 319, downlinePrice: 429, medspaPrice: 539 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "1mg/mL", dispenseSize: "5mL", ourPrice: 280, toplinePrice: 439, downlinePrice: 579, medspaPrice: 719 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "2mg/mL", dispenseSize: "5mL", ourPrice: 380, toplinePrice: 569, downlinePrice: 749, medspaPrice: 929 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "5mL", ourPrice: 450, toplinePrice: 669, downlinePrice: 879, medspaPrice: 1089 },
-  { name: "Semaglutide/Methylcobalamin/Glycine", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "5mL", ourPrice: 550, toplinePrice: 819, downlinePrice: 1079, medspaPrice: 1329 },
+  // ============ TESTOSTERONE CREAMS ============
+  // From Excel: Testosterone Cream 50mg/mL
+  { name: "Testosterone Cream", dosageForm: "Cream", concentration: "50mg/mL", dispenseSize: "30g", ourPrice: 19.71, toplinePrice: 27.60, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Testosterone Cream", dosageForm: "Cream", concentration: "50mg/mL", dispenseSize: "60g", ourPrice: 29.57, toplinePrice: 41.40, downlinePrice: 50.40, medspaPrice: 56.40 },
+  { name: "Testosterone Cream", dosageForm: "Cream", concentration: "50mg/mL", dispenseSize: "90g", ourPrice: 39.42, toplinePrice: 55.19, downlinePrice: 67.19, medspaPrice: 75.19 },
+  { name: "Testosterone Cream", dosageForm: "Cream", concentration: "100mg/mL", dispenseSize: "30g", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Testosterone Cream", dosageForm: "Cream", concentration: "100mg/mL", dispenseSize: "60g", ourPrice: 36.95, toplinePrice: 51.73, downlinePrice: 62.99, medspaPrice: 70.49 },
+  { name: "Testosterone Cream", dosageForm: "Cream", concentration: "100mg/mL", dispenseSize: "90g", ourPrice: 49.27, toplinePrice: 68.98, downlinePrice: 83.98, medspaPrice: 93.98 },
+  { name: "Testosterone Cream", dosageForm: "Cream", concentration: "200mg/mL", dispenseSize: "30g", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+  { name: "Testosterone Cream", dosageForm: "Cream", concentration: "200mg/mL", dispenseSize: "60g", ourPrice: 51.73, toplinePrice: 72.42, downlinePrice: 88.18, medspaPrice: 98.68 },
+  { name: "Testosterone Cream", dosageForm: "Cream", concentration: "200mg/mL", dispenseSize: "90g", ourPrice: 68.98, toplinePrice: 96.57, downlinePrice: 117.57, medspaPrice: 131.57 },
 
-  // Semaglutide Troches/RDT
-  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "0.5mg", dispenseSize: "4ct", ourPrice: 55, toplinePrice: 99, downlinePrice: 139, medspaPrice: 179 },
-  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "1mg", dispenseSize: "4ct", ourPrice: 75, toplinePrice: 129, downlinePrice: 179, medspaPrice: 219 },
-  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "2mg", dispenseSize: "4ct", ourPrice: 95, toplinePrice: 159, downlinePrice: 219, medspaPrice: 269 },
-  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "3mg", dispenseSize: "4ct", ourPrice: 115, toplinePrice: 189, downlinePrice: 259, medspaPrice: 319 },
-  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "4mg", dispenseSize: "4ct", ourPrice: 135, toplinePrice: 219, downlinePrice: 299, medspaPrice: 369 },
-  
-  // Tirzepatide Injections - 1mL vials
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "1mL", ourPrice: 120, toplinePrice: 189, downlinePrice: 249, medspaPrice: 309 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "1mL", ourPrice: 150, toplinePrice: 229, downlinePrice: 299, medspaPrice: 369 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "7.5mg/mL", dispenseSize: "1mL", ourPrice: 180, toplinePrice: 269, downlinePrice: 349, medspaPrice: 429 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "10mg/mL", dispenseSize: "1mL", ourPrice: 200, toplinePrice: 299, downlinePrice: 389, medspaPrice: 469 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "12.5mg/mL", dispenseSize: "1mL", ourPrice: 230, toplinePrice: 339, downlinePrice: 439, medspaPrice: 529 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "15mg/mL", dispenseSize: "1mL", ourPrice: 260, toplinePrice: 379, downlinePrice: 489, medspaPrice: 589 },
-  
-  // Tirzepatide Injections - 2mL vials
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "2mL", ourPrice: 220, toplinePrice: 339, downlinePrice: 449, medspaPrice: 549 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "2mL", ourPrice: 280, toplinePrice: 419, downlinePrice: 549, medspaPrice: 669 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "7.5mg/mL", dispenseSize: "2mL", ourPrice: 340, toplinePrice: 499, downlinePrice: 649, medspaPrice: 789 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "10mg/mL", dispenseSize: "2mL", ourPrice: 380, toplinePrice: 559, downlinePrice: 729, medspaPrice: 889 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "12.5mg/mL", dispenseSize: "2mL", ourPrice: 440, toplinePrice: 639, downlinePrice: 829, medspaPrice: 1009 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "15mg/mL", dispenseSize: "2mL", ourPrice: 500, toplinePrice: 729, downlinePrice: 949, medspaPrice: 1149 },
-  
-  // Tirzepatide Injections - 4mL vials
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "4mL", ourPrice: 520, toplinePrice: 769, downlinePrice: 1009, medspaPrice: 1229 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "10mg/mL", dispenseSize: "4mL", ourPrice: 720, toplinePrice: 1069, downlinePrice: 1399, medspaPrice: 1709 },
-  { name: "Tirzepatide", dosageForm: "Injection", concentration: "15mg/mL", dispenseSize: "4mL", ourPrice: 960, toplinePrice: 1419, downlinePrice: 1859, medspaPrice: 2269 },
-  
-  // ============ HORMONE THERAPY ============
-  // Bi-est Creams - Various concentrations
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "0.25mg/gm", dispenseSize: "30gm", ourPrice: 30, toplinePrice: 49, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "0.5mg/gm", dispenseSize: "30gm", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "0.75mg/gm", dispenseSize: "30gm", ourPrice: 38, toplinePrice: 64, downlinePrice: 84, medspaPrice: 104 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "1mg/gm", dispenseSize: "30gm", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "1.25mg/gm", dispenseSize: "30gm", ourPrice: 42, toplinePrice: 74, downlinePrice: 94, medspaPrice: 114 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "1.5mg/gm", dispenseSize: "30gm", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "2mg/gm", dispenseSize: "30gm", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 129 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "2.5mg/gm", dispenseSize: "30gm", ourPrice: 55, toplinePrice: 99, downlinePrice: 119, medspaPrice: 149 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "3mg/gm", dispenseSize: "30gm", ourPrice: 60, toplinePrice: 109, downlinePrice: 129, medspaPrice: 159 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "4mg/gm", dispenseSize: "30gm", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 179 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "5mg/gm", dispenseSize: "30gm", ourPrice: 80, toplinePrice: 139, downlinePrice: 169, medspaPrice: 209 },
-  
-  // Bi-est Creams - 60gm sizes
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "0.5mg/gm", dispenseSize: "60gm", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "1mg/gm", dispenseSize: "60gm", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 179 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "2mg/gm", dispenseSize: "60gm", ourPrice: 90, toplinePrice: 149, downlinePrice: 189, medspaPrice: 229 },
-  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "3mg/gm", dispenseSize: "60gm", ourPrice: 110, toplinePrice: 179, downlinePrice: 229, medspaPrice: 279 },
-  
-  // Bi-est 50/50 Creams
-  { name: "Bi-est 50/50 Cream", dosageForm: "Cream", concentration: "0.5mg/gm", dispenseSize: "30gm", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Bi-est 50/50 Cream", dosageForm: "Cream", concentration: "1mg/gm", dispenseSize: "30gm", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Bi-est 50/50 Cream", dosageForm: "Cream", concentration: "2mg/gm", dispenseSize: "30gm", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 129 },
-  
-  // Estriol Creams
-  { name: "Estriol Cream", dosageForm: "Cream", concentration: "0.25mg/gm", dispenseSize: "30gm", ourPrice: 28, toplinePrice: 49, downlinePrice: 65, medspaPrice: 85 },
-  { name: "Estriol Cream", dosageForm: "Cream", concentration: "0.5mg/gm", dispenseSize: "30gm", ourPrice: 32, toplinePrice: 55, downlinePrice: 72, medspaPrice: 92 },
-  { name: "Estriol Cream", dosageForm: "Cream", concentration: "1mg/gm", dispenseSize: "30gm", ourPrice: 38, toplinePrice: 65, downlinePrice: 85, medspaPrice: 105 },
-  { name: "Estriol Cream", dosageForm: "Cream", concentration: "2mg/gm", dispenseSize: "30gm", ourPrice: 48, toplinePrice: 85, downlinePrice: 105, medspaPrice: 125 },
-  
-  // Estradiol Creams
-  { name: "Estradiol Cream", dosageForm: "Cream", concentration: "0.1mg/gm", dispenseSize: "30gm", ourPrice: 30, toplinePrice: 52, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Estradiol Cream", dosageForm: "Cream", concentration: "0.25mg/gm", dispenseSize: "30gm", ourPrice: 33, toplinePrice: 57, downlinePrice: 75, medspaPrice: 95 },
-  { name: "Estradiol Cream", dosageForm: "Cream", concentration: "0.5mg/gm", dispenseSize: "30gm", ourPrice: 38, toplinePrice: 65, downlinePrice: 85, medspaPrice: 105 },
-  { name: "Estradiol Cream", dosageForm: "Cream", concentration: "1mg/gm", dispenseSize: "30gm", ourPrice: 45, toplinePrice: 77, downlinePrice: 99, medspaPrice: 119 },
-  
-  // Testosterone Creams - Men
-  { name: "Testosterone Cream (Men)", dosageForm: "Cream", concentration: "20mg/gm", dispenseSize: "30gm", ourPrice: 30, toplinePrice: 52, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Testosterone Cream (Men)", dosageForm: "Cream", concentration: "50mg/gm", dispenseSize: "30gm", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Testosterone Cream (Men)", dosageForm: "Cream", concentration: "100mg/gm", dispenseSize: "30gm", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 129 },
-  { name: "Testosterone Cream (Men)", dosageForm: "Cream", concentration: "150mg/gm", dispenseSize: "30gm", ourPrice: 60, toplinePrice: 109, downlinePrice: 129, medspaPrice: 159 },
-  { name: "Testosterone Cream (Men)", dosageForm: "Cream", concentration: "200mg/gm", dispenseSize: "30gm", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 179 },
-  { name: "Testosterone Cream (Men)", dosageForm: "Cream", concentration: "250mg/gm", dispenseSize: "30gm", ourPrice: 80, toplinePrice: 139, downlinePrice: 169, medspaPrice: 209 },
-  
-  // Testosterone Creams - Men 60gm
-  { name: "Testosterone Cream (Men)", dosageForm: "Cream", concentration: "50mg/gm", dispenseSize: "60gm", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 179 },
-  { name: "Testosterone Cream (Men)", dosageForm: "Cream", concentration: "100mg/gm", dispenseSize: "60gm", ourPrice: 90, toplinePrice: 149, downlinePrice: 189, medspaPrice: 229 },
-  { name: "Testosterone Cream (Men)", dosageForm: "Cream", concentration: "200mg/gm", dispenseSize: "60gm", ourPrice: 130, toplinePrice: 209, downlinePrice: 269, medspaPrice: 329 },
-  
-  // Testosterone Creams - Women
-  { name: "Testosterone Cream (Women)", dosageForm: "Cream", concentration: "0.5mg/gm", dispenseSize: "30gm", ourPrice: 30, toplinePrice: 52, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Testosterone Cream (Women)", dosageForm: "Cream", concentration: "1mg/gm", dispenseSize: "30gm", ourPrice: 33, toplinePrice: 57, downlinePrice: 75, medspaPrice: 95 },
-  { name: "Testosterone Cream (Women)", dosageForm: "Cream", concentration: "2mg/gm", dispenseSize: "30gm", ourPrice: 35, toplinePrice: 62, downlinePrice: 80, medspaPrice: 100 },
-  { name: "Testosterone Cream (Women)", dosageForm: "Cream", concentration: "5mg/gm", dispenseSize: "30gm", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Testosterone Cream (Women)", dosageForm: "Cream", concentration: "10mg/gm", dispenseSize: "30gm", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  
-  // Testosterone Cypionate Injections
-  { name: "Testosterone Cypionate", dosageForm: "Injection", concentration: "100mg/mL", dispenseSize: "5mL", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 129 },
-  { name: "Testosterone Cypionate", dosageForm: "Injection", concentration: "100mg/mL", dispenseSize: "10mL", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  { name: "Testosterone Cypionate", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "5mL", ourPrice: 55, toplinePrice: 95, downlinePrice: 119, medspaPrice: 149 },
-  { name: "Testosterone Cypionate", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "10mL", ourPrice: 80, toplinePrice: 129, downlinePrice: 169, medspaPrice: 209 },
-  
-  // Testosterone Enanthate Injections
-  { name: "Testosterone Enanthate", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "5mL", ourPrice: 55, toplinePrice: 95, downlinePrice: 119, medspaPrice: 149 },
-  { name: "Testosterone Enanthate", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "10mL", ourPrice: 80, toplinePrice: 129, downlinePrice: 169, medspaPrice: 209 },
-  
-  // Nandrolone Decanoate
-  { name: "Nandrolone Decanoate", dosageForm: "Injection", concentration: "100mg/mL", dispenseSize: "10mL", ourPrice: 90, toplinePrice: 149, downlinePrice: 189, medspaPrice: 239 },
-  { name: "Nandrolone Decanoate", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "10mL", ourPrice: 120, toplinePrice: 189, downlinePrice: 249, medspaPrice: 309 },
-  
-  // Progesterone Capsules
-  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "25mg", dispenseSize: "30ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "50mg", dispenseSize: "30ct", ourPrice: 28, toplinePrice: 49, downlinePrice: 65, medspaPrice: 85 },
-  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 49, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "150mg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "200mg", dispenseSize: "30ct", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "300mg", dispenseSize: "30ct", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 129 },
-  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "400mg", dispenseSize: "30ct", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // Progesterone Creams
-  { name: "Progesterone Cream", dosageForm: "Cream", concentration: "20mg/gm", dispenseSize: "30gm", ourPrice: 30, toplinePrice: 52, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Progesterone Cream", dosageForm: "Cream", concentration: "50mg/gm", dispenseSize: "30gm", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Progesterone Cream", dosageForm: "Cream", concentration: "100mg/gm", dispenseSize: "30gm", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  { name: "Progesterone Cream", dosageForm: "Cream", concentration: "200mg/gm", dispenseSize: "30gm", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // Progesterone SR Capsules
-  { name: "Progesterone SR Capsules", dosageForm: "Capsule SR", concentration: "100mg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Progesterone SR Capsules", dosageForm: "Capsule SR", concentration: "200mg", dispenseSize: "30ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  
-  // DHEA
-  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "5mg", dispenseSize: "30ct", ourPrice: 18, toplinePrice: 32, downlinePrice: 45, medspaPrice: 59 },
-  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "10mg", dispenseSize: "30ct", ourPrice: 20, toplinePrice: 35, downlinePrice: 49, medspaPrice: 65 },
-  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "15mg", dispenseSize: "30ct", ourPrice: 22, toplinePrice: 40, downlinePrice: 55, medspaPrice: 69 },
-  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "25mg", dispenseSize: "30ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "50mg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 55, downlinePrice: 69, medspaPrice: 89 },
-  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "30ct", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  
-  // DHEA Creams
-  { name: "DHEA Cream", dosageForm: "Cream", concentration: "10mg/gm", dispenseSize: "30gm", ourPrice: 30, toplinePrice: 52, downlinePrice: 69, medspaPrice: 89 },
-  { name: "DHEA Cream", dosageForm: "Cream", concentration: "25mg/gm", dispenseSize: "30gm", ourPrice: 35, toplinePrice: 62, downlinePrice: 79, medspaPrice: 99 },
-  { name: "DHEA Cream", dosageForm: "Cream", concentration: "50mg/gm", dispenseSize: "30gm", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  
-  // Pregnenolone
-  { name: "Pregnenolone Capsules", dosageForm: "Capsule", concentration: "25mg", dispenseSize: "30ct", ourPrice: 22, toplinePrice: 40, downlinePrice: 55, medspaPrice: 69 },
-  { name: "Pregnenolone Capsules", dosageForm: "Capsule", concentration: "50mg", dispenseSize: "30ct", ourPrice: 28, toplinePrice: 49, downlinePrice: 65, medspaPrice: 85 },
-  { name: "Pregnenolone Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 62, downlinePrice: 79, medspaPrice: 99 },
-  
-  // ============ THYROID ============
-  // Liothyronine (T3)
-  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "2.5mcg", dispenseSize: "30ct", ourPrice: 22, toplinePrice: 40, downlinePrice: 55, medspaPrice: 69 },
-  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "5mcg", dispenseSize: "30ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "7.5mcg", dispenseSize: "30ct", ourPrice: 28, toplinePrice: 49, downlinePrice: 65, medspaPrice: 85 },
-  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "10mcg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 55, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "15mcg", dispenseSize: "30ct", ourPrice: 32, toplinePrice: 59, downlinePrice: 75, medspaPrice: 95 },
-  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "25mcg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 65, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "37.5mcg", dispenseSize: "30ct", ourPrice: 38, toplinePrice: 69, downlinePrice: 85, medspaPrice: 105 },
-  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "50mcg", dispenseSize: "30ct", ourPrice: 40, toplinePrice: 75, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "75mcg", dispenseSize: "30ct", ourPrice: 45, toplinePrice: 82, downlinePrice: 99, medspaPrice: 119 },
-  
-  // Liothyronine (T3) SR
-  { name: "Liothyronine (T3) SR", dosageForm: "Capsule SR", concentration: "5mcg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 52, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Liothyronine (T3) SR", dosageForm: "Capsule SR", concentration: "10mcg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 62, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Liothyronine (T3) SR", dosageForm: "Capsule SR", concentration: "25mcg", dispenseSize: "30ct", ourPrice: 40, toplinePrice: 72, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Liothyronine (T3) SR", dosageForm: "Capsule SR", concentration: "50mcg", dispenseSize: "30ct", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 129 },
-  
-  // Levothyroxine (T4)
-  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "25mcg", dispenseSize: "30ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "50mcg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 55, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "75mcg", dispenseSize: "30ct", ourPrice: 32, toplinePrice: 59, downlinePrice: 75, medspaPrice: 95 },
-  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "100mcg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 65, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "125mcg", dispenseSize: "30ct", ourPrice: 38, toplinePrice: 69, downlinePrice: 85, medspaPrice: 105 },
-  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "150mcg", dispenseSize: "30ct", ourPrice: 40, toplinePrice: 75, downlinePrice: 89, medspaPrice: 109 },
-  
-  // T3/T4 Combination
-  { name: "T3/T4 Combination", dosageForm: "Capsule", concentration: "5/50mcg", dispenseSize: "30ct", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "T3/T4 Combination", dosageForm: "Capsule", concentration: "5/75mcg", dispenseSize: "30ct", ourPrice: 42, toplinePrice: 75, downlinePrice: 95, medspaPrice: 115 },
-  { name: "T3/T4 Combination", dosageForm: "Capsule", concentration: "7.5/75mcg", dispenseSize: "30ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  { name: "T3/T4 Combination", dosageForm: "Capsule", concentration: "10/100mcg", dispenseSize: "30ct", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 129 },
-  { name: "T3/T4 Combination", dosageForm: "Capsule", concentration: "15/100mcg", dispenseSize: "30ct", ourPrice: 55, toplinePrice: 95, downlinePrice: 119, medspaPrice: 145 },
-  { name: "T3/T4 Combination", dosageForm: "Capsule", concentration: "25/100mcg", dispenseSize: "30ct", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // T3/T4 SR Combination
-  { name: "T3/T4 Combination SR", dosageForm: "Capsule SR", concentration: "5/50mcg", dispenseSize: "30ct", ourPrice: 50, toplinePrice: 85, downlinePrice: 109, medspaPrice: 135 },
-  { name: "T3/T4 Combination SR", dosageForm: "Capsule SR", concentration: "10/100mcg", dispenseSize: "30ct", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // Armour Thyroid Equivalent
-  { name: "Desiccated Thyroid", dosageForm: "Capsule", concentration: "15mg (1/4 gr)", dispenseSize: "30ct", ourPrice: 28, toplinePrice: 49, downlinePrice: 65, medspaPrice: 85 },
-  { name: "Desiccated Thyroid", dosageForm: "Capsule", concentration: "30mg (1/2 gr)", dispenseSize: "30ct", ourPrice: 32, toplinePrice: 55, downlinePrice: 72, medspaPrice: 92 },
-  { name: "Desiccated Thyroid", dosageForm: "Capsule", concentration: "60mg (1 gr)", dispenseSize: "30ct", ourPrice: 38, toplinePrice: 65, downlinePrice: 85, medspaPrice: 105 },
-  { name: "Desiccated Thyroid", dosageForm: "Capsule", concentration: "90mg (1.5 gr)", dispenseSize: "30ct", ourPrice: 42, toplinePrice: 75, downlinePrice: 95, medspaPrice: 115 },
-  { name: "Desiccated Thyroid", dosageForm: "Capsule", concentration: "120mg (2 gr)", dispenseSize: "30ct", ourPrice: 48, toplinePrice: 85, downlinePrice: 105, medspaPrice: 125 },
-  
-  // ============ SEXUAL HEALTH ============
-  // Tadalafil Capsules
-  { name: "Tadalafil Capsules", dosageForm: "Capsule", concentration: "2.5mg", dispenseSize: "30ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Tadalafil Capsules", dosageForm: "Capsule", concentration: "5mg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 49, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Tadalafil Capsules", dosageForm: "Capsule", concentration: "10mg", dispenseSize: "30ct", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Tadalafil Capsules", dosageForm: "Capsule", concentration: "20mg", dispenseSize: "30ct", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 129 },
-  
-  // Tadalafil Troches
-  { name: "Tadalafil Troches", dosageForm: "Troche", concentration: "5mg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 52, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Tadalafil Troches", dosageForm: "Troche", concentration: "10mg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Tadalafil Troches", dosageForm: "Troche", concentration: "20mg", dispenseSize: "30ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  
-  // Tadalafil/Oxytocin Troches
-  { name: "Tadalafil/Oxytocin Troches", dosageForm: "Troche", concentration: "10mg/10IU", dispenseSize: "8ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 125 },
-  { name: "Tadalafil/Oxytocin Troches", dosageForm: "Troche", concentration: "20mg/25IU", dispenseSize: "8ct", ourPrice: 55, toplinePrice: 95, downlinePrice: 119, medspaPrice: 149 },
-  
-  // Sildenafil Capsules
-  { name: "Sildenafil Capsules", dosageForm: "Capsule", concentration: "20mg", dispenseSize: "30ct", ourPrice: 28, toplinePrice: 45, downlinePrice: 62, medspaPrice: 79 },
-  { name: "Sildenafil Capsules", dosageForm: "Capsule", concentration: "25mg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 49, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Sildenafil Capsules", dosageForm: "Capsule", concentration: "50mg", dispenseSize: "30ct", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Sildenafil Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "30ct", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 129 },
-  
-  // Sildenafil Troches
-  { name: "Sildenafil Troches", dosageForm: "Troche", concentration: "25mg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 52, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Sildenafil Troches", dosageForm: "Troche", concentration: "50mg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Sildenafil Troches", dosageForm: "Troche", concentration: "100mg", dispenseSize: "30ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  
-  // Sildenafil/Oxytocin Troches
-  { name: "Sildenafil/Oxytocin Troches", dosageForm: "Troche", concentration: "50mg/10IU", dispenseSize: "8ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 125 },
-  { name: "Sildenafil/Oxytocin Troches", dosageForm: "Troche", concentration: "100mg/25IU", dispenseSize: "8ct", ourPrice: 55, toplinePrice: 95, downlinePrice: 119, medspaPrice: 149 },
-  
-  // PT-141 (Bremelanotide)
-  { name: "PT-141 (Bremelanotide)", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 169 },
-  { name: "PT-141 (Bremelanotide)", dosageForm: "Injection", concentration: "10mg", dispenseSize: "1 vial", ourPrice: 80, toplinePrice: 139, downlinePrice: 179, medspaPrice: 219 },
-  { name: "PT-141 (Bremelanotide)", dosageForm: "Troche", concentration: "250mcg", dispenseSize: "8ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 129 },
-  { name: "PT-141 (Bremelanotide)", dosageForm: "Troche", concentration: "500mcg", dispenseSize: "8ct", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  { name: "PT-141 (Bremelanotide)", dosageForm: "Troche", concentration: "750mcg", dispenseSize: "8ct", ourPrice: 75, toplinePrice: 119, downlinePrice: 159, medspaPrice: 199 },
-  { name: "PT-141 (Bremelanotide)", dosageForm: "Nasal Spray", concentration: "10mg/mL", dispenseSize: "5mL", ourPrice: 90, toplinePrice: 149, downlinePrice: 189, medspaPrice: 239 },
-  
-  // Oxytocin
-  { name: "Oxytocin Troches", dosageForm: "Troche", concentration: "10IU", dispenseSize: "30ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  { name: "Oxytocin Troches", dosageForm: "Troche", concentration: "15IU", dispenseSize: "30ct", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 135 },
-  { name: "Oxytocin Troches", dosageForm: "Troche", concentration: "25IU", dispenseSize: "30ct", ourPrice: 55, toplinePrice: 99, downlinePrice: 119, medspaPrice: 149 },
-  { name: "Oxytocin Troches", dosageForm: "Troche", concentration: "40IU", dispenseSize: "30ct", ourPrice: 65, toplinePrice: 109, downlinePrice: 139, medspaPrice: 169 },
-  { name: "Oxytocin Nasal Spray", dosageForm: "Nasal Spray", concentration: "20IU/mL", dispenseSize: "10mL", ourPrice: 50, toplinePrice: 85, downlinePrice: 109, medspaPrice: 139 },
-  { name: "Oxytocin Nasal Spray", dosageForm: "Nasal Spray", concentration: "40IU/mL", dispenseSize: "10mL", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // ============ PEPTIDES ============
-  // Sermorelin
-  { name: "Sermorelin", dosageForm: "Injection", concentration: "3mg", dispenseSize: "1 vial", ourPrice: 80, toplinePrice: 139, downlinePrice: 179, medspaPrice: 219 },
-  { name: "Sermorelin", dosageForm: "Injection", concentration: "6mg", dispenseSize: "1 vial", ourPrice: 100, toplinePrice: 169, downlinePrice: 219, medspaPrice: 269 },
-  { name: "Sermorelin", dosageForm: "Injection", concentration: "9mg", dispenseSize: "1 vial", ourPrice: 120, toplinePrice: 199, downlinePrice: 259, medspaPrice: 319 },
-  { name: "Sermorelin", dosageForm: "Injection", concentration: "15mg", dispenseSize: "1 vial", ourPrice: 180, toplinePrice: 289, downlinePrice: 379, medspaPrice: 459 },
-  
-  // Sermorelin/Ipamorelin
-  { name: "Sermorelin/Ipamorelin", dosageForm: "Injection", concentration: "3mg/3mg", dispenseSize: "1 vial", ourPrice: 100, toplinePrice: 169, downlinePrice: 219, medspaPrice: 269 },
-  { name: "Sermorelin/Ipamorelin", dosageForm: "Injection", concentration: "6mg/6mg", dispenseSize: "1 vial", ourPrice: 150, toplinePrice: 249, downlinePrice: 329, medspaPrice: 399 },
-  { name: "Sermorelin/Ipamorelin", dosageForm: "Injection", concentration: "9mg/9mg", dispenseSize: "1 vial", ourPrice: 200, toplinePrice: 329, downlinePrice: 429, medspaPrice: 519 },
-  
-  // Ipamorelin
-  { name: "Ipamorelin", dosageForm: "Injection", concentration: "2mg", dispenseSize: "1 vial", ourPrice: 50, toplinePrice: 89, downlinePrice: 115, medspaPrice: 145 },
-  { name: "Ipamorelin", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 80, toplinePrice: 139, downlinePrice: 179, medspaPrice: 219 },
-  { name: "Ipamorelin", dosageForm: "Injection", concentration: "10mg", dispenseSize: "1 vial", ourPrice: 140, toplinePrice: 229, downlinePrice: 299, medspaPrice: 369 },
-  { name: "Ipamorelin", dosageForm: "Injection", concentration: "15mg", dispenseSize: "1 vial", ourPrice: 190, toplinePrice: 309, downlinePrice: 399, medspaPrice: 489 },
-  
-  // Ipamorelin/CJC-1295
-  { name: "Ipamorelin/CJC-1295", dosageForm: "Injection", concentration: "3mg/3mg", dispenseSize: "1 vial", ourPrice: 100, toplinePrice: 169, downlinePrice: 219, medspaPrice: 269 },
-  { name: "Ipamorelin/CJC-1295", dosageForm: "Injection", concentration: "5mg/5mg", dispenseSize: "1 vial", ourPrice: 140, toplinePrice: 229, downlinePrice: 299, medspaPrice: 369 },
-  { name: "Ipamorelin/CJC-1295", dosageForm: "Injection", concentration: "9mg/9mg", dispenseSize: "1 vial", ourPrice: 220, toplinePrice: 359, downlinePrice: 469, medspaPrice: 569 },
-  
-  // CJC-1295 DAC
-  { name: "CJC-1295 DAC", dosageForm: "Injection", concentration: "2mg", dispenseSize: "1 vial", ourPrice: 70, toplinePrice: 119, downlinePrice: 155, medspaPrice: 195 },
-  { name: "CJC-1295 DAC", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 120, toplinePrice: 199, downlinePrice: 259, medspaPrice: 319 },
-  
-  // BPC-157
-  { name: "BPC-157", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 90, toplinePrice: 149, downlinePrice: 199, medspaPrice: 249 },
-  { name: "BPC-157", dosageForm: "Injection", concentration: "10mg", dispenseSize: "1 vial", ourPrice: 160, toplinePrice: 259, downlinePrice: 339, medspaPrice: 419 },
-  { name: "BPC-157", dosageForm: "Capsule", concentration: "200mcg", dispenseSize: "60ct", ourPrice: 70, toplinePrice: 119, downlinePrice: 159, medspaPrice: 199 },
-  { name: "BPC-157", dosageForm: "Capsule", concentration: "250mcg", dispenseSize: "60ct", ourPrice: 80, toplinePrice: 139, downlinePrice: 179, medspaPrice: 219 },
-  { name: "BPC-157", dosageForm: "Capsule", concentration: "500mcg", dispenseSize: "60ct", ourPrice: 140, toplinePrice: 229, downlinePrice: 299, medspaPrice: 369 },
-  
-  // TB-500 (Thymosin Beta-4)
-  { name: "TB-500 (Thymosin Beta-4)", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 100, toplinePrice: 169, downlinePrice: 219, medspaPrice: 269 },
-  { name: "TB-500 (Thymosin Beta-4)", dosageForm: "Injection", concentration: "10mg", dispenseSize: "1 vial", ourPrice: 180, toplinePrice: 289, downlinePrice: 379, medspaPrice: 469 },
-  
-  // BPC-157/TB-500 Blend
-  { name: "BPC-157/TB-500 Blend", dosageForm: "Injection", concentration: "5mg/5mg", dispenseSize: "1 vial", ourPrice: 170, toplinePrice: 279, downlinePrice: 365, medspaPrice: 449 },
-  { name: "BPC-157/TB-500 Blend", dosageForm: "Injection", concentration: "10mg/10mg", dispenseSize: "1 vial", ourPrice: 300, toplinePrice: 489, downlinePrice: 639, medspaPrice: 789 },
-  
-  // AOD-9604
-  { name: "AOD-9604", dosageForm: "Injection", concentration: "3mg", dispenseSize: "1 vial", ourPrice: 80, toplinePrice: 139, downlinePrice: 179, medspaPrice: 219 },
-  { name: "AOD-9604", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 120, toplinePrice: 199, downlinePrice: 259, medspaPrice: 319 },
-  
-  // Tesamorelin
-  { name: "Tesamorelin", dosageForm: "Injection", concentration: "2mg", dispenseSize: "1 vial", ourPrice: 120, toplinePrice: 199, downlinePrice: 259, medspaPrice: 319 },
-  { name: "Tesamorelin", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 250, toplinePrice: 409, downlinePrice: 535, medspaPrice: 659 },
-  
-  // MOTS-c
-  { name: "MOTS-c", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 110, toplinePrice: 179, downlinePrice: 235, medspaPrice: 289 },
-  { name: "MOTS-c", dosageForm: "Injection", concentration: "10mg", dispenseSize: "1 vial", ourPrice: 200, toplinePrice: 329, downlinePrice: 429, medspaPrice: 529 },
-  
-  // Epithalon
-  { name: "Epithalon", dosageForm: "Injection", concentration: "10mg", dispenseSize: "1 vial", ourPrice: 90, toplinePrice: 149, downlinePrice: 195, medspaPrice: 239 },
-  { name: "Epithalon", dosageForm: "Injection", concentration: "50mg", dispenseSize: "1 vial", ourPrice: 350, toplinePrice: 569, downlinePrice: 745, medspaPrice: 919 },
-  
-  // GHK-Cu
-  { name: "GHK-Cu", dosageForm: "Injection", concentration: "50mg", dispenseSize: "1 vial", ourPrice: 100, toplinePrice: 169, downlinePrice: 219, medspaPrice: 269 },
-  { name: "GHK-Cu Cream", dosageForm: "Cream", concentration: "0.01%", dispenseSize: "30gm", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // SS-31 (Elamipretide)
-  { name: "SS-31 (Elamipretide)", dosageForm: "Injection", concentration: "20mg", dispenseSize: "1 vial", ourPrice: 150, toplinePrice: 249, downlinePrice: 325, medspaPrice: 399 },
-  { name: "SS-31 (Elamipretide)", dosageForm: "Injection", concentration: "50mg", dispenseSize: "1 vial", ourPrice: 350, toplinePrice: 569, downlinePrice: 745, medspaPrice: 919 },
-  
-  // Pentosan Polysulfate (PPS)
-  { name: "Pentosan Polysulfate (PPS)", dosageForm: "Injection", concentration: "30mg/mL", dispenseSize: "5mL", ourPrice: 120, toplinePrice: 199, downlinePrice: 259, medspaPrice: 319 },
-  
-  // Selank
-  { name: "Selank", dosageForm: "Nasal Spray", concentration: "5mg/mL", dispenseSize: "5mL", ourPrice: 80, toplinePrice: 139, downlinePrice: 179, medspaPrice: 219 },
-  
-  // Semax
-  { name: "Semax", dosageForm: "Nasal Spray", concentration: "5mg/mL", dispenseSize: "5mL", ourPrice: 90, toplinePrice: 149, downlinePrice: 195, medspaPrice: 239 },
-  
-  // Glutathione
-  { name: "Glutathione", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "10mL", ourPrice: 70, toplinePrice: 119, downlinePrice: 155, medspaPrice: 189 },
-  { name: "Glutathione", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "30mL", ourPrice: 100, toplinePrice: 169, downlinePrice: 219, medspaPrice: 269 },
-  { name: "Glutathione", dosageForm: "Capsule", concentration: "250mg", dispenseSize: "60ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 129 },
-  { name: "Glutathione", dosageForm: "Capsule", concentration: "500mg", dispenseSize: "60ct", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  { name: "Glutathione Troche", dosageForm: "Troche", concentration: "100mg", dispenseSize: "30ct", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 139 },
-  { name: "Glutathione Troche", dosageForm: "Troche", concentration: "200mg", dispenseSize: "30ct", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 185 },
-  
-  // NAD+
-  { name: "NAD+ Injection", dosageForm: "Injection", concentration: "50mg/mL", dispenseSize: "10mL", ourPrice: 150, toplinePrice: 249, downlinePrice: 325, medspaPrice: 399 },
-  { name: "NAD+ Injection", dosageForm: "Injection", concentration: "100mg/mL", dispenseSize: "10mL", ourPrice: 200, toplinePrice: 329, downlinePrice: 429, medspaPrice: 529 },
-  { name: "NAD+ Injection", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "10mL", ourPrice: 350, toplinePrice: 549, downlinePrice: 719, medspaPrice: 889 },
-  { name: "NAD+ Nasal Spray", dosageForm: "Nasal Spray", concentration: "50mg/mL", dispenseSize: "30mL", ourPrice: 180, toplinePrice: 289, downlinePrice: 379, medspaPrice: 469 },
-  { name: "NAD+ Troches", dosageForm: "Troche", concentration: "50mg", dispenseSize: "30ct", ourPrice: 90, toplinePrice: 149, downlinePrice: 195, medspaPrice: 239 },
-  { name: "NAD+ Troches", dosageForm: "Troche", concentration: "100mg", dispenseSize: "30ct", ourPrice: 140, toplinePrice: 229, downlinePrice: 299, medspaPrice: 369 },
-  
-  // NMN
-  { name: "NMN Capsules", dosageForm: "Capsule", concentration: "250mg", dispenseSize: "60ct", ourPrice: 70, toplinePrice: 119, downlinePrice: 155, medspaPrice: 189 },
-  { name: "NMN Capsules", dosageForm: "Capsule", concentration: "500mg", dispenseSize: "60ct", ourPrice: 120, toplinePrice: 199, downlinePrice: 259, medspaPrice: 319 },
-  
-  // ============ HAIR ============
-  // Minoxidil Foam/Solution
-  { name: "Minoxidil Foam", dosageForm: "Topical", concentration: "5%", dispenseSize: "60mL", ourPrice: 30, toplinePrice: 49, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Minoxidil Foam", dosageForm: "Topical", concentration: "8%", dispenseSize: "60mL", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Minoxidil Foam", dosageForm: "Topical", concentration: "10%", dispenseSize: "60mL", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Minoxidil Foam", dosageForm: "Topical", concentration: "15%", dispenseSize: "60mL", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 135 },
-  
-  // Minoxidil/Finasteride
-  { name: "Minoxidil/Finasteride", dosageForm: "Topical", concentration: "5%/0.05%", dispenseSize: "60mL", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 125 },
-  { name: "Minoxidil/Finasteride", dosageForm: "Topical", concentration: "5%/0.1%", dispenseSize: "60mL", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 139 },
-  { name: "Minoxidil/Finasteride", dosageForm: "Topical", concentration: "8%/0.1%", dispenseSize: "60mL", ourPrice: 55, toplinePrice: 95, downlinePrice: 119, medspaPrice: 149 },
-  { name: "Minoxidil/Finasteride", dosageForm: "Topical", concentration: "10%/0.1%", dispenseSize: "60mL", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // Minoxidil/Finasteride/Tretinoin
-  { name: "Minoxidil/Finasteride/Tretinoin", dosageForm: "Topical", concentration: "5%/0.1%/0.01%", dispenseSize: "60mL", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 165 },
-  { name: "Minoxidil/Finasteride/Tretinoin", dosageForm: "Topical", concentration: "5%/0.1%/0.025%", dispenseSize: "60mL", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 189 },
-  { name: "Minoxidil/Finasteride/Tretinoin", dosageForm: "Topical", concentration: "8%/0.1%/0.025%", dispenseSize: "60mL", ourPrice: 75, toplinePrice: 125, downlinePrice: 159, medspaPrice: 199 },
-  { name: "Minoxidil/Finasteride/Tretinoin", dosageForm: "Topical", concentration: "10%/0.1%/0.025%", dispenseSize: "60mL", ourPrice: 80, toplinePrice: 135, downlinePrice: 169, medspaPrice: 209 },
-  
-  // Finasteride
-  { name: "Finasteride Capsules", dosageForm: "Capsule", concentration: "1mg", dispenseSize: "30ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Finasteride Capsules", dosageForm: "Capsule", concentration: "2.5mg", dispenseSize: "30ct", ourPrice: 28, toplinePrice: 49, downlinePrice: 65, medspaPrice: 85 },
-  { name: "Finasteride Capsules", dosageForm: "Capsule", concentration: "5mg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 55, downlinePrice: 69, medspaPrice: 89 },
-  
-  // Dutasteride
-  { name: "Dutasteride Capsules", dosageForm: "Capsule", concentration: "0.5mg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Dutasteride Capsules", dosageForm: "Capsule", concentration: "1mg", dispenseSize: "30ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 125 },
-  { name: "Dutasteride Capsules", dosageForm: "Capsule", concentration: "2.5mg", dispenseSize: "30ct", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // Ketoconazole
-  { name: "Ketoconazole Shampoo", dosageForm: "Shampoo", concentration: "2%", dispenseSize: "120mL", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Ketoconazole Foam", dosageForm: "Foam", concentration: "2%", dispenseSize: "60gm", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  
-  // Biotin
-  { name: "Biotin Capsules", dosageForm: "Capsule", concentration: "5000mcg", dispenseSize: "60ct", ourPrice: 20, toplinePrice: 35, downlinePrice: 49, medspaPrice: 65 },
-  { name: "Biotin Capsules", dosageForm: "Capsule", concentration: "10000mcg", dispenseSize: "60ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  
-  // ============ VITAMINS / SUPPLEMENTS ============
-  // Vitamin B12 (Methylcobalamin)
-  { name: "Vitamin B12 (Methylcobalamin)", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "10mL", ourPrice: 30, toplinePrice: 49, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Vitamin B12 (Methylcobalamin)", dosageForm: "Injection", concentration: "10mg/mL", dispenseSize: "10mL", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Vitamin B12 (Methylcobalamin)", dosageForm: "Injection", concentration: "25mg/mL", dispenseSize: "10mL", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 139 },
-  { name: "Vitamin B12 (Methylcobalamin)", dosageForm: "Injection", concentration: "50mg/mL", dispenseSize: "10mL", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 185 },
-  { name: "Vitamin B12 (Methylcobalamin)", dosageForm: "Troche", concentration: "5000mcg", dispenseSize: "60ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  
-  // Vitamin D3
-  { name: "Vitamin D3 Capsules", dosageForm: "Capsule", concentration: "1000IU", dispenseSize: "60ct", ourPrice: 15, toplinePrice: 27, downlinePrice: 39, medspaPrice: 52 },
-  { name: "Vitamin D3 Capsules", dosageForm: "Capsule", concentration: "2000IU", dispenseSize: "60ct", ourPrice: 18, toplinePrice: 32, downlinePrice: 45, medspaPrice: 59 },
-  { name: "Vitamin D3 Capsules", dosageForm: "Capsule", concentration: "5000IU", dispenseSize: "60ct", ourPrice: 20, toplinePrice: 35, downlinePrice: 49, medspaPrice: 65 },
-  { name: "Vitamin D3 Capsules", dosageForm: "Capsule", concentration: "10000IU", dispenseSize: "60ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Vitamin D3 Capsules", dosageForm: "Capsule", concentration: "25000IU", dispenseSize: "60ct", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Vitamin D3 Capsules", dosageForm: "Capsule", concentration: "50000IU", dispenseSize: "12ct", ourPrice: 30, toplinePrice: 52, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Vitamin D3 Injection", dosageForm: "Injection", concentration: "50000IU/mL", dispenseSize: "1mL", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  
-  // MIC/B12 (Lipo-B)
-  { name: "MIC/B12 (Lipo-B)", dosageForm: "Injection", concentration: "MIC/1mg/mL", dispenseSize: "10mL", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 129 },
-  { name: "MIC/B12 (Lipo-B)", dosageForm: "Injection", concentration: "MIC/2.5mg/mL", dispenseSize: "10mL", ourPrice: 55, toplinePrice: 99, downlinePrice: 119, medspaPrice: 149 },
-  { name: "MIC/B12 (Lipo-B)", dosageForm: "Injection", concentration: "MIC/5mg/mL", dispenseSize: "10mL", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 185 },
-  { name: "MIC/B12 (Lipo-B)", dosageForm: "Injection", concentration: "MIC/1mg/mL", dispenseSize: "30mL", ourPrice: 90, toplinePrice: 149, downlinePrice: 189, medspaPrice: 239 },
-  
-  // L-Carnitine
-  { name: "L-Carnitine Injection", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "10mL", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "L-Carnitine Injection", dosageForm: "Injection", concentration: "500mg/mL", dispenseSize: "10mL", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 139 },
-  { name: "L-Carnitine Injection", dosageForm: "Injection", concentration: "500mg/mL", dispenseSize: "30mL", ourPrice: 100, toplinePrice: 169, downlinePrice: 219, medspaPrice: 269 },
-  
-  // CoQ10
-  { name: "CoQ10 Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "60ct", ourPrice: 30, toplinePrice: 55, downlinePrice: 69, medspaPrice: 89 },
-  { name: "CoQ10 Capsules", dosageForm: "Capsule", concentration: "200mg", dispenseSize: "60ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  { name: "CoQ10 Capsules", dosageForm: "Capsule", concentration: "300mg", dispenseSize: "60ct", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // Magnesium
-  { name: "Magnesium Glycinate", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "60ct", ourPrice: 18, toplinePrice: 32, downlinePrice: 45, medspaPrice: 59 },
-  { name: "Magnesium Glycinate", dosageForm: "Capsule", concentration: "200mg", dispenseSize: "60ct", ourPrice: 22, toplinePrice: 40, downlinePrice: 55, medspaPrice: 69 },
-  { name: "Magnesium Threonate", dosageForm: "Capsule", concentration: "144mg", dispenseSize: "60ct", ourPrice: 35, toplinePrice: 62, downlinePrice: 79, medspaPrice: 99 },
-  
-  // Zinc
-  { name: "Zinc Picolinate", dosageForm: "Capsule", concentration: "30mg", dispenseSize: "60ct", ourPrice: 15, toplinePrice: 27, downlinePrice: 39, medspaPrice: 52 },
-  { name: "Zinc Picolinate", dosageForm: "Capsule", concentration: "50mg", dispenseSize: "60ct", ourPrice: 18, toplinePrice: 32, downlinePrice: 45, medspaPrice: 59 },
-  
-  // Vitamin B Complex
-  { name: "Vitamin B Complex Injection", dosageForm: "Injection", concentration: "B1/B2/B3/B5/B6", dispenseSize: "10mL", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Vitamin B Complex Injection", dosageForm: "Injection", concentration: "B1/B2/B3/B5/B6", dispenseSize: "30mL", ourPrice: 80, toplinePrice: 135, downlinePrice: 175, medspaPrice: 215 },
-  
-  // ============ ANTI-AGING ============
-  // Methylene Blue
-  { name: "Methylene Blue Capsules", dosageForm: "Capsule", concentration: "5mg", dispenseSize: "60ct", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Methylene Blue Capsules", dosageForm: "Capsule", concentration: "10mg", dispenseSize: "60ct", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Methylene Blue Capsules", dosageForm: "Capsule", concentration: "25mg", dispenseSize: "60ct", ourPrice: 55, toplinePrice: 99, downlinePrice: 119, medspaPrice: 149 },
-  { name: "Methylene Blue Capsules", dosageForm: "Capsule", concentration: "50mg", dispenseSize: "60ct", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 185 },
-  
-  // Rapamycin (Sirolimus)
-  { name: "Rapamycin Capsules", dosageForm: "Capsule", concentration: "0.5mg", dispenseSize: "10ct", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  { name: "Rapamycin Capsules", dosageForm: "Capsule", concentration: "1mg", dispenseSize: "10ct", ourPrice: 80, toplinePrice: 139, downlinePrice: 179, medspaPrice: 219 },
-  { name: "Rapamycin Capsules", dosageForm: "Capsule", concentration: "2mg", dispenseSize: "10ct", ourPrice: 120, toplinePrice: 199, downlinePrice: 259, medspaPrice: 319 },
-  { name: "Rapamycin Capsules", dosageForm: "Capsule", concentration: "5mg", dispenseSize: "10ct", ourPrice: 200, toplinePrice: 329, downlinePrice: 429, medspaPrice: 529 },
-  { name: "Rapamycin Capsules", dosageForm: "Capsule", concentration: "6mg", dispenseSize: "10ct", ourPrice: 230, toplinePrice: 379, downlinePrice: 495, medspaPrice: 609 },
-  
-  // Resveratrol
-  { name: "Resveratrol Capsules", dosageForm: "Capsule", concentration: "250mg", dispenseSize: "60ct", ourPrice: 35, toplinePrice: 62, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Resveratrol Capsules", dosageForm: "Capsule", concentration: "500mg", dispenseSize: "60ct", ourPrice: 55, toplinePrice: 95, downlinePrice: 119, medspaPrice: 149 },
-  
-  // Quercetin
-  { name: "Quercetin Capsules", dosageForm: "Capsule", concentration: "500mg", dispenseSize: "60ct", ourPrice: 28, toplinePrice: 49, downlinePrice: 65, medspaPrice: 85 },
-  { name: "Quercetin Capsules", dosageForm: "Capsule", concentration: "1000mg", dispenseSize: "60ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 125 },
-  
-  // Fisetin
-  { name: "Fisetin Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "60ct", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Fisetin Capsules", dosageForm: "Capsule", concentration: "200mg", dispenseSize: "60ct", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // Alpha Lipoic Acid
-  { name: "Alpha Lipoic Acid Capsules", dosageForm: "Capsule", concentration: "300mg", dispenseSize: "60ct", ourPrice: 28, toplinePrice: 49, downlinePrice: 65, medspaPrice: 85 },
-  { name: "Alpha Lipoic Acid Capsules", dosageForm: "Capsule", concentration: "600mg", dispenseSize: "60ct", ourPrice: 42, toplinePrice: 75, downlinePrice: 95, medspaPrice: 119 },
-  { name: "Alpha Lipoic Acid Injection", dosageForm: "Injection", concentration: "100mg/mL", dispenseSize: "10mL", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  
-  // ============ MISC MEDICATIONS ============
-  // Low Dose Naltrexone (LDN)
-  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "0.5mg", dispenseSize: "30ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "1mg", dispenseSize: "30ct", ourPrice: 28, toplinePrice: 49, downlinePrice: 65, medspaPrice: 85 },
-  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "1.5mg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 55, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "3mg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 65, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "4.5mg", dispenseSize: "30ct", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "6mg", dispenseSize: "30ct", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  
-  // Metformin ER
-  { name: "Metformin ER Capsules", dosageForm: "Capsule ER", concentration: "250mg", dispenseSize: "90ct", ourPrice: 22, toplinePrice: 40, downlinePrice: 55, medspaPrice: 69 },
-  { name: "Metformin ER Capsules", dosageForm: "Capsule ER", concentration: "500mg", dispenseSize: "90ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Metformin ER Capsules", dosageForm: "Capsule ER", concentration: "750mg", dispenseSize: "90ct", ourPrice: 30, toplinePrice: 55, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Metformin ER Capsules", dosageForm: "Capsule ER", concentration: "1000mg", dispenseSize: "90ct", ourPrice: 35, toplinePrice: 65, downlinePrice: 79, medspaPrice: 99 },
-  
-  // ============ SKINCARE / TOPICALS ============
-  // Tretinoin Cream
-  { name: "Tretinoin Cream", dosageForm: "Cream", concentration: "0.025%", dispenseSize: "30gm", ourPrice: 35, toplinePrice: 59, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Tretinoin Cream", dosageForm: "Cream", concentration: "0.05%", dispenseSize: "30gm", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Tretinoin Cream", dosageForm: "Cream", concentration: "0.1%", dispenseSize: "30gm", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 119 },
-  
-  // Hydroquinone
-  { name: "Hydroquinone Cream", dosageForm: "Cream", concentration: "4%", dispenseSize: "30gm", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Hydroquinone Cream", dosageForm: "Cream", concentration: "6%", dispenseSize: "30gm", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 135 },
-  { name: "Hydroquinone Cream", dosageForm: "Cream", concentration: "8%", dispenseSize: "30gm", ourPrice: 60, toplinePrice: 99, downlinePrice: 129, medspaPrice: 159 },
-  { name: "Hydroquinone Cream", dosageForm: "Cream", concentration: "10%", dispenseSize: "30gm", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 185 },
-  { name: "Hydroquinone Cream", dosageForm: "Cream", concentration: "12%", dispenseSize: "30gm", ourPrice: 80, toplinePrice: 135, downlinePrice: 169, medspaPrice: 209 },
-  
-  // Hydroquinone Combinations
-  { name: "Hydroquinone/Tretinoin Cream", dosageForm: "Cream", concentration: "4%/0.025%", dispenseSize: "30gm", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 139 },
-  { name: "Hydroquinone/Tretinoin Cream", dosageForm: "Cream", concentration: "4%/0.05%", dispenseSize: "30gm", ourPrice: 55, toplinePrice: 99, downlinePrice: 119, medspaPrice: 149 },
-  { name: "Hydroquinone/Tretinoin Cream", dosageForm: "Cream", concentration: "6%/0.05%", dispenseSize: "30gm", ourPrice: 65, toplinePrice: 109, downlinePrice: 139, medspaPrice: 175 },
-  { name: "Hydroquinone/Tretinoin/Fluocinolone Cream", dosageForm: "Cream", concentration: "4%/0.05%/0.01%", dispenseSize: "30gm", ourPrice: 65, toplinePrice: 109, downlinePrice: 139, medspaPrice: 175 },
-  
-  // Niacinamide
-  { name: "Niacinamide Cream", dosageForm: "Cream", concentration: "4%", dispenseSize: "30gm", ourPrice: 30, toplinePrice: 55, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Niacinamide Cream", dosageForm: "Cream", concentration: "10%", dispenseSize: "30gm", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  
-  // Vitamin C Serum
-  { name: "Vitamin C Serum", dosageForm: "Serum", concentration: "10%", dispenseSize: "30mL", ourPrice: 35, toplinePrice: 62, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Vitamin C Serum", dosageForm: "Serum", concentration: "20%", dispenseSize: "30mL", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 139 },
-  
-  // Hyaluronic Acid Serum
-  { name: "Hyaluronic Acid Serum", dosageForm: "Serum", concentration: "1%", dispenseSize: "30mL", ourPrice: 35, toplinePrice: 62, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Hyaluronic Acid Serum", dosageForm: "Serum", concentration: "2%", dispenseSize: "30mL", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 125 },
-  
-  // ============ SLEEP / ANXIETY ============
-  // Trazodone
-  { name: "Trazodone Capsules", dosageForm: "Capsule", concentration: "25mg", dispenseSize: "30ct", ourPrice: 22, toplinePrice: 40, downlinePrice: 55, medspaPrice: 69 },
-  { name: "Trazodone Capsules", dosageForm: "Capsule", concentration: "50mg", dispenseSize: "30ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Trazodone Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "30ct", ourPrice: 30, toplinePrice: 55, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Trazodone Capsules", dosageForm: "Capsule", concentration: "150mg", dispenseSize: "30ct", ourPrice: 35, toplinePrice: 62, downlinePrice: 79, medspaPrice: 99 },
-  
-  // Gabapentin
-  { name: "Gabapentin Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "90ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Gabapentin Capsules", dosageForm: "Capsule", concentration: "300mg", dispenseSize: "90ct", ourPrice: 35, toplinePrice: 65, downlinePrice: 79, medspaPrice: 99 },
-  { name: "Gabapentin Capsules", dosageForm: "Capsule", concentration: "400mg", dispenseSize: "90ct", ourPrice: 40, toplinePrice: 72, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Gabapentin Capsules", dosageForm: "Capsule", concentration: "600mg", dispenseSize: "90ct", ourPrice: 50, toplinePrice: 89, downlinePrice: 109, medspaPrice: 135 },
-  
-  // Melatonin
-  { name: "Melatonin Capsules", dosageForm: "Capsule", concentration: "0.5mg", dispenseSize: "60ct", ourPrice: 15, toplinePrice: 27, downlinePrice: 39, medspaPrice: 52 },
-  { name: "Melatonin Capsules", dosageForm: "Capsule", concentration: "1mg", dispenseSize: "60ct", ourPrice: 16, toplinePrice: 29, downlinePrice: 42, medspaPrice: 55 },
-  { name: "Melatonin Capsules", dosageForm: "Capsule", concentration: "3mg", dispenseSize: "60ct", ourPrice: 18, toplinePrice: 32, downlinePrice: 45, medspaPrice: 59 },
-  { name: "Melatonin Capsules", dosageForm: "Capsule", concentration: "5mg", dispenseSize: "60ct", ourPrice: 20, toplinePrice: 35, downlinePrice: 49, medspaPrice: 65 },
-  { name: "Melatonin Capsules", dosageForm: "Capsule", concentration: "10mg", dispenseSize: "60ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  
-  // Melatonin ER
-  { name: "Melatonin ER Capsules", dosageForm: "Capsule ER", concentration: "3mg", dispenseSize: "60ct", ourPrice: 20, toplinePrice: 35, downlinePrice: 49, medspaPrice: 65 },
-  { name: "Melatonin ER Capsules", dosageForm: "Capsule ER", concentration: "5mg", dispenseSize: "60ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Melatonin ER Capsules", dosageForm: "Capsule ER", concentration: "10mg", dispenseSize: "60ct", ourPrice: 30, toplinePrice: 55, downlinePrice: 69, medspaPrice: 89 },
-  
-  // ============ PAIN / INFLAMMATION ============
-  // Diclofenac
-  { name: "Diclofenac Gel", dosageForm: "Gel", concentration: "1%", dispenseSize: "100gm", ourPrice: 30, toplinePrice: 52, downlinePrice: 69, medspaPrice: 89 },
-  { name: "Diclofenac Gel", dosageForm: "Gel", concentration: "3%", dispenseSize: "100gm", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 125 },
-  
-  // Ketoprofen
-  { name: "Ketoprofen PLO Gel", dosageForm: "Gel", concentration: "10%", dispenseSize: "60gm", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 125 },
-  { name: "Ketoprofen PLO Gel", dosageForm: "Gel", concentration: "20%", dispenseSize: "60gm", ourPrice: 55, toplinePrice: 95, downlinePrice: 119, medspaPrice: 149 },
-  
-  // Baclofen
-  { name: "Baclofen PLO Gel", dosageForm: "Gel", concentration: "2%", dispenseSize: "60gm", ourPrice: 40, toplinePrice: 69, downlinePrice: 89, medspaPrice: 109 },
-  { name: "Baclofen Capsules", dosageForm: "Capsule", concentration: "10mg", dispenseSize: "60ct", ourPrice: 25, toplinePrice: 45, downlinePrice: 59, medspaPrice: 75 },
-  { name: "Baclofen Capsules", dosageForm: "Capsule", concentration: "20mg", dispenseSize: "60ct", ourPrice: 32, toplinePrice: 55, downlinePrice: 72, medspaPrice: 92 },
-  
-  // Compound Pain Creams
-  { name: "Pain Cream (Ketoprofen/Baclofen/Gabapentin)", dosageForm: "Cream", concentration: "10%/2%/6%", dispenseSize: "60gm", ourPrice: 70, toplinePrice: 119, downlinePrice: 149, medspaPrice: 189 },
-  { name: "Pain Cream (Ketoprofen/Lidocaine/Cyclobenzaprine)", dosageForm: "Cream", concentration: "10%/5%/2%", dispenseSize: "60gm", ourPrice: 75, toplinePrice: 125, downlinePrice: 159, medspaPrice: 199 },
-  
-  // ============ DENTAL / ORAL ============
-  // Magic Mouthwash
-  { name: "Magic Mouthwash", dosageForm: "Mouthwash", concentration: "Standard", dispenseSize: "240mL", ourPrice: 45, toplinePrice: 79, downlinePrice: 99, medspaPrice: 125 },
-  
-  // Lidocaine Oral Rinse
-  { name: "Lidocaine Oral Rinse", dosageForm: "Rinse", concentration: "2%", dispenseSize: "100mL", ourPrice: 35, toplinePrice: 62, downlinePrice: 79, medspaPrice: 99 },
+  // ============ SEMAGLUTIDE INJECTIONS ============
+  // From Excel: Semaglutide/B12/Glycine/L-Carnitine Injection
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "0.25mg/mL", dispenseSize: "1mL", ourPrice: 12.32, toplinePrice: 17.25, downlinePrice: 21.00, medspaPrice: 23.50 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "0.5mg/mL", dispenseSize: "1mL", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "1mg/mL", dispenseSize: "1mL", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "1.25mg/mL", dispenseSize: "1mL", ourPrice: 22.17, toplinePrice: 31.04, downlinePrice: 37.80, medspaPrice: 42.30 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "1.7mg/mL", dispenseSize: "1mL", ourPrice: 27.10, toplinePrice: 37.94, downlinePrice: 46.20, medspaPrice: 51.70 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "2mg/mL", dispenseSize: "1mL", ourPrice: 29.56, toplinePrice: 41.38, downlinePrice: 50.40, medspaPrice: 56.40 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "2.4mg/mL", dispenseSize: "1mL", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "1mL", ourPrice: 36.95, toplinePrice: 51.73, downlinePrice: 62.99, medspaPrice: 70.49 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "3mg/mL", dispenseSize: "1mL", ourPrice: 39.42, toplinePrice: 55.19, downlinePrice: 67.19, medspaPrice: 75.19 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "4mg/mL", dispenseSize: "1mL", ourPrice: 44.35, toplinePrice: 62.09, downlinePrice: 75.59, medspaPrice: 84.59 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "1mL", ourPrice: 49.27, toplinePrice: 68.98, downlinePrice: 83.98, medspaPrice: 93.98 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "6mg/mL", dispenseSize: "1mL", ourPrice: 54.20, toplinePrice: 75.88, downlinePrice: 92.38, medspaPrice: 103.38 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "7.5mg/mL", dispenseSize: "1mL", ourPrice: 61.59, toplinePrice: 86.23, downlinePrice: 104.98, medspaPrice: 117.48 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "10mg/mL", dispenseSize: "1mL", ourPrice: 73.91, toplinePrice: 103.47, downlinePrice: 125.97, medspaPrice: 140.97 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "12.5mg/mL", dispenseSize: "1mL", ourPrice: 86.23, toplinePrice: 120.72, downlinePrice: 146.97, medspaPrice: 164.47 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "15mg/mL", dispenseSize: "1mL", ourPrice: 98.55, toplinePrice: 137.97, downlinePrice: 167.97, medspaPrice: 187.97 },
+
+  // Semaglutide 2mL vials
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "0.5mg/mL", dispenseSize: "2mL", ourPrice: 22.17, toplinePrice: 31.04, downlinePrice: 37.80, medspaPrice: 42.30 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "1mg/mL", dispenseSize: "2mL", ourPrice: 29.56, toplinePrice: 41.38, downlinePrice: 50.40, medspaPrice: 56.40 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "2mg/mL", dispenseSize: "2mL", ourPrice: 44.35, toplinePrice: 62.09, downlinePrice: 75.59, medspaPrice: 84.59 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "2mL", ourPrice: 56.67, toplinePrice: 79.34, downlinePrice: 96.59, medspaPrice: 108.09 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "2mL", ourPrice: 86.23, toplinePrice: 120.72, downlinePrice: 146.97, medspaPrice: 164.47 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "7.5mg/mL", dispenseSize: "2mL", ourPrice: 115.79, toplinePrice: 162.11, downlinePrice: 197.36, medspaPrice: 220.86 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "10mg/mL", dispenseSize: "2mL", ourPrice: 140.42, toplinePrice: 196.59, downlinePrice: 239.34, medspaPrice: 267.84 },
+
+  // Semaglutide 5mL vials
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "0.5mg/mL", dispenseSize: "5mL", ourPrice: 44.35, toplinePrice: 62.09, downlinePrice: 75.59, medspaPrice: 84.59 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "1mg/mL", dispenseSize: "5mL", ourPrice: 61.59, toplinePrice: 86.23, downlinePrice: 104.98, medspaPrice: 117.48 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "2mg/mL", dispenseSize: "5mL", ourPrice: 98.55, toplinePrice: 137.97, downlinePrice: 167.97, medspaPrice: 187.97 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "5mL", ourPrice: 123.18, toplinePrice: 172.45, downlinePrice: 209.95, medspaPrice: 234.95 },
+  { name: "Semaglutide/B12/Glycine/L-Carnitine", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "5mL", ourPrice: 197.10, toplinePrice: 275.94, downlinePrice: 335.94, medspaPrice: 375.94 },
+
+  // ============ SEMAGLUTIDE RDT (Rapid Dissolve Tablets) ============
+  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "1mg", dispenseSize: "4ct", ourPrice: 22.17, toplinePrice: 31.04, downlinePrice: 37.80, medspaPrice: 42.30 },
+  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "2mg", dispenseSize: "4ct", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "3mg", dispenseSize: "4ct", ourPrice: 46.81, toplinePrice: 65.53, downlinePrice: 79.78, medspaPrice: 89.28 },
+  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "4mg", dispenseSize: "4ct", ourPrice: 59.13, toplinePrice: 82.78, downlinePrice: 100.78, medspaPrice: 112.78 },
+  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "5mg", dispenseSize: "4ct", ourPrice: 71.45, toplinePrice: 100.03, downlinePrice: 121.78, medspaPrice: 136.28 },
+  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "6mg", dispenseSize: "4ct", ourPrice: 83.77, toplinePrice: 117.28, downlinePrice: 142.78, medspaPrice: 159.78 },
+  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "8mg", dispenseSize: "4ct", ourPrice: 108.40, toplinePrice: 151.76, downlinePrice: 184.76, medspaPrice: 206.76 },
+  { name: "Semaglutide RDT", dosageForm: "RDT", concentration: "10mg", dispenseSize: "4ct", ourPrice: 133.04, toplinePrice: 186.26, downlinePrice: 226.76, medspaPrice: 253.76 },
+
+  // ============ TIRZEPATIDE INJECTIONS ============
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "1mL", ourPrice: 86.23, toplinePrice: 120.72, downlinePrice: 146.97, medspaPrice: 164.47 },
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "1mL", ourPrice: 110.87, toplinePrice: 155.22, downlinePrice: 188.97, medspaPrice: 211.47 },
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "7.5mg/mL", dispenseSize: "1mL", ourPrice: 135.50, toplinePrice: 189.70, downlinePrice: 230.97, medspaPrice: 258.47 },
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "10mg/mL", dispenseSize: "1mL", ourPrice: 160.14, toplinePrice: 224.20, downlinePrice: 272.97, medspaPrice: 305.47 },
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "12.5mg/mL", dispenseSize: "1mL", ourPrice: 184.77, toplinePrice: 258.68, downlinePrice: 314.97, medspaPrice: 352.47 },
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "15mg/mL", dispenseSize: "1mL", ourPrice: 209.41, toplinePrice: 293.17, downlinePrice: 356.97, medspaPrice: 399.47 },
+
+  // Tirzepatide 2mL vials
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "2.5mg/mL", dispenseSize: "2mL", ourPrice: 160.14, toplinePrice: 224.20, downlinePrice: 272.97, medspaPrice: 305.47 },
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "5mg/mL", dispenseSize: "2mL", ourPrice: 209.41, toplinePrice: 293.17, downlinePrice: 356.97, medspaPrice: 399.47 },
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "7.5mg/mL", dispenseSize: "2mL", ourPrice: 258.68, toplinePrice: 362.15, downlinePrice: 440.97, medspaPrice: 493.47 },
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "10mg/mL", dispenseSize: "2mL", ourPrice: 307.95, toplinePrice: 431.13, downlinePrice: 524.97, medspaPrice: 587.47 },
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "12.5mg/mL", dispenseSize: "2mL", ourPrice: 357.22, toplinePrice: 500.11, downlinePrice: 608.97, medspaPrice: 681.47 },
+  { name: "Tirzepatide", dosageForm: "Injection", concentration: "15mg/mL", dispenseSize: "2mL", ourPrice: 406.49, toplinePrice: 569.09, downlinePrice: 692.97, medspaPrice: 775.47 },
+
+  // ============ BI-EST CREAMS ============
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "0.25mg/g", dispenseSize: "30g", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "0.5mg/g", dispenseSize: "30g", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "1mg/g", dispenseSize: "30g", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "2mg/g", dispenseSize: "30g", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "3mg/g", dispenseSize: "30g", ourPrice: 29.56, toplinePrice: 41.38, downlinePrice: 50.40, medspaPrice: 56.40 },
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "4mg/g", dispenseSize: "30g", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "5mg/g", dispenseSize: "30g", ourPrice: 39.42, toplinePrice: 55.19, downlinePrice: 67.19, medspaPrice: 75.19 },
+
+  // Bi-est 60g sizes
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "0.5mg/g", dispenseSize: "60g", ourPrice: 27.10, toplinePrice: 37.94, downlinePrice: 46.20, medspaPrice: 51.70 },
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "1mg/g", dispenseSize: "60g", ourPrice: 32.03, toplinePrice: 44.84, downlinePrice: 54.60, medspaPrice: 61.10 },
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "2mg/g", dispenseSize: "60g", ourPrice: 41.88, toplinePrice: 58.63, downlinePrice: 71.39, medspaPrice: 79.89 },
+  { name: "Bi-est 80/20 Cream", dosageForm: "Cream", concentration: "3mg/g", dispenseSize: "60g", ourPrice: 51.73, toplinePrice: 72.42, downlinePrice: 88.18, medspaPrice: 98.68 },
+
+  // ============ PROGESTERONE CAPSULES ============
+  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "25mg", dispenseSize: "30ct", ourPrice: 12.32, toplinePrice: 17.25, downlinePrice: 21.00, medspaPrice: 23.50 },
+  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "50mg", dispenseSize: "30ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "30ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "150mg", dispenseSize: "30ct", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "200mg", dispenseSize: "30ct", ourPrice: 22.17, toplinePrice: 31.04, downlinePrice: 37.80, medspaPrice: 42.30 },
+  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "300mg", dispenseSize: "30ct", ourPrice: 27.10, toplinePrice: 37.94, downlinePrice: 46.20, medspaPrice: 51.70 },
+  { name: "Progesterone Capsules", dosageForm: "Capsule", concentration: "400mg", dispenseSize: "30ct", ourPrice: 32.03, toplinePrice: 44.84, downlinePrice: 54.60, medspaPrice: 61.10 },
+
+  // ============ PROGESTERONE CREAM ============
+  { name: "Progesterone Cream", dosageForm: "Cream", concentration: "20mg/g", dispenseSize: "30g", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Progesterone Cream", dosageForm: "Cream", concentration: "50mg/g", dispenseSize: "30g", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Progesterone Cream", dosageForm: "Cream", concentration: "100mg/g", dispenseSize: "30g", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Progesterone Cream", dosageForm: "Cream", concentration: "200mg/g", dispenseSize: "30g", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+
+  // ============ DHEA ============
+  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "5mg", dispenseSize: "30ct", ourPrice: 9.86, toplinePrice: 13.80, downlinePrice: 16.80, medspaPrice: 18.80 },
+  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "10mg", dispenseSize: "30ct", ourPrice: 12.32, toplinePrice: 17.25, downlinePrice: 21.00, medspaPrice: 23.50 },
+  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "15mg", dispenseSize: "30ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "25mg", dispenseSize: "30ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "50mg", dispenseSize: "30ct", ourPrice: 22.17, toplinePrice: 31.04, downlinePrice: 37.80, medspaPrice: 42.30 },
+  { name: "DHEA Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "30ct", ourPrice: 29.56, toplinePrice: 41.38, downlinePrice: 50.40, medspaPrice: 56.40 },
+
+  // ============ THYROID - LIOTHYRONINE (T3) ============
+  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "5mcg", dispenseSize: "30ct", ourPrice: 12.32, toplinePrice: 17.25, downlinePrice: 21.00, medspaPrice: 23.50 },
+  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "10mcg", dispenseSize: "30ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "15mcg", dispenseSize: "30ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "25mcg", dispenseSize: "30ct", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "50mcg", dispenseSize: "30ct", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Liothyronine (T3)", dosageForm: "Capsule", concentration: "75mcg", dispenseSize: "30ct", ourPrice: 29.56, toplinePrice: 41.38, downlinePrice: 50.40, medspaPrice: 56.40 },
+
+  // ============ THYROID - LIOTHYRONINE SR ============
+  { name: "Liothyronine (T3) SR", dosageForm: "Capsule SR", concentration: "5mcg", dispenseSize: "30ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Liothyronine (T3) SR", dosageForm: "Capsule SR", concentration: "10mcg", dispenseSize: "30ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Liothyronine (T3) SR", dosageForm: "Capsule SR", concentration: "25mcg", dispenseSize: "30ct", ourPrice: 22.17, toplinePrice: 31.04, downlinePrice: 37.80, medspaPrice: 42.30 },
+  { name: "Liothyronine (T3) SR", dosageForm: "Capsule SR", concentration: "50mcg", dispenseSize: "30ct", ourPrice: 29.56, toplinePrice: 41.38, downlinePrice: 50.40, medspaPrice: 56.40 },
+
+  // ============ LEVOTHYROXINE (T4) ============
+  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "25mcg", dispenseSize: "30ct", ourPrice: 12.32, toplinePrice: 17.25, downlinePrice: 21.00, medspaPrice: 23.50 },
+  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "50mcg", dispenseSize: "30ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "75mcg", dispenseSize: "30ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "100mcg", dispenseSize: "30ct", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "125mcg", dispenseSize: "30ct", ourPrice: 22.17, toplinePrice: 31.04, downlinePrice: 37.80, medspaPrice: 42.30 },
+  { name: "Levothyroxine (T4)", dosageForm: "Capsule", concentration: "150mcg", dispenseSize: "30ct", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+
+  // ============ TADALAFIL ============
+  { name: "Tadalafil Capsules", dosageForm: "Capsule", concentration: "5mg", dispenseSize: "30ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Tadalafil Capsules", dosageForm: "Capsule", concentration: "10mg", dispenseSize: "30ct", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Tadalafil Capsules", dosageForm: "Capsule", concentration: "20mg", dispenseSize: "30ct", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+
+  { name: "Tadalafil Troches", dosageForm: "Troche", concentration: "5mg", dispenseSize: "30ct", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Tadalafil Troches", dosageForm: "Troche", concentration: "10mg", dispenseSize: "30ct", ourPrice: 27.10, toplinePrice: 37.94, downlinePrice: 46.20, medspaPrice: 51.70 },
+  { name: "Tadalafil Troches", dosageForm: "Troche", concentration: "20mg", dispenseSize: "30ct", ourPrice: 36.95, toplinePrice: 51.73, downlinePrice: 62.99, medspaPrice: 70.49 },
+
+  // ============ SILDENAFIL ============
+  { name: "Sildenafil Capsules", dosageForm: "Capsule", concentration: "20mg", dispenseSize: "30ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Sildenafil Capsules", dosageForm: "Capsule", concentration: "25mg", dispenseSize: "30ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Sildenafil Capsules", dosageForm: "Capsule", concentration: "50mg", dispenseSize: "30ct", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Sildenafil Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "30ct", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+
+  { name: "Sildenafil Troches", dosageForm: "Troche", concentration: "25mg", dispenseSize: "30ct", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Sildenafil Troches", dosageForm: "Troche", concentration: "50mg", dispenseSize: "30ct", ourPrice: 27.10, toplinePrice: 37.94, downlinePrice: 46.20, medspaPrice: 51.70 },
+  { name: "Sildenafil Troches", dosageForm: "Troche", concentration: "100mg", dispenseSize: "30ct", ourPrice: 36.95, toplinePrice: 51.73, downlinePrice: 62.99, medspaPrice: 70.49 },
+
+  // ============ OXYTOCIN ============
+  { name: "Oxytocin Troches", dosageForm: "Troche", concentration: "10IU", dispenseSize: "30ct", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Oxytocin Troches", dosageForm: "Troche", concentration: "25IU", dispenseSize: "30ct", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+  { name: "Oxytocin Troches", dosageForm: "Troche", concentration: "40IU", dispenseSize: "30ct", ourPrice: 44.35, toplinePrice: 62.09, downlinePrice: 75.59, medspaPrice: 84.59 },
+
+  { name: "Oxytocin Nasal Spray", dosageForm: "Nasal Spray", concentration: "20IU/mL", dispenseSize: "10mL", ourPrice: 29.56, toplinePrice: 41.38, downlinePrice: 50.40, medspaPrice: 56.40 },
+  { name: "Oxytocin Nasal Spray", dosageForm: "Nasal Spray", concentration: "40IU/mL", dispenseSize: "10mL", ourPrice: 39.42, toplinePrice: 55.19, downlinePrice: 67.19, medspaPrice: 75.19 },
+
+  // ============ PT-141 ============
+  { name: "PT-141 (Bremelanotide)", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 36.95, toplinePrice: 51.73, downlinePrice: 62.99, medspaPrice: 70.49 },
+  { name: "PT-141 (Bremelanotide)", dosageForm: "Injection", concentration: "10mg", dispenseSize: "1 vial", ourPrice: 56.67, toplinePrice: 79.34, downlinePrice: 96.59, medspaPrice: 108.09 },
+  { name: "PT-141 (Bremelanotide)", dosageForm: "Troche", concentration: "500mcg", dispenseSize: "8ct", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+  { name: "PT-141 (Bremelanotide)", dosageForm: "Troche", concentration: "750mcg", dispenseSize: "8ct", ourPrice: 44.35, toplinePrice: 62.09, downlinePrice: 75.59, medspaPrice: 84.59 },
+  { name: "PT-141 (Bremelanotide)", dosageForm: "Nasal Spray", concentration: "10mg/mL", dispenseSize: "5mL", ourPrice: 56.67, toplinePrice: 79.34, downlinePrice: 96.59, medspaPrice: 108.09 },
+
+  // ============ PEPTIDES - SERMORELIN ============
+  { name: "Sermorelin", dosageForm: "Injection", concentration: "3mg", dispenseSize: "1 vial", ourPrice: 49.27, toplinePrice: 68.98, downlinePrice: 83.98, medspaPrice: 93.98 },
+  { name: "Sermorelin", dosageForm: "Injection", concentration: "6mg", dispenseSize: "1 vial", ourPrice: 73.91, toplinePrice: 103.47, downlinePrice: 125.97, medspaPrice: 140.97 },
+  { name: "Sermorelin", dosageForm: "Injection", concentration: "9mg", dispenseSize: "1 vial", ourPrice: 98.55, toplinePrice: 137.97, downlinePrice: 167.97, medspaPrice: 187.97 },
+  { name: "Sermorelin", dosageForm: "Injection", concentration: "15mg", dispenseSize: "1 vial", ourPrice: 147.82, toplinePrice: 206.95, downlinePrice: 251.95, medspaPrice: 281.95 },
+
+  // ============ PEPTIDES - IPAMORELIN ============
+  { name: "Ipamorelin", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 49.27, toplinePrice: 68.98, downlinePrice: 83.98, medspaPrice: 93.98 },
+  { name: "Ipamorelin", dosageForm: "Injection", concentration: "10mg", dispenseSize: "1 vial", ourPrice: 73.91, toplinePrice: 103.47, downlinePrice: 125.97, medspaPrice: 140.97 },
+  { name: "Ipamorelin", dosageForm: "Injection", concentration: "15mg", dispenseSize: "1 vial", ourPrice: 98.55, toplinePrice: 137.97, downlinePrice: 167.97, medspaPrice: 187.97 },
+
+  // ============ PEPTIDES - CJC-1295 / IPAMORELIN COMBO ============
+  { name: "CJC-1295/Ipamorelin", dosageForm: "Injection", concentration: "2mg/2mg", dispenseSize: "1 vial", ourPrice: 61.59, toplinePrice: 86.23, downlinePrice: 104.98, medspaPrice: 117.48 },
+  { name: "CJC-1295/Ipamorelin", dosageForm: "Injection", concentration: "3mg/3mg", dispenseSize: "1 vial", ourPrice: 86.23, toplinePrice: 120.72, downlinePrice: 146.97, medspaPrice: 164.47 },
+  { name: "CJC-1295/Ipamorelin", dosageForm: "Injection", concentration: "5mg/5mg", dispenseSize: "1 vial", ourPrice: 110.87, toplinePrice: 155.22, downlinePrice: 188.97, medspaPrice: 211.47 },
+  { name: "CJC-1295/Ipamorelin", dosageForm: "Injection", concentration: "9mg/9mg", dispenseSize: "1 vial", ourPrice: 172.46, toplinePrice: 241.44, downlinePrice: 293.94, medspaPrice: 328.94 },
+
+  // ============ PEPTIDES - BPC-157 ============
+  { name: "BPC-157", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 49.27, toplinePrice: 68.98, downlinePrice: 83.98, medspaPrice: 93.98 },
+  { name: "BPC-157", dosageForm: "Injection", concentration: "10mg", dispenseSize: "1 vial", ourPrice: 73.91, toplinePrice: 103.47, downlinePrice: 125.97, medspaPrice: 140.97 },
+  { name: "BPC-157", dosageForm: "Capsule", concentration: "250mcg", dispenseSize: "30ct", ourPrice: 49.27, toplinePrice: 68.98, downlinePrice: 83.98, medspaPrice: 93.98 },
+  { name: "BPC-157", dosageForm: "Capsule", concentration: "500mcg", dispenseSize: "30ct", ourPrice: 73.91, toplinePrice: 103.47, downlinePrice: 125.97, medspaPrice: 140.97 },
+
+  // ============ PEPTIDES - TB-500 ============
+  { name: "TB-500 (Thymosin Beta-4)", dosageForm: "Injection", concentration: "5mg", dispenseSize: "1 vial", ourPrice: 56.67, toplinePrice: 79.34, downlinePrice: 96.59, medspaPrice: 108.09 },
+  { name: "TB-500 (Thymosin Beta-4)", dosageForm: "Injection", concentration: "10mg", dispenseSize: "1 vial", ourPrice: 86.23, toplinePrice: 120.72, downlinePrice: 146.97, medspaPrice: 164.47 },
+
+  // ============ NAD+ ============
+  { name: "NAD+ Injection", dosageForm: "Injection", concentration: "100mg/mL", dispenseSize: "10mL", ourPrice: 123.18, toplinePrice: 172.45, downlinePrice: 209.95, medspaPrice: 234.95 },
+  { name: "NAD+ Injection", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "10mL", ourPrice: 197.10, toplinePrice: 275.94, downlinePrice: 335.94, medspaPrice: 375.94 },
+  { name: "NAD+ Nasal Spray", dosageForm: "Nasal Spray", concentration: "100mg/mL", dispenseSize: "10mL", ourPrice: 86.23, toplinePrice: 120.72, downlinePrice: 146.97, medspaPrice: 164.47 },
+
+  // ============ GLUTATHIONE ============
+  { name: "Glutathione Injection", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "10mL", ourPrice: 49.27, toplinePrice: 68.98, downlinePrice: 83.98, medspaPrice: 93.98 },
+  { name: "Glutathione Injection", dosageForm: "Injection", concentration: "200mg/mL", dispenseSize: "30mL", ourPrice: 110.87, toplinePrice: 155.22, downlinePrice: 188.97, medspaPrice: 211.47 },
+  { name: "Glutathione Capsules", dosageForm: "Capsule", concentration: "250mg", dispenseSize: "60ct", ourPrice: 36.95, toplinePrice: 51.73, downlinePrice: 62.99, medspaPrice: 70.49 },
+  { name: "Glutathione Capsules", dosageForm: "Capsule", concentration: "500mg", dispenseSize: "60ct", ourPrice: 56.67, toplinePrice: 79.34, downlinePrice: 96.59, medspaPrice: 108.09 },
+
+  // ============ LOW DOSE NALTREXONE (LDN) ============
+  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "0.5mg", dispenseSize: "30ct", ourPrice: 12.32, toplinePrice: 17.25, downlinePrice: 21.00, medspaPrice: 23.50 },
+  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "1mg", dispenseSize: "30ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "1.5mg", dispenseSize: "30ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "3mg", dispenseSize: "30ct", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "4.5mg", dispenseSize: "30ct", ourPrice: 22.17, toplinePrice: 31.04, downlinePrice: 37.80, medspaPrice: 42.30 },
+  { name: "Low Dose Naltrexone (LDN)", dosageForm: "Capsule", concentration: "6mg", dispenseSize: "30ct", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+
+  // ============ METFORMIN ER ============
+  { name: "Metformin ER Capsules", dosageForm: "Capsule ER", concentration: "250mg", dispenseSize: "90ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Metformin ER Capsules", dosageForm: "Capsule ER", concentration: "500mg", dispenseSize: "90ct", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Metformin ER Capsules", dosageForm: "Capsule ER", concentration: "750mg", dispenseSize: "90ct", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Metformin ER Capsules", dosageForm: "Capsule ER", concentration: "1000mg", dispenseSize: "90ct", ourPrice: 29.56, toplinePrice: 41.38, downlinePrice: 50.40, medspaPrice: 56.40 },
+
+  // ============ VITAMIN B12 / MIC INJECTIONS ============
+  { name: "Vitamin B12 Injection", dosageForm: "Injection", concentration: "1000mcg/mL", dispenseSize: "10mL", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Vitamin B12 Injection", dosageForm: "Injection", concentration: "1000mcg/mL", dispenseSize: "30mL", ourPrice: 29.56, toplinePrice: 41.38, downlinePrice: 50.40, medspaPrice: 56.40 },
+  { name: "MIC/B12 Lipotropic Injection", dosageForm: "Injection", concentration: "Standard", dispenseSize: "10mL", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "MIC/B12 Lipotropic Injection", dosageForm: "Injection", concentration: "Standard", dispenseSize: "30mL", ourPrice: 49.27, toplinePrice: 68.98, downlinePrice: 83.98, medspaPrice: 93.98 },
+
+  // ============ MINOXIDIL - HAIR LOSS ============
+  { name: "Minoxidil Solution", dosageForm: "Solution", concentration: "5%", dispenseSize: "60mL", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Minoxidil Solution", dosageForm: "Solution", concentration: "10%", dispenseSize: "60mL", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+  { name: "Minoxidil Solution", dosageForm: "Solution", concentration: "15%", dispenseSize: "60mL", ourPrice: 44.35, toplinePrice: 62.09, downlinePrice: 75.59, medspaPrice: 84.59 },
+  { name: "Minoxidil/Finasteride Solution", dosageForm: "Solution", concentration: "5%/0.1%", dispenseSize: "60mL", ourPrice: 44.35, toplinePrice: 62.09, downlinePrice: 75.59, medspaPrice: 84.59 },
+  { name: "Minoxidil/Finasteride Solution", dosageForm: "Solution", concentration: "10%/0.1%", dispenseSize: "60mL", ourPrice: 54.20, toplinePrice: 75.88, downlinePrice: 92.38, medspaPrice: 103.38 },
+
+  // ============ FINASTERIDE ============
+  { name: "Finasteride Capsules", dosageForm: "Capsule", concentration: "1mg", dispenseSize: "30ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Finasteride Capsules", dosageForm: "Capsule", concentration: "2.5mg", dispenseSize: "30ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Finasteride Capsules", dosageForm: "Capsule", concentration: "5mg", dispenseSize: "30ct", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+
+  // ============ TRETINOIN ============
+  { name: "Tretinoin Cream", dosageForm: "Cream", concentration: "0.025%", dispenseSize: "30g", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+  { name: "Tretinoin Cream", dosageForm: "Cream", concentration: "0.05%", dispenseSize: "30g", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Tretinoin Cream", dosageForm: "Cream", concentration: "0.1%", dispenseSize: "30g", ourPrice: 29.56, toplinePrice: 41.38, downlinePrice: 50.40, medspaPrice: 56.40 },
+
+  // ============ HYDROQUINONE ============
+  { name: "Hydroquinone Cream", dosageForm: "Cream", concentration: "4%", dispenseSize: "30g", ourPrice: 24.64, toplinePrice: 34.50, downlinePrice: 42.00, medspaPrice: 47.00 },
+  { name: "Hydroquinone Cream", dosageForm: "Cream", concentration: "6%", dispenseSize: "30g", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
+  { name: "Hydroquinone Cream", dosageForm: "Cream", concentration: "8%", dispenseSize: "30g", ourPrice: 44.35, toplinePrice: 62.09, downlinePrice: 75.59, medspaPrice: 84.59 },
+  { name: "Hydroquinone Cream", dosageForm: "Cream", concentration: "10%", dispenseSize: "30g", ourPrice: 54.20, toplinePrice: 75.88, downlinePrice: 92.38, medspaPrice: 103.38 },
+
+  // ============ MELATONIN ============
+  { name: "Melatonin Capsules", dosageForm: "Capsule", concentration: "1mg", dispenseSize: "60ct", ourPrice: 9.86, toplinePrice: 13.80, downlinePrice: 16.80, medspaPrice: 18.80 },
+  { name: "Melatonin Capsules", dosageForm: "Capsule", concentration: "3mg", dispenseSize: "60ct", ourPrice: 12.32, toplinePrice: 17.25, downlinePrice: 21.00, medspaPrice: 23.50 },
+  { name: "Melatonin Capsules", dosageForm: "Capsule", concentration: "5mg", dispenseSize: "60ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Melatonin Capsules", dosageForm: "Capsule", concentration: "10mg", dispenseSize: "60ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Melatonin ER Capsules", dosageForm: "Capsule ER", concentration: "3mg", dispenseSize: "60ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Melatonin ER Capsules", dosageForm: "Capsule ER", concentration: "5mg", dispenseSize: "60ct", ourPrice: 17.25, toplinePrice: 24.15, downlinePrice: 29.40, medspaPrice: 32.90 },
+  { name: "Melatonin ER Capsules", dosageForm: "Capsule ER", concentration: "10mg", dispenseSize: "60ct", ourPrice: 19.71, toplinePrice: 27.59, downlinePrice: 33.60, medspaPrice: 37.60 },
+
+  // ============ GABAPENTIN ============
+  { name: "Gabapentin Capsules", dosageForm: "Capsule", concentration: "100mg", dispenseSize: "90ct", ourPrice: 14.78, toplinePrice: 20.69, downlinePrice: 25.20, medspaPrice: 28.20 },
+  { name: "Gabapentin Capsules", dosageForm: "Capsule", concentration: "300mg", dispenseSize: "90ct", ourPrice: 22.17, toplinePrice: 31.04, downlinePrice: 37.80, medspaPrice: 42.30 },
+  { name: "Gabapentin Capsules", dosageForm: "Capsule", concentration: "400mg", dispenseSize: "90ct", ourPrice: 27.10, toplinePrice: 37.94, downlinePrice: 46.20, medspaPrice: 51.70 },
+  { name: "Gabapentin Capsules", dosageForm: "Capsule", concentration: "600mg", dispenseSize: "90ct", ourPrice: 34.49, toplinePrice: 48.29, downlinePrice: 58.79, medspaPrice: 65.79 },
 ];
 
 // Auto-generate description based on medication category
@@ -686,15 +365,17 @@ function getCategory(productName: string): string {
   if (lowerName.includes('sermorelin') || lowerName.includes('ipamorelin') || lowerName.includes('bpc') || lowerName.includes('cjc') || lowerName.includes('glutathione') || lowerName.includes('tb-500') || lowerName.includes('aod') || lowerName.includes('tesamorelin') || lowerName.includes('mots') || lowerName.includes('epithalon')) return 'peptide';
   if (lowerName.includes('minoxidil') || lowerName.includes('finasteride') || lowerName.includes('dutasteride') || lowerName.includes('ketoconazole')) return 'hair';
   if (lowerName.includes('nad') || lowerName.includes('methylene') || lowerName.includes('rapamycin') || lowerName.includes('resveratrol') || lowerName.includes('nmn')) return 'antiaging';
-  if (lowerName.includes('vitamin') || lowerName.includes('b12') || lowerName.includes('coq10') || lowerName.includes('carnitine') || lowerName.includes('mic') || lowerName.includes('magnesium') || lowerName.includes('zinc')) return 'vitamin';
+  if (lowerName.includes('vitamin') || lowerName.includes('b12') || lowerName.includes('mic') || lowerName.includes('magnesium') || lowerName.includes('zinc') || lowerName.includes('coq10') || lowerName.includes('carnitine')) return 'vitamin';
+  if (lowerName.includes('tretinoin') || lowerName.includes('hydroquinone') || lowerName.includes('niacinamide')) return 'skincare';
+  if (lowerName.includes('naltrexone') || lowerName.includes('ldn') || lowerName.includes('metformin') || lowerName.includes('gabapentin') || lowerName.includes('melatonin')) return 'misc';
   
-  return 'default';
+  return 'general';
 }
 
-// Parse concentration to numeric value for sorting (lower = primary)
+// Parse concentration to numeric value for sorting
 function parseConcentration(concentration: string): number {
-  const match = concentration.match(/([\d.]+)/);
-  return match ? parseFloat(match[1]) : 999;
+  const match = concentration.match(/[\d.]+/);
+  return match ? parseFloat(match[0]) : 0;
 }
 
 // Group products into families by name
