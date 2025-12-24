@@ -52,6 +52,7 @@ export const ProductsGrid = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [prescriptionFilter, setPrescriptionFilter] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<string>("a-z");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -255,7 +256,7 @@ export const ProductsGrid = () => {
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     
-    return products.filter((product) => {
+    const filtered = products.filter((product) => {
       // Critical: Filter out any null/undefined products
       if (!product) return false;
       
@@ -276,7 +277,19 @@ export const ProductsGrid = () => {
       
       return matchesSearch && matchesType && matchesPrescription && canSeeProduct;
     });
-  }, [products, searchQuery, productTypeFilter, prescriptionFilter, canOrderRx, viewingAsAdmin]);
+
+    // Sort based on sortOrder
+    return filtered.sort((a, b) => {
+      const nameA = a?.name?.toLowerCase() || '';
+      const nameB = b?.name?.toLowerCase() || '';
+      if (sortOrder === 'a-z') {
+        return nameA.localeCompare(nameB);
+      } else if (sortOrder === 'z-a') {
+        return nameB.localeCompare(nameA);
+      }
+      return 0;
+    });
+  }, [products, searchQuery, productTypeFilter, prescriptionFilter, canOrderRx, viewingAsAdmin, sortOrder]);
 
   const productCounts = useMemo(() => {
     if (!products) return {
@@ -877,6 +890,19 @@ export const ProductsGrid = () => {
               <SelectItem value="all">All Products ({productCounts.all})</SelectItem>
               <SelectItem value="yes">Prescription Required ({productCounts.prescriptionRequired})</SelectItem>
               <SelectItem value="no">No Prescription ({productCounts.noPrescription})</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={sortOrder}
+            onValueChange={setSortOrder}
+          >
+            <SelectTrigger className="w-full sm:w-[140px]">
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="a-z">A → Z</SelectItem>
+              <SelectItem value="z-a">Z → A</SelectItem>
             </SelectContent>
           </Select>
         </div>
