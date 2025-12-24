@@ -8572,6 +8572,17 @@ export type Database = {
         Args: { _user_id: string }
         Returns: string[]
       }
+      get_effective_prices_bulk: {
+        Args: { p_product_ids: string[]; p_user_id: string }
+        Returns: {
+          base_price: number
+          effective_downline_price: number
+          effective_retail_price: number
+          effective_topline_price: number
+          has_override: boolean
+          product_id: string
+        }[]
+      }
       get_effective_product_price: {
         Args: { p_product_id: string; p_user_id: string }
         Returns: {
