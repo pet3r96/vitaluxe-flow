@@ -117,13 +117,25 @@ export const ProductsGrid = () => {
   const { data: allVariantStats } = useQuery({
     queryKey: ['all-variant-stats'],
     queryFn: async () => {
+      // Explicitly select all fields including first_variant_dosage for debugging
       const { data, error } = await supabase
         .from('product_variant_stats')
-        .select('*');
+        .select('product_id, variant_count, first_variant_dosage, min_base_price, max_base_price, min_topline_price, max_topline_price, min_downline_price, max_downline_price, min_retail_price, max_retail_price');
       if (error) {
         logger.error('Error fetching variant stats', error);
         return {};
       }
+      
+      // Debug: Log raw variant stats data
+      logger.info('[ProductsGrid] Variant stats fetched', { 
+        count: data?.length,
+        sampleWithDosage: data?.filter(s => s.first_variant_dosage)?.slice(0, 3)?.map(s => ({
+          product_id: s.product_id,
+          dosage: s.first_variant_dosage,
+          variant_count: s.variant_count
+        }))
+      });
+      
       // Convert to map: productId -> stats
       return (data || []).reduce((acc, stat) => {
         acc[stat.product_id] = stat;

@@ -74,6 +74,21 @@ export const ProductCard = memo(({
   const variantCount = variantStats?.variant_count || 0;
   const hasVariants = variantCount > 0;
   const hasMultipleVariants = variantCount > 1;
+  
+  // Debug: Log variant stats for products without dosage
+  if (!product.dosage && variantStats) {
+    import('@/lib/logger').then(({ logger }) => {
+      logger.info('[ProductCard] Variant stats received', {
+        productName: product.name,
+        productId: product.id,
+        productDosage: product.dosage,
+        variantStats: {
+          variant_count: variantStats.variant_count,
+          first_variant_dosage: variantStats.first_variant_dosage
+        }
+      });
+    });
+  }
 
   // Helper to format price range
   const formatPriceRange = (minPrice: number | null, maxPrice: number | null, fallbackPrice: number | null) => {
