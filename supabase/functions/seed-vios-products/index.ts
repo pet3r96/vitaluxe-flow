@@ -735,11 +735,30 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { generateImages = true, dryRun = false, startIndex = 0, batchSize = 0 } = body;
+    const { generateImages = true, dryRun = false, startIndex = 0, batchSize = 0, forceOverwrite = false } = body;
 
     console.log('Starting Vios product catalog seed...');
     console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}, Generate Images: ${generateImages}`);
     console.log(`Total products in catalog: ${VIOS_PRODUCTS.length}`);
+
+    // Check for existing products to prevent duplicates (unless forceOverwrite is true)
+    if (!dryRun && !forceOverwrite) {
+      const { count: existingCount } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('pharmacy_id', VIOS_PHARMACY_ID);
+
+      if (existingCount && existingCount > 10) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: `Products already exist for Vios Compounding (${existingCount} products found). Run a dry run first to see what would be created, or set forceOverwrite to add more products.`,
+            existingCount,
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Group products into families
     const allFamilies = groupProductFamilies();
@@ -928,9 +947,14 @@ serve(async (req) => {
     console.log('Seed completed!');
     console.log(`Products: ${results.productsCreated}, Variants: ${results.variantsCreated}, Images: ${results.imagesGenerated}`);
 
+    const message = dryRun 
+      ? `Dry run complete: Found ${allFamilies.length} product families with ${results.variantsCreated + results.productsCreated} total items`
+      : `Successfully created ${results.productsCreated} products with ${results.variantsCreated} variants`;
+
     return new Response(
       JSON.stringify({
         success: true,
+        message,
         dryRun,
         summary: {
           totalProductsInCatalog: VIOS_PRODUCTS.length,
@@ -939,11 +963,10 @@ serve(async (req) => {
           productsCreated: results.productsCreated,
           variantsCreated: results.variantsCreated,
           imagesGenerated: results.imagesGenerated,
-          errors: results.errors.length,
+          errors: results.errors.slice(0, 10), // First 10 errors as array
           nextStartIndex: startIndex + families.length,
         },
         samples: results.samples,
-        errors: results.errors.slice(0, 10), // First 10 errors
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
