@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Play, TestTube, CheckCircle2, XCircle, AlertCircle, Database, StopCircle, DollarSign } from "lucide-react";
+import { Loader2, Play, TestTube, CheckCircle2, XCircle, AlertCircle, Database, StopCircle, DollarSign, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -56,19 +56,36 @@ interface PricingUpdateResult {
   };
 }
 
+interface ImageGenResult {
+  success: boolean;
+  message: string;
+  imagesGenerated?: number;
+  imagesFailed?: number;
+  totalMissing?: number;
+  hasMore?: boolean;
+  nextStartFrom?: number | null;
+  errors?: string[];
+}
+
 export const SeedViosProducts = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDryRunning, setIsDryRunning] = useState(false);
   const [isUpdatingPricing, setIsUpdatingPricing] = useState(false);
+  const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [generateImages, setGenerateImages] = useState(true);
   const [currentProductCount, setCurrentProductCount] = useState<number | null>(null);
+  const [productsMissingImages, setProductsMissingImages] = useState<number | null>(null);
   const [result, setResult] = useState<SeedResult | null>(null);
   const [pricingResult, setPricingResult] = useState<PricingUpdateResult | null>(null);
+  const [imageGenResult, setImageGenResult] = useState<ImageGenResult | null>(null);
+  const [imageGenProgress, setImageGenProgress] = useState<{ generated: number; total: number } | null>(null);
   const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
   const cancelledRef = useRef(false);
+  const cancelImageGenRef = useRef(false);
 
   useEffect(() => {
     fetchProductCount();
+    fetchMissingImagesCount();
   }, []);
 
   const fetchProductCount = async () => {
@@ -78,6 +95,17 @@ export const SeedViosProducts = () => {
     
     if (!error && count !== null) {
       setCurrentProductCount(count);
+    }
+  };
+
+  const fetchMissingImagesCount = async () => {
+    const { count, error } = await supabase
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .or('image_url.is.null,image_url.eq.');
+    
+    if (!error && count !== null) {
+      setProductsMissingImages(count);
     }
   };
 
@@ -271,6 +299,92 @@ export const SeedViosProducts = () => {
     });
   };
 
+  const handleCancelImageGen = () => {
+    cancelImageGenRef.current = true;
+    toast({
+      title: "Cancelling...",
+      description: "Will stop after current batch completes",
+    });
+  };
+
+  const runBatchImageGeneration = async () => {
+    setIsGeneratingImages(true);
+    setImageGenResult(null);
+    setImageGenProgress(null);
+    cancelImageGenRef.current = false;
+
+    let startFrom = 0;
+    let hasMore = true;
+    let totalGenerated = 0;
+    let totalFailed = 0;
+    const allErrors: string[] = [];
+
+    try {
+      while (hasMore && !cancelImageGenRef.current) {
+        const { data, error } = await supabase.functions.invoke('batch-generate-product-images', {
+          body: { batchSize: 3, startFrom }
+        });
+
+        if (error) throw error;
+
+        const result = data as ImageGenResult;
+        
+        if (!result.success && !result.imagesGenerated) {
+          throw new Error(result.message || 'Batch failed');
+        }
+
+        totalGenerated += result.imagesGenerated || 0;
+        totalFailed += result.imagesFailed || 0;
+        if (result.errors) {
+          allErrors.push(...result.errors);
+        }
+
+        setImageGenProgress({
+          generated: totalGenerated,
+          total: result.totalMissing || 0
+        });
+
+        hasMore = result.hasMore || false;
+        startFrom = result.nextStartFrom || 0;
+      }
+
+      setImageGenResult({
+        success: true,
+        message: cancelImageGenRef.current 
+          ? `Cancelled after ${totalGenerated} images`
+          : `Generated ${totalGenerated} images (${totalFailed} failed)`,
+        imagesGenerated: totalGenerated,
+        imagesFailed: totalFailed,
+        errors: allErrors.slice(0, 5)
+      });
+
+      fetchMissingImagesCount();
+
+      if (!cancelImageGenRef.current) {
+        toast({
+          title: "Image Generation Complete",
+          description: `Generated ${totalGenerated} images`,
+        });
+      }
+
+    } catch (error: any) {
+      console.error('Image generation error:', error);
+      setImageGenResult({
+        success: false,
+        message: error.message || 'Failed to generate images',
+        errors: allErrors
+      });
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate images",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingImages(false);
+      setImageGenProgress(null);
+    }
+  };
+
   const progressPercent = batchProgress 
     ? Math.round((batchProgress.currentBatch / Math.max(batchProgress.totalBatches, 1)) * 100)
     : 0;
@@ -435,6 +549,64 @@ export const SeedViosProducts = () => {
                   </div>
                 )}
               </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Generate Missing Images Card */}
+      <Card className="border-blue-500/50">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <ImageIcon className="h-5 w-5 text-blue-500" />
+            Generate Missing Product Images
+          </CardTitle>
+          <CardDescription>
+            {productsMissingImages !== null && productsMissingImages > 0 
+              ? `${productsMissingImages} products are missing images. Generate them using AI.`
+              : 'All products have images.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {imageGenProgress && isGeneratingImages && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Generating images...</span>
+                <span>{imageGenProgress.generated} / {imageGenProgress.total}</span>
+              </div>
+              <Progress value={(imageGenProgress.generated / Math.max(imageGenProgress.total, 1)) * 100} className="h-3" />
+              <Button variant="outline" size="sm" onClick={handleCancelImageGen} className="w-full">
+                <StopCircle className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          )}
+
+          {!isGeneratingImages && (
+            <Button 
+              variant="default"
+              onClick={runBatchImageGeneration}
+              disabled={isGeneratingImages || isLoading || productsMissingImages === 0}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
+              {isGeneratingImages ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <ImageIcon className="h-4 w-4 mr-2" />
+              )}
+              Generate {productsMissingImages || 0} Missing Images
+            </Button>
+          )}
+          
+          {imageGenResult && (
+            <Alert variant={imageGenResult.success ? "default" : "destructive"}>
+              {imageGenResult.success ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              <AlertTitle>{imageGenResult.success ? "Complete" : "Error"}</AlertTitle>
+              <AlertDescription>{imageGenResult.message}</AlertDescription>
             </Alert>
           )}
         </CardContent>

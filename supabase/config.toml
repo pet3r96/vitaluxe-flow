@@ -452,3 +452,6 @@ verify_jwt = true
 
 [functions.update-vios-pricing]
 verify_jwt = false
+
+[functions.batch-generate-product-images]
+verify_jwt = true
