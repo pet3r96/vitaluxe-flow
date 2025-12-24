@@ -1,17 +1,16 @@
 /**
  * Variant Pricing Utilities
- * Centralized logic for determining correct variant prices based on user role/tier
+ * Simplified 2-tier pricing model: base_price (our cost) and retail_price (practice price)
  */
 
 import type { ProductVariant } from "@/types/domain/productVariant";
 
-export type PriceTier = 'topline' | 'downline' | 'retail';
+export type PriceTier = 'base' | 'retail';
 
 /**
  * Get the appropriate price for a variant based on the user's price tier
- * - topline: topline_price (fallback to base_price)
- * - downline: downline_price (fallback to retail_price, then base_price)
- * - retail: retail_price (fallback to base_price) - default for practices
+ * - base: base_price (internal/our cost)
+ * - retail: retail_price (practice/medspa price) - default
  */
 export function getVariantPriceByTier(
   variant: ProductVariant | null | undefined, 
@@ -20,10 +19,8 @@ export function getVariantPriceByTier(
   if (!variant) return null;
   
   switch (tier) {
-    case 'topline':
-      return variant.topline_price ?? variant.base_price;
-    case 'downline':
-      return variant.downline_price ?? variant.retail_price ?? variant.base_price;
+    case 'base':
+      return variant.base_price;
     case 'retail':
     default:
       return variant.retail_price ?? variant.base_price;
@@ -31,12 +28,15 @@ export function getVariantPriceByTier(
 }
 
 /**
- * Determine price tier based on rep linkage
- * @param linkedRepRole - The role of the rep linked to the practice ('topline' | 'downline' | null)
- * @returns The price tier to use
+ * Get retail price for practices (default pricing)
  */
-export function determinePriceTierFromRepRole(linkedRepRole: string | null): PriceTier {
-  if (linkedRepRole === 'topline') return 'topline';
-  if (linkedRepRole === 'downline') return 'retail'; // Downline practices pay retail
-  return 'retail'; // Default to retail for direct practices
+export function getRetailPrice(variant: ProductVariant | null | undefined): number | null {
+  return getVariantPriceByTier(variant, 'retail');
+}
+
+/**
+ * Get base price (internal cost)
+ */
+export function getBasePrice(variant: ProductVariant | null | undefined): number | null {
+  return getVariantPriceByTier(variant, 'base');
 }
