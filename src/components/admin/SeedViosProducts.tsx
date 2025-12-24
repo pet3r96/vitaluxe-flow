@@ -29,9 +29,8 @@ interface SeedResult {
     variantsCreated: number;
     imagesGenerated: number;
     errors: string[];
+    totalFamilies?: number;
   };
-  productFamilies?: number;
-  totalVariants?: number;
 }
 
 export const SeedViosProducts = () => {
@@ -82,7 +81,7 @@ export const SeedViosProducts = () => {
         toast({
           title: dryRun ? "Dry Run Complete" : "Catalog Seeded Successfully",
           description: dryRun 
-            ? `Found ${data.productFamilies} product families with ${data.totalVariants} variants` 
+            ? `Found ${data.summary?.totalFamilies} product families with ${data.summary?.variantsCreated} variants` 
             : `Created ${data.summary?.productsCreated} products with ${data.summary?.variantsCreated} variants`,
         });
         
@@ -253,10 +252,10 @@ export const SeedViosProducts = () => {
           <AlertDescription className="mt-2">
             <p>{result.message}</p>
             
-            {result.dryRun && result.productFamilies && (
+            {result.dryRun && result.summary?.totalFamilies && (
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                <div>Product Families: <strong>{result.productFamilies}</strong></div>
-                <div>Total Variants: <strong>{result.totalVariants}</strong></div>
+                <div>Product Families: <strong>{result.summary.totalFamilies}</strong></div>
+                <div>Total Variants: <strong>{result.summary.variantsCreated}</strong></div>
               </div>
             )}
 
