@@ -455,8 +455,7 @@ export const AccountsDataTable = () => {
           />
         ) : (
           // Desktop Table View
-          <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <div className="min-w-[1200px]">
+          <div className="min-w-[1200px]">
             <Table className="table-fixed">
               <colgroup>
                 <col style={{ width: '160px' }} />
@@ -563,7 +562,6 @@ export const AccountsDataTable = () => {
                 )}
               </TableBody>
             </Table>
-            </div>
           </div>
         )}
       </div>
