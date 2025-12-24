@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface ProductCardProps {
   product: any;
+  variantStats?: any;
   isAdmin: boolean;
   isProvider: boolean;
   isToplineRep: boolean;
@@ -33,6 +34,7 @@ interface ProductCardProps {
 
 export const ProductCard = memo(({
   product,
+  variantStats,
   isAdmin,
   isProvider,
   isToplineRep,
@@ -61,11 +63,10 @@ export const ProductCard = memo(({
     return Number(value).toFixed(2);
   };
 
-  // Get variant stats from the joined view
-  const variantStats = product.product_variant_stats?.[0] || null;
+  // Get variant stats from prop (passed from ProductsGrid)
   const variantCount = variantStats?.variant_count || 0;
+  const hasVariants = variantCount > 0;
   const hasMultipleVariants = variantCount > 1;
-  const hasManyVariants = variantCount >= 3;
 
   // Helper to format price range
   const formatPriceRange = (minPrice: number | null, maxPrice: number | null, fallbackPrice: number | null) => {
@@ -255,11 +256,11 @@ export const ProductCard = memo(({
         <div className="space-y-3 flex flex-col items-start flex-1">
           <div className="w-full space-y-1">
             <h3 className="font-semibold text-base sm:text-lg lg:text-xl line-clamp-2 leading-tight">{product.name}</h3>
-            {hasManyVariants ? (
+            {hasVariants ? (
               <p className="text-sm text-muted-foreground line-clamp-1">Multiple options available</p>
-            ) : product.dosage && (
+            ) : product.dosage ? (
               <p className="text-sm text-muted-foreground line-clamp-1">{product.dosage}</p>
-            )}
+            ) : null}
             {product.description && (
               <div className="flex items-start gap-1">
                 <span className="text-xs font-semibold text-muted-foreground shrink-0">Description:</span>
