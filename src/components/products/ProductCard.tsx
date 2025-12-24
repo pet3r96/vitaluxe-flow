@@ -1,7 +1,4 @@
 import { memo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { usePracticeRxPrivileges } from "@/hooks/usePracticeRxPrivileges";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,9 +13,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+interface EffectivePriceData {
+  product_id: string;
+  effective_topline_price: number | null;
+  effective_downline_price: number | null;
+  effective_retail_price: number | null;
+  base_price: number | null;
+  has_override: boolean;
+}
+
 interface ProductCardProps {
   product: any;
   variantStats?: any;
+  effectivePrice?: EffectivePriceData | null;
   isAdmin: boolean;
   isProvider: boolean;
   isToplineRep: boolean;
@@ -35,6 +42,7 @@ interface ProductCardProps {
 export const ProductCard = memo(({
   product,
   variantStats,
+  effectivePrice,
   isAdmin,
   isProvider,
   isToplineRep,
@@ -47,7 +55,6 @@ export const ProductCard = memo(({
   onAddToCart,
   onToggleStatus,
 }: ProductCardProps) => {
-  const { effectiveUserId, effectiveRole } = useAuth();
   const { canOrderRx } = usePracticeRxPrivileges();
 
   if (!product) {
@@ -76,31 +83,6 @@ export const ProductCard = memo(({
     if (min === max || Math.abs(min - max) < 0.01) return `$${formatPrice(min)}`;
     return `$${formatPrice(min)} - $${formatPrice(max)}`;
   };
-
-  // Fetch effective price for current user with immediate refresh
-  const { data: effectivePrice } = useQuery({
-    queryKey: ['effective-price', product.id, effectiveUserId, effectiveRole],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc(
-        'get_effective_product_price',
-        { 
-          p_product_id: product.id,
-          p_user_id: effectiveUserId 
-        }
-      );
-      if (error) {
-        import('@/lib/logger').then(({ logger }) => {
-          logger.error('Error fetching effective price', error);
-        });
-        return null;
-      }
-      return data?.[0];
-    },
-    enabled: !!effectiveUserId && (isToplineRep || isDownlineRep || isProvider),
-    staleTime: 30000, // 30 seconds - pricing updates occasionally
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: false,
-  });
 
   const getPriceDisplay = () => {
     if (isAdmin) {

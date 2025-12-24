@@ -132,6 +132,35 @@ export const ProductsGrid = () => {
     staleTime: 60000, // 1 minute cache
   });
 
+  // Bulk fetch effective prices for all products at once to prevent N+1 queries
+  const productIds = useMemo(() => products?.map(p => p?.id).filter(Boolean) || [], [products]);
+  
+  const { data: allEffectivePrices } = useQuery({
+    queryKey: ['bulk-effective-prices', productIds, effectiveUserId],
+    queryFn: async () => {
+      if (!productIds.length || !effectiveUserId) return {};
+      
+      const { data, error } = await supabase.rpc('get_effective_prices_bulk', {
+        p_product_ids: productIds,
+        p_user_id: effectiveUserId
+      });
+      
+      if (error) {
+        logger.error('Error fetching bulk prices', error);
+        return {};
+      }
+      
+      // Convert to map: productId -> price data
+      return (data || []).reduce((acc: Record<string, any>, price: any) => {
+        acc[price.product_id] = price;
+        return acc;
+      }, {} as Record<string, any>);
+    },
+    enabled: !!productIds.length && !!effectiveUserId && (isToplineRep || isDownlineRep || isProvider),
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: false,
+  });
+
   // Fetch visibility settings for topline rep to show hidden status
   const { data: visibilitySettings } = useQuery({
     queryKey: ["rep-product-visibility", effectiveUserId, isToplineRep],
@@ -962,6 +991,7 @@ export const ProductsGrid = () => {
                 key={product.id}
                 product={product}
                 variantStats={allVariantStats?.[product.id] || null}
+                effectivePrice={allEffectivePrices?.[product.id] || null}
                 isAdmin={isAdmin}
                 isProvider={isProvider}
                 isToplineRep={isToplineRep}
