@@ -451,4 +451,4 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.update-vios-pricing]
-verify_jwt = true
+verify_jwt = false
