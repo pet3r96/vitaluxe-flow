@@ -242,6 +242,8 @@ export const ProductCard = memo(({
               <p className="text-sm text-muted-foreground line-clamp-1">Multiple options available</p>
             ) : product.dosage ? (
               <p className="text-sm text-muted-foreground line-clamp-1">{product.dosage}</p>
+            ) : variantStats?.first_variant_dosage ? (
+              <p className="text-sm text-muted-foreground line-clamp-1">{variantStats.first_variant_dosage}</p>
             ) : null}
             {product.description && (
               <div className="flex items-start gap-1">
