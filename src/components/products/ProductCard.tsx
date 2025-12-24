@@ -61,6 +61,21 @@ export const ProductCard = memo(({
     return Number(value).toFixed(2);
   };
 
+  // Get variant stats from the joined view
+  const variantStats = product.product_variant_stats?.[0] || null;
+  const variantCount = variantStats?.variant_count || 0;
+  const hasMultipleVariants = variantCount > 1;
+  const hasManyVariants = variantCount >= 3;
+
+  // Helper to format price range
+  const formatPriceRange = (minPrice: number | null, maxPrice: number | null, fallbackPrice: number | null) => {
+    const min = minPrice ?? fallbackPrice;
+    const max = maxPrice ?? fallbackPrice;
+    if (min == null || max == null) return `$${formatPrice(fallbackPrice)}`;
+    if (min === max || Math.abs(min - max) < 0.01) return `$${formatPrice(min)}`;
+    return `$${formatPrice(min)} - $${formatPrice(max)}`;
+  };
+
   // Fetch effective price for current user with immediate refresh
   const { data: effectivePrice } = useQuery({
     queryKey: ['effective-price', product.id, effectiveUserId, effectiveRole],
@@ -92,23 +107,39 @@ export const ProductCard = memo(({
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground pr-2">Base:</span>
-            <span className="font-semibold">${product.base_price}</span>
+            <span className="font-semibold">
+              {hasMultipleVariants 
+                ? formatPriceRange(variantStats?.min_base_price, variantStats?.max_base_price, product.base_price)
+                : `$${formatPrice(product.base_price)}`}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground pr-2">Topline:</span>
             <span>
-              {product.requires_prescription ? "$-" : `$${product.topline_price || "-"}`}
+              {product.requires_prescription ? "$-" : (
+                hasMultipleVariants 
+                  ? formatPriceRange(variantStats?.min_topline_price, variantStats?.max_topline_price, product.topline_price)
+                  : `$${formatPrice(product.topline_price) || "-"}`
+              )}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground pr-2">Downline:</span>
             <span>
-              {product.requires_prescription ? "$-" : `$${product.downline_price || "-"}`}
+              {product.requires_prescription ? "$-" : (
+                hasMultipleVariants 
+                  ? formatPriceRange(variantStats?.min_downline_price, variantStats?.max_downline_price, product.downline_price)
+                  : `$${formatPrice(product.downline_price) || "-"}`
+              )}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground pr-2">Practice:</span>
-            <span>${product.retail_price || "-"}</span>
+            <span>
+              {hasMultipleVariants 
+                ? formatPriceRange(variantStats?.min_retail_price, variantStats?.max_retail_price, product.retail_price)
+                : `$${formatPrice(product.retail_price) || "-"}`}
+            </span>
           </div>
         </div>
       );
@@ -185,10 +216,14 @@ export const ProductCard = memo(({
     }
 
     if (isProvider) {
+      const priceDisplay = hasMultipleVariants 
+        ? formatPriceRange(variantStats?.min_retail_price, variantStats?.max_retail_price, product.retail_price)
+        : `$${formatPrice(effectivePrice?.effective_retail_price ?? product.retail_price ?? product.base_price)}`;
+      
       return (
         <div className="text-center">
           <div className="text-3xl font-bold text-primary">
-            ${formatPrice(effectivePrice?.effective_retail_price ?? product.retail_price ?? product.base_price)}
+            {priceDisplay}
           </div>
         </div>
       );
@@ -220,7 +255,9 @@ export const ProductCard = memo(({
         <div className="space-y-3 flex flex-col items-start flex-1">
           <div className="w-full space-y-1">
             <h3 className="font-semibold text-base sm:text-lg lg:text-xl line-clamp-2 leading-tight">{product.name}</h3>
-            {product.dosage && (
+            {hasManyVariants ? (
+              <p className="text-sm text-muted-foreground line-clamp-1">Multiple options available</p>
+            ) : product.dosage && (
               <p className="text-sm text-muted-foreground line-clamp-1">{product.dosage}</p>
             )}
             {product.description && (

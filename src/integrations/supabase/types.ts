@@ -619,6 +619,13 @@ export type Database = {
             foreignKeyName: "cart_lines_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "product_variant_stats"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "cart_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -1859,6 +1866,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mv_top_products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_variant_stats"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "order_lines_product_id_fkey"
@@ -5203,6 +5217,13 @@ export type Database = {
             foreignKeyName: "product_pharmacies_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "product_variant_stats"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_pharmacies_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -5246,6 +5267,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "mv_top_products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_pricing_tiers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "product_variant_stats"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "product_pricing_tiers_product_id_fkey"
@@ -5330,6 +5358,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mv_top_products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_variant_stats"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "product_variants_product_id_fkey"
@@ -6102,6 +6137,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mv_top_products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_product_visibility_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_variant_stats"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "rep_product_visibility_product_id_fkey"
@@ -7711,6 +7753,13 @@ export type Database = {
             foreignKeyName: "cart_lines_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "product_variant_stats"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "cart_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -7770,6 +7819,21 @@ export type Database = {
           passed_tests: number | null
           test_category: string | null
           total_tests: number | null
+        }
+        Relationships: []
+      }
+      product_variant_stats: {
+        Row: {
+          max_base_price: number | null
+          max_downline_price: number | null
+          max_retail_price: number | null
+          max_topline_price: number | null
+          min_base_price: number | null
+          min_downline_price: number | null
+          min_retail_price: number | null
+          min_topline_price: number | null
+          product_id: string | null
+          variant_count: number | null
         }
         Relationships: []
       }
