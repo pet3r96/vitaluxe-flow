@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Play, TestTube, CheckCircle2, XCircle, AlertCircle, Database, StopCircle } from "lucide-react";
+import { Loader2, Play, TestTube, CheckCircle2, XCircle, AlertCircle, Database, StopCircle, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -46,12 +46,24 @@ interface BatchProgress {
   errors: string[];
 }
 
+interface PricingUpdateResult {
+  success: boolean;
+  message: string;
+  summary?: {
+    productsUpdated: number;
+    productsSkipped: number;
+    errorsCount: number;
+  };
+}
+
 export const SeedViosProducts = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDryRunning, setIsDryRunning] = useState(false);
+  const [isUpdatingPricing, setIsUpdatingPricing] = useState(false);
   const [generateImages, setGenerateImages] = useState(true);
   const [currentProductCount, setCurrentProductCount] = useState<number | null>(null);
   const [result, setResult] = useState<SeedResult | null>(null);
+  const [pricingResult, setPricingResult] = useState<PricingUpdateResult | null>(null);
   const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
   const cancelledRef = useRef(false);
 
@@ -216,6 +228,41 @@ export const SeedViosProducts = () => {
     }
   };
 
+  const runPricingUpdate = async (dryRun: boolean) => {
+    setIsUpdatingPricing(true);
+    setPricingResult(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('update-vios-pricing', {
+        body: { dryRun }
+      });
+
+      if (error) throw error;
+      
+      setPricingResult(data as PricingUpdateResult);
+      
+      if (data?.success) {
+        toast({
+          title: dryRun ? "Pricing Check Complete" : "Pricing Updated",
+          description: data.message,
+        });
+      }
+    } catch (error: any) {
+      console.error('Pricing update error:', error);
+      setPricingResult({
+        success: false,
+        message: error.message || 'Failed to update pricing',
+      });
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update pricing",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingPricing(false);
+    }
+  };
+
   const handleCancel = () => {
     cancelledRef.current = true;
     toast({
@@ -325,6 +372,71 @@ export const SeedViosProducts = () => {
               <p className="text-xs text-muted-foreground">Generated Images</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Fix Pricing Card */}
+      <Card className="border-amber-500/50">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-amber-500" />
+            Fix Existing Product Pricing
+          </CardTitle>
+          <CardDescription>
+            Updates existing Vios products with correct 4-tier pricing (base, topline, downline, retail).
+            Run this if products were seeded with incorrect prices.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => runPricingUpdate(true)}
+              disabled={isUpdatingPricing || isLoading}
+              className="flex-1"
+            >
+              {isUpdatingPricing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <TestTube className="h-4 w-4 mr-2" />
+              )}
+              Check Pricing
+            </Button>
+            <Button 
+              variant="default"
+              onClick={() => runPricingUpdate(false)}
+              disabled={isUpdatingPricing || isLoading}
+              className="flex-1 bg-amber-600 hover:bg-amber-700"
+            >
+              {isUpdatingPricing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <DollarSign className="h-4 w-4 mr-2" />
+              )}
+              Fix Pricing Now
+            </Button>
+          </div>
+          
+          {pricingResult && (
+            <Alert variant={pricingResult.success ? "default" : "destructive"}>
+              {pricingResult.success ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              <AlertTitle>{pricingResult.success ? "Success" : "Error"}</AlertTitle>
+              <AlertDescription>
+                {pricingResult.message}
+                {pricingResult.summary && (
+                  <div className="mt-2 text-sm">
+                    <span className="font-medium">Updated: {pricingResult.summary.productsUpdated}</span>
+                    {' | '}
+                    <span>Already Correct: {pricingResult.summary.productsSkipped}</span>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 

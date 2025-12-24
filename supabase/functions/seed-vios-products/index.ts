@@ -742,24 +742,14 @@ serve(async (req) => {
     console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}, Generate Images: ${generateImages}`);
     console.log(`Total products in catalog: ${VIOS_PRODUCTS.length}`);
 
-    // Check for existing products to prevent duplicates (unless forceOverwrite is true)
-    if (!dryRun && !forceOverwrite) {
-      const { count: existingCount } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('pharmacy_id', VIOS_PHARMACY_ID);
+    // Fetch existing Vios product names to skip already-seeded families
+    const { data: existingProducts } = await supabase
+      .from('products')
+      .select('name')
+      .eq('pharmacy_id', VIOS_PHARMACY_ID);
 
-      if (existingCount && existingCount > 10) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            message: `Products already exist for Vios Compounding (${existingCount} products found). Run a dry run first to see what would be created, or set forceOverwrite to add more products.`,
-            existingCount,
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
+    const existingProductNames = new Set((existingProducts || []).map(p => p.name));
+    console.log(`Found ${existingProductNames.size} existing Vios products - will skip these families`);
 
     // Group products into families
     const allFamilies = groupProductFamilies();
@@ -797,6 +787,12 @@ serve(async (req) => {
     for (let i = 0; i < families.length; i++) {
       const family = families[i];
       const primaryVariant = family.variants[0]; // Lowest concentration
+      
+      // Skip if already seeded
+      if (existingProductNames.has(family.name)) {
+        console.log(`[${i + 1}/${families.length}] Skipping (already exists): ${family.name}`);
+        continue;
+      }
       
       console.log(`[${i + 1}/${families.length}] Processing: ${family.name}`);
       
