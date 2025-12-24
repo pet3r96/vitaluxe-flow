@@ -218,9 +218,8 @@ export function DownlinesDataTable() {
         </div>
       </div>
 
-      <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-[1400px]">
-          <Table>
+      <div className="min-w-[1400px]">
+        <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -271,9 +270,8 @@ export function DownlinesDataTable() {
                 </TableCell>
               </TableRow>
             )}
-          </TableBody>
-        </Table>
-        </div>
+        </TableBody>
+      </Table>
       </div>
 
       {filteredDownlines && filteredDownlines.length > 0 && (

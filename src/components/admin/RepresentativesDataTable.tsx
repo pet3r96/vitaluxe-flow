@@ -270,9 +270,8 @@ export const RepresentativesDataTable = () => {
           </div>
         ) : (
           // Desktop Table View
-          <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <div className="min-w-[1200px]">
-            <Table className="table-fixed">
+          <div className="min-w-[1200px]">
+          <Table className="table-fixed">
               <colgroup>
                 <col style={{ width: '160px' }} />
                 <col style={{ width: '220px' }} />
@@ -380,9 +379,8 @@ export const RepresentativesDataTable = () => {
                   </TableRow>
                   ))
                 )}
-              </TableBody>
-            </Table>
-            </div>
+            </TableBody>
+          </Table>
           </div>
         )}
       </Card>

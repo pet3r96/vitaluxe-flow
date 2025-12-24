@@ -606,9 +606,8 @@ export const OrdersDataTable = () => {
         </div>
       ) : (
         /* Desktop View */
-        <div className="rounded-md border border-border bg-card overflow-x-auto w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="min-w-[1600px]">
-          <Table>
+        <div className="min-w-[1600px]">
+        <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Order ID</TableHead>
@@ -948,9 +947,8 @@ export const OrdersDataTable = () => {
                 );
               })
             )}
-            </TableBody>
-          </Table>
-          </div>
+          </TableBody>
+        </Table>
         </div>
       )}
 
