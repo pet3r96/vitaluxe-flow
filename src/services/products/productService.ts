@@ -26,17 +26,6 @@ export async function fetchProducts(params: ProductQueryParams) {
           priority_map,
           active
         )
-      ),
-      product_variant_stats!left (
-        variant_count,
-        min_retail_price,
-        max_retail_price,
-        min_topline_price,
-        max_topline_price,
-        min_downline_price,
-        max_downline_price,
-        min_base_price,
-        max_base_price
       )
     `)
     .order("created_at", { ascending: false });
