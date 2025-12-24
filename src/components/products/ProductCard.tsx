@@ -86,6 +86,13 @@ export const ProductCard = memo(({
 
   const getPriceDisplay = () => {
     if (isAdmin) {
+      // For single-variant products, prioritize variantStats prices over product-level prices
+      // This fixes the issue where product-level prices are NULL but variant prices exist
+      const singleVariantBasePrice = variantStats?.min_base_price ?? product.base_price;
+      const singleVariantToplinePrice = variantStats?.min_topline_price ?? product.topline_price;
+      const singleVariantDownlinePrice = variantStats?.min_downline_price ?? product.downline_price;
+      const singleVariantRetailPrice = variantStats?.min_retail_price ?? product.retail_price;
+      
       return (
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
@@ -93,7 +100,7 @@ export const ProductCard = memo(({
             <span className="font-semibold">
               {hasMultipleVariants 
                 ? formatPriceRange(variantStats?.min_base_price, variantStats?.max_base_price, product.base_price)
-                : `$${formatPrice(product.base_price)}`}
+                : `$${formatPrice(singleVariantBasePrice)}`}
             </span>
           </div>
           <div className="flex justify-between">
@@ -102,7 +109,7 @@ export const ProductCard = memo(({
               {product.requires_prescription ? "$-" : (
                 hasMultipleVariants 
                   ? formatPriceRange(variantStats?.min_topline_price, variantStats?.max_topline_price, product.topline_price)
-                  : `$${formatPrice(product.topline_price) || "-"}`
+                  : `$${formatPrice(singleVariantToplinePrice)}`
               )}
             </span>
           </div>
@@ -112,7 +119,7 @@ export const ProductCard = memo(({
               {product.requires_prescription ? "$-" : (
                 hasMultipleVariants 
                   ? formatPriceRange(variantStats?.min_downline_price, variantStats?.max_downline_price, product.downline_price)
-                  : `$${formatPrice(product.downline_price) || "-"}`
+                  : `$${formatPrice(singleVariantDownlinePrice)}`
               )}
             </span>
           </div>
@@ -121,7 +128,7 @@ export const ProductCard = memo(({
             <span>
               {hasMultipleVariants 
                 ? formatPriceRange(variantStats?.min_retail_price, variantStats?.max_retail_price, product.retail_price)
-                : `$${formatPrice(product.retail_price) || "-"}`}
+                : `$${formatPrice(singleVariantRetailPrice)}`}
             </span>
           </div>
         </div>
