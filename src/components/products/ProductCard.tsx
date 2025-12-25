@@ -223,10 +223,10 @@ export const ProductCard = memo(({
   };
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-200 flex flex-col h-full">
+    <Card className="group hover:shadow-lg transition-all duration-200 flex flex-col h-full border-border/50">
       <CardContent className="p-4 sm:p-5 lg:p-6 flex-1 flex flex-col">
         {/* Product Image */}
-        <div className="aspect-[4/3] mb-3 sm:mb-4 rounded-lg overflow-hidden bg-muted flex items-center justify-center p-2">
+        <div className="aspect-[4/3] mb-3 sm:mb-4 rounded-lg overflow-hidden bg-card flex items-center justify-center p-2 border border-border/30">
           {product.image_url ? (
             <img
               src={product.image_url}
@@ -314,13 +314,13 @@ export const ProductCard = memo(({
           <div className="flex-1"></div>
 
           {/* Price Display */}
-          <div className="w-full pt-3 border-t mt-auto">
+          <div className="w-full pt-3 border-t border-border/30 mt-auto">
             {getPriceDisplay()}
           </div>
 
           {/* Admin Info */}
           {isAdmin && (
-            <div className="w-full pt-3 border-t">
+            <div className="w-full pt-3 border-t border-border/30">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground font-medium">Status:</span>
                 <Switch

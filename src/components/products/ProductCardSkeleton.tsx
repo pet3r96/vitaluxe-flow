@@ -3,10 +3,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export const ProductCardSkeleton = () => {
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col h-full border-border/50">
       <CardContent className="p-4 sm:p-5 lg:p-6 flex-1 flex flex-col">
         {/* Image skeleton */}
-        <Skeleton className="aspect-[4/3] mb-3 sm:mb-4 rounded-lg" />
+        <Skeleton className="aspect-[4/3] mb-3 sm:mb-4 rounded-lg bg-muted/50" />
         
         {/* Content skeleton */}
         <div className="space-y-3 flex flex-col items-start flex-1">
