@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
     const targetPracticeId = requestData.practice_id || user.id;
     edgeLogger.info('Creating payment profile', { userId: user.id, targetPractice: targetPracticeId, paymentType: requestData.payment_type });
 
-    // Check for existing customer profile
+    // Check for existing customer profile with valid numeric ID
     const { data: existingProfile } = await supabase
       .from('practice_payment_methods')
       .select('authorizenet_profile_id')
@@ -166,6 +166,17 @@ Deno.serve(async (req) => {
       .not('authorizenet_profile_id', 'is', null)
       .limit(1)
       .maybeSingle();
+
+    // Validate that the profile ID is numeric (Authorize.Net requirement)
+    const hasValidExistingProfile = existingProfile?.authorizenet_profile_id 
+      && /^\d+$/.test(existingProfile.authorizenet_profile_id);
+
+    if (existingProfile?.authorizenet_profile_id && !hasValidExistingProfile) {
+      edgeLogger.warn('Found invalid non-numeric profile ID, will create new profile', { 
+        invalidId: existingProfile.authorizenet_profile_id,
+        practiceId: targetPracticeId
+      });
+    }
 
     let customerProfileId: string;
     let paymentProfileId: string;
@@ -175,7 +186,7 @@ Deno.serve(async (req) => {
       dataValue: requestData.payment_nonce || ''
     };
 
-    if (existingProfile?.authorizenet_profile_id) {
+    if (hasValidExistingProfile) {
       // Add to existing customer
       const response = await addPaymentProfile(
         apiLoginId, transactionKey,
