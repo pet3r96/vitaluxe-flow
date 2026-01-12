@@ -44,7 +44,7 @@ export const AddCreditCardDialog = ({
 
   const addCardMutation = useMutation({
     mutationFn: async () => {
-      // Tokenize card using Accept.js (placeholder mode)
+      // Tokenize card securely using Accept.js
       const tokenResult = await tokenizeCard({
         cardNumber,
         expiryMonth,
