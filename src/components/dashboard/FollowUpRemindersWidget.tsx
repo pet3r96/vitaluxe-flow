@@ -48,19 +48,35 @@ export function FollowUpRemindersWidget() {
 
   const markComplete = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      logger.info('Attempting to mark follow-up complete', { id });
+      
+      const { data, error } = await supabase
         .from("patient_follow_ups")
         .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", id);
+        .eq("id", id)
+        .select(); // Add select() to detect RLS issues
 
-      if (error) throw error;
+      if (error) {
+        logger.error('Failed to update follow-up', error);
+        throw error;
+      }
+      
+      // Check if any rows were actually updated (RLS might silently block)
+      if (!data || data.length === 0) {
+        logger.warn('No rows updated - possible RLS policy issue', { id });
+        throw new Error('Update not allowed - check permissions');
+      }
+      
+      logger.info('Follow-up marked complete', { id });
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["follow-up-reminders"] });
       toast.success("Follow-up marked as complete");
     },
     onError: (error) => {
-      toast.error("Failed to update follow-up");
+      const msg = error instanceof Error ? error.message : String(error);
+      toast.error("Failed to update follow-up: " + msg);
       logger.error("Failed to update follow-up", error);
     },
   });
