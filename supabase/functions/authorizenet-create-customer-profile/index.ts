@@ -126,6 +126,14 @@ Deno.serve(async (req) => {
     const apiLoginId = Deno.env.get('AUTHORIZENET_API_LOGIN_ID');
     const transactionKey = Deno.env.get('AUTHORIZENET_TRANSACTION_KEY');
 
+    // Debug logging to confirm credentials are loaded
+    edgeLogger.info('Authorize.Net credentials check', { 
+      apiLoginIdPresent: !!apiLoginId,
+      apiLoginIdLength: apiLoginId?.length,
+      transactionKeyPresent: !!transactionKey,
+      transactionKeyLength: transactionKey?.length
+    });
+
     if (!apiLoginId || !transactionKey) {
       edgeLogger.error('Missing Authorize.Net credentials');
       return new Response(
@@ -179,9 +187,15 @@ Deno.serve(async (req) => {
 
       if (response.messages?.resultCode !== 'Ok') {
         const errorMsg = response.messages?.message?.[0]?.text || 'Failed to add card';
-        edgeLogger.error('Authorize.Net error', { error: errorMsg });
+        const errorCode = response.messages?.message?.[0]?.code || 'UNKNOWN';
+        edgeLogger.error('Authorize.Net add payment profile error', { 
+          errorMessage: errorMsg,
+          errorCode,
+          resultCode: response.messages?.resultCode,
+          fullResponse: JSON.stringify(response)
+        });
         return new Response(
-          JSON.stringify({ error: errorMsg }),
+          JSON.stringify({ error: errorMsg, code: errorCode, details: response.messages }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -201,9 +215,15 @@ Deno.serve(async (req) => {
 
       if (response.messages?.resultCode !== 'Ok') {
         const errorMsg = response.messages?.message?.[0]?.text || 'Failed to create profile';
-        edgeLogger.error('Authorize.Net error', { error: errorMsg });
+        const errorCode = response.messages?.message?.[0]?.code || 'UNKNOWN';
+        edgeLogger.error('Authorize.Net create profile error', { 
+          errorMessage: errorMsg,
+          errorCode,
+          resultCode: response.messages?.resultCode,
+          fullResponse: JSON.stringify(response)
+        });
         return new Response(
-          JSON.stringify({ error: errorMsg }),
+          JSON.stringify({ error: errorMsg, code: errorCode, details: response.messages }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -269,9 +289,14 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    edgeLogger.error('Unexpected error', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    edgeLogger.error('Unexpected error in authorizenet-create-customer-profile', { 
+      errorMessage,
+      errorStack 
+    });
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
