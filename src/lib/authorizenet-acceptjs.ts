@@ -1,78 +1,112 @@
 /**
- * Placeholder Accept.js integration
- * When API keys are added, this will tokenize cards client-side
+ * Authorize.Net Accept.js Integration
+ * Securely tokenizes card data client-side before sending to server
  */
 
 import type { CardData, AcceptJsResponse } from "@/types/domain/payments";
 
 export type { CardData, AcceptJsResponse };
 
+// Public keys (safe for browser)
+const AUTHORIZENET_API_LOGIN_ID = '5RHaf53LDc3';
+const AUTHORIZENET_PUBLIC_CLIENT_KEY = '4SdAK3f4YaL5P89MM94UDcz7j8mGMG8DDy9HC2W3nDr88uS6pCP9Phzvf4ARGDUN';
+
+// Accept.js types
+interface AcceptJsSecureData {
+  authData: {
+    clientKey: string;
+    apiLoginID: string;
+  };
+  cardData: {
+    cardNumber: string;
+    month: string;
+    year: string;
+    cardCode: string;
+  };
+}
+
+interface AcceptJsNativeResponse {
+  messages: {
+    resultCode: string;
+    message: Array<{ code: string; text: string }>;
+  };
+  opaqueData?: {
+    dataDescriptor: string;
+    dataValue: string;
+  };
+}
+
+declare global {
+  interface Window {
+    Accept: {
+      dispatchData: (
+        secureData: AcceptJsSecureData,
+        callback: (response: AcceptJsNativeResponse) => void
+      ) => void;
+    };
+  }
+}
+
 /**
- * Placeholder tokenization (simulates Accept.js)
- * Replace with actual Accept.js when keys are available
+ * Tokenize card data using Accept.js
+ * Card numbers are securely tokenized in the browser and never touch our servers
  */
 export const tokenizeCard = async (cardData: CardData): Promise<AcceptJsResponse> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // TODO: Replace with actual Accept.js when API keys are available
-  // const secureData = {
-  //   authData: {
-  //     clientKey: import.meta.env.VITE_AUTHORIZENET_PUBLIC_CLIENT_KEY,
-  //     apiLoginID: import.meta.env.VITE_AUTHORIZENET_API_LOGIN_ID
-  //   },
-  //   cardData: {
-  //     cardNumber: cardData.cardNumber,
-  //     month: cardData.expiryMonth,
-  //     year: cardData.expiryYear,
-  //     cardCode: cardData.cvv
-  //   }
-  // };
-  
-  // return new Promise((resolve) => {
-  //   (window as any).Accept.dispatchData(secureData, (response: any) => {
-  //     resolve({
-  //       success: response.messages.resultCode === "Ok",
-  //       opaqueData: response.opaqueData,
-  //       messages: response.messages
-  //     });
-  //   });
-  // });
-  
-  // Placeholder: Return simulated nonce
-  return {
-    success: true,
-    opaqueData: {
-      dataDescriptor: 'COMMON.ACCEPT.INAPP.PAYMENT',
-      dataValue: `placeholder_nonce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  // Ensure Accept.js is loaded
+  if (typeof window === 'undefined' || !window.Accept) {
+    console.error('Accept.js not loaded');
+    return {
+      success: false,
+      messages: {
+        resultCode: 'Error',
+        message: [{ code: 'E00001', text: 'Accept.js is not loaded. Please refresh the page.' }]
+      }
+    };
+  }
+
+  const secureData: AcceptJsSecureData = {
+    authData: {
+      clientKey: AUTHORIZENET_PUBLIC_CLIENT_KEY,
+      apiLoginID: AUTHORIZENET_API_LOGIN_ID
     },
-    messages: {
-      resultCode: 'Ok',
-      message: [{ code: 'I00001', text: 'Successful' }]
+    cardData: {
+      cardNumber: cardData.cardNumber.replace(/\s/g, ''),
+      month: cardData.expiryMonth.padStart(2, '0'),
+      year: cardData.expiryYear.length === 2 ? cardData.expiryYear : cardData.expiryYear.slice(-2),
+      cardCode: cardData.cvv
     }
   };
+
+  return new Promise((resolve) => {
+    window.Accept.dispatchData(secureData, (response: AcceptJsNativeResponse) => {
+      const isSuccess = response.messages.resultCode === 'Ok';
+      
+      if (!isSuccess) {
+        console.error('Accept.js tokenization failed:', response.messages);
+      }
+      
+      resolve({
+        success: isSuccess,
+        opaqueData: response.opaqueData,
+        messages: response.messages
+      });
+    });
+  });
 };
 
 /**
  * Detect card type from card number (BIN lookup)
- * More permissive for test cards - allows any card starting with standard BINs
  */
 export const detectCardType = (cardNumber: string): string => {
   const cleaned = cardNumber.replace(/\s/g, '');
   
-  // Test card patterns - be permissive
   if (/^4/.test(cleaned)) return 'Visa';
   if (/^5[1-5]/.test(cleaned)) return 'Mastercard';
   if (/^2[2-7]/.test(cleaned)) return 'Mastercard'; // New Mastercard BINs
   if (/^3[47]/.test(cleaned)) return 'Amex';
   if (/^6(?:011|5|4[4-9]|22)/.test(cleaned)) return 'Discover';
   
-  // For test cards without valid BIN, default to Visa
-  if (cleaned.endsWith('0000') || cleaned.endsWith('1111')) {
-    return 'Visa';
-  }
-  
-  return 'Visa'; // Default to Visa for unknown cards to allow testing
+  return 'Unknown';
 };
 
 /**
@@ -90,7 +124,7 @@ export const isCardExpired = (expiryMonth: string, expiryYear: string): boolean 
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   
-  const expYear = parseInt(`20${expiryYear}`);
+  const expYear = parseInt(expiryYear.length === 2 ? `20${expiryYear}` : expiryYear);
   const expMonth = parseInt(expiryMonth);
   
   if (expYear < currentYear) return true;
@@ -103,5 +137,42 @@ export const isCardExpired = (expiryMonth: string, expiryYear: string): boolean 
  * Format card expiry for display (MM/YY)
  */
 export const formatCardExpiry = (month: string, year: string): string => {
-  return `${month.padStart(2, '0')}/${year.padStart(2, '0')}`;
+  const formattedYear = year.length === 4 ? year.slice(-2) : year;
+  return `${month.padStart(2, '0')}/${formattedYear.padStart(2, '0')}`;
+};
+
+/**
+ * Validate card number using Luhn algorithm
+ */
+export const isValidCardNumber = (cardNumber: string): boolean => {
+  const cleaned = cardNumber.replace(/\s/g, '');
+  if (!/^\d{13,19}$/.test(cleaned)) return false;
+  
+  let sum = 0;
+  let isEven = false;
+  
+  for (let i = cleaned.length - 1; i >= 0; i--) {
+    let digit = parseInt(cleaned[i], 10);
+    
+    if (isEven) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    
+    sum += digit;
+    isEven = !isEven;
+  }
+  
+  return sum % 10 === 0;
+};
+
+/**
+ * Validate CVV
+ */
+export const isValidCVV = (cvv: string, cardType: string): boolean => {
+  const cleaned = cvv.replace(/\D/g, '');
+  if (cardType === 'Amex') {
+    return /^\d{4}$/.test(cleaned);
+  }
+  return /^\d{3}$/.test(cleaned);
 };
