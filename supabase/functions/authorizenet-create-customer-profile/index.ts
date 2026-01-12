@@ -188,7 +188,9 @@ Deno.serve(async (req) => {
       if (response.messages?.resultCode !== 'Ok') {
         const errorMsg = response.messages?.message?.[0]?.text || 'Failed to add card';
         const errorCode = response.messages?.message?.[0]?.code || 'UNKNOWN';
-        edgeLogger.error('Authorize.Net add payment profile error', { 
+        // Direct console log for debugging
+        console.error('AUTHORIZE.NET RAW RESPONSE:', JSON.stringify(response, null, 2));
+        edgeLogger.error('Authorize.Net add payment profile error', null, { 
           errorMessage: errorMsg,
           errorCode,
           resultCode: response.messages?.resultCode,
@@ -216,7 +218,9 @@ Deno.serve(async (req) => {
       if (response.messages?.resultCode !== 'Ok') {
         const errorMsg = response.messages?.message?.[0]?.text || 'Failed to create profile';
         const errorCode = response.messages?.message?.[0]?.code || 'UNKNOWN';
-        edgeLogger.error('Authorize.Net create profile error', { 
+        // Direct console log for debugging
+        console.error('AUTHORIZE.NET RAW RESPONSE:', JSON.stringify(response, null, 2));
+        edgeLogger.error('Authorize.Net create profile error', null, { 
           errorMessage: errorMsg,
           errorCode,
           resultCode: response.messages?.resultCode,
@@ -291,7 +295,8 @@ Deno.serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    edgeLogger.error('Unexpected error in authorizenet-create-customer-profile', { 
+    console.error('UNEXPECTED ERROR:', errorMessage, errorStack);
+    edgeLogger.error('Unexpected error in authorizenet-create-customer-profile', null, { 
       errorMessage,
       errorStack 
     });
