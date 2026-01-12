@@ -112,10 +112,10 @@ serve(async (req) => {
             .from('orders')
             .update({ 
               payment_status: 'paid',
-              transaction_id: transactionId,
+              authorizenet_transaction_id: transactionId,
               updated_at: new Date().toISOString()
             })
-            .eq('transaction_id', transactionId);
+            .eq('authorizenet_transaction_id', transactionId);
 
           if (updateError) {
             edgeLogger.error('Failed to update order payment status', updateError);
@@ -141,7 +141,7 @@ serve(async (req) => {
               payment_status: 'voided',
               updated_at: new Date().toISOString()
             })
-            .eq('transaction_id', transactionId);
+            .eq('authorizenet_transaction_id', transactionId);
 
           if (updateError) {
             edgeLogger.error('Failed to update order to voided', updateError);
