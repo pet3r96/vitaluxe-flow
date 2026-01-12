@@ -58,12 +58,12 @@ serve(async (req) => {
       );
     }
 
-    // Validate webhook signature
-    const signingKey = Deno.env.get('AUTHORIZENET_WEBHOOK_SIGNING_KEY');
+    // Validate webhook signature using the signature key
+    const signatureKey = Deno.env.get('AUTHORIZENET_SIGNATURE_KEY');
     const signatureValidation = await validateAuthorizenetWebhookSignature(
       signature,
       rawBody,
-      signingKey
+      signatureKey
     );
     
     if (!signatureValidation.valid) {

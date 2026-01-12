@@ -332,67 +332,82 @@ Deno.serve(async (req) => {
       timestamp: new Date().toISOString()
     });
 
-    // PHASE 4: Enhanced test card logic with detailed logging
-    // TODO: Replace with actual Authorize.Net API call when keys are available
-    // Test card support for reliable testing:
-    // - Cards ending in 0000 = always succeed
-    // - Cards ending in 1111 = always fail (declined)
-    // - Other cards = 90% success for realistic testing
-    const lastFour = paymentMethod.card_last_five?.slice(-4) || '';
-    edgeLogger.info('[AUTHNET_CHARGE] Test card analysis', {
-      card_last_five_raw: paymentMethod.card_last_five,
-      lastFour_extracted: lastFour,
-      lastFourLength: lastFour.length,
-      willMatch0000: lastFour === '0000',
-      willMatch1111: lastFour === '1111',
-      isTestMode: lastFour === '0000' || lastFour === '1111',
+    // PRODUCTION: Authorize.Net API call for createTransactionRequest
+    const apiLoginId = Deno.env.get('AUTHORIZENET_API_LOGIN_ID');
+    const transactionKey = Deno.env.get('AUTHORIZENET_TRANSACTION_KEY');
+
+    if (!apiLoginId || !transactionKey) {
+      edgeLogger.error('[AUTHNET_CHARGE] Missing Authorize.Net credentials');
+      finalError = { success: false, error: 'Payment processing unavailable. Please try again later.' };
+      break;
+    }
+
+    edgeLogger.info('[AUTHNET_CHARGE] Calling Authorize.Net API', {
+      customerProfileId: paymentMethod.authorizenet_profile_id,
+      customerPaymentProfileId: paymentMethod.authorizenet_payment_profile_id,
+      amount,
       attempt: paymentAttempt
     });
-    
-    let isSuccess;
 
-    if (lastFour === '0000') {
-      // Test card - guaranteed success
-      isSuccess = true;
-      edgeLogger.info('[AUTHNET_CHARGE] ✅ Test card detected (0000) - SIMULATING SUCCESS', {
-        attempt: paymentAttempt,
-        bypass_authorizenet: true
-      });
-    } else if (lastFour === '1111') {
-      // Test card - guaranteed failure
-      isSuccess = false;
-      edgeLogger.info('[AUTHNET_CHARGE] ❌ Test card detected (1111) - SIMULATING FAILURE', {
-        attempt: paymentAttempt,
-        bypass_authorizenet: true
-      });
-    } else {
-      // Real cards - simulate 90% success rate
-      const randomValue = Math.random();
-      isSuccess = randomValue > 0.1;
-      edgeLogger.info('Random payment simulation', {
-        randomValue,
-        threshold: 0.1,
-        willSucceed: isSuccess
-      });
-    }
-    
+    // Build the createTransactionRequest for charging a customer profile
+    const transactionRequest = {
+      createTransactionRequest: {
+        merchantAuthentication: {
+          name: apiLoginId,
+          transactionKey: transactionKey
+        },
+        transactionRequest: {
+          transactionType: 'authCaptureTransaction',
+          amount: amount.toFixed(2),
+          profile: {
+            customerProfileId: paymentMethod.authorizenet_profile_id,
+            paymentProfile: {
+              paymentProfileId: paymentMethod.authorizenet_payment_profile_id
+            }
+          },
+          order: order_id ? {
+            invoiceNumber: order_id.substring(0, 20),
+            description: 'Order Payment'
+          } : undefined
+        }
+      }
+    };
+
+    const authnetResponse = await fetch('https://api.authorize.net/xml/v1/request.api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(transactionRequest)
+    });
+
+    const authnetResult = await authnetResponse.json();
+
+    edgeLogger.info('[AUTHNET_CHARGE] Authorize.Net response received', {
+      resultCode: authnetResult?.messages?.resultCode,
+      responseCode: authnetResult?.transactionResponse?.responseCode,
+      attempt: paymentAttempt
+    });
+
+    // Check for successful transaction (responseCode 1 = Approved)
+    const transactionResponse = authnetResult?.transactionResponse;
+    const isSuccess = authnetResult?.messages?.resultCode === 'Ok' && 
+                      transactionResponse?.responseCode === '1';
+
     if (isSuccess) {
-          const mockTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const realTransactionId = transactionResponse.transId;
           
-          edgeLogger.info('[AUTHNET_CHARGE] Authorize.Net response received (simulated)', {
+          edgeLogger.info('[AUTHNET_CHARGE] Payment approved', {
             order_id,
-            success: true,
-            transaction_id: mockTransactionId,
-            attempt: paymentAttempt,
-            timestamp: new Date().toISOString()
+            transaction_id: realTransactionId,
+            authCode: transactionResponse.authCode,
+            attempt: paymentAttempt
           });
           
-          // ✅ ONLY update order if order_id exists (skip in pre-order mode)
+          // Update order if order_id exists
           if (order_id) {
             const { error: updateError } = await supabase
               .from('orders')
               .update({
-                authorizenet_transaction_id: mockTransactionId,
+                authorizenet_transaction_id: realTransactionId,
                 authorizenet_profile_id: paymentMethod.authorizenet_profile_id,
                 payment_method_used: paymentMethod.payment_type,
                 payment_method_id: payment_method_id,
@@ -402,7 +417,7 @@ Deno.serve(async (req) => {
 
             if (updateError) {
               edgeLogger.error('[AUTHNET_CHARGE] Error updating order', updateError, { attempt: paymentAttempt });
-              finalError = { error: 'Unable to process payment. Please try again or contact support.' };
+              finalError = { error: 'Payment approved but order update failed. Please contact support.' };
               
               if (paymentAttempt < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -411,48 +426,48 @@ Deno.serve(async (req) => {
               
               return new Response(
                 JSON.stringify({ 
-                  success: false, 
-                  error: finalError.error
+                  success: true, 
+                  transaction_id: realTransactionId,
+                  warning: 'Payment approved but order update failed'
                 }),
                 { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
               );
             }
           } else {
-            // Pre-order mode: payment authorized but no order to update yet
-            edgeLogger.info('[AUTHNET_CHARGE] Pre-order mode: payment authorized, no order update', {
-              transaction_id: mockTransactionId,
+            edgeLogger.info('[AUTHNET_CHARGE] Pre-order mode: payment authorized', {
+              transaction_id: realTransactionId,
               attempt: paymentAttempt
             });
           }
 
           edgeLogger.info("[AUTHNET_CHARGE] Payment successful", { 
-            transaction_id: mockTransactionId,
+            transaction_id: realTransactionId,
             order_id: order_id || 'pre-order',
-            attempt: paymentAttempt,
-            timestamp: new Date().toISOString()
+            attempt: paymentAttempt
           });
 
           finalSuccess = true;
-          finalTransactionId = mockTransactionId;
+          finalTransactionId = realTransactionId;
           break; // Exit retry loop on success
         } else {
-          // Simulate payment failure
-          edgeLogger.info("[AUTHNET_CHARGE] Payment failed for order", { 
+          // Payment declined or error
+          const errorMessage = transactionResponse?.errors?.[0]?.errorText || 
+                               authnetResult?.messages?.message?.[0]?.text ||
+                               'Your card was declined.';
+          
+          edgeLogger.info("[AUTHNET_CHARGE] Payment failed", { 
             order_id,
+            responseCode: transactionResponse?.responseCode,
+            errorMessage,
             attempt: paymentAttempt,
             willRetry: paymentAttempt < maxAttempts
           });
           
           finalError = {
             success: false,
-            error: 'Your card was declined. Please try a different payment method or contact your bank.',
+            error: `Payment declined: ${errorMessage}`,
             message: 'Payment declined',
-            authorizenet_response: {
-              messages: {
-                resultCode: 'Error',
-                message: [{ code: 'E00027', text: 'The transaction was declined.' }]
-              }
-            }
+            authorizenet_response: authnetResult
           };
           
           if (paymentAttempt < maxAttempts) {
@@ -465,14 +480,16 @@ Deno.serve(async (req) => {
             continue;
           }
           
-          // Only mark as declined after all retries exhausted
-          const { error: updateError } = await supabaseAdmin
-            .from('practice_payment_methods')
-            .update({ status: 'declined' })
-            .eq('id', payment_method_id);
-            
-          if (updateError) {
-            edgeLogger.error('[AUTHNET_CHARGE] Failed to mark payment method as declined', updateError);
+          // Mark payment method as declined after all retries exhausted
+          if (transactionResponse?.responseCode === '2') { // Declined
+            const { error: updateError } = await supabaseAdmin
+              .from('practice_payment_methods')
+              .update({ status: 'declined' })
+              .eq('id', payment_method_id);
+              
+            if (updateError) {
+              edgeLogger.error('[AUTHNET_CHARGE] Failed to mark payment method as declined', updateError);
+            }
           }
         }
       } catch (attemptError) {
