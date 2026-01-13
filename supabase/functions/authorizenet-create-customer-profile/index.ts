@@ -71,7 +71,7 @@ async function createCustomerProfile(
           payment: { opaqueData }
         }
       },
-      validationMode: 'liveMode'
+          validationMode: 'testMode'
     }
   };
 
@@ -112,7 +112,7 @@ async function addPaymentProfile(
         },
         payment: { opaqueData }
       },
-      validationMode: 'liveMode'
+      validationMode: 'testMode'
     }
   };
 
