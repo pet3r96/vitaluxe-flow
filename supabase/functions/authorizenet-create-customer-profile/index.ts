@@ -8,6 +8,14 @@ const corsHeaders = {
 
 const AUTHORIZENET_API_URL = 'https://api.authorize.net/xml/v1/request.api';
 
+// Generate a short unique merchant customer ID (max 20 chars for Authorize.Net)
+function generateMerchantCustomerId(practiceId: string): string {
+  // Use first 8 chars of UUID (without dashes) + timestamp suffix for uniqueness
+  const shortId = practiceId.replace(/-/g, '').substring(0, 8);
+  const timestamp = Date.now().toString(36).slice(-6); // Last 6 chars of base36 timestamp
+  return `p${shortId}${timestamp}`.substring(0, 20); // Ensure max 20 chars
+}
+
 interface CreateProfileRequest {
   payment_type: 'credit_card' | 'bank_account';
   payment_nonce?: string;
@@ -220,7 +228,7 @@ Deno.serve(async (req) => {
       const response = await createCustomerProfile(
         apiLoginId, transactionKey,
         user.email || '',
-        `user_${targetPracticeId}`,
+        generateMerchantCustomerId(targetPracticeId),
         opaqueData,
         requestData.billing_address,
         requestData.cardholder_name
