@@ -16,6 +16,7 @@ interface DiagnosticStep {
 
 interface DiagnosticsRequest {
   pharmacy_id: string;
+  include_vios_token_test?: boolean;
 }
 
 serve(async (req) => {
@@ -26,8 +27,8 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createAdminClient();
 
-    const { pharmacy_id }: DiagnosticsRequest = await req.json();
-    edgeLogger.info('[Diagnostics] Starting diagnostics for pharmacy', { pharmacyId: pharmacy_id });
+    const { pharmacy_id, include_vios_token_test }: DiagnosticsRequest = await req.json();
+    edgeLogger.info('[Diagnostics] Starting diagnostics for pharmacy', { pharmacyId: pharmacy_id, includeViosTokenTest: include_vios_token_test });
 
     const results: DiagnosticStep[] = [];
 
@@ -177,6 +178,94 @@ serve(async (req) => {
           message: "No API credentials required",
         });
         break;
+    }
+
+    // Step: VIOS Token Test (if requested and VIOS handler)
+    if (include_vios_token_test && pharmacy.api_handler_type === 'vios') {
+      const baseUrl = pharmacy.api_endpoint_url?.replace(/\/+$/, '') || 'https://integrations.vioscompounding.com';
+      
+      // Get VIOS credentials
+      const viosClientKey = credentials?.find((c: any) => c.credential_type === 'vios_client_key')?.credential_key;
+      const viosClientSecret = credentials?.find((c: any) => c.credential_type === 'vios_client_secret')?.credential_key;
+      
+      // Also check environment variables
+      const envClientId = Deno.env.get('VIOS_CLIENT_ID');
+      const envClientSecret = Deno.env.get('VIOS_CLIENT_SECRET');
+      
+      const clientId = (envClientId && envClientSecret) ? envClientId : viosClientKey;
+      const clientSecret = (envClientId && envClientSecret) ? envClientSecret : viosClientSecret;
+      
+      if (!clientId || !clientSecret) {
+        results.push({
+          step: "VIOS Token Exchange",
+          status: "error",
+          message: "Missing VIOS credentials for token test",
+          details: { hasClientId: !!clientId, hasClientSecret: !!clientSecret }
+        });
+      } else {
+        try {
+          const tokenUrl = `${baseUrl}/api/auth/token`;
+          const startTime = Date.now();
+          
+          const tokenResponse = await fetch(tokenUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'ClientId': clientId,
+              'ClientSecret': clientSecret
+            }
+          });
+          
+          const duration = Date.now() - startTime;
+          
+          if (tokenResponse.ok) {
+            const tokenData = await tokenResponse.json();
+            if (tokenData.accessToken) {
+              results.push({
+                step: "VIOS Token Exchange",
+                status: "success",
+                message: "Successfully obtained VIOS JWT token",
+                details: { 
+                  tokenLength: tokenData.accessToken.length,
+                  durationMs: duration,
+                  usingEnvVars: !!(envClientId && envClientSecret)
+                }
+              });
+            } else {
+              results.push({
+                step: "VIOS Token Exchange",
+                status: "error",
+                message: "Token response missing accessToken",
+                details: { responseKeys: Object.keys(tokenData) }
+              });
+            }
+          } else {
+            const errorText = await tokenResponse.text();
+            results.push({
+              step: "VIOS Token Exchange",
+              status: "error",
+              message: `VIOS auth failed (${tokenResponse.status})`,
+              details: { error: errorText.substring(0, 200) }
+            });
+          }
+        } catch (tokenError) {
+          results.push({
+            step: "VIOS Token Exchange",
+            status: "error",
+            message: "Failed to connect to VIOS auth endpoint",
+            details: { error: tokenError instanceof Error ? tokenError.message : String(tokenError) }
+          });
+        }
+      }
+      
+      // Check if all steps passed including VIOS token
+      const hasErrors = results.some(r => r.status === 'error');
+      if (hasErrors) {
+        return new Response(
+          JSON.stringify({ success: false, results }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
     }
 
     // All diagnostics passed
