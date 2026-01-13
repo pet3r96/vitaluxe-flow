@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/formatters";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -116,7 +117,7 @@ const PracticeProfitReports = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              ${totalSpent.toFixed(2)}
+              {formatCurrency(totalSpent)}
             </div>
             <p className="text-xs text-muted-foreground">All-time order total</p>
           </CardContent>
@@ -129,7 +130,7 @@ const PracticeProfitReports = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              ${pendingAmount.toFixed(2)}
+              {formatCurrency(pendingAmount)}
             </div>
             <p className="text-xs text-muted-foreground">In processing or pending</p>
           </CardContent>
@@ -142,7 +143,7 @@ const PracticeProfitReports = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              ${completedAmount.toFixed(2)}
+              {formatCurrency(completedAmount)}
             </div>
             <p className="text-xs text-muted-foreground">Shipped or delivered</p>
           </CardContent>
@@ -229,7 +230,7 @@ const PracticeProfitReports = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${parseFloat(order.total_amount?.toString() || '0').toFixed(2)}
+                      {formatCurrency(parseFloat(order.total_amount?.toString() || '0'))}
                     </TableCell>
                   </TableRow>
                 ))

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/lib/formatters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, Package, TrendingUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -147,7 +148,7 @@ const RepDashboard = () => {
     },
     {
       title: "Total Profit",
-      value: `$${dashboardStats?.profitStats?.totalProfit?.toFixed(2) || '0.00'}`,
+      value: formatCurrency(dashboardStats?.profitStats?.totalProfit || 0),
       icon: DollarSign,
       description: "Commissions + Development Fees",
     },
@@ -160,13 +161,13 @@ const RepDashboard = () => {
     },
     {
       title: "Total Profit",
-      value: `$${dashboardStats?.profitStats?.totalProfit?.toFixed(2) || '0.00'}`,
+      value: formatCurrency(dashboardStats?.profitStats?.totalProfit || 0),
       icon: DollarSign,
       description: "All-time earnings",
     },
     {
       title: "Pending Profit",
-      value: `$${dashboardStats?.profitStats?.pendingProfit?.toFixed(2) || '0.00'}`,
+      value: formatCurrency(dashboardStats?.profitStats?.pendingProfit || 0),
       icon: Package,
       description: "Orders not yet delivered",
     },

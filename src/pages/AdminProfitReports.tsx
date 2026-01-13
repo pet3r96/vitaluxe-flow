@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/formatters";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -213,7 +214,7 @@ const AdminProfitReports = () => {
             <CardTitle className="text-sm font-medium">Total Admin Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalAdminProfit.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalAdminProfit)}</div>
             <p className="text-xs text-muted-foreground mt-1">All-time platform earnings</p>
           </CardContent>
         </Card>
@@ -223,7 +224,7 @@ const AdminProfitReports = () => {
             <CardTitle className="text-sm font-medium">Pending Admin Profit</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">${pendingAdminProfit.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(pendingAdminProfit)}</div>
             <p className="text-xs text-muted-foreground mt-1">Not yet delivered</p>
           </CardContent>
         </Card>
@@ -233,7 +234,7 @@ const AdminProfitReports = () => {
             <CardTitle className="text-sm font-medium">Collected Admin Profit</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${collectedAdminProfit.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(collectedAdminProfit)}</div>
             <p className="text-xs text-muted-foreground mt-1">Delivered orders</p>
           </CardContent>
         </Card>
@@ -249,15 +250,15 @@ const AdminProfitReports = () => {
             <div className="space-y-2">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Direct:</span>
-                <span className="font-semibold">${directProfit.toFixed(2)}</span>
+                <span className="font-semibold">{formatCurrency(directProfit)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Via Topline:</span>
-                <span className="font-semibold">${toplineOnlyProfit.toFixed(2)}</span>
+                <span className="font-semibold">{formatCurrency(toplineOnlyProfit)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Full Network:</span>
-                <span className="font-semibold">${fullNetworkProfit.toFixed(2)}</span>
+                <span className="font-semibold">{formatCurrency(fullNetworkProfit)}</span>
               </div>
             </div>
           </CardContent>
@@ -365,7 +366,7 @@ const AdminProfitReports = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <span className="font-medium">
-                        ${parseFloat(profit.admin_profit?.toString() || '0').toFixed(2)}
+                        {formatCurrency(parseFloat(profit.admin_profit?.toString() || '0'))}
                       </span>
                     </TableCell>
                   </TableRow>
