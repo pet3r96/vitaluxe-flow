@@ -117,10 +117,10 @@ export async function getViosToken(credentials: ViosCredentials): Promise<string
     throw new Error('VIOS auth response missing accessToken');
   }
   
-  // Cache token for 55 minutes (tokens typically last 60 mins)
+  // Cache token for 14 minutes (VIOS tokens expire in 15 mins per their FAQ)
   tokenCache.set(cacheKey, {
     token: data.accessToken,
-    expiresAt: Date.now() + 55 * 60 * 1000
+    expiresAt: Date.now() + 14 * 60 * 1000
   });
   
   edgeLogger.info('VIOS: JWT token obtained', { duration, tokenLength: data.accessToken.length });

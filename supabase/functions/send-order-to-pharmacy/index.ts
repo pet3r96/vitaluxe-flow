@@ -275,13 +275,19 @@ function transformToViosPayload(
     },
     rxs: [{
       rxType: orderLine.is_refill ? 'refill' : 'new',
-      drugName: orderLine.products?.name || 'Unknown Product',
+      // Use lfProductId if available (preferred by VIOS), otherwise fall back to drugName
+      lfProductId: orderLine.products?.vios_lf_product_id || undefined,
+      drugName: orderLine.products?.vios_lf_product_id ? undefined : (orderLine.products?.name || 'Unknown Product'),
       quantity: String(orderLine.quantity || 1),
       directions: orderLine.custom_sig || 'As directed',
       drugStrength: orderLine.custom_dosage || undefined,
       refills: orderLine.refills_remaining || 0,
       dateWritten: formatDateForVios(order.created_at) || formatDateForVios(new Date()),
-      specialInstructions: orderLine.order_notes || undefined
+      specialInstructions: orderLine.order_notes || undefined,
+      // GLP-1 clinical difference statement (required by FDA for GLP-1 compounds)
+      clinicalDifferenceStatement: orderLine.products?.is_glp1 
+        ? (orderLine.products?.glp1_clinical_statement || 'Compounded for patient-specific dose customization')
+        : undefined
     }]
   };
   
