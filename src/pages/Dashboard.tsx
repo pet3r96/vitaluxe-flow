@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Card } from "@/components/ui/card";
 import { Package, ShoppingCart, Users, DollarSign, Clock, Sparkles, Lock } from "lucide-react";
+import { formatCurrency } from "@/lib/formatters";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDashboardQuery } from "@/hooks/useDashboardQuery";
@@ -315,7 +316,7 @@ const Dashboard = () => {
     },
     {
       title: effectiveRole === "doctor" ? "Total Paid" : "Pending Revenue",
-      value: pendingRevenueLoading ? "..." : `$${pendingRevenue?.toFixed(2) || "0.00"}`,
+      value: pendingRevenueLoading ? "..." : formatCurrency(pendingRevenue || 0),
       icon: DollarSign,
       description: effectiveRole === "doctor" ? "Total amount paid by practice" : effectiveRole === "provider" ? "Your pending revenue" : "Pending orders revenue",
       isLoading: pendingRevenueLoading,
@@ -323,7 +324,7 @@ const Dashboard = () => {
     },
     {
       title: "Collected Revenue",
-      value: collectedRevenueLoading ? "..." : `$${collectedRevenue?.toFixed(2) || "0.00"}`,
+      value: collectedRevenueLoading ? "..." : formatCurrency(collectedRevenue || 0),
       icon: DollarSign,
       description: effectiveRole === "doctor" ? "Practice collected revenue" : effectiveRole === "provider" ? "Your collected revenue" : "Paid orders revenue",
       isLoading: collectedRevenueLoading,
@@ -541,10 +542,10 @@ const Dashboard = () => {
               metricKey="revenue"
               icon={DollarSign}
               description="Paid orders revenue"
-              currentValue={(collectedRevenueLoading || collectedRevenue === undefined) ? "..." : `$${collectedRevenue.toFixed(2)}`}
+              currentValue={(collectedRevenueLoading || collectedRevenue === undefined) ? "..." : formatCurrency(collectedRevenue)}
               role={effectiveRole}
               userId={effectiveUserId}
-              valueFormatter={(v) => `$${v.toFixed(2)}`}
+              valueFormatter={(v) => formatCurrency(v)}
             />
           </div>
         </div>

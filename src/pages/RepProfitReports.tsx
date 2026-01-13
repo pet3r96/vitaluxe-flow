@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/formatters";
 import {
   Table,
   TableBody,
@@ -132,7 +133,7 @@ const RepProfitReports = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalEarnings)}</div>
             <p className="text-xs text-muted-foreground">
               All time earnings
             </p>
@@ -145,7 +146,7 @@ const RepProfitReports = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${unpaidEarnings.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(unpaidEarnings)}</div>
             <p className="text-xs text-muted-foreground">
               Awaiting collection
             </p>
@@ -158,7 +159,7 @@ const RepProfitReports = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${paidEarnings.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(paidEarnings)}</div>
             <p className="text-xs text-muted-foreground">
               Successfully collected
             </p>
@@ -175,11 +176,11 @@ const RepProfitReports = () => {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Direct Sales Commissions</p>
-                <p className="text-2xl font-bold">${directSalesEarnings.toFixed(2)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(directSalesEarnings)}</p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Practice Development Fees</p>
-                <p className="text-2xl font-bold">${practiceDevFees.toFixed(2)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(practiceDevFees)}</p>
               </div>
             </div>
           </CardContent>
@@ -275,7 +276,7 @@ const RepProfitReports = () => {
                             </div>
                           </TableCell>
                           <TableCell className="font-medium">
-                            ${parseFloat(earning.amount?.toString() || '0').toFixed(2)}
+                            {formatCurrency(parseFloat(earning.amount?.toString() || '0'))}
                           </TableCell>
                           <TableCell>
                             <Badge variant={earning.paid_at ? 'default' : 'secondary'}>
