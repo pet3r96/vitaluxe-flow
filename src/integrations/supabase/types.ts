@@ -5384,8 +5384,10 @@ export type Database = {
           dosage: string | null
           dosage_form: string | null
           downline_price: number | null
+          glp1_clinical_statement: string | null
           id: string
           image_url: string | null
+          is_glp1: boolean | null
           name: string
           pharmacy_id: string | null
           product_type_id: string
@@ -5394,6 +5396,7 @@ export type Database = {
           sig: string | null
           topline_price: number | null
           updated_at: string | null
+          vios_lf_product_id: string | null
         }
         Insert: {
           active?: boolean | null
@@ -5403,8 +5406,10 @@ export type Database = {
           dosage?: string | null
           dosage_form?: string | null
           downline_price?: number | null
+          glp1_clinical_statement?: string | null
           id?: string
           image_url?: string | null
+          is_glp1?: boolean | null
           name: string
           pharmacy_id?: string | null
           product_type_id: string
@@ -5413,6 +5418,7 @@ export type Database = {
           sig?: string | null
           topline_price?: number | null
           updated_at?: string | null
+          vios_lf_product_id?: string | null
         }
         Update: {
           active?: boolean | null
@@ -5422,8 +5428,10 @@ export type Database = {
           dosage?: string | null
           dosage_form?: string | null
           downline_price?: number | null
+          glp1_clinical_statement?: string | null
           id?: string
           image_url?: string | null
+          is_glp1?: boolean | null
           name?: string
           pharmacy_id?: string | null
           product_type_id?: string
@@ -5432,6 +5440,7 @@ export type Database = {
           sig?: string | null
           topline_price?: number | null
           updated_at?: string | null
+          vios_lf_product_id?: string | null
         }
         Relationships: [
           {
