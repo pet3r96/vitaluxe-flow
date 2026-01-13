@@ -285,9 +285,17 @@ function transformToViosPayload(
       dateWritten: formatDateForVios(order.created_at) || formatDateForVios(new Date()),
       specialInstructions: orderLine.order_notes || undefined,
       // GLP-1 clinical difference statement (required by FDA for GLP-1 compounds)
-      clinicalDifferenceStatement: orderLine.products?.is_glp1 
-        ? (orderLine.products?.glp1_clinical_statement || 'Compounded for patient-specific dose customization')
-        : undefined
+      // Check product.is_glp1 flag OR product_type.is_glp OR product_type name starts with GLP
+      clinicalDifferenceStatement: (() => {
+        const product = orderLine.products;
+        const productType = product?.product_types;
+        const isGlp = product?.is_glp1 || productType?.is_glp || productType?.name?.startsWith('GLP');
+        if (!isGlp) return undefined;
+        // Priority: product-level statement > product_type statement > default
+        return product?.glp1_clinical_statement || 
+               productType?.glp_clinical_statement || 
+               'Compounded for customized dosing to meet individual patient needs per prescriber requirements.';
+      })()
     }]
   };
   
@@ -639,12 +647,24 @@ serve(async (req) => {
       throw new Error(`Order not found: ${orderError?.message}`);
     }
 
-    // Fetch all order lines data with provider credentials and patient account data
+    // Fetch all order lines data with provider credentials, patient account data, and product details
     const { data: orderLines, error: linesError } = await supabaseAdmin
       .from("order_lines")
       .select(`
         *,
-        products(name),
+        products(
+          id,
+          name,
+          vios_lf_product_id,
+          is_glp1,
+          glp1_clinical_statement,
+          product_types(
+            id,
+            name,
+            is_glp,
+            glp_clinical_statement
+          )
+        ),
         providers!order_lines_provider_id_fkey(
           user_id,
           profiles!providers_user_id_fkey(

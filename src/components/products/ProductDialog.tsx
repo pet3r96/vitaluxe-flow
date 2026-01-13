@@ -66,6 +66,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     product_type_id: "",
     scope_type: "global" as "global" | "scoped",
     assigned_topline_reps: [] as string[],
+    vios_lf_product_id: "",
   });
 
   const DOSAGE_FORMS = [
@@ -186,6 +187,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         product_type_id: product.product_type_id || "",
         scope_type: "global",
         assigned_topline_reps: [],
+        vios_lf_product_id: product.vios_lf_product_id || "",
       });
       setImagePreview(product.image_url || "");
       
@@ -330,6 +332,8 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         active: true,
         requires_prescription: formData.requires_prescription,
         product_type_id: formData.product_type_id,
+        // VIOS API integration
+        vios_lf_product_id: formData.vios_lf_product_id || null,
       };
 
       let productId = product?.id;
@@ -423,6 +427,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
       product_type_id: "",
       scope_type: "global",
       assigned_topline_reps: [],
+      vios_lf_product_id: "",
     });
     setImageFile(null);
     setImagePreview("");
@@ -710,6 +715,20 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             
             <p className="text-xs text-muted-foreground mt-2">
               Selected: {formData.assigned_pharmacies.length} pharmacy(s)
+            </p>
+          </div>
+
+          {/* VIOS API Integration */}
+          <div className="space-y-2">
+            <Label htmlFor="vios_lf_product_id">VIOS Product ID</Label>
+            <Input
+              id="vios_lf_product_id"
+              value={formData.vios_lf_product_id}
+              onChange={(e) => setFormData({ ...formData, vios_lf_product_id: e.target.value })}
+              placeholder="Enter lfProductId from VIOS catalog"
+            />
+            <p className="text-xs text-muted-foreground">
+              Optional: For direct VIOS pharmacy mapping. Get this ID from the VIOS product catalog.
             </p>
           </div>
 
