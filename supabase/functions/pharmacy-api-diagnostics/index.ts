@@ -106,23 +106,57 @@ serve(async (req) => {
 
     switch (pharmacy.api_auth_type) {
       case "bearer": {
-        const hasToken = credentials?.some(c => c.credential_type === "bearer_token");
-        if (!hasToken) {
+        // VIOS uses OAuth client credentials, not static bearer token
+        if (pharmacy.api_handler_type === 'vios') {
+          const hasClientKey = credentials?.some(c => c.credential_type === "vios_client_key");
+          const hasClientSecret = credentials?.some(c => c.credential_type === "vios_client_secret");
+          // Also check environment variables
+          const envClientId = Deno.env.get('VIOS_CLIENT_ID');
+          const envClientSecret = Deno.env.get('VIOS_CLIENT_SECRET');
+          const hasEnvCredentials = !!(envClientId && envClientSecret);
+          
+          if (!hasEnvCredentials && (!hasClientKey || !hasClientSecret)) {
+            results.push({
+              step: "API Credentials",
+              status: "error",
+              message: "VIOS OAuth credentials incomplete",
+              details: {
+                has_client_key: Boolean(hasClientKey),
+                has_client_secret: Boolean(hasClientSecret),
+                has_env_credentials: hasEnvCredentials,
+              },
+            });
+            return new Response(
+              JSON.stringify({ success: false, results }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+            );
+          }
           results.push({
             step: "API Credentials",
-            status: "error",
-            message: "No bearer token credentials found",
+            status: "success",
+            message: hasEnvCredentials ? "VIOS OAuth credentials configured (env)" : "VIOS OAuth credentials configured",
+            details: { source: hasEnvCredentials ? "environment" : "database" },
           });
-          return new Response(
-            JSON.stringify({ success: false, results }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-          );
+        } else {
+          // Standard bearer token check for non-VIOS
+          const hasToken = credentials?.some(c => c.credential_type === "bearer_token");
+          if (!hasToken) {
+            results.push({
+              step: "API Credentials",
+              status: "error",
+              message: "No bearer token credentials found",
+            });
+            return new Response(
+              JSON.stringify({ success: false, results }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+            );
+          }
+          results.push({
+            step: "API Credentials",
+            status: "success",
+            message: "Bearer token credentials configured",
+          });
         }
-        results.push({
-          step: "API Credentials",
-          status: "success",
-          message: "Bearer token credentials configured",
-        });
         break;
       }
       case "api_key": {
