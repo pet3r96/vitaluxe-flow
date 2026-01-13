@@ -40,6 +40,9 @@ export const PharmacyApiConfigDialog = ({
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const [diagnosticsResults, setDiagnosticsResults] = useState<any>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [isSendingTestOrder, setIsSendingTestOrder] = useState(false);
+  const [testOrderResult, setTestOrderResult] = useState<any>(null);
+  const [showTestOrderResult, setShowTestOrderResult] = useState(false);
   
   // Collapsible section states
   const [outboundOpen, setOutboundOpen] = useState(true);
@@ -350,7 +353,8 @@ export const PharmacyApiConfigDialog = ({
     try {
       const { data, error } = await supabase.functions.invoke("pharmacy-api-diagnostics", {
         body: {
-          pharmacy_id: pharmacyId
+          pharmacy_id: pharmacyId,
+          include_vios_token_test: apiHandlerType === 'vios'
         }
       });
 
@@ -380,6 +384,48 @@ export const PharmacyApiConfigDialog = ({
       });
     } finally {
       setIsRunningDiagnostics(false);
+    }
+  };
+
+  const handleSendTestOrder = async () => {
+    setIsSendingTestOrder(true);
+    setTestOrderResult(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("pharmacy-test-order", {
+        body: {
+          pharmacy_id: pharmacyId
+        }
+      });
+
+      if (error) throw error;
+
+      setTestOrderResult(data);
+      setShowTestOrderResult(true);
+
+      if (data?.success) {
+        toast({
+          title: "Test Order Sent ✓",
+          description: `VIOS Order ID: ${data.viosOrderId || 'N/A'}`,
+        });
+      } else {
+        toast({
+          title: "Test Order Failed",
+          description: data?.error || "Failed to send test order",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      logger.error('Test order error', error);
+      setTestOrderResult({ success: false, error: error.message });
+      setShowTestOrderResult(true);
+      toast({
+        title: "Failed to send test order",
+        description: error.message || "An error occurred while sending test order",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingTestOrder(false);
     }
   };
 
@@ -722,6 +768,64 @@ export const PharmacyApiConfigDialog = ({
                           {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Test Connection
                         </Button>
+                      )}
+
+                      {apiHandlerType === 'vios' && diagnosticsResults?.success && (
+                        <>
+                          <Button
+                            onClick={handleSendTestOrder}
+                            disabled={isSendingTestOrder}
+                            variant="default"
+                            className="w-full"
+                          >
+                            {isSendingTestOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            <FlaskConical className="mr-2 h-4 w-4" />
+                            Send Test Order to VIOS
+                          </Button>
+
+                          {testOrderResult && (
+                            <Collapsible open={showTestOrderResult} onOpenChange={setShowTestOrderResult}>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" className="w-full justify-between">
+                                  <span className="flex items-center gap-2">
+                                    {testOrderResult.success ? (
+                                      <CheckCircle className="h-4 w-4 text-green-500" />
+                                    ) : (
+                                      <XCircle className="h-4 w-4 text-destructive" />
+                                    )}
+                                    Test Order Result
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {showTestOrderResult ? "Hide" : "Show"}
+                                  </span>
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="mt-2 p-3 border rounded-md text-sm space-y-2">
+                                {testOrderResult.success ? (
+                                  <>
+                                    <p className="text-green-600 font-medium">✓ Test order sent successfully</p>
+                                    {testOrderResult.viosOrderId && (
+                                      <p><span className="text-muted-foreground">VIOS Order ID:</span> <code className="bg-muted px-1 rounded">{testOrderResult.viosOrderId}</code></p>
+                                    )}
+                                    {testOrderResult.referenceId && (
+                                      <p><span className="text-muted-foreground">Reference ID:</span> <code className="bg-muted px-1 rounded">{testOrderResult.referenceId}</code></p>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="text-destructive font-medium">✗ Test order failed</p>
+                                    <p className="text-muted-foreground">{testOrderResult.error}</p>
+                                  </>
+                                )}
+                                {testOrderResult.details && (
+                                  <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-x-auto max-h-48">
+                                    {JSON.stringify(testOrderResult.details, null, 2)}
+                                  </pre>
+                                )}
+                              </CollapsibleContent>
+                            </Collapsible>
+                          )}
+                        </>
                       )}
                     </div>
                   </CollapsibleContent>
