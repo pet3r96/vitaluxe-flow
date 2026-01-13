@@ -5288,21 +5288,27 @@ export type Database = {
         Row: {
           active: boolean | null
           created_at: string | null
+          glp_clinical_statement: string | null
           id: string
+          is_glp: boolean | null
           name: string
           updated_at: string | null
         }
         Insert: {
           active?: boolean | null
           created_at?: string | null
+          glp_clinical_statement?: string | null
           id?: string
+          is_glp?: boolean | null
           name: string
           updated_at?: string | null
         }
         Update: {
           active?: boolean | null
           created_at?: string | null
+          glp_clinical_statement?: string | null
           id?: string
+          is_glp?: boolean | null
           name?: string
           updated_at?: string | null
         }
