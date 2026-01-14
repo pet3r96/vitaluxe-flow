@@ -12,6 +12,43 @@ interface TestOrderRequest {
   pharmacy_id: string;
 }
 
+// Fetch test prescriber NPI from pharmacy settings
+async function getTestPrescriberNpi(
+  supabaseAdmin: any,
+  pharmacyId: string
+): Promise<{ npi: string | null; error?: string }> {
+  const { data: pharmacy, error } = await supabaseAdmin
+    .from('pharmacies')
+    .select('test_prescriber_npi, name')
+    .eq('id', pharmacyId)
+    .single();
+  
+  if (error) {
+    edgeLogger.error('[TestOrder] Failed to fetch pharmacy', { pharmacyId, error: error.message });
+    return { npi: null, error: `Failed to fetch pharmacy: ${error.message}` };
+  }
+  
+  const npi = pharmacy?.test_prescriber_npi;
+  
+  if (!npi || npi.trim() === '') {
+    return { 
+      npi: null, 
+      error: `Test Prescriber NPI not configured for "${pharmacy?.name || 'this pharmacy'}". Please set a valid 10-digit NPI in the VIOS API Configuration that is registered with your VIOS account.` 
+    };
+  }
+  
+  // Validate NPI format (10 digits)
+  const npiDigits = npi.replace(/\D/g, '');
+  if (npiDigits.length !== 10) {
+    return { 
+      npi: null, 
+      error: `Invalid Test Prescriber NPI format: "${npi}". NPI must be exactly 10 digits.` 
+    };
+  }
+  
+  return { npi: npiDigits };
+}
+
 // Get a valid shipping service code from the pharmacy's configured rates
 async function getValidShippingCode(
   supabaseAdmin: any, 
@@ -49,7 +86,7 @@ async function getValidShippingCode(
 }
 
 // Generate synthetic test order payload - minimal to avoid practice lookups
-function createTestOrderPayload(shippingServiceCode: number): any {
+function createTestOrderPayload(shippingServiceCode: number, prescriberNpi: string): any {
   const testId = `TEST-${Date.now()}`;
   
   return {
@@ -60,9 +97,9 @@ function createTestOrderPayload(shippingServiceCode: number): any {
       // IMPORTANT: Do NOT include practiceId - let VIOS use authenticated user's default
     },
     prescriber: {
-      // NPI is REQUIRED by VIOS - use a valid NPI registered with the VIOS account
+      // NPI is REQUIRED by VIOS - fetched from pharmacy settings
       // This NPI must be associated with the authenticated user's network
-      npi: "1033620489", // From successful previous orders
+      npi: prescriberNpi,
       firstName: "Test",
       lastName: "Prescriber",
       address1: "123 Test Street",
@@ -147,6 +184,27 @@ serve(async (req) => {
       );
     }
 
+    // Fetch test prescriber NPI from pharmacy settings
+    const npiResult = await getTestPrescriberNpi(supabaseAdmin, pharmacy_id);
+    if (npiResult.error || !npiResult.npi) {
+      edgeLogger.error('[TestOrder] Test prescriber NPI not configured', { 
+        pharmacyId: pharmacy_id, 
+        error: npiResult.error 
+      });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: npiResult.error || "Test Prescriber NPI not configured"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+    
+    edgeLogger.info('[TestOrder] Using test prescriber NPI', { 
+      pharmacyId: pharmacy_id, 
+      npi: npiResult.npi 
+    });
+
     // Get valid shipping service code for this pharmacy
     const shippingServiceCode = await getValidShippingCode(supabaseAdmin, pharmacy_id);
     edgeLogger.info('[TestOrder] Using shipping service code', { 
@@ -154,11 +212,12 @@ serve(async (req) => {
       serviceCode: shippingServiceCode 
     });
 
-    // Create test order payload with valid shipping code (no practice ID to avoid lookups)
-    const testPayload = createTestOrderPayload(shippingServiceCode);
+    // Create test order payload with valid shipping code and prescriber NPI
+    const testPayload = createTestOrderPayload(shippingServiceCode, npiResult.npi);
     edgeLogger.info('[TestOrder] Sending test order', { 
       referenceId: testPayload.general.referenceId,
-      isTestOrder: testPayload.general.isTestOrder
+      isTestOrder: testPayload.general.isTestOrder,
+      prescriberNpi: npiResult.npi
     });
 
     // Send test order to VIOS
