@@ -764,7 +764,7 @@ Deno.serve(async (req) => {
             start_time,
             end_time,
             created_at,
-            providers(id, user_id, profiles(name)),
+            providers(id, user_id, profiles!providers_user_id_fkey(name)),
             patient_accounts(id, first_name, last_name)
           `)
           .eq('practice_id', practiceId)
