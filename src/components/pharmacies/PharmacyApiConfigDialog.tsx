@@ -432,7 +432,7 @@ export const PharmacyApiConfigDialog = ({
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>Loading API Configuration...</DialogTitle>
           </DialogHeader>
@@ -446,12 +446,12 @@ export const PharmacyApiConfigDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>API Configuration - {pharmacyName}</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="config" className="w-full">
+        <Tabs defaultValue="config" className="w-full min-w-0">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="config">Configuration</TabsTrigger>
             <TabsTrigger value="logs">Transmission Logs</TabsTrigger>
@@ -863,11 +863,11 @@ export const PharmacyApiConfigDialog = ({
                       <>
                         <div className="space-y-2">
                           <Label>Webhook URL</Label>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 min-w-0">
                             <Input
                               value={getInboundWebhookUrl() || ''}
                               readOnly
-                              className="font-mono text-xs bg-muted"
+                              className="font-mono text-xs bg-muted truncate min-w-0 flex-1"
                             />
                             <Button
                               type="button"
