@@ -73,7 +73,6 @@ export const TrialExpiredDialog = ({
             <ul className="space-y-1 text-sm text-muted-foreground">
               <li>✓ Unlimited patient records</li>
               <li>✓ Advanced appointment scheduling</li>
-              <li>✓ Video consultations</li>
               <li>✓ Custom branding</li>
               <li>✓ Priority support</li>
             </ul>
