@@ -397,6 +397,14 @@ async function sendViosOrder(
       ? pharmacy.test_prescriber_npi.replace(/\D/g, '') 
       : null;
     
+    // DEBUG: Log test NPI configuration for troubleshooting
+    edgeLogger.info("VIOS: Test NPI configuration check", {
+      pharmacyId: pharmacy.id,
+      pharmacyTestNpi: pharmacy.test_prescriber_npi || '[NOT_SET]',
+      isTestMode: isTestMode,
+      computedTestNpi: testPrescriberNpi || '[NULL_OR_EMPTY]'
+    });
+    
     if (isTestMode) {
       edgeLogger.info("VIOS: Sandbox mode configuration", {
         isTestMode: true,

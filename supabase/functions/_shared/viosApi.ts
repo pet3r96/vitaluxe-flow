@@ -268,13 +268,27 @@ export async function viosRequest<T>(
       // Extract actionable error message from VIOS response
       let errorMessage = `VIOS API error (${response.status})`;
       
+      // VIOS returns errors in multiple nested formats - extract all possible error text
+      const rawErrorText = responseData?.text || 
+                           responseData?.message || 
+                           responseData?.Message ||
+                           (typeof responseData === 'string' ? responseData : null) ||
+                           responseText.substring(0, 500);
+      
       if (response.status === 400) {
-        // Validation error - extract field-level errors
-        const errors = responseData?.errors || responseData?.Errors || [];
-        if (Array.isArray(errors) && errors.length > 0) {
-          errorMessage = `Validation failed: ${errors.map((e: any) => e.message || e.Message || e).join('; ')}`;
-        } else if (responseData?.message || responseData?.Message) {
-          errorMessage = `Validation failed: ${responseData.message || responseData.Message}`;
+        // Validation error - check for VIOS-specific error patterns first
+        if (rawErrorText?.includes('API Network ID different') || rawErrorText?.includes('practice')) {
+          errorMessage = `NPI Registration Error: The prescriber NPI is not associated with your VIOS account's practice. The NPI may be registered under a different VIOS network. Please verify the NPI is correctly configured in your VIOS account, or contact VIOS support.`;
+        } else if (rawErrorText?.includes('product') || rawErrorText?.includes('lfProductId')) {
+          errorMessage = `Product Error: ${rawErrorText}. The lfProductId may not be valid for your account.`;
+        } else {
+          // Extract field-level errors
+          const errors = responseData?.errors || responseData?.Errors || [];
+          if (Array.isArray(errors) && errors.length > 0) {
+            errorMessage = `Validation failed: ${errors.map((e: any) => e.message || e.Message || e).join('; ')}`;
+          } else if (rawErrorText) {
+            errorMessage = `Validation failed: ${rawErrorText}`;
+          }
         }
       } else if (response.status === 401) {
         errorMessage = 'Authentication failed. Check VIOS credentials and ensure they are not expired.';
