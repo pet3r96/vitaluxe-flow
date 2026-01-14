@@ -218,16 +218,31 @@ serve(async (req) => {
     if (include_vios_token_test && pharmacy.api_handler_type === 'vios') {
       const baseUrl = pharmacy.api_endpoint_url?.replace(/\/+$/, '') || 'https://integrations.vioscompounding.com';
       
-      // Get VIOS credentials
-      const viosClientKey = credentials?.find((c: any) => c.credential_type === 'vios_client_key')?.credential_key;
-      const viosClientSecret = credentials?.find((c: any) => c.credential_type === 'vios_client_secret')?.credential_key;
-      
-      // Also check environment variables
+      // Check environment variables first
       const envClientId = Deno.env.get('VIOS_CLIENT_ID');
       const envClientSecret = Deno.env.get('VIOS_CLIENT_SECRET');
       
-      const clientId = (envClientId && envClientSecret) ? envClientId : viosClientKey;
-      const clientSecret = (envClientId && envClientSecret) ? envClientSecret : viosClientSecret;
+      let clientId = envClientId;
+      let clientSecret = envClientSecret;
+      
+      // If no env vars, decrypt credentials from database
+      if (!envClientId || !envClientSecret) {
+        try {
+          const { data: decryptedCreds, error: decryptError } = await supabaseAdmin
+            .rpc('decrypt_pharmacy_credentials_batch', { p_pharmacy_id: pharmacy_id });
+          
+          if (decryptError) {
+            edgeLogger.error('[Diagnostics] Failed to decrypt credentials', { error: decryptError.message });
+          } else if (decryptedCreds && Array.isArray(decryptedCreds)) {
+            const clientKeyRecord = decryptedCreds.find((c: any) => c.credential_type === 'vios_client_key');
+            const clientSecretRecord = decryptedCreds.find((c: any) => c.credential_type === 'vios_client_secret');
+            clientId = clientKeyRecord?.credential_key || null;
+            clientSecret = clientSecretRecord?.credential_key || null;
+          }
+        } catch (decryptErr) {
+          edgeLogger.error('[Diagnostics] Error decrypting credentials', { error: decryptErr });
+        }
+      }
       
       if (!clientId || !clientSecret) {
         results.push({
