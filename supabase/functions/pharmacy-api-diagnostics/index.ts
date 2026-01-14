@@ -291,13 +291,39 @@ serve(async (req) => {
                   details: { responseKeys: Object.keys(tokenData) }
                 });
               }
-            } else {
+          } else {
               const errorText = await tokenResponse.text();
+              
+              // Enhanced error messaging for common auth failures
+              let actionableMessage = `VIOS auth failed (${tokenResponse.status})`;
+              let actionableDetails: Record<string, any> = { error: errorText.substring(0, 200) };
+              
+              if (tokenResponse.status === 401) {
+                actionableMessage = "VIOS authentication rejected (401 Unauthorized)";
+                actionableDetails = {
+                  error: errorText.substring(0, 200),
+                  possibleCauses: [
+                    "Credentials may be expired",
+                    "Credentials may be for wrong environment (sandbox vs production)",
+                    "Credentials may have been revoked or regenerated",
+                    "Client ID or Secret may contain typos"
+                  ],
+                  recommendation: "Regenerate credentials in VIOS Integration Portal and update backend secrets",
+                  source: hasEnvCredentials ? "environment" : "database"
+                };
+              } else if (tokenResponse.status === 403) {
+                actionableMessage = "VIOS access denied (403 Forbidden)";
+                actionableDetails = {
+                  error: errorText.substring(0, 200),
+                  recommendation: "Contact VIOS to verify account permissions"
+                };
+              }
+              
               results.push({
                 step: "VIOS Token Exchange",
                 status: "error",
-                message: `VIOS auth failed (${tokenResponse.status})`,
-                details: { error: errorText.substring(0, 200) }
+                message: actionableMessage,
+                details: actionableDetails
               });
             }
           } catch (tokenError) {
