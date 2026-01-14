@@ -48,56 +48,19 @@ async function getValidShippingCode(
   return 1;
 }
 
-// Get VIOS practice ID from credentials or environment
-async function getViosPracticeId(
-  supabaseAdmin: any,
-  pharmacyId: string
-): Promise<string | null> {
-  // Try environment variable first
-  const envPracticeId = Deno.env.get('VIOS_PRACTICE_ID');
-  if (envPracticeId) {
-    edgeLogger.info('[TestOrder] Using VIOS practice ID from environment');
-    return envPracticeId;
-  }
-  
-  // Fallback to database credentials
-  try {
-    const { data: credentials } = await supabaseAdmin.rpc(
-      'decrypt_pharmacy_credentials_batch',
-      { p_pharmacy_id: pharmacyId }
-    );
-    
-    if (credentials) {
-      const practiceIdCred = credentials.find(
-        (c: any) => c.credential_type === 'vios_practice_id'
-      );
-      if (practiceIdCred?.credential_key) {
-        edgeLogger.info('[TestOrder] Using VIOS practice ID from database');
-        return practiceIdCred.credential_key;
-      }
-    }
-  } catch (error) {
-    edgeLogger.warn('[TestOrder] Failed to fetch practice ID from credentials', { error });
-  }
-  
-  return null;
-}
-
-// Generate synthetic test order payload
-function createTestOrderPayload(shippingServiceCode: number, viosPracticeId?: string | null): any {
+// Generate synthetic test order payload - minimal to avoid practice lookups
+function createTestOrderPayload(shippingServiceCode: number): any {
   const testId = `TEST-${Date.now()}`;
   
   return {
     general: {
       referenceId: testId,
       memo: `VitaLuxe Test Order - ${new Date().toISOString()}`,
-      isTestOrder: true, // Always true for test orders
-      // Include practice ID to associate with correct network
-      ...(viosPracticeId && { practiceId: viosPracticeId })
+      isTestOrder: true // Always true for test orders
+      // No practiceId - let VIOS use authenticated user's default
     },
     prescriber: {
-      // Use empty NPI to avoid VIOS lookup conflicts with other networks
-      npi: "",
+      // No NPI field - prevents VIOS from looking up any practice
       firstName: "Test",
       lastName: "Prescriber",
       address1: "123 Test Street",
@@ -190,14 +153,8 @@ serve(async (req) => {
       serviceCode: shippingServiceCode 
     });
 
-    // Get VIOS practice ID (from env var or database credentials)
-    const viosPracticeId = await getViosPracticeId(supabaseAdmin, pharmacy_id);
-    if (!viosPracticeId) {
-      edgeLogger.warn('[TestOrder] No VIOS practice ID configured - order may fail due to network mismatch');
-    }
-
-    // Create test order payload with valid shipping code and practice ID
-    const testPayload = createTestOrderPayload(shippingServiceCode, viosPracticeId);
+    // Create test order payload with valid shipping code (no practice ID to avoid lookups)
+    const testPayload = createTestOrderPayload(shippingServiceCode);
     edgeLogger.info('[TestOrder] Sending test order', { 
       referenceId: testPayload.general.referenceId,
       isTestOrder: testPayload.general.isTestOrder
