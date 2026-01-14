@@ -126,6 +126,46 @@ async function getViosTokenLocal(credentials: { clientId: string; clientSecret: 
   return getViosTokenShared(fullCredentials);
 }
 
+// Validate prescriber NPI before transformation
+function validatePrescriberNpi(orderLine: any, order: any): { valid: boolean; npi: string; error?: string } {
+  const providerProfile = orderLine.providers?.profiles;
+  const doctorProfile = order.profiles;
+  const prescriberProfile = providerProfile || doctorProfile;
+  
+  const npi = prescriberProfile?.npi;
+  
+  if (!npi || npi.trim() === '') {
+    const providerName = providerProfile?.name || 'Unknown Provider';
+    const doctorName = doctorProfile?.name || 'Unknown Practice';
+    
+    if (providerProfile) {
+      return { 
+        valid: false, 
+        npi: '',
+        error: `Provider "${providerName}" does not have an NPI configured. Please add the NPI in provider settings before sending orders to VIOS.`
+      };
+    } else {
+      return { 
+        valid: false, 
+        npi: '',
+        error: `No provider assigned to this order line and practice "${doctorName}" does not have an NPI configured. Please assign a provider with a valid NPI or configure the practice NPI.`
+      };
+    }
+  }
+  
+  // Validate NPI format (10 digits)
+  const npiDigits = npi.replace(/\D/g, '');
+  if (npiDigits.length !== 10) {
+    return { 
+      valid: false, 
+      npi: '',
+      error: `Invalid NPI format: "${npi}". NPI must be exactly 10 digits.`
+    };
+  }
+  
+  return { valid: true, npi: npiDigits };
+}
+
 // Transform order to VIOS CreateOrderRequest format
 function transformToViosPayload(
   order: any, 
@@ -187,6 +227,9 @@ function transformToViosPayload(
   // Create short order reference (first 8 chars of UUID for readability)
   const orderRef = order.id.substring(0, 8).toUpperCase();
   
+  // Get and validate prescriber NPI
+  const prescriberNpi = (prescriberProfile?.npi || '').replace(/\D/g, '');
+  
   // Debug logging for critical fields
   edgeLogger.info("VIOS payload data sources", {
     patientAllergies: patientAllergies || 'NKA',
@@ -194,7 +237,7 @@ function transformToViosPayload(
     patientPhone: patientPhone ? '[SET]' : '[MISSING]',
     prescriberPhone: prescriberProfile?.phone ? '[SET]' : '[MISSING]',
     prescriberName: prescriberName,
-    prescriberNpi: prescriberProfile?.npi || '[MISSING]'
+    prescriberNpi: prescriberNpi || '[MISSING - WILL FAIL]'
   });
   
   // Build memo with allergies info since VIOS allergies field expects integer IDs
@@ -209,7 +252,7 @@ function transformToViosPayload(
       isTestOrder: isTestMode // Use test mode flag
     },
     prescriber: {
-      npi: prescriberProfile?.npi || '',
+      npi: prescriberNpi, // Already validated before calling this function
       firstName: prescriberFirstName,
       lastName: prescriberLastName,
       dea: prescriberProfile?.dea || undefined,
@@ -339,6 +382,18 @@ async function sendViosOrder(
     for (const orderLine of orderLines) {
       const lineStartTime = Date.now();
       try {
+        // Validate prescriber NPI before proceeding
+        const npiValidation = validatePrescriberNpi(orderLine, order);
+        if (!npiValidation.valid) {
+          edgeLogger.error("VIOS: Prescriber NPI validation failed", { 
+            orderLineId: orderLine.id,
+            error: npiValidation.error
+          });
+          allSuccess = false;
+          results.push({ orderLineId: orderLine.id, success: false, error: npiValidation.error });
+          continue;
+        }
+        
         // Get prescription PDF as base64 if available
         let prescriptionBase64: string | null = null;
         if (orderLine.prescription_url) {
