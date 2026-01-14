@@ -71,6 +71,7 @@ export const PharmacyApiConfigDialog = ({
   const [viosBaseUrl, setViosBaseUrl] = useState("https://integrations.vioscompounding.com");
   const [viosClientKey, setViosClientKey] = useState("");
   const [viosClientSecret, setViosClientSecret] = useState("");
+  const [testPrescriberNpi, setTestPrescriberNpi] = useState("");
   
 
   // Fetch pharmacy config
@@ -108,6 +109,9 @@ export const PharmacyApiConfigDialog = ({
       if (handlerType === 'vios' && data.api_endpoint_url) {
         setViosBaseUrl(data.api_endpoint_url);
       }
+      
+      // Set test prescriber NPI
+      setTestPrescriberNpi(data.test_prescriber_npi || "");
 
       return data;
     },
@@ -266,10 +270,13 @@ export const PharmacyApiConfigDialog = ({
           if (viosSecretError) throw viosSecretError;
         }
 
-        // Save VIOS base URL in the api_endpoint_url field
+        // Save VIOS base URL and test prescriber NPI
         const { error: urlError } = await supabase
           .from("pharmacies")
-          .update({ api_endpoint_url: viosBaseUrl })
+          .update({ 
+            api_endpoint_url: viosBaseUrl,
+            test_prescriber_npi: testPrescriberNpi || null
+          })
           .eq("id", pharmacyId);
         if (urlError) throw urlError;
       }
@@ -602,6 +609,30 @@ export const PharmacyApiConfigDialog = ({
                             onChange={(e) => setViosClientSecret(e.target.value)}
                             disabled={!isAdmin}
                           />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="test-prescriber-npi">Test Prescriber NPI</Label>
+                          <Input
+                            id="test-prescriber-npi"
+                            placeholder="Enter 10-digit NPI"
+                            value={testPrescriberNpi}
+                            onChange={(e) => {
+                              // Only allow digits
+                              const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                              setTestPrescriberNpi(value);
+                            }}
+                            maxLength={10}
+                            disabled={!isAdmin}
+                          />
+                          {testPrescriberNpi && testPrescriberNpi.length !== 10 && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400">
+                              ⚠️ NPI must be exactly 10 digits
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Required for test orders. Must be a valid NPI registered with your VIOS account.
+                          </p>
                         </div>
 
                         {/* VIOS API Support Card with endpoints, auth flow, and curl examples */}
