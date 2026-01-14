@@ -231,21 +231,16 @@ Deno.serve(async (req) => {
         edgeLogger.error('Error fetching practice address', practiceError);
       }
       
-      const isVideo = visitType === 'video';
+      // Note: Video appointments coming soon - currently only in_person is supported
       
       if (patientWithUser.user_id) {
         // Patient has portal access - use handleNotifications
         edgeLogger.info('[book-appointment] Patient has portal access, calling handleNotifications');
         try {
-          let message;
-          if (isVideo) {
-            message = `Your appointment request for a video appointment on ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been submitted and is pending approval.`;
-          } else {
-            const address = practice 
-              ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
-              : '';
-            message = `Your appointment request for an in-office appointment on ${appointmentDateFormatted} at ${appointmentTimeFormatted}${address ? ` at ${address}` : ''} has been submitted and is pending approval.`;
-          }
+          const address = practice 
+            ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
+            : '';
+          const message = `Your appointment request for an in-office appointment on ${appointmentDateFormatted} at ${appointmentTimeFormatted}${address ? ` at ${address}` : ''} has been submitted and is pending approval.`;
           
           await supabaseClient.functions.invoke('handleNotifications', {
             body: {
@@ -269,15 +264,10 @@ Deno.serve(async (req) => {
         // No portal access - send email/SMS directly
         edgeLogger.info('Patient has no portal access, sending direct email/SMS');
         
-        let directMessage;
-        if (isVideo) {
-          directMessage = `Your appointment request for a video appointment on ${appointmentDateFormatted} at ${appointmentTimeFormatted} has been submitted and is pending approval.`;
-        } else {
-          const address = practice 
-            ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
-            : '';
-          directMessage = `Your appointment request for an in-office appointment on ${appointmentDateFormatted} at ${appointmentTimeFormatted}${address ? ` at ${address}` : ''} has been submitted and is pending approval.`;
-        }
+        const address = practice 
+          ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
+          : '';
+        const directMessage = `Your appointment request for an in-office appointment on ${appointmentDateFormatted} at ${appointmentTimeFormatted}${address ? ` at ${address}` : ''} has been submitted and is pending approval.`;
         
         if (patientWithUser.email) {
           try {
@@ -316,9 +306,7 @@ Deno.serve(async (req) => {
         if (patientWithUser.phone) {
           try {
             const normalizedPhone = normalizePhoneToE164(patientWithUser.phone);
-            const smsMessage = isVideo
-              ? `Video appointment request for ${appointmentDateFormatted} at ${appointmentTimeFormatted}. Pending approval.`
-              : `In-office appointment request for ${appointmentDateFormatted} at ${appointmentTimeFormatted}${practice ? ` at ${practice.address_city}, ${practice.address_state}` : ''}. Pending approval.`;
+            const smsMessage = `In-office appointment request for ${appointmentDateFormatted} at ${appointmentTimeFormatted}${practice ? ` at ${practice.address_city}, ${practice.address_state}` : ''}. Pending approval.`;
             
             await sendNotificationSms({
               phoneNumber: normalizedPhone,
