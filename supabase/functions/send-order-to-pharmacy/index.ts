@@ -13,12 +13,13 @@ interface SendOrderRequest {
   pharmacy_id: string;
 }
 
-// Default VIOS shipping service code mapping (used as fallback)
+// Official VIOS shipping service codes per Swagger spec
+// These are the actual service IDs from the VIOS API
 const DEFAULT_VIOS_SHIPPING_CODES: Record<string, number> = {
-  'ground': 1,
-  '2day': 2,
-  'overnight': 3,
-  'priority': 4
+  'ground': 7623,      // FedEx Ground
+  '2day': 7608,        // FEDEX 2 DAY
+  'overnight': 7618,   // FEDEX STANDARD OVERNIGHT
+  'priority': 7615     // USPS PRIORITY
 };
 
 // Get VIOS shipping service code from database or use default

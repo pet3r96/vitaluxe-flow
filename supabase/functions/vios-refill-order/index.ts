@@ -22,20 +22,14 @@ interface RefillOrderRequest {
   notes?: string;
 }
 
+// VIOS Refill payload per Swagger spec: POST /api/orders/refill
+// Requires ONE of: refilledReferenceId, refilledLfOrderId, or refilledForeignRxNumber
 interface ViosRefillPayload {
-  originalOrderId: number;
-  quantity?: number;
-  specialInstructions?: string;
-  shipping?: {
-    service?: number;
-    addressLine1?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-    recipientFirstName?: string;
-    recipientLastName?: string;
-    recipientPhone?: string;
-  };
+  refilledReferenceId?: string;      // Our order_line_id stored as referenceId in VIOS
+  refilledLfOrderId?: number;        // VIOS internal order ID (stored as pharmacy_order_id)
+  refilledForeignRxNumber?: string;  // Foreign Rx number (optional)
+  newReferenceId?: string;           // New reference ID for the refill order
+  newForeignRxNumber?: string;       // New foreign Rx number (optional)
 }
 
 serve(async (req) => {
@@ -128,30 +122,24 @@ serve(async (req) => {
       );
     }
 
-    // Build VIOS refill payload
-    const patientAccount = orderLine.patient_accounts;
+    // Build VIOS refill payload per Swagger spec
+    // VIOS refill uses the original order's referenceId (our order_line_id) or VIOS orderId
+    // Refills reuse the original order's shipping/quantity - we just specify which order to refill
+    const newRefillId = `REFILL-${order_line_id.substring(0, 8)}-${Date.now()}`;
+    
     const refillPayload: ViosRefillPayload = {
-      originalOrderId: parseInt(pharmacyOrderId, 10),
-      quantity: quantity || orderLine.quantity || 1,
-      specialInstructions: notes || orderLine.order_notes
+      // Use VIOS order ID (pharmacy_order_id) as primary identifier
+      refilledLfOrderId: parseInt(pharmacyOrderId, 10),
+      // Also provide the original referenceId for cross-reference
+      refilledReferenceId: order_line_id,
+      // New reference ID for tracking the refill order
+      newReferenceId: newRefillId
     };
 
-    // Add shipping info if available
-    if (patientAccount) {
-      refillPayload.shipping = {
-        addressLine1: patientAccount.address_street,
-        city: patientAccount.address_city,
-        state: patientAccount.address_state,
-        zipCode: patientAccount.address_zip,
-        recipientFirstName: patientAccount.first_name,
-        recipientLastName: patientAccount.last_name,
-        recipientPhone: formatPhoneForVios(patientAccount.phone) || undefined
-      };
-    }
-
     edgeLogger.info("VIOS Refill Order: Sending request", { 
-      originalOrderId: refillPayload.originalOrderId,
-      quantity: refillPayload.quantity
+      refilledLfOrderId: refillPayload.refilledLfOrderId,
+      refilledReferenceId: refillPayload.refilledReferenceId,
+      newReferenceId: refillPayload.newReferenceId
     });
 
     // Make VIOS refill request
