@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { Clock, User, MapPin, Zap, Video } from "lucide-react";
+import { Clock, User, MapPin, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { PatientQuickAccessButton } from "@/components/patients/PatientQuickAccessButton";
@@ -90,9 +90,6 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
           <div className="flex items-center justify-between gap-1">
             <div className="flex items-center gap-1">
               <span className="text-[10px] font-semibold opacity-90">{appointmentTime}</span>
-              {appointment.visit_type === 'video' && (
-                <Video className="h-2.5 w-2.5 opacity-90" />
-              )}
             </div>
             {(isPending || isWalkIn) && (
               <Badge variant="warning" size="xs" className="text-[9px] px-1 py-0 h-3.5">
@@ -121,9 +118,6 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
               {patientName}
               {isAfterHours && <Badge variant="outline" className="ml-1 text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500">After Hours</Badge>}
             </p>
-            {appointment.visit_type === 'video' && (
-              <Video className="h-3.5 w-3.5 flex-shrink-0 opacity-90" />
-            )}
             {appointment.patient_id && (
               <PatientQuickAccessButton
                 patientId={appointment.patient_id}
@@ -162,9 +156,6 @@ export function AppointmentCard({ appointment, onClick, isDragging, style, durat
               {patientName}
               {isAfterHours && <Badge variant="outline" className="ml-2 bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500">🌙 After Hours</Badge>}
             </p>
-            {appointment.visit_type === 'video' && (
-              <Video className="h-4 w-4 flex-shrink-0 opacity-90" />
-            )}
             {appointment.patient_id && (
               <PatientQuickAccessButton
                 patientId={appointment.patient_id}

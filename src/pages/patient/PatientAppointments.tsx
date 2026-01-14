@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AppointmentBookingDialog } from "@/components/patient/AppointmentBookingDialog";
 import { RescheduleRequestDialog } from "@/components/patient/RescheduleRequestDialog";
 import { format, differenceInMinutes } from "date-fns";
-import { Calendar, Clock, MapPin, Download, Video, Building } from "lucide-react";
+import { Calendar, Clock, MapPin, Download, Building } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -46,7 +46,6 @@ export default function PatientAppointments() {
     reason_for_visit?: string;
     provider_id?: string;
     practice_id: string;
-    video_session_id?: string;
     notes?: string;
     practice?: { id: string; name?: string; address?: string };
     providers?: { id: string; name?: string };
@@ -63,9 +62,6 @@ export default function PatientAppointments() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [recordingConsent, setRecordingConsent] = useState(false);
-  const [joiningSession, setJoiningSession] = useState<string | null>(null);
-
   // Cache key includes effectiveUserId to prevent data leakage across impersonations
   const { data: appointments, refetch } = useQuery<PatientAppointment[]>({
     queryKey: ["patient-appointments", effectiveUserId],
@@ -296,47 +292,6 @@ export default function PatientAppointments() {
     }
   };
 
-  const canJoinVideoSession = (appointment: any) => {
-    if (appointment.visit_type !== 'video') return false;
-    if (appointment.status === 'cancelled') return false;
-
-    const now = new Date();
-    const startTime = new Date(appointment.start_time);
-    const minutesUntil = differenceInMinutes(startTime, now);
-
-    // Can join 15 minutes before or anytime after
-    return minutesUntil <= 15;
-  };
-
-  const handleJoinVideoSession = async (appointmentId: string) => {
-    if (!recordingConsent) {
-      toast.error("Please consent to recording before joining");
-      return;
-    }
-
-    try {
-      setJoiningSession(appointmentId);
-
-      // Fetch video session for this appointment
-      const { data: sessions, error: sessionError } = await supabase
-        .from('video_sessions')
-        .select('id')
-        .eq('appointment_id', appointmentId)
-        .single();
-
-      if (sessionError) throw sessionError;
-      if (!sessions) throw new Error("No video session found");
-
-      // Navigate to unified video room
-      navigate('/video/room');
-    } catch (error: any) {
-      logger.error("Error joining video session", error);
-      toast.error(error.message || "Failed to join video session");
-    } finally {
-      setJoiningSession(null);
-    }
-  };
-
   const handleAddToCalendar = async (appointmentId: string) => {
     try {
       const { data, error } = await supabase.functions.invoke("export-calendar-ics", {
@@ -388,9 +343,6 @@ export default function PatientAppointments() {
   };
 
   const getVisitTypeBadge = (visitType: string) => {
-    if (visitType === 'video') {
-      return <Badge variant="outline" className="gap-1"><Video className="h-3 w-3" />Video Call</Badge>;
-    }
     return <Badge variant="outline" className="gap-1"><Building className="h-3 w-3" />In-Person</Badge>;
   };
 

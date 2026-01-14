@@ -310,8 +310,7 @@ export const ProviderDetailsDialog = ({
         queryClient.invalidateQueries({ queryKey: ['practice-rx-privileges'] }),
         queryClient.invalidateQueries({ queryKey: ['providers'] }),
         queryClient.invalidateQueries({ queryKey: ['calendar-data'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient_appointments'] }),
-        queryClient.invalidateQueries({ queryKey: ['video-sessions'] })
+        queryClient.invalidateQueries({ queryKey: ['patient_appointments'] })
       ]);
       
       toast.success("Provider updated successfully!", {

@@ -213,45 +213,7 @@ Deno.serve(async (req) => {
       edgeLogger.info('Appointment cancelled successfully');
     }
 
-    // ALWAYS check and update video session status (even if appointment was already cancelled)
-    // This ensures video sessions are synchronized with their appointments
-    // Use admin client to bypass RLS since impersonation affects RLS policies
-    const { data: videoSession } = await supabaseAdmin
-      .from('video_sessions')
-      .select('id, status')
-      .eq('appointment_id', appointmentId)
-      .maybeSingle();
-
-    let videoSessionUpdated = false;
-    if (videoSession && videoSession.status !== 'ended') {
-      edgeLogger.info('Updating video session to ended', { videoSessionId: videoSession.id });
-      const { error: vsError } = await supabaseAdmin
-        .from('video_sessions')
-        .update({
-          status: 'ended'
-        })
-        .eq('id', videoSession.id);
-
-      if (vsError) {
-        edgeLogger.error('[cancel-appointment] Video session update error', vsError);
-        throw new Error('Video session update failed: ' + vsError.message);
-      }
-      // Log the cancellation (use admin client to ensure it persists)
-      await supabaseAdmin.from('video_session_logs').insert({
-        session_id: videoSession.id,
-        event_type: 'session_cancelled',
-        user_id: user.id,
-        user_type: 'provider',
-        event_data: { reason: 'appointment_cancelled' }
-      });
-      
-      videoSessionUpdated = true;
-      edgeLogger.info('[cancel-appointment] Video session also cancelled');
-    } else if (videoSession) {
-      edgeLogger.info('[cancel-appointment] Video session already ended');
-    }
-
-    edgeLogger.info('[cancel-appointment] Successfully cancelled appointment', { appointmentId, videoSessionEnded: videoSessionUpdated });
+    edgeLogger.info('[cancel-appointment] Successfully cancelled appointment', { appointmentId });
 
     // Send cancellation notification to patient (only if not already cancelled)
     if (!appointmentWasAlreadyCancelled && appointment) {
@@ -376,8 +338,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true,
-      idempotent: appointmentWasAlreadyCancelled,
-      videoSessionUpdated
+      idempotent: appointmentWasAlreadyCancelled
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

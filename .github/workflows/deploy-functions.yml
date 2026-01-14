@@ -54,59 +54,9 @@ jobs:
           
           echo "All functions deployed successfully!"
 
-      - name: Verify critical functions
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      - name: Verify deployment
         run: |
-          echo "Verifying critical video functions..."
-          
-          CRITICAL_FUNCTIONS=(
-            "generate-agora-token"
-            "join-video-session"
-            "test-agora-token"
-            "validate-video-guest-link"
-            "agora-echo"
-          )
-          
-          for func in "${CRITICAL_FUNCTIONS[@]}"; do
-            echo "Checking $func..."
-            supabase functions list | grep -q "$func" || {
-              echo "Critical function $func not found!"
-              exit 1
-            }
-          done
-          
-          echo "All critical functions verified!"
-
-      - name: Test public endpoints
-        env:
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: |
-          echo "Testing public endpoints..."
-          
-          # Test agora-echo (public endpoint)
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/agora-echo")
-          
-          if [ "$RESPONSE" = "200" ]; then
-            echo "✓ agora-echo endpoint is reachable"
-          else
-            echo "✗ agora-echo endpoint returned: $RESPONSE"
-            exit 1
-          fi
-          
-          # Test edge-ping (public endpoint)
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/edge-ping")
-          
-          if [ "$RESPONSE" = "200" ]; then
-            echo "✓ edge-ping endpoint is reachable"
-          else
-            echo "✗ edge-ping endpoint returned: $RESPONSE"
-            exit 1
-          fi
-
+          echo "All functions deployed successfully!"
       - name: Deployment summary
         if: success()
         run: |

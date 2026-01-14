@@ -67,7 +67,7 @@ export function CreateAppointmentDialog({
     if (nameLower.includes('consultation')) return 'consultation';
     if (nameLower.includes('follow-up') || nameLower.includes('follow up')) return 'follow_up';
     if (nameLower.includes('treatment') || nameLower.includes('procedure')) return 'procedure';
-    if (nameLower.includes('video') || nameLower.includes('telehealth')) return 'telehealth';
+    
     if (nameLower.includes('walk-in') || nameLower.includes('walk in')) return 'walk_in';
     
     return 'other';
@@ -273,56 +273,6 @@ export function CreateAppointmentDialog({
         });
       }
 
-      // If this is a video appointment, create video session via edge function
-      if (values.visitType === 'video') {
-        import('@/lib/logger').then(({ logger }) => {
-          logger.info('Creating video session via edge function');
-        });
-
-        const { data: videoSession, error: videoError } = await supabase.functions.invoke(
-          'create-video-session',
-          {
-            body: {
-              practiceId: practiceId,
-              providerId: values.providerId,
-              patientId: selectedPatientId,
-              sessionType: 'scheduled',
-              scheduledStart: startDateTime.toISOString(),
-              scheduledEnd: endDateTime.toISOString()
-            }
-          }
-        );
-
-        if (videoError) {
-          import('@/lib/logger').then(({ logger }) => {
-            logger.error('Error creating video session', videoError);
-          });
-          throw videoError;
-        }
-
-        import('@/lib/logger').then(({ logger }) => {
-          logger.info('Video session created', { hasSession: !!videoSession?.session?.id });
-        });
-
-        // Link video session to appointment
-        const sessionId = videoSession?.session?.id;
-        if (sessionId) {
-          const { error: updateError } = await supabase
-            .from('patient_appointments')
-            .update({ video_session_id: sessionId })
-            .eq('id', data.id);
-
-          if (updateError) {
-            import('@/lib/logger').then(({ logger }) => {
-              logger.error('Error linking video session', updateError);
-            });
-            throw updateError;
-          }
-
-          data.video_session_id = sessionId;
-        }
-      }
-
       // Create follow-up if requested
       if (createFollowUp && data && effectiveUserId) {
         const followUpDate = new Date(startDateTime);
@@ -375,35 +325,12 @@ export function CreateAppointmentDialog({
             .eq('id', practiceId)
             .single();
           
-          const isVideo = data.visit_type === 'video';
-          const title = isVideo ? 'Video Appointment Scheduled' : 'Appointment Scheduled';
+          const title = 'Appointment Scheduled';
           
-          // Generate join URLs for video appointments
-          let providerJoinUrl: string | undefined;
-          let patientJoinUrl: string | undefined;
-
-          if (isVideo && data.video_session_id) {
-            const baseUrl = window.location.origin;
-            providerJoinUrl = `${baseUrl}/practice/video/${data.video_session_id}`;
-            patientJoinUrl = `${baseUrl}/patient/video/${data.video_session_id}`;
-            
-            import('@/lib/logger').then(({ logger }) => {
-              logger.info('Video join URLs generated');
-            });
-          }
-          
-          let message;
-          if (isVideo) {
-            message = `Your video appointment is scheduled for ${formattedDate} at ${formattedTime}.`;
-            if (patientJoinUrl) {
-              message += `\n\nJoin here: ${patientJoinUrl}`;
-            }
-          } else {
-            const address = practice 
-              ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
-              : '';
-            message = `Your appointment is scheduled for an in-office appointment on ${formattedDate} at ${formattedTime}${address ? ` at ${address}` : ''}.`;
-          }
+          const address = practice 
+            ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
+            : '';
+          const message = `Your appointment is scheduled for an in-office appointment on ${formattedDate} at ${formattedTime}${address ? ` at ${address}` : ''}.`;
           
           await supabase.functions.invoke('handleNotifications', {
             body: {
@@ -415,14 +342,7 @@ export function CreateAppointmentDialog({
                 appointmentId: data.id,
                 appointmentDate: formattedDate,
                 appointmentTime: formattedTime,
-                visitType: data.visit_type,
-                ...(isVideo && data.video_session_id && {
-                  videoSessionId: data.video_session_id,
-                  join_links: {
-                    provider: providerJoinUrl,
-                    patient: patientJoinUrl
-                  }
-                })
+                visitType: data.visit_type
               },
               entity_type: 'appointment',
               entity_id: data.id
@@ -473,11 +393,6 @@ export function CreateAppointmentDialog({
       return;
     }
     
-    // Prevent video appointments - coming soon
-    if (values.visitType === 'video') {
-      toast.error("Video consultations are coming soon. Please select an in-person appointment.");
-      return;
-    }
     
     // Prevent creating scheduled appointments in the past
     if (!isWalkIn) {
@@ -611,11 +526,6 @@ export function CreateAppointmentDialog({
           <div className="space-y-2">
             <Label htmlFor="roomId">
               Room 
-              {visitType === 'video' && (
-                <span className="text-muted-foreground text-xs ml-1">
-                  (Not required for video)
-                </span>
-              )}
               {visitType === 'in_person' && !displayRooms?.length && (
                 <span className="text-amber-500 text-xs ml-1">
                   (No rooms configured)
