@@ -248,11 +248,18 @@ export async function validateUserOwnsResource(
           .eq('user_id', userId);
 
         const roles = adminRoles?.map((r: { role: string }) => r.role) || [];
+        edgeLogger.info('[ID_VALIDATOR] Order validation - user roles', { userId, roles });
+        
         const isAdmin = roles.includes('super_admin') || roles.includes('admin');
 
         if (isAdmin) {
           edgeLogger.info('Admin access granted for order validation', { userId, orderId: resourceId });
           return { valid: true };
+        }
+        
+        // ✅ STAFF FIX: Check if user is staff - they should have same access as practice owner
+        if (roles.includes('staff')) {
+          edgeLogger.info('[ID_VALIDATOR] User is staff, checking practice access', { userId });
         }
 
         // ✅ PHARMACY FIX: Check if user is a pharmacy
@@ -303,8 +310,21 @@ export async function validateUserOwnsResource(
           return { valid: false, error: 'Order not found' };
         }
         
+        edgeLogger.info('[ID_VALIDATOR] Order found', { 
+          orderId: resourceId, 
+          orderPracticeId: order.practice_id, 
+          orderDoctorId: order.doctor_id 
+        });
+        
         // Check if user has a practice_id (supports staff users)
         const userPracticeId = await getUserPracticeId(supabase, userId);
+        
+        edgeLogger.info('[ID_VALIDATOR] User practice check', { 
+          userId, 
+          userPracticeId,
+          matchesPracticeId: order.practice_id === userPracticeId,
+          matchesDoctorId: order.doctor_id === userPracticeId
+        });
         
         // Check if user is the practice this order belongs to
         // Check BOTH practice_id and doctor_id since orders use doctor_id as primary practice reference
