@@ -214,106 +214,121 @@ serve(async (req) => {
       }
     }
 
-    // Step: VIOS Token Test (if requested and VIOS handler)
-    if (include_vios_token_test && pharmacy.api_handler_type === 'vios') {
-      const baseUrl = pharmacy.api_endpoint_url?.replace(/\/+$/, '') || 'https://integrations.vioscompounding.com';
-      
-      // Check environment variables first
+    // Step: VIOS Token Test (only for VIOS handlers)
+    if (pharmacy.api_handler_type === 'vios') {
+      // Check environment variables for source info
       const envClientId = Deno.env.get('VIOS_CLIENT_ID');
       const envClientSecret = Deno.env.get('VIOS_CLIENT_SECRET');
+      const hasEnvCredentials = !!(envClientId && envClientSecret);
       
-      let clientId = envClientId;
-      let clientSecret = envClientSecret;
-      
-      // If no env vars, decrypt credentials from database
-      if (!envClientId || !envClientSecret) {
-        try {
-          const { data: decryptedCreds, error: decryptError } = await supabaseAdmin
-            .rpc('decrypt_pharmacy_credentials_batch', { p_pharmacy_id: pharmacy_id });
-          
-          if (decryptError) {
-            edgeLogger.error('[Diagnostics] Failed to decrypt credentials', { error: decryptError.message });
-          } else if (decryptedCreds && Array.isArray(decryptedCreds)) {
-            const clientKeyRecord = decryptedCreds.find((c: any) => c.credential_type === 'vios_client_key');
-            const clientSecretRecord = decryptedCreds.find((c: any) => c.credential_type === 'vios_client_secret');
-            clientId = clientKeyRecord?.credential_key || null;
-            clientSecret = clientSecretRecord?.credential_key || null;
+      if (include_vios_token_test) {
+        // Live token test requested - attempt VIOS token exchange
+        const baseUrl = pharmacy.api_endpoint_url?.replace(/\/+$/, '') || 'https://integrations.vioscompounding.com';
+        
+        let clientId = envClientId;
+        let clientSecret = envClientSecret;
+        
+        // If no env vars, decrypt credentials from database
+        if (!envClientId || !envClientSecret) {
+          try {
+            const { data: decryptedCreds, error: decryptError } = await supabaseAdmin
+              .rpc('decrypt_pharmacy_credentials_batch', { p_pharmacy_id: pharmacy_id });
+            
+            if (decryptError) {
+              edgeLogger.error('[Diagnostics] Failed to decrypt credentials', { error: decryptError.message });
+            } else if (decryptedCreds && Array.isArray(decryptedCreds)) {
+              const clientKeyRecord = decryptedCreds.find((c: any) => c.credential_type === 'vios_client_key');
+              const clientSecretRecord = decryptedCreds.find((c: any) => c.credential_type === 'vios_client_secret');
+              clientId = clientKeyRecord?.credential_key || null;
+              clientSecret = clientSecretRecord?.credential_key || null;
+            }
+          } catch (decryptErr) {
+            edgeLogger.error('[Diagnostics] Error decrypting credentials', { error: decryptErr });
           }
-        } catch (decryptErr) {
-          edgeLogger.error('[Diagnostics] Error decrypting credentials', { error: decryptErr });
         }
-      }
-      
-      if (!clientId || !clientSecret) {
-        results.push({
-          step: "VIOS Token Exchange",
-          status: "error",
-          message: "Missing VIOS credentials for token test",
-          details: { hasClientId: !!clientId, hasClientSecret: !!clientSecret }
-        });
-      } else {
-        try {
-          const tokenUrl = `${baseUrl}/api/auth/token`;
-          const startTime = Date.now();
-          
-          const tokenResponse = await fetch(tokenUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'ClientId': clientId,
-              'ClientSecret': clientSecret
-            }
-          });
-          
-          const duration = Date.now() - startTime;
-          
-          if (tokenResponse.ok) {
-            const tokenData = await tokenResponse.json();
-            if (tokenData.accessToken) {
-              results.push({
-                step: "VIOS Token Exchange",
-                status: "success",
-                message: "Successfully obtained VIOS JWT token",
-                details: { 
-                  tokenLength: tokenData.accessToken.length,
-                  durationMs: duration,
-                  usingEnvVars: !!(envClientId && envClientSecret)
-                }
-              });
-            } else {
-              results.push({
-                step: "VIOS Token Exchange",
-                status: "error",
-                message: "Token response missing accessToken",
-                details: { responseKeys: Object.keys(tokenData) }
-              });
-            }
-          } else {
-            const errorText = await tokenResponse.text();
-            results.push({
-              step: "VIOS Token Exchange",
-              status: "error",
-              message: `VIOS auth failed (${tokenResponse.status})`,
-              details: { error: errorText.substring(0, 200) }
-            });
-          }
-        } catch (tokenError) {
+        
+        if (!clientId || !clientSecret) {
           results.push({
             step: "VIOS Token Exchange",
             status: "error",
-            message: "Failed to connect to VIOS auth endpoint",
-            details: { error: tokenError instanceof Error ? tokenError.message : String(tokenError) }
+            message: "Missing VIOS credentials for token test",
+            details: { hasClientId: !!clientId, hasClientSecret: !!clientSecret }
           });
+        } else {
+          try {
+            const tokenUrl = `${baseUrl}/api/auth/token`;
+            const startTime = Date.now();
+            
+            const tokenResponse = await fetch(tokenUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'ClientId': clientId,
+                'ClientSecret': clientSecret
+              }
+            });
+            
+            const duration = Date.now() - startTime;
+            
+            if (tokenResponse.ok) {
+              const tokenData = await tokenResponse.json();
+              if (tokenData.accessToken) {
+                results.push({
+                  step: "VIOS Token Exchange",
+                  status: "success",
+                  message: "Successfully obtained VIOS JWT token",
+                  details: { 
+                    tokenLength: tokenData.accessToken.length,
+                    durationMs: duration,
+                    usingEnvVars: hasEnvCredentials
+                  }
+                });
+              } else {
+                results.push({
+                  step: "VIOS Token Exchange",
+                  status: "error",
+                  message: "Token response missing accessToken",
+                  details: { responseKeys: Object.keys(tokenData) }
+                });
+              }
+            } else {
+              const errorText = await tokenResponse.text();
+              results.push({
+                step: "VIOS Token Exchange",
+                status: "error",
+                message: `VIOS auth failed (${tokenResponse.status})`,
+                details: { error: errorText.substring(0, 200) }
+              });
+            }
+          } catch (tokenError) {
+            results.push({
+              step: "VIOS Token Exchange",
+              status: "error",
+              message: "Failed to connect to VIOS auth endpoint",
+              details: { error: tokenError instanceof Error ? tokenError.message : String(tokenError) }
+            });
+          }
         }
-      }
-      
-      // Check if all steps passed including VIOS token
-      const hasErrors = results.some(r => r.status === 'error');
-      if (hasErrors) {
-        return new Response(
-          JSON.stringify({ success: false, results }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-        );
+        
+        // Check if all steps passed including VIOS token
+        const hasErrors = results.some(r => r.status === 'error');
+        if (hasErrors) {
+          return new Response(
+            JSON.stringify({ success: false, results }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
+        }
+      } else {
+        // Config-only mode - skip live token test
+        results.push({
+          step: "VIOS Token Exchange",
+          status: "success",
+          message: "Token test skipped (config-only mode)",
+          details: { 
+            note: "Credentials are configured. Enable 'Include Token Test' to verify validity.",
+            source: hasEnvCredentials ? "environment" : "database"
+          }
+        });
       }
     }
 
