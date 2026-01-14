@@ -761,8 +761,10 @@ Deno.serve(async (req) => {
             provider_id,
             patient_id,
             status,
-            start_time,
+            scheduled_start_time,
+            actual_start_time,
             end_time,
+            duration_seconds,
             created_at,
             providers(id, user_id, profiles!providers_user_id_fkey(name)),
             patient_accounts(id, first_name, last_name)
@@ -770,17 +772,20 @@ Deno.serve(async (req) => {
           .eq('practice_id', practiceId)
           .order('created_at', { ascending: false });
 
-        if (startDate) query = query.gte('start_time', startDate);
+        if (startDate) query = query.gte('scheduled_start_time', startDate);
         if (endDate) query = query.lte('end_time', endDate);
 
         const { data: sessions, error: sessionsError } = await query;
         if (sessionsError) throw sessionsError;
 
         // Calculate duration in minutes for each session
+        // Prefer duration_seconds from DB, fallback to calculating from actual_start_time/end_time
         const sessionsWithDuration = (sessions || []).map(session => {
           let durationMinutes = 0;
-          if (session.start_time && session.end_time) {
-            const start = new Date(session.start_time).getTime();
+          if (session.duration_seconds) {
+            durationMinutes = Math.round(session.duration_seconds / 60);
+          } else if (session.actual_start_time && session.end_time) {
+            const start = new Date(session.actual_start_time).getTime();
             const end = new Date(session.end_time).getTime();
             durationMinutes = Math.round((end - start) / 60000);
           }
