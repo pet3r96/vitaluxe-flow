@@ -261,16 +261,23 @@ serve(async (req) => {
       const errorDetails = typeof result.error === 'object' 
         ? JSON.stringify(result.error) 
         : result.error;
+      
+      // Extract nested error text from VIOS response for clearer messages
+      const rawErrorText = result.data?.text || result.data?.message || result.data?.Message || null;
+      
       edgeLogger.error('[TestOrder] Test order failed', { 
         error: errorDetails,
+        rawErrorText: rawErrorText,
         statusCode: result.statusCode,
-        responseData: result.data 
+        fullResponseData: JSON.stringify(result.data || {}).substring(0, 1000)
       });
+      
       return new Response(
         JSON.stringify({
           success: false,
-          error: result.error,
-          details: result.data
+          error: rawErrorText || result.error,
+          details: result.data,
+          statusCode: result.statusCode
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
