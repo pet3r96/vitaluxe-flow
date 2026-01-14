@@ -127,7 +127,20 @@ async function getViosTokenLocal(credentials: { clientId: string; clientSecret: 
 }
 
 // Validate prescriber NPI before transformation
-function validatePrescriberNpi(orderLine: any, order: any): { valid: boolean; npi: string; error?: string } {
+// When testPrescriberNpi is provided (sandbox mode), use it directly without validation
+function validatePrescriberNpi(
+  orderLine: any, 
+  order: any, 
+  testPrescriberNpi: string | null = null
+): { valid: boolean; npi: string; error?: string } {
+  // If test prescriber NPI is provided (sandbox mode), use it directly
+  if (testPrescriberNpi) {
+    edgeLogger.info("VIOS: Using test prescriber NPI from pharmacy settings", {
+      testNpi: testPrescriberNpi
+    });
+    return { valid: true, npi: testPrescriberNpi };
+  }
+  
   const providerProfile = orderLine.providers?.profiles;
   const doctorProfile = order.profiles;
   const prescriberProfile = providerProfile || doctorProfile;
@@ -172,7 +185,8 @@ function transformToViosPayload(
   orderLine: any, 
   prescriptionBase64: string | null,
   isTestMode: boolean = false,
-  shippingServiceCode: number = 1 // Default to ground (1)
+  shippingServiceCode: number = 1, // Default to ground (1)
+  testPrescriberNpi: string | null = null // Override NPI for sandbox mode
 ): any {
   // Get prescriber info - prefer order line provider, fallback to order's doctor (practice)
   const providerProfile = orderLine.providers?.profiles;
@@ -227,8 +241,8 @@ function transformToViosPayload(
   // Create short order reference (first 8 chars of UUID for readability)
   const orderRef = order.id.substring(0, 8).toUpperCase();
   
-  // Get and validate prescriber NPI
-  const prescriberNpi = (prescriberProfile?.npi || '').replace(/\D/g, '');
+  // Get and validate prescriber NPI - use test NPI if provided (sandbox mode)
+  const prescriberNpi = testPrescriberNpi || (prescriberProfile?.npi || '').replace(/\D/g, '');
   
   // Debug logging for critical fields
   edgeLogger.info("VIOS payload data sources", {
@@ -378,12 +392,25 @@ async function sendViosOrder(
     const results: any[] = [];
     let allSuccess = true;
     
+    // Determine test prescriber NPI for sandbox mode
+    const testPrescriberNpi = isTestMode && pharmacy.test_prescriber_npi 
+      ? pharmacy.test_prescriber_npi.replace(/\D/g, '') 
+      : null;
+    
+    if (isTestMode) {
+      edgeLogger.info("VIOS: Sandbox mode configuration", {
+        isTestMode: true,
+        testPrescriberNpi: testPrescriberNpi || '[NOT_CONFIGURED - will use provider NPI]',
+        pharmacyId: pharmacy.id
+      });
+    }
+    
     // Send each order line as a separate VIOS order
     for (const orderLine of orderLines) {
       const lineStartTime = Date.now();
       try {
-        // Validate prescriber NPI before proceeding
-        const npiValidation = validatePrescriberNpi(orderLine, order);
+        // Validate prescriber NPI before proceeding (uses test NPI if in sandbox mode)
+        const npiValidation = validatePrescriberNpi(orderLine, order, testPrescriberNpi);
         if (!npiValidation.valid) {
           edgeLogger.error("VIOS: Prescriber NPI validation failed", { 
             orderLineId: orderLine.id,
@@ -448,7 +475,8 @@ async function sendViosOrder(
         });
         
         // Transform to VIOS payload with test mode flag and shipping service code
-        const viosPayload = transformToViosPayload(order, orderLine, prescriptionBase64, isTestMode, shippingServiceCode);
+        // Transform to VIOS payload - pass test NPI for sandbox mode
+        const viosPayload = transformToViosPayload(order, orderLine, prescriptionBase64, isTestMode, shippingServiceCode, testPrescriberNpi);
         
         // Log sanitized payload (remove sensitive data)
         const sanitizedPayload = {
