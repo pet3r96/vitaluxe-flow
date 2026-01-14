@@ -137,8 +137,7 @@ export const PharmacyApiConfigTable = () => {
                 {
                   label: 'API Type',
                   value: !pharmacy.api_enabled ? 'Disabled' :
-                         pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
-                         pharmacy.api_handler_type === 'custom' ? 'Custom' : 'Generic',
+                         pharmacy.api_handler_type === 'vios' ? 'VIOS' : 'Standard',
                   badge: true,
                   badgeVariant: pharmacy.api_enabled && pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'
                 },
@@ -223,8 +222,7 @@ export const PharmacyApiConfigTable = () => {
                         className="text-xs"
                       >
                         {!pharmacy.api_enabled ? 'Disabled' :
-                         pharmacy.api_handler_type === 'vios' ? 'VIOS' : 
-                         pharmacy.api_handler_type === 'custom' ? 'Custom' : 'Generic'}
+                         pharmacy.api_handler_type === 'vios' ? 'VIOS' : 'Standard'}
                       </Badge>
                     </TableCell>
                     <TableCell>
