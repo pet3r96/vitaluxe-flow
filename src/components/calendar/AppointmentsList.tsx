@@ -2,7 +2,7 @@ import { format, isSameDay, isToday, isTomorrow, startOfDay } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronRight, Clock, MapPin, Video } from "lucide-react";
+import { ChevronRight, Clock, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AppointmentsListProps {
@@ -48,16 +48,12 @@ export function AppointmentsList({
   };
 
   const getAppointmentTypeLabel = (apt: any) => {
-    if (apt.visit_type === 'video') return 'Video consultation';
     if (apt.appointment_type === 'walk_in') return 'Walk-in';
     if (apt.visit_type === 'in_person') return 'Office visit';
     return 'Appointment';
   };
 
   const getAppointmentTypeBadge = (apt: any) => {
-    if (apt.visit_type === 'video') {
-      return <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">Video consultation</Badge>;
-    }
     if (apt.appointment_type === 'walk_in') {
       return <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">Walk-in</Badge>;
     }

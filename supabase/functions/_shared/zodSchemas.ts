@@ -88,13 +88,6 @@ export const assignRoleSchema = z.object({
   role: z.enum(["admin","doctor","provider","pharmacy","topline","downline","patient"]),
 });
 
-// Video/Agora schemas
-export const generateAgoraTokenSchema = z.object({
-  channel_name: z.string().min(1).max(64),
-  uid: z.number().int().positive(),
-  role: z.enum(["publisher","subscriber"]).optional(),
-});
-
 // Medical vault schemas
 export const vaultRecordSchema = z.object({
   patient_account_id: z.string().uuid(),
@@ -115,19 +108,6 @@ export const detectBruteForceSchema = z.object({
 });
 
 // PHASE 3: Expanded schemas for additional edge functions
-export const startVideoSessionSchema = z.object({
-  practice_id: z.string().uuid('Invalid practice ID'),
-  channel_name: z.string().trim().min(1).max(64),
-  provider_id: z.string().uuid('Invalid provider ID').optional(),
-  patient_id: z.string().uuid('Invalid patient ID').optional(),
-  session_type: z.enum(['consultation', 'follow_up', 'emergency']).optional(),
-});
-
-export const joinVideoSessionSchema = z.object({
-  session_id: z.string().uuid('Invalid session ID'),
-  user_id: z.string().uuid('Invalid user ID'),
-  role: z.enum(['host', 'participant']).optional(),
-});
 
 export const createPatientPortalAccountSchema = z.object({
   email: z.string().trim().email('Invalid email address').max(255),
