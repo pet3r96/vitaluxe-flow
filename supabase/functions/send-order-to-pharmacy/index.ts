@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { getViosCredentials, getViosToken as getViosTokenShared } from '../_shared/viosApi.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -109,48 +110,14 @@ function parseAddress(address: string | null): {
   return { address1: address, city: null, state: null, zip: null };
 }
 
-// Get VIOS JWT token with enhanced logging
-async function getViosToken(baseUrl: string, clientId: string, clientSecret: string): Promise<string> {
-  const tokenUrl = `${baseUrl}/api/auth/token`;
-  const startTime = Date.now();
-  
-  edgeLogger.info("VIOS: Fetching JWT token", { 
-    tokenUrl,
-    clientIdPrefix: clientId?.substring(0, 8) + '...' 
+// Use shared VIOS token function - centralized implementation with caching
+// Local wrapper to maintain logging consistency
+async function getViosTokenLocal(credentials: { clientId: string; clientSecret: string; baseUrl: string }): Promise<string> {
+  edgeLogger.info("VIOS: Fetching JWT token via shared utility", { 
+    baseUrl: credentials.baseUrl,
+    clientIdPrefix: credentials.clientId?.substring(0, 8) + '...' 
   });
-  
-  const response = await fetch(tokenUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'ClientId': clientId,
-      'ClientSecret': clientSecret
-    }
-  });
-  
-  const duration = Date.now() - startTime;
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    edgeLogger.error("VIOS: Token request failed", { 
-      status: response.status, 
-      duration,
-      error: errorText.substring(0, 500) 
-    });
-    throw new Error(`VIOS auth failed (${response.status}): ${errorText}`);
-  }
-  
-  const data = await response.json();
-  if (!data.accessToken) {
-    edgeLogger.error("VIOS: Token response missing accessToken", { responseKeys: Object.keys(data) });
-    throw new Error('VIOS auth response missing accessToken');
-  }
-  
-  edgeLogger.info("VIOS: JWT token obtained successfully", { 
-    duration,
-    tokenLength: data.accessToken.length 
-  });
-  return data.accessToken;
+  return getViosTokenShared(credentials);
 }
 
 // Transform order to VIOS CreateOrderRequest format
@@ -335,43 +302,29 @@ async function sendViosOrder(
     testMode: isTestMode
   });
   
-  // Get VIOS credentials - check environment variables first (freshest), then database
-  const envClientId = Deno.env.get('VIOS_CLIENT_ID');
-  const envClientSecret = Deno.env.get('VIOS_CLIENT_SECRET');
+  // Get VIOS credentials using shared utility (handles env vars + database fallback)
+  const viosCredentials = await getViosCredentials(supabaseAdmin, pharmacy.id);
   
-  const dbClientId = credentials.find(c => c.credential_type === 'vios_client_key')?.credential_key;
-  const dbClientSecret = credentials.find(c => c.credential_type === 'vios_client_secret')?.credential_key;
-  
-  // Prefer environment variables if both are set, otherwise fall back to database
-  const clientId = (envClientId && envClientSecret) ? envClientId : dbClientId;
-  const clientSecret = (envClientId && envClientSecret) ? envClientSecret : dbClientSecret;
-  
-  edgeLogger.info("VIOS: Credential source", {
-    usingEnvVars: !!(envClientId && envClientSecret),
-    hasDbCredentials: !!(dbClientId && dbClientSecret)
-  });
-  
-  if (!clientId || !clientSecret) {
+  if (!viosCredentials) {
     edgeLogger.error("VIOS: Missing credentials", {
-      hasClientId: !!clientId,
-      hasClientSecret: !!clientSecret,
-      credentialTypes: credentials.map(c => c.credential_type)
+      pharmacyId: pharmacy.id,
+      pharmacyName: pharmacy.name
     });
-    return { success: false, error: 'VIOS credentials not configured (missing client_key or client_secret)' };
+    return { success: false, error: 'VIOS credentials not configured. Check environment variables or database credentials.' };
   }
   
-  // Get base URL from pharmacy config
-  const baseUrl = pharmacy.api_endpoint_url?.replace(/\/+$/, '') || 'https://integrations.vioscompounding.com';
-  
-  edgeLogger.info("VIOS: Configuration", { 
-    baseUrl, 
+  edgeLogger.info("VIOS: Configuration resolved", { 
+    baseUrl: viosCredentials.baseUrl, 
     testMode: isTestMode,
     hasEndpointUrl: !!pharmacy.api_endpoint_url 
   });
   
+  // Alias for use in the rest of this function
+  const baseUrl = viosCredentials.baseUrl;
+  
   try {
-    // Get JWT token
-    const jwtToken = await getViosToken(baseUrl, clientId, clientSecret);
+    // Get JWT token using shared utility with caching
+    const jwtToken = await getViosTokenLocal(viosCredentials);
     
     const results: any[] = [];
     let allSuccess = true;
