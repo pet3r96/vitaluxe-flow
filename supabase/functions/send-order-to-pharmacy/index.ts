@@ -112,12 +112,18 @@ function parseAddress(address: string | null): {
 
 // Use shared VIOS token function - centralized implementation with caching
 // Local wrapper to maintain logging consistency
-async function getViosTokenLocal(credentials: { clientId: string; clientSecret: string; baseUrl: string }): Promise<string> {
+async function getViosTokenLocal(credentials: { clientId: string; clientSecret: string; baseUrl: string; environment?: string }): Promise<string> {
   edgeLogger.info("VIOS: Fetching JWT token via shared utility", { 
     baseUrl: credentials.baseUrl,
-    clientIdPrefix: credentials.clientId?.substring(0, 8) + '...' 
+    clientIdPrefix: credentials.clientId?.substring(0, 8) + '...',
+    environment: credentials.environment || 'unknown'
   });
-  return getViosTokenShared(credentials);
+  // Add default environment if not provided for backwards compatibility
+  const fullCredentials = {
+    ...credentials,
+    environment: (credentials.environment || 'production') as 'sandbox' | 'production'
+  };
+  return getViosTokenShared(fullCredentials);
 }
 
 // Transform order to VIOS CreateOrderRequest format
