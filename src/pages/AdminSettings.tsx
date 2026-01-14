@@ -118,7 +118,7 @@ const AdminSettings = () => {
                 Manage all medical practices, view statistics, and control account status
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-hidden">
               <PracticesDataTable />
             </CardContent>
           </Card>
