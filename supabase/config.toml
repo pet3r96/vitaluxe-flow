@@ -3,9 +3,6 @@ project_id = "qbtsfajshnrwwlfzkeog"
 [functions.email-dispatcher]
 verify_jwt = false
 
-[functions.agora-diagnostics]
-verify_jwt = false
-
 [functions.email-diagnostics]
 verify_jwt = false
 
@@ -153,9 +150,6 @@ verify_jwt = true
 [functions.log-error]
 verify_jwt = true
 
-[functions.log-video-error]
-verify_jwt = true
-
 [functions.send-patient-message]
 verify_jwt = true
 
@@ -199,9 +193,6 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.update-appointment-settings]
-verify_jwt = true
-
-[functions.manage-practice-room]
 verify_jwt = true
 
 [functions.create-patient-portal-account]
@@ -339,51 +330,6 @@ verify_jwt = true
 [functions.validate-rx-order]
 verify_jwt = true
 
-[functions.generate-agora-token]
-verify_jwt = true
-
-[functions.start-video-session]
-verify_jwt = true
-
-[functions.join-video-session]
-verify_jwt = true
-
-[functions.start-video-recording]
-verify_jwt = true
-
-[functions.stop-video-recording]
-verify_jwt = true
-
-[functions.end-video-session]
-verify_jwt = true
-
-[functions.complete-video-appointment]
-verify_jwt = true
-
-[functions.cleanup-expired-video-recordings]
-verify_jwt = false
-
-[functions.generate-video-guest-link]
-verify_jwt = true
-
-[functions.ensure-video-session]
-verify_jwt = true
-
-[functions.create-video-session]
-verify_jwt = true
-
-[functions.get-or-create-practice-room]
-verify_jwt = true
-
-[functions.resolve-practice-room-join]
-verify_jwt = true
-
-[functions.validate-guest-access]
-verify_jwt = false
-
-[functions.create-instant-video-session]
-verify_jwt = true
-
 [functions.upgrade-trial-to-active]
 verify_jwt = true
 
@@ -412,9 +358,6 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.update-shipping-speed]
-verify_jwt = true
-
-[functions.get-practice-rooms]
 verify_jwt = true
 
 [functions.place-order]

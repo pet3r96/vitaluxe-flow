@@ -367,13 +367,9 @@ serve(async (req) => {
       const normalizedPhone = normalizePhoneToE164(userPhone);
       edgeLogger.info('[handleNotifications] Sending SMS', { phonePrefix: normalizedPhone.substring(0, 5) });
       
-      // Format SMS message with join link for video appointments
+      // Format SMS message with portal link
       let smsMessage = `${payload.title}\n\n${payload.message}`;
-      if (payload.metadata?.join_links?.patient) {
-        smsMessage += `\n\nJoin video call: ${payload.metadata.join_links.patient}`;
-      } else {
-        smsMessage += `\n\nView in portal: https://app.vitaluxeservices.com`;
-      }
+      smsMessage += `\n\nView in portal: https://app.vitaluxeservices.com`;
 
       const smsResult = await sendNotificationSms({
         phoneNumber: normalizedPhone,
