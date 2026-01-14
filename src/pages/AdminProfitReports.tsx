@@ -7,14 +7,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { Tag, RefreshCw, AlertCircle, Copy } from "lucide-react";
+import { Tag, RefreshCw, Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
+import { useResponsive } from "@/hooks/useResponsive";
+import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,7 @@ const AdminProfitReports = () => {
   usePagePerformance('AdminProfitReports');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isMobile } = useResponsive();
   const [rxFilter, setRxFilter] = useState<"all" | "non-rx" | "rx-only">("all");
 
   // JUSTIFIED: Complex Supabase query with nested relations causes TypeScript inference issues
@@ -162,18 +164,70 @@ const AdminProfitReports = () => {
     },
   });
 
+  // Helper to get sales chain label
+  const getSalesChainLabel = (profit: any) => {
+    if (profit.downline_id) return "Full Network";
+    if (profit.topline_id) return "Via Topline";
+    return "Direct";
+  };
+
+  const getSalesChainVariant = (profit: any): "default" | "secondary" | "outline" => {
+    if (profit.downline_id) return "default";
+    if (profit.topline_id) return "secondary";
+    return "outline";
+  };
+
+  // Mobile rows data
+  const mobileRows: MobileTableRowProps[] = useMemo(() => {
+    return paginatedProfitDetails?.map((profit: any) => ({
+      title: profit.orders?.profiles?.name || "Unknown Practice",
+      subtitle: profit.created_at ? format(new Date(profit.created_at), "MMM d, yyyy") : "-",
+      fields: [
+        { 
+          label: "Order ID", 
+          value: profit.order_id?.slice(0, 8) + "..." 
+        },
+        { 
+          label: "Status", 
+          value: profit.orders?.status || "unknown", 
+          badge: true,
+          badgeVariant: (profit.orders?.status === 'shipped' || profit.orders?.status === 'delivered') ? 'default' : 'secondary'
+        },
+        { 
+          label: "Chain", 
+          value: getSalesChainLabel(profit), 
+          badge: true,
+          badgeVariant: getSalesChainVariant(profit)
+        },
+        { 
+          label: "Profit", 
+          value: formatCurrency(parseFloat(profit.admin_profit?.toString() || '0'))
+        },
+      ],
+      actions: [
+        {
+          label: "Copy Order ID",
+          onClick: () => {
+            navigator.clipboard.writeText(profit.order_id);
+            toast({ title: "Copied!", description: "Order ID copied to clipboard" });
+          }
+        }
+      ]
+    })) || [];
+  }, [paginatedProfitDetails, toast]);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Profit Reports</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Profit Reports</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">
             Detailed breakdown of platform earnings
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <Select value={rxFilter} onValueChange={(value: any) => setRxFilter(value)}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Filter by order type" />
             </SelectTrigger>
             <SelectContent>
@@ -184,17 +238,16 @@ const AdminProfitReports = () => {
           </Select>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="w-full sm:w-auto">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Recompute Profits
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent className="max-w-[95vw] sm:max-w-lg">
               <AlertDialogHeader>
                 <AlertDialogTitle>Recompute Order Profits?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This will recalculate profits for all pending and processing orders using the current price overrides.
-                  This is useful after updating rep pricing to ensure accurate profit calculations.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -266,114 +319,115 @@ const AdminProfitReports = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Admin Profit History</CardTitle>
+        <CardHeader className="pb-2 sm:pb-6">
+          <CardTitle className="text-lg sm:text-xl">Admin Profit History</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Practice</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Sales Chain</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead className="text-right">Admin Profit</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : filteredProfitDetails?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
-                    No profit data yet
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginatedProfitDetails?.map((profit: any) => (
-                  <TableRow key={profit.id}>
-                    <TableCell>
-                      {profit.created_at ? format(new Date(profit.created_at), "MMM d, yyyy") : "-"}
-                    </TableCell>
-                    <TableCell>{profit.orders?.profiles?.name || "-"}</TableCell>
-                    <TableCell>{profit.order_lines?.products?.name || "-"}</TableCell>
-                    <TableCell className="font-mono text-sm">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(profit.order_id);
-                                toast({
-                                  title: "Copied!",
-                                  description: "Order ID copied to clipboard",
-                                });
-                              }}
-                              className="inline-flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
-                            >
-                              {profit.order_id?.slice(0, 8)}...
-                              <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="font-mono">{profit.order_id}</p>
-                            <p className="text-xs text-muted-foreground mt-1">Click to copy</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell>
-                      {profit.downline_id ? (
-                        <Badge variant="default" className="text-xs">
-                          Admin → Topline → Downline → Practice
-                        </Badge>
-                      ) : profit.topline_id ? (
-                        <Badge variant="secondary" className="text-xs">
-                          Admin → Topline → Practice
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">
-                          Admin → Practice (Direct)
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        profit.orders?.status === 'shipped' || profit.orders?.status === 'delivered' 
-                          ? 'default' 
-                          : 'secondary'
-                      }>
-                        {profit.orders?.status || 'unknown'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {profit.is_rx_required ? (
-                        <Badge variant="outline" className="text-xs">
-                          Rx Order - Zero Rep Commission
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">
-                          Non Rx Order- Commissions Applicable
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className="font-medium">
-                        {formatCurrency(parseFloat(profit.admin_profit?.toString() || '0'))}
-                      </span>
-                    </TableCell>
+        <CardContent className="px-3 sm:px-6">
+          {isMobile ? (
+            isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            ) : (
+              <MobileDataTable rows={mobileRows} emptyMessage="No profit data yet" />
+            )
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[100px]">Date</TableHead>
+                    <TableHead className="min-w-[140px]">Practice</TableHead>
+                    <TableHead className="min-w-[120px]">Order ID</TableHead>
+                    <TableHead className="min-w-[110px]">Sales Chain</TableHead>
+                    <TableHead className="min-w-[90px]">Status</TableHead>
+                    <TableHead className="min-w-[80px]">Source</TableHead>
+                    <TableHead className="text-right min-w-[100px]">Admin Profit</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredProfitDetails?.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        No profit data yet
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedProfitDetails?.map((profit: any) => (
+                      <TableRow key={profit.id}>
+                        <TableCell className="whitespace-nowrap">
+                          {profit.created_at ? format(new Date(profit.created_at), "MMM d, yyyy") : "-"}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">{profit.orders?.profiles?.name || "-"}</TableCell>
+                        <TableCell className="font-mono text-sm min-w-[120px]">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(profit.order_id);
+                                    toast({
+                                      title: "Copied!",
+                                      description: "Order ID copied to clipboard",
+                                    });
+                                  }}
+                                  className="inline-flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                                >
+                                  {profit.order_id?.slice(0, 8)}...
+                                  <Copy className="h-3 w-3 opacity-50 hover:opacity-100" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-mono">{profit.order_id}</p>
+                                <p className="text-xs text-muted-foreground mt-1">Click to copy</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={getSalesChainVariant(profit)} 
+                            className="text-xs whitespace-nowrap"
+                          >
+                            {getSalesChainLabel(profit)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              profit.orders?.status === 'shipped' || profit.orders?.status === 'delivered' 
+                                ? 'default' 
+                                : 'secondary'
+                            }
+                            className="whitespace-nowrap"
+                          >
+                            {profit.orders?.status || 'unknown'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={profit.is_rx_required ? "outline" : "secondary"} 
+                            className="text-xs whitespace-nowrap"
+                          >
+                            {profit.is_rx_required ? "Rx" : "Non-Rx"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-medium whitespace-nowrap">
+                            {formatCurrency(parseFloat(profit.admin_profit?.toString() || '0'))}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
