@@ -104,41 +104,41 @@ serve(async (req) => {
       details: { url: pharmacy.api_endpoint_url },
     });
 
-    switch (pharmacy.api_auth_type) {
-      case "bearer": {
-        // VIOS uses OAuth client credentials, not static bearer token
-        if (pharmacy.api_handler_type === 'vios') {
-          const hasClientKey = credentials?.some(c => c.credential_type === "vios_client_key");
-          const hasClientSecret = credentials?.some(c => c.credential_type === "vios_client_secret");
-          // Also check environment variables
-          const envClientId = Deno.env.get('VIOS_CLIENT_ID');
-          const envClientSecret = Deno.env.get('VIOS_CLIENT_SECRET');
-          const hasEnvCredentials = !!(envClientId && envClientSecret);
-          
-          if (!hasEnvCredentials && (!hasClientKey || !hasClientSecret)) {
-            results.push({
-              step: "API Credentials",
-              status: "error",
-              message: "VIOS OAuth credentials incomplete",
-              details: {
-                has_client_key: Boolean(hasClientKey),
-                has_client_secret: Boolean(hasClientSecret),
-                has_env_credentials: hasEnvCredentials,
-              },
-            });
-            return new Response(
-              JSON.stringify({ success: false, results }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-            );
-          }
-          results.push({
-            step: "API Credentials",
-            status: "success",
-            message: hasEnvCredentials ? "VIOS OAuth credentials configured (env)" : "VIOS OAuth credentials configured",
-            details: { source: hasEnvCredentials ? "environment" : "database" },
-          });
-        } else {
-          // Standard bearer token check for non-VIOS
+    // VIOS handlers always require OAuth credentials regardless of api_auth_type setting
+    if (pharmacy.api_handler_type === 'vios') {
+      const hasClientKey = credentials?.some(c => c.credential_type === "vios_client_key");
+      const hasClientSecret = credentials?.some(c => c.credential_type === "vios_client_secret");
+      // Also check environment variables
+      const envClientId = Deno.env.get('VIOS_CLIENT_ID');
+      const envClientSecret = Deno.env.get('VIOS_CLIENT_SECRET');
+      const hasEnvCredentials = !!(envClientId && envClientSecret);
+      
+      if (!hasEnvCredentials && (!hasClientKey || !hasClientSecret)) {
+        results.push({
+          step: "API Credentials",
+          status: "error",
+          message: "VIOS OAuth credentials incomplete",
+          details: {
+            has_client_key: Boolean(hasClientKey),
+            has_client_secret: Boolean(hasClientSecret),
+            has_env_credentials: hasEnvCredentials,
+          },
+        });
+        return new Response(
+          JSON.stringify({ success: false, results }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+      results.push({
+        step: "API Credentials",
+        status: "success",
+        message: hasEnvCredentials ? "VIOS OAuth credentials configured (env)" : "VIOS OAuth credentials configured",
+        details: { source: hasEnvCredentials ? "environment" : "database" },
+      });
+    } else {
+      // Non-VIOS handlers use the api_auth_type setting
+      switch (pharmacy.api_auth_type) {
+        case "bearer": {
           const hasToken = credentials?.some(c => c.credential_type === "bearer_token");
           if (!hasToken) {
             results.push({
@@ -156,62 +156,62 @@ serve(async (req) => {
             status: "success",
             message: "Bearer token credentials configured",
           });
+          break;
         }
-        break;
-      }
-      case "api_key": {
-        const hasKey = credentials?.some(c => c.credential_type === "api_key");
-        if (!hasKey) {
+        case "api_key": {
+          const hasKey = credentials?.some(c => c.credential_type === "api_key");
+          if (!hasKey) {
+            results.push({
+              step: "API Credentials",
+              status: "error",
+              message: "No API key credentials found",
+            });
+            return new Response(
+              JSON.stringify({ success: false, results }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+            );
+          }
           results.push({
             step: "API Credentials",
-            status: "error",
-            message: "No API key credentials found",
+            status: "success",
+            message: "API key credentials configured",
           });
-          return new Response(
-            JSON.stringify({ success: false, results }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-          );
+          break;
         }
-        results.push({
-          step: "API Credentials",
-          status: "success",
-          message: "API key credentials configured",
-        });
-        break;
-      }
-      case "basic": {
-        const hasUsername = credentials?.some(c => c.credential_type === "basic_auth_username");
-        const hasPassword = credentials?.some(c => c.credential_type === "basic_auth_password");
-        if (!hasUsername || !hasPassword) {
+        case "basic": {
+          const hasUsername = credentials?.some(c => c.credential_type === "basic_auth_username");
+          const hasPassword = credentials?.some(c => c.credential_type === "basic_auth_password");
+          if (!hasUsername || !hasPassword) {
+            results.push({
+              step: "API Credentials",
+              status: "error",
+              message: "Basic auth credentials incomplete",
+              details: {
+                has_username: Boolean(hasUsername),
+                has_password: Boolean(hasPassword),
+              },
+            });
+            return new Response(
+              JSON.stringify({ success: false, results }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+            );
+          }
           results.push({
             step: "API Credentials",
-            status: "error",
-            message: "Basic auth credentials incomplete",
-            details: {
-              has_username: Boolean(hasUsername),
-              has_password: Boolean(hasPassword),
-            },
+            status: "success",
+            message: "Basic auth credentials configured",
           });
-          return new Response(
-            JSON.stringify({ success: false, results }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-          );
+          break;
         }
-        results.push({
-          step: "API Credentials",
-          status: "success",
-          message: "Basic auth credentials configured",
-        });
-        break;
+        case "none":
+        default:
+          results.push({
+            step: "API Credentials",
+            status: "success",
+            message: "No API credentials required",
+          });
+          break;
       }
-      case "none":
-      default:
-        results.push({
-          step: "API Credentials",
-          status: "success",
-          message: "No API credentials required",
-        });
-        break;
     }
 
     // Step: VIOS Token Test (if requested and VIOS handler)
