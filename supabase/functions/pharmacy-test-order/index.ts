@@ -12,8 +12,44 @@ interface TestOrderRequest {
   pharmacy_id: string;
 }
 
+// Get a valid shipping service code from the pharmacy's configured rates
+async function getValidShippingCode(
+  supabaseAdmin: any, 
+  pharmacyId: string
+): Promise<number> {
+  // First try to get ground shipping (most common for test orders)
+  const { data: groundRate } = await supabaseAdmin
+    .from('pharmacy_shipping_rates')
+    .select('vios_service_code')
+    .eq('pharmacy_id', pharmacyId)
+    .eq('shipping_speed', 'ground')
+    .eq('enabled', true)
+    .single();
+  
+  if (groundRate?.vios_service_code) {
+    return groundRate.vios_service_code;
+  }
+  
+  // Fall back to any enabled rate
+  const { data: anyRate } = await supabaseAdmin
+    .from('pharmacy_shipping_rates')
+    .select('vios_service_code')
+    .eq('pharmacy_id', pharmacyId)
+    .eq('enabled', true)
+    .limit(1)
+    .single();
+  
+  if (anyRate?.vios_service_code) {
+    return anyRate.vios_service_code;
+  }
+  
+  // Last resort fallback - will likely fail but API will provide clear error
+  edgeLogger.warn('[TestOrder] No valid shipping rates found, using fallback', { pharmacyId });
+  return 1;
+}
+
 // Generate synthetic test order payload
-function createTestOrderPayload(): any {
+function createTestOrderPayload(shippingServiceCode: number): any {
   const testId = `TEST-${Date.now()}`;
   
   return {
@@ -51,7 +87,7 @@ function createTestOrderPayload(): any {
       city: "Patient City",
       state: "CA",
       zipCode: "90211",
-      service: 1, // Ground
+      service: shippingServiceCode, // Use pharmacy's configured shipping code
       recipientType: "patient",
       recipientFirstName: "Test",
       recipientLastName: "Patient",
@@ -109,8 +145,15 @@ serve(async (req) => {
       );
     }
 
-    // Create test order payload
-    const testPayload = createTestOrderPayload();
+    // Get valid shipping service code for this pharmacy
+    const shippingServiceCode = await getValidShippingCode(supabaseAdmin, pharmacy_id);
+    edgeLogger.info('[TestOrder] Using shipping service code', { 
+      pharmacyId: pharmacy_id, 
+      serviceCode: shippingServiceCode 
+    });
+
+    // Create test order payload with valid shipping code
+    const testPayload = createTestOrderPayload(shippingServiceCode);
     edgeLogger.info('[TestOrder] Sending test order', { 
       referenceId: testPayload.general.referenceId,
       isTestOrder: testPayload.general.isTestOrder
