@@ -52,7 +52,7 @@ export const PharmacyApiConfigDialog = ({
   // Form state
   const [apiEnabled, setApiEnabled] = useState(false);
   const [apiTestMode, setApiTestMode] = useState(true); // Sandbox by default
-  const [apiHandlerType, setApiHandlerType] = useState<string>("generic");
+  const [apiHandlerType, setApiHandlerType] = useState<string>("standard");
   const [apiEndpointUrl, setApiEndpointUrl] = useState("");
   const [authType, setAuthType] = useState<string>("none");
   const [authKeyName, setAuthKeyName] = useState("X-API-Key");
@@ -88,11 +88,9 @@ export const PharmacyApiConfigDialog = ({
       // Update form state
       setApiEnabled(data.api_enabled || false);
       setApiTestMode(data.api_test_mode ?? true);
-      // Default to 'standard' if no handler type or if it was 'none'/'generic'/'custom'
+      // Normalize legacy types (generic, custom, none) to 'standard'
       const handlerType = data.api_handler_type;
-      // Map legacy types to new unified types
-      const normalizedType = handlerType === 'vios' ? 'vios' : 'standard';
-      setApiHandlerType(handlerType && handlerType !== 'none' ? normalizedType : "standard");
+      setApiHandlerType(handlerType === 'vios' ? 'vios' : 'standard');
       setApiEndpointUrl(data.api_endpoint_url || "");
       setAuthType(data.api_auth_type || "none");
       setAuthKeyName(data.api_auth_key_name || "X-API-Key");
@@ -555,7 +553,7 @@ export const PharmacyApiConfigDialog = ({
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        {(apiHandlerType === 'standard' || apiHandlerType === 'generic') && 'Standard REST API endpoint with configurable authentication'}
+                        {apiHandlerType === 'standard' && 'Standard REST API endpoint with configurable authentication'}
                         {apiHandlerType === 'vios' && 'VIOS Compounding Pharmacy API (Multi-endpoint with OAuth)'}
                       </p>
                     </div>
@@ -611,7 +609,7 @@ export const PharmacyApiConfigDialog = ({
                       </div>
                     )}
 
-                    {(apiHandlerType === 'standard' || apiHandlerType === 'generic') && (
+                    {apiHandlerType === 'standard' && (
                       <>
                         <div className="space-y-2">
                           <Label htmlFor="api-endpoint">API Endpoint URL</Label>
