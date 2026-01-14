@@ -1,20 +1,77 @@
 import { edgeLogger } from './logger.ts';
+import { 
+  ViosErrorType, 
+  ViosError, 
+  ViosTokenResponse,
+  ViosEnvironment,
+  type ViosConfig 
+} from './viosTypes.ts';
 
 /**
  * Shared VIOS API utilities for authentication, credentials, and error handling
+ * 
+ * ARCHITECTURE NOTES:
+ * - This is the SINGLE source of truth for VIOS authentication
+ * - All VIOS edge functions must use these utilities
+ * - Never duplicate token logic elsewhere
  */
 
 export interface ViosCredentials {
   clientId: string;
   clientSecret: string;
   baseUrl: string;
+  environment: ViosEnvironment;
 }
 
 export interface ViosApiResult<T> {
   success: boolean;
   data?: T;
   error?: string;
+  errorType?: ViosErrorType;
   statusCode?: number;
+}
+
+/**
+ * Validate and sanitize credential string
+ * Catches common issues: whitespace, empty values, placeholder text
+ */
+function validateCredential(value: string | undefined, name: string): string {
+  if (!value) {
+    throw new Error(`VIOS ${name} is not configured`);
+  }
+  
+  const trimmed = value.trim();
+  
+  if (trimmed !== value) {
+    edgeLogger.warn(`VIOS: ${name} had leading/trailing whitespace (removed)`);
+  }
+  
+  if (trimmed.length === 0) {
+    throw new Error(`VIOS ${name} is empty after trimming whitespace`);
+  }
+  
+  // Check for common placeholder values
+  const placeholders = ['your-client-id', 'your-client-secret', 'xxx', 'placeholder', '<'];
+  if (placeholders.some(p => trimmed.toLowerCase().includes(p))) {
+    throw new Error(`VIOS ${name} appears to contain placeholder text`);
+  }
+  
+  // Minimum length check (VIOS credentials are typically 32+ chars)
+  if (trimmed.length < 10) {
+    edgeLogger.warn(`VIOS: ${name} seems unusually short (${trimmed.length} chars)`);
+  }
+  
+  return trimmed;
+}
+
+/**
+ * Determine environment from base URL
+ */
+function detectEnvironment(baseUrl: string): ViosEnvironment {
+  if (baseUrl.includes('sandbox') || baseUrl.includes('test') || baseUrl.includes('staging')) {
+    return 'sandbox';
+  }
+  return 'production';
 }
 
 // Cache for VIOS tokens (in-memory, per-execution)
@@ -22,6 +79,7 @@ const tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
 /**
  * Get VIOS credentials from environment variables or database
+ * Includes validation and environment detection
  */
 export async function getViosCredentials(
   supabaseAdmin: any,
@@ -49,10 +107,28 @@ export async function getViosCredentials(
   }
   
   const baseUrl = pharmacy.api_endpoint_url?.replace(/\/+$/, '') || 'https://integrations.vioscompounding.com';
+  const environment = detectEnvironment(baseUrl);
+  
+  edgeLogger.info('VIOS: Environment detected', { environment, baseUrl });
   
   // Use env vars if both are set
   if (envClientId && envClientSecret) {
-    return { clientId: envClientId, clientSecret: envClientSecret, baseUrl };
+    try {
+      const validatedClientId = validateCredential(envClientId, 'CLIENT_ID');
+      const validatedClientSecret = validateCredential(envClientSecret, 'CLIENT_SECRET');
+      
+      return { 
+        clientId: validatedClientId, 
+        clientSecret: validatedClientSecret, 
+        baseUrl,
+        environment
+      };
+    } catch (error) {
+      edgeLogger.error('VIOS: Environment credential validation failed', { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+      // Fall through to database credentials
+    }
   }
   
   // Fallback to database credentials
@@ -74,7 +150,22 @@ export async function getViosCredentials(
     return null;
   }
   
-  return { clientId: dbClientId, clientSecret: dbClientSecret, baseUrl };
+  try {
+    const validatedClientId = validateCredential(dbClientId, 'CLIENT_ID (database)');
+    const validatedClientSecret = validateCredential(dbClientSecret, 'CLIENT_SECRET (database)');
+    
+    return { 
+      clientId: validatedClientId, 
+      clientSecret: validatedClientSecret, 
+      baseUrl,
+      environment
+    };
+  } catch (error) {
+    edgeLogger.error('VIOS: Database credential validation failed', { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    return null;
+  }
 }
 
 /**
