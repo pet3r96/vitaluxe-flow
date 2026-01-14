@@ -2,14 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { realtimeManager } from "@/lib/realtimeManager";
-import { time, timeEnd } from "@/diag";
 import { differenceInMinutes, format } from "date-fns";
-import { Clock, User, ChevronDown, ChevronUp, Video, AlertTriangle } from "lucide-react";
+import { Clock, User, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { VideoSessionStatus } from "@/components/video/VideoSessionStatus";
 import { toast } from "sonner";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import {
@@ -22,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-import type { CalendarProvider, CalendarAppointment, VideoSession } from '@/types/domain/calendar';
+import type { CalendarProvider, CalendarAppointment } from '@/types/domain/calendar';
 
 interface WaitingRoomPanelProps {
   practiceId: string;
@@ -39,168 +37,6 @@ export function WaitingRoomPanel({
 }: WaitingRoomPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const queryClient = useQueryClient();
-
-  // Fetch video sessions (real sessions with video_sessions records)
-  const { data: rawVideoSessions = [], refetch: refetchVideo } = useQuery({
-    queryKey: ["video-sessions", practiceId, currentDate.toISOString()],
-    queryFn: async () => {
-      const startOfDay = new Date(currentDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(currentDate);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      import('@/lib/logger').then(({ logger }) => {
-        logger.info('Fetching video sessions', { practiceId });
-      });
-
-      const { data, error } = await supabase
-        .from("video_sessions")
-        .select(`
-          *,
-          patient_appointments!inner(
-            *,
-            patient:patient_accounts(*),
-            provider_id
-          )
-        `)
-        .eq("practice_id", practiceId)
-        .in("status", ["scheduled", "waiting", "active"])
-        .gte("scheduled_start_time", startOfDay.toISOString())
-        .lte("scheduled_start_time", endOfDay.toISOString())
-        .order("scheduled_start_time", { ascending: true });
-
-      if (error) throw error;
-      
-      import('@/lib/logger').then(({ logger }) => {
-        logger.info('Video sessions loaded', { count: data?.length || 0 });
-      });
-      
-      return data || [];
-    },
-    enabled: !!practiceId,
-    staleTime: 60_000, // Keep data fresh for 60 seconds
-    refetchOnWindowFocus: false, // Prevent refetch on tab switching
-    refetchInterval: 5000, // Poll every 5 seconds for real-time updates
-  });
-
-  // Fetch video appointments (base appointments for synthetic sessions)
-  const { data: rawVideoAppointments = [] } = useQuery({
-    queryKey: ["video-appointments-base", practiceId, currentDate.toISOString()],
-    queryFn: async () => {
-      const startOfDay = new Date(currentDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(currentDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      import('@/lib/logger').then(({ logger }) => {
-        logger.info('Fetching video appointments (base)', { practiceId });
-      });
-
-      const { data, error } = await supabase
-        .from("patient_appointments")
-        .select(`
-          id, patient_id, provider_id, start_time, status, practice_id,
-          patient:patient_accounts(id, first_name, last_name, email)
-        `)
-        .eq("practice_id", practiceId)
-        .eq("visit_type", "video")
-        .not("status", "in", "(cancelled,completed)")
-        .gte("start_time", startOfDay.toISOString())
-        .lte("start_time", endOfDay.toISOString())
-        .order("start_time", { ascending: true });
-        
-      if (error) throw error;
-      
-      import('@/lib/logger').then(({ logger }) => {
-        logger.info('Video appointments (base) loaded', { count: data?.length || 0 });
-      });
-      
-      return data || [];
-    },
-    enabled: !!practiceId,
-    staleTime: 60_000, // Keep data fresh for 60 seconds
-    refetchOnWindowFocus: false, // Prevent refetch on tab switching
-    refetchInterval: 5000,
-  });
-
-  // Merge real sessions with synthetic appointments
-  // Build a map of sessions by appointment_id
-  const sessionsByAppointment = new Map(
-    rawVideoSessions.map(s => [s.appointment_id, s])
-  );
-  
-  // Merge: real sessions + synthetic appointments
-  const mergedVideoAppointments: VideoSession[] = [];
-  
-  // Add all real sessions with provider data
-  rawVideoSessions.forEach(session => {
-    const appointment = session.patient_appointments;
-    const provider = providers.find((p: any) => p.id === appointment.provider_id);
-    
-    mergedVideoAppointments.push({
-      ...session,
-      patient_appointments: {
-        ...appointment,
-        provider: provider ? {
-          id: provider.id,
-          user: {
-            full_name: provider.profiles?.prescriber_name || provider.profiles?.full_name || 'Unassigned'
-          }
-        } : null
-      }
-    });
-  });
-  
-  // Add synthetic sessions for video appointments without a session record
-  rawVideoAppointments.forEach(apt => {
-    if (!sessionsByAppointment.has(apt.id)) {
-      const provider = providers.find((p: any) => p.id === apt.provider_id);
-      
-      const now = new Date().toISOString();
-      mergedVideoAppointments.push({
-        id: `apt-${apt.id}`,
-        practice_id: apt.practice_id,
-        appointment_id: apt.id,
-        session_id: `synthetic-${apt.id}`, // Add session_id for type safety
-        channel_name: `apt-${apt.id}`,
-        scheduled_start_time: apt.start_time,
-        status: apt.status === 'checked_in' ? 'waiting' : 'scheduled',
-        created_at: now,
-        updated_at: now,
-        isSynthetic: true,
-        patient_appointments: {
-          id: apt.id,
-          patient_id: apt.patient_id,
-          provider_id: apt.provider_id,
-          start_time: apt.start_time,
-          status: apt.status,
-          patient: apt.patient,
-          provider: provider ? {
-            id: provider.id,
-            user: {
-              full_name: provider.profiles?.prescriber_name || provider.profiles?.full_name || 'Unassigned'
-            }
-          } : null
-        } // Merged event structure from appointments & sessions
-      });
-    }
-  });
-  
-  // Sort by scheduled time
-  mergedVideoAppointments.sort((a, b) => 
-    new Date(a.scheduled_start_time).getTime() - new Date(b.scheduled_start_time).getTime()
-  );
-  
-  const videoAppointments = mergedVideoAppointments;
-
-  import('@/lib/logger').then(({ logger }) => {
-    logger.info('Merged video data', {
-      realSessions: rawVideoSessions.length,
-      appointments: rawVideoAppointments.length,
-      synthetic: mergedVideoAppointments.filter(s => s.isSynthetic).length,
-      total: mergedVideoAppointments.length
-    });
-  });
 
   // Fetch overdue appointments (>15 minutes past scheduled time)
   const { data: rawOverdueAppointments = [], refetch: refetchOverdue } = useQuery({
@@ -231,7 +67,7 @@ export function WaitingRoomPanel({
       return data || [];
     },
     enabled: !!practiceId,
-    refetchInterval: 5000, // Poll every 5 seconds for real-time updates
+    refetchInterval: 30000, // Poll every 30 seconds
   });
 
   // Merge provider data client-side
@@ -290,45 +126,22 @@ export function WaitingRoomPanel({
     };
   });
 
-  // Real-time subscription for in-person appointments
+  // Real-time subscription for appointments
   useEffect(() => {
     realtimeManager.subscribe('patient_appointments', () => {
       refetch();
       refetchOverdue();
-      refetchVideo(); // Also refetch video when appointments change
     });
 
     // Also subscribe to patient_accounts for name/profile updates
     realtimeManager.subscribe('patient_accounts', () => {
-      refetchVideo();
+      refetch();
     });
 
     return () => {
       // Manager handles cleanup
     };
-  }, [practiceId, refetch, refetchOverdue, refetchVideo]);
-
-  // Real-time subscription for video sessions
-  useEffect(() => {
-    const channel = supabase
-      .channel('video_sessions_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'video_sessions'
-        },
-        () => {
-          refetchVideo();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [practiceId, refetchVideo]);
+  }, [practiceId, refetch, refetchOverdue]);
 
   const startTreatmentMutation = useOptimisticMutation<void, string>(
     async (appointmentId: string) => {
@@ -360,45 +173,6 @@ export function WaitingRoomPanel({
 
   const handleStartTreatment = (appointmentId: string) => {
     startTreatmentMutation.mutate(appointmentId);
-  };
-
-  const handleStartVideoSession = async (sessionId: string) => {
-    time(`WaitingRoomPanel start-video-session-${sessionId}`);
-    try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('timeout')), 12000)
-      );
-      
-      const invokePromise = supabase.functions.invoke('start-video-session', {
-        body: { sessionId }
-      });
-
-      const result = await Promise.race([invokePromise, timeoutPromise]);
-      const { data, error } = result as { data: any; error: any };
-      timeEnd(`WaitingRoomPanel start-video-session-${sessionId}`);
-
-      if (error) throw error;
-
-      toast.success("Video Session Started", {
-        description: "Patient has been notified via SMS",
-      });
-
-      refetchVideo();
-    } catch (error: any) {
-      timeEnd(`WaitingRoomPanel start-video-session-${sessionId}`);
-      
-      if (error.message === 'timeout') {
-        toast.info("Still Processing", {
-          description: "Starting the session... We'll update the list automatically.",
-        });
-        // Trigger refetch to show any changes
-        setTimeout(() => refetchVideo(), 2000);
-      } else {
-        toast.error("Error", {
-          description: error.message || "Failed to start video session",
-        });
-      }
-    }
   };
 
   const handleCheckInOverdue = async (appointmentId: string) => {
@@ -449,40 +223,6 @@ export function WaitingRoomPanel({
     }
   };
 
-  // Helper functions for video appointments
-  const canStartVideoSession = (scheduledTime: string, status: string) => {
-    const now = new Date();
-    const scheduled = new Date(scheduledTime);
-    const minutesUntil = differenceInMinutes(scheduled, now);
-    
-    // Can start if within 15 minutes before or anytime after scheduled time
-    return status === 'scheduled' && minutesUntil <= 15;
-  };
-
-  const getTimeUntilText = (scheduledTime: string) => {
-    const now = new Date();
-    const scheduled = new Date(scheduledTime);
-    const minutesUntil = differenceInMinutes(scheduled, now);
-    
-    if (minutesUntil < 0) return "Ready now";
-    if (minutesUntil === 0) return "Starting now";
-    if (minutesUntil < 60) return `In ${minutesUntil} min`;
-    const hours = Math.floor(minutesUntil / 60);
-    return `In ${hours}h ${minutesUntil % 60}m`;
-  };
-
-  const getVideoAppointmentColor = (scheduledTime: string, status: string) => {
-    const now = new Date();
-    const scheduled = new Date(scheduledTime);
-    const minutesUntil = differenceInMinutes(scheduled, now);
-    
-    if (status === 'waiting') return "bg-card border-l-4 border-l-blue-500 hover:bg-muted/50";
-    if (status === 'active') return "bg-card border-l-4 border-l-green-500 animate-pulse hover:bg-muted/50";
-    if (minutesUntil <= 0) return "bg-card border-l-4 border-l-green-500 hover:bg-muted/50";
-    if (minutesUntil <= 5) return "bg-card border-l-4 border-l-yellow-500 hover:bg-muted/50";
-    return "bg-card border-l-4 border-l-muted hover:bg-muted/50";
-  };
-
   const getWaitTimeColor = (checkedInAt: string) => {
     const minutes = differenceInMinutes(new Date(), new Date(checkedInAt));
     
@@ -499,341 +239,150 @@ export function WaitingRoomPanel({
     return "text-red-500";
   };
 
-  const getWaitTimeText = (checkedInAt: string) => {
-    const minutes = differenceInMinutes(new Date(), new Date(checkedInAt));
-    return `${minutes} min${minutes !== 1 ? "s" : ""}`;
-  };
-
-  // Helper functions for overdue appointments
-  const getOverdueMinutes = (startTime: string) => {
-    return differenceInMinutes(new Date(), new Date(startTime));
-  };
-
-  const getOverdueColor = () => {
-    return "bg-card dark:bg-card text-foreground dark:text-white border-l-4 border-l-red-500 hover:bg-muted dark:hover:bg-gray-900 animate-pulse";
-  };
+  // Calculate total count for display
+  const totalCount = waitingPatients.length + overdueAppointments.length;
 
   return (
-    <Card className="border-t bg-background max-h-[500px] flex flex-col">
-      {/* Header */}
-      <div
-        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50"
+    <Card className="bg-card dark:bg-card text-foreground dark:text-white border border-border dark:border-gray-700">
+      <div 
+        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 dark:hover:bg-gray-900/50 transition-colors"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
         <div className="flex items-center gap-2">
-          {overdueAppointments.length > 0 ? (
-            <AlertTriangle className="h-5 w-5 text-red-500" />
-          ) : videoAppointments.length > 0 ? (
-            <Video className="h-5 w-5 text-primary" />
-          ) : (
-            <Clock className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Waiting Room</h2>
+          {totalCount > 0 && (
+            <Badge variant="secondary" className="bg-primary/10 text-primary">
+              {totalCount}
+            </Badge>
           )}
-          <h2 className="text-lg font-semibold">
-            Waiting Room
-            {(overdueAppointments.length + videoAppointments.length + waitingPatients.length) > 0 && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({overdueAppointments.length + videoAppointments.length + waitingPatients.length})
-              </span>
-            )}
-          </h2>
         </div>
         {isCollapsed ? (
-          <ChevronDown className="h-5 w-5" />
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
         ) : (
-          <ChevronUp className="h-5 w-5" />
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
         )}
       </div>
 
-      {/* Content */}
       {!isCollapsed && (
-        <div className="overflow-y-auto flex-1">
-          {/* Overdue Appointments Section */}
+        <div className="p-4 pt-0 space-y-6">
+          {/* Overdue Section */}
           {overdueAppointments.length > 0 && (
-            <div className="mb-4">
-              <div className="bg-red-500/10 px-4 py-2 flex items-center gap-2 border-l-4 border-l-red-500">
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-                <h3 className="text-sm font-semibold text-red-500">Overdue Appointments</h3>
-                <Badge variant="destructive" className="ml-auto">
-                  {overdueAppointments.length}
-                </Badge>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>Scheduled Time</TableHead>
-                    <TableHead>Overdue</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {overdueAppointments.map((appointment: any) => {
-                    const overdueMinutes = getOverdueMinutes(appointment.start_time);
-                    
-                    return (
-                      <TableRow
-                        key={appointment.id}
-                        className={cn(
-                          "cursor-pointer",
-                          getOverdueColor()
-                        )}
-                        onClick={() => onAppointmentClick(appointment)}
-                      >
-                        <TableCell className="font-medium">
-                          {appointment.patient?.first_name}{" "}
-                          {appointment.patient?.last_name}
-                        </TableCell>
-                        <TableCell>
-                          {appointment.provider?.user?.full_name || "Unassigned"}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(appointment.start_time), "h:mm a")}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="destructive" className="font-semibold">
-                            OVERDUE: {overdueMinutes} min
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCheckInOverdue(appointment.id);
-                              }}
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              Check In Now
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMarkNoShow(appointment.id);
-                              }}
-                            >
-                              Mark No-Show
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
-          {/* Separator between overdue and video sections */}
-          {overdueAppointments.length > 0 && videoAppointments.length > 0 && (
-            <Separator className="my-4" />
-          )}
-
-          {/* Video Appointments Section */}
-          {videoAppointments.length > 0 && (
-            <div className="mb-4">
-              <div className="bg-muted/30 px-4 py-2 flex items-center gap-2">
-                <Video className="h-4 w-4 text-blue-500" />
-                <h3 className="text-sm font-semibold">Video Consultations</h3>
-                <Badge variant="secondary" className="ml-auto">
-                  {videoAppointments.length}
-                </Badge>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>Scheduled Time</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Time Until</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {videoAppointments.map((session: any) => {
-                    const appointment = session.patient_appointments;
-                    const canStart = canStartVideoSession(session.scheduled_start_time, session.status);
-                    const timeUntil = getTimeUntilText(session.scheduled_start_time);
-                    
-                    return (
-                      <TableRow
-                        key={session.id}
-                        className={cn(
-                          "cursor-pointer",
-                          getVideoAppointmentColor(session.scheduled_start_time, session.status)
-                        )}
-                        onClick={() => onAppointmentClick(appointment)}
-                      >
-                        <TableCell className="font-medium">
-                          {appointment.patient?.first_name}{" "}
-                          {appointment.patient?.last_name}
-                        </TableCell>
-                        <TableCell>
-                          {appointment.provider?.user?.full_name || "Unassigned"}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(session.scheduled_start_time), "h:mm a")}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <VideoSessionStatus status={session.status} />
-                            {session.isSynthetic && (
-                              <Badge variant="outline" className="text-xs">
-                                Initializing...
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-semibold text-sm">
-                          {timeUntil}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {session.status === 'scheduled' && (
-                            <Button
-                              size="sm"
-                              disabled={!canStart || session.isSynthetic}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!session.isSynthetic) {
-                                  handleStartVideoSession(session.id);
-                                }
-                              }}
-                              className={cn(
-                                canStart && !session.isSynthetic
-                                  ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                                  : "opacity-50"
-                              )}
-                              title={session.isSynthetic ? "Session is initializing. Try again momentarily." : undefined}
-                            >
-                              {session.isSynthetic 
-                                ? "Initializing..." 
-                                : canStart 
-                                  ? "Start Session" 
-                                  : `Wait ${timeUntil}`}
-                            </Button>
-                          )}
-                          {(session.status === 'waiting' || session.status === 'active') && !session.isSynthetic && (
-                           <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!session?.id) {
-                                  toast.error("Invalid session", {
-                                    description: "Unable to join this session"
-                                  });
-                                  return;
-                                }
-                                window.open(`/practice/video/${session.id}`, '_blank');
-                              }}
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              Join Session
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
-          {/* Separator between video and in-person sections */}
-          {(overdueAppointments.length > 0 || videoAppointments.length > 0) && waitingPatients.length > 0 && (
-            <Separator className="my-4" />
-          )}
-
-          {/* In-Person Waiting Room Section */}
-          {waitingPatients.length > 0 && (
             <div>
-              <div className="bg-muted/30 px-4 py-2 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-semibold">In-Person Waiting Room</h3>
-                <Badge variant="secondary" className="ml-auto">
-                  {waitingPatients.length}
-                </Badge>
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <span className="text-sm font-medium text-destructive">
+                  Overdue ({overdueAppointments.length})
+                </span>
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>Check-in Time</TableHead>
-                    <TableHead>Wait Time</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {waitingPatients.map((appointment: any) => (
-                    <TableRow
-                      key={appointment.id}
-                      className={cn(
-                        "cursor-pointer",
-                        appointment.checked_in_at &&
-                          getWaitTimeColor(appointment.checked_in_at)
-                      )}
-                      onClick={() => onAppointmentClick(appointment)}
+              <div className="space-y-2">
+                {overdueAppointments.map((apt: any) => (
+                  <div
+                    key={apt.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-destructive/10 border border-destructive/20 gap-2"
+                  >
+                    <div 
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => onAppointmentClick(apt)}
                     >
-                      <TableCell className="font-medium">
-                        {appointment.patient?.first_name}{" "}
-                        {appointment.patient?.last_name}
-                        {appointment.appointment_type === "walk_in" && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            (Walk-in)
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {appointment.provider?.user?.full_name || "Unassigned"}
-                      </TableCell>
-                      <TableCell>
-                        {appointment.checked_in_at
-                          ? format(
-                              new Date(appointment.checked_in_at),
-                              "h:mm a"
-                            )
-                          : "-"}
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        {appointment.checked_in_at ? (
-                          <div className="flex items-center gap-1">
-                            <Clock className={cn("h-3 w-3", getWaitTimeIconColor(appointment.checked_in_at))} />
-                            {getWaitTimeText(appointment.checked_in_at)}
-                          </div>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStartTreatment(appointment.id);
-                          }}
-                        >
-                          Start Treatment
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      <div className="font-medium text-sm truncate">
+                        {apt.patient?.first_name} {apt.patient?.last_name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Scheduled: {format(new Date(apt.start_time), "h:mm a")} • 
+                        {apt.provider?.user?.full_name || "Unassigned"}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs h-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCheckInOverdue(apt.id);
+                        }}
+                      >
+                        Check In
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs h-8 text-muted-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkNoShow(apt.id);
+                        }}
+                      >
+                        No Show
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Separator className="my-4" />
             </div>
           )}
 
-          {/* Empty state when all sections are empty */}
-          {overdueAppointments.length === 0 && videoAppointments.length === 0 && waitingPatients.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <User className="h-12 w-12 mb-2 opacity-20" />
-              <p className="text-sm">No patients waiting today</p>
+          {/* Checked-in Section */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">
+                Checked In ({waitingPatients.length})
+              </span>
             </div>
-          )}
+            
+            {waitingPatients.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No patients currently waiting
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {waitingPatients.map((apt: any) => {
+                  const waitMinutes = differenceInMinutes(
+                    new Date(),
+                    new Date(apt.checked_in_at)
+                  );
+
+                  return (
+                    <div
+                      key={apt.id}
+                      className={cn(
+                        "flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg transition-colors gap-2",
+                        getWaitTimeColor(apt.checked_in_at)
+                      )}
+                    >
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => onAppointmentClick(apt)}
+                      >
+                        <div className="font-medium text-sm truncate">
+                          {apt.patient?.first_name} {apt.patient?.last_name}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className={cn("h-3 w-3", getWaitTimeIconColor(apt.checked_in_at))} />
+                          <span>
+                            {waitMinutes} min wait • {apt.provider?.user?.full_name || "Unassigned"}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="text-xs h-8 flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartTreatment(apt.id);
+                        }}
+                        disabled={startTreatmentMutation.isPending}
+                      >
+                        Start Treatment
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </Card>

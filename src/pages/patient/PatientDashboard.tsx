@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MessageSquare, FileText, Activity, AlertCircle, Clock, Pill, Video, Building, Heart } from "lucide-react";
+import { Calendar, MessageSquare, FileText, Activity, AlertCircle, Clock, Pill, Building, Heart } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +10,6 @@ import { IntakePromptCard } from "@/components/patient/IntakePromptCard";
 import { getPatientPracticeSubscription } from "@/lib/patientSubscriptionCheck";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { PatientVirtualWaitingRoom } from "@/components/video/PatientVirtualWaitingRoom";
 import { usePatientDashboard } from "@/hooks/usePatientDashboard";
 import { logger } from "@/lib/logger";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
@@ -170,11 +169,7 @@ export default function PatientDashboard() {
                   {format(new Date(nextAppointment.start_time), "MMM dd")}
                 </div>
                 <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
-                  {nextAppointment.visit_type === 'video' ? (
-                    <><Video className="h-3 w-3" /> Video Call</>
-                  ) : (
-                    <><Building className="h-3 w-3" /> In-Person</>
-                  )}
+                  <><Building className="h-3 w-3" /> In-Person</>
                   {' • '}
                   {format(new Date(nextAppointment.start_time), "h:mm a")}
                 </p>
@@ -279,15 +274,6 @@ export default function PatientDashboard() {
         </Card>
       </div>
 
-        {/* Video Appointments Section - Hidden until video feature is fully enabled */}
-        {false && patientAccount?.id && (
-          <div className="mt-6">
-            <PatientVirtualWaitingRoom 
-              patientId={patientAccount.id}
-              onJoinSession={(sessionId) => navigate(`/video-room/${sessionId}`)}
-            />
-          </div>
-        )}
 
       {/* Recent Activity Section */}
       <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
