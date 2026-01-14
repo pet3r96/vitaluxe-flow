@@ -88,9 +88,11 @@ export const PharmacyApiConfigDialog = ({
       // Update form state
       setApiEnabled(data.api_enabled || false);
       setApiTestMode(data.api_test_mode ?? true);
-      // Default to 'generic' if no handler type or if it was 'none'
+      // Default to 'standard' if no handler type or if it was 'none'/'generic'/'custom'
       const handlerType = data.api_handler_type;
-      setApiHandlerType(handlerType && handlerType !== 'none' ? handlerType : "generic");
+      // Map legacy types to new unified types
+      const normalizedType = handlerType === 'vios' ? 'vios' : 'standard';
+      setApiHandlerType(handlerType && handlerType !== 'none' ? normalizedType : "standard");
       setApiEndpointUrl(data.api_endpoint_url || "");
       setAuthType(data.api_auth_type || "none");
       setAuthKeyName(data.api_auth_key_name || "X-API-Key");
@@ -548,15 +550,13 @@ export const PharmacyApiConfigDialog = ({
                           <SelectValue placeholder="Select integration type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="generic">Generic - Single Endpoint</SelectItem>
-                          <SelectItem value="vios">VIOS - Multi-Endpoint</SelectItem>
-                          <SelectItem value="custom">Custom Handler</SelectItem>
+                          <SelectItem value="standard">Standard API</SelectItem>
+                          <SelectItem value="vios">VIOS Pharmacy</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        {apiHandlerType === 'generic' && 'Single endpoint configuration for standard pharmacy APIs'}
-                        {apiHandlerType === 'vios' && 'Multi-endpoint support for VIOS (Orders, Refills, Shipping, Lookups)'}
-                        {apiHandlerType === 'custom' && 'Custom handler for pharmacy-specific integrations'}
+                        {(apiHandlerType === 'standard' || apiHandlerType === 'generic') && 'Standard REST API endpoint with configurable authentication'}
+                        {apiHandlerType === 'vios' && 'VIOS Compounding Pharmacy API (Multi-endpoint with OAuth)'}
                       </p>
                     </div>
 
@@ -611,7 +611,7 @@ export const PharmacyApiConfigDialog = ({
                       </div>
                     )}
 
-                    {(apiHandlerType === 'generic' || apiHandlerType === 'custom') && (
+                    {(apiHandlerType === 'standard' || apiHandlerType === 'generic') && (
                       <>
                         <div className="space-y-2">
                           <Label htmlFor="api-endpoint">API Endpoint URL</Label>
