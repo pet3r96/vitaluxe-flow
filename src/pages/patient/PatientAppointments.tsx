@@ -480,33 +480,8 @@ export default function PatientAppointments() {
                       <p className="text-sm">Provider: {appt.provider.display_name}</p>
                     )}
 
-                    {/* Video Join Section */}
-                    {appt.visit_type === 'video' && canJoinVideoSession(appt) && (
-                      <div className="border-t pt-4 space-y-3">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`consent-${appt.id}`}
-                            checked={recordingConsent}
-                            onCheckedChange={(checked) => setRecordingConsent(checked as boolean)}
-                          />
-                          <label
-                            htmlFor={`consent-${appt.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            I consent to this session being recorded for quality and compliance purposes
-                          </label>
-                        </div>
-                        <Button
-                          onClick={() => handleJoinVideoSession(appt.id)}
-                          disabled={!recordingConsent || joiningSession === appt.id}
-                          className="w-full gap-2"
-                          size="lg"
-                        >
-                          <Video className="h-5 w-5" />
-                          {joiningSession === appt.id ? "Joining..." : "Join Video Call"}
-                        </Button>
-                      </div>
-                    )}
+                    {/* Video Join Section - Feature disabled, coming soon */}
+                    {/* Video appointments are currently disabled */}
 
                     {appt.practice && appt.visit_type !== 'video' && (
                       <div className="flex items-start gap-2 text-sm text-muted-foreground">
