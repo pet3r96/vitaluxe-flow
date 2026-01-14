@@ -134,8 +134,8 @@ function createTestOrderPayload(shippingServiceCode: number, prescriberNpi: stri
     },
     rxs: [{
       rxType: "new",
-      // Use lfProductId per VIOS example - 12345 is a test product ID
-      lfProductId: 12345,
+      // Use lfProductId per VIOS - 302464900 is the test product ID
+      lfProductId: 302464900,
       quantity: "30",
       directions: "Take as directed"
     }]
