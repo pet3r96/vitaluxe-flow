@@ -56,20 +56,20 @@ function createTestOrderPayload(shippingServiceCode: number): any {
     general: {
       referenceId: testId,
       memo: `VitaLuxe Test Order - ${new Date().toISOString()}`,
-      isTestOrder: true // Always true for test orders
-      // No practiceId - let VIOS use authenticated user's default
+      isTestOrder: true
+      // IMPORTANT: Do NOT include practiceId - let VIOS use authenticated user's default
     },
     prescriber: {
-      // NPI is REQUIRED per VIOS Swagger spec - use test NPI format
-      npi: "0000000000",
+      // NPI is REQUIRED by VIOS - use a valid NPI registered with the VIOS account
+      // This NPI must be associated with the authenticated user's network
+      npi: "1033620489", // From successful previous orders
       firstName: "Test",
       lastName: "Prescriber",
       address1: "123 Test Street",
-      city: "Test City",
+      city: "Los Angeles",
       state: "CA",
       zip: "90210",
-      phone: "(555) 555-0100",
-      email: "test.prescriber@vitaluxe.test"
+      phone: "(555) 555-0100"
     },
     patient: {
       firstName: "Test",
@@ -77,19 +77,19 @@ function createTestOrderPayload(shippingServiceCode: number): any {
       gender: "u",
       dateOfBirth: "1990-01-01",
       address1: "456 Patient Lane",
-      city: "Patient City",
+      city: "Los Angeles", 
       state: "CA",
       zip: "90211",
       phoneHome: "(555) 555-0200",
       phoneMobile: "(555) 555-0200",
-      email: "test.patient@vitaluxe.test"
+      email: "test.patient@test.example.com"
     },
     shipping: {
       addressLine1: "456 Patient Lane",
-      city: "Patient City",
+      city: "Los Angeles",
       state: "CA",
       zipCode: "90211",
-      service: shippingServiceCode, // Use pharmacy's configured shipping code
+      service: shippingServiceCode,
       recipientType: "patient",
       recipientFirstName: "Test",
       recipientLastName: "Patient",
@@ -97,12 +97,12 @@ function createTestOrderPayload(shippingServiceCode: number): any {
     },
     rxs: [{
       rxType: "new",
-      drugName: "Test Compound 100mg",
+      drugName: "Test Compound 100mg Capsules",
       quantity: "30",
-      directions: "Take one daily for testing purposes",
+      directions: "Take one capsule daily",
       refills: 0,
       dateWritten: new Date().toISOString().split('T')[0],
-      specialInstructions: "This is a test order - DO NOT PROCESS"
+      specialInstructions: "TEST ORDER - DO NOT PROCESS"
     }]
   };
 }
