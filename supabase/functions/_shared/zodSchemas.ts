@@ -25,7 +25,7 @@ export const bookAppointmentSchema = z.object({
   clientDateTimeIso: z.string().datetime('Invalid ISO datetime format').optional(),
   timezoneOffsetMinutes: z.number().int().min(-720).max(840).optional(),
   reasonForVisit: z.string().trim().min(1, 'Reason for visit is required').max(500, 'Reason must be less than 500 characters'),
-  visitType: z.enum(['in_person', 'video'], { errorMap: () => ({ message: 'Visit type must be in_person or video' }) }).optional(),
+  visitType: z.enum(['in_person'], { errorMap: () => ({ message: 'Visit type must be in_person' }) }).optional(),
   notes: z.string().max(2000, 'Notes must be less than 2000 characters').optional().nullable(),
 });
 
@@ -36,7 +36,7 @@ export const createAppointmentSchema = z.object({
   start_time: z.string().datetime('Invalid start time format'),
   end_time: z.string().datetime('Invalid end time format'),
   reason_for_visit: z.string().trim().max(500).optional().nullable(),
-  visit_type: z.enum(['in_person', 'video']).optional(),
+  visit_type: z.enum(['in_person']).optional(),
   status: z.enum(['scheduled', 'pending', 'confirmed', 'cancelled', 'completed', 'no_show']).optional(),
   notes: z.string().max(2000).optional().nullable(),
 });

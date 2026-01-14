@@ -27,7 +27,6 @@ export interface Appointment {
   status: string;
   service_type_id?: string;
   notes?: string;
-  telehealth?: boolean;
   patient_name?: string;
   provider_name?: string;
   patient_accounts?: {

@@ -21,7 +21,6 @@ const CRITICAL_FUNCTIONS = [
   'cleanup-test-data',
   'manage-entity-status',
   'admin-reset-user-password',
-  'start-video-session',
   'create-patient-portal-account',
   'place-order',
   'send-2fa-sms',
@@ -34,10 +33,6 @@ const CRITICAL_FUNCTIONS = [
   'create-prescription',
   'update-order-status',
   'send-patient-message',
-  'join-video-session',
-  'generate-agora-token',
-  'ensure-video-session',
-  'resolve-practice-room-join',
   'manage-documents',
   'create-checkout-session'
 ];

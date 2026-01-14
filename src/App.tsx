@@ -343,10 +343,6 @@ const App = () => {
                                                 </SubscriptionProtectedRoute>
                                               }
                                             /> */}
-                                            {/* Video routes removed - feature disabled */}
-                                            {/* <Route path="/video-test" element={<DeveloperRoute><VideoTestRoom /></DeveloperRoute>} /> */}
-                                            {/* <Route path="/token-verification-test" element={<DeveloperRoute><TokenVerificationTest /></DeveloperRoute>} /> */}
-                                            {/* <Route path="/dev/agora-debug" element={<DeveloperRoute><AgoraDebugSuite /></DeveloperRoute>} /> */}
                                             <Route
                                               path="/document-center"
                                               element={

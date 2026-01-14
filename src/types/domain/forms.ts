@@ -45,7 +45,6 @@ export interface AppointmentFormData {
   service_type_id?: string;
   status: string;
   notes?: string;
-  telehealth?: boolean;
   follow_up_for?: string;
 }
 
