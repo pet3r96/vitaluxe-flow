@@ -384,26 +384,26 @@ export const PracticesDataTable = () => {
         </div>
       ) : (
         /* Desktop View */
-        <div className="min-w-[1600px]">
-          <Table>
+        <div className="overflow-x-auto -mx-3 sm:-mx-6 px-3 sm:px-6">
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Practice Name</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead className="min-w-[150px]">Practice Name</TableHead>
+                <TableHead className="min-w-[180px]">Email</TableHead>
                 {canViewCredentials && (
                   <>
-                    <TableHead>NPI</TableHead>
-                    <TableHead>License #</TableHead>
+                    <TableHead className="min-w-[110px]">NPI</TableHead>
+                    <TableHead className="min-w-[100px]">License #</TableHead>
                   </>
                 )}
-              <TableHead>Phone</TableHead>
-              <TableHead>Prescriber Status</TableHead>
-              <TableHead>Providers</TableHead>
-              <TableHead>Assigned Rep</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+                <TableHead className="min-w-[120px]">Phone</TableHead>
+                <TableHead className="min-w-[110px]">Prescriber</TableHead>
+                <TableHead className="min-w-[80px]">Providers</TableHead>
+                <TableHead className="min-w-[140px]">Assigned Rep</TableHead>
+                <TableHead className="min-w-[80px]">Status</TableHead>
+                <TableHead className="text-right min-w-[90px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
@@ -420,8 +420,8 @@ export const PracticesDataTable = () => {
             ) : (
               paginatedPractices?.map((practice) => (
                 <TableRow key={practice.id}>
-                  <TableCell className="font-medium">{practice.name}</TableCell>
-                  <TableCell>{practice.email}</TableCell>
+                  <TableCell className="font-medium truncate max-w-[200px]">{practice.name}</TableCell>
+                  <TableCell className="truncate max-w-[200px]">{practice.email}</TableCell>
                   {canViewCredentials && (
                     <>
                       <TableCell>
@@ -454,7 +454,7 @@ export const PracticesDataTable = () => {
                     <Badge variant="outline">{providerCounts?.[practice.id] || 0}</Badge>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm">
+                    <span className="text-sm truncate block max-w-[150px]">
                       {getRepDisplay(practice.id, practice.linked_topline_id)}
                     </span>
                   </TableCell>
