@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { Loader2, CheckCircle, XCircle, AlertCircle, Activity, ShieldAlert, Copy, ChevronDown, ChevronRight, FlaskConical, Zap, ArrowUpFromLine, ArrowDownToLine } from "lucide-react";
+import { ViosApiSupportCard } from "./ViosApiSupportCard";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useRole } from "@/hooks/useAuth";
@@ -67,7 +68,7 @@ export const PharmacyApiConfigDialog = ({
   const [apiStatusMapping, setApiStatusMapping] = useState<Record<string, string>>({});
   
   // VIOS-specific state
-  const [viosBaseUrl, setViosBaseUrl] = useState("https://api.viosrx.com/v1");
+  const [viosBaseUrl, setViosBaseUrl] = useState("https://integrations.vioscompounding.com");
   const [viosClientKey, setViosClientKey] = useState("");
   const [viosClientSecret, setViosClientSecret] = useState("");
   
@@ -567,21 +568,26 @@ export const PharmacyApiConfigDialog = ({
                           <Label htmlFor="vios-base-url">VIOS Base URL</Label>
                           <Input
                             id="vios-base-url"
-                            placeholder="https://api.viosrx.com/v1"
+                            placeholder="https://integrations.vioscompounding.com"
                             value={viosBaseUrl}
-                            onChange={(e) => setViosBaseUrl(e.target.value)}
+                            onChange={(e) => setViosBaseUrl(e.target.value.replace(/\/+$/, ''))}
                             disabled={!isAdmin}
                           />
+                          {viosBaseUrl && !viosBaseUrl.includes('vioscompounding.com') && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400">
+                              ⚠️ Expected domain: vioscompounding.com
+                            </p>
+                          )}
                           <p className="text-xs text-muted-foreground">
-                            Base URL for VIOS API. Endpoints will be appended automatically.
+                            Production: https://integrations.vioscompounding.com
                           </p>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="vios-client-key">Client Key</Label>
+                          <Label htmlFor="vios-client-key">Client ID</Label>
                           <Input
                             id="vios-client-key"
-                            placeholder="Enter VIOS client key"
+                            placeholder="Enter VIOS Client ID"
                             value={viosClientKey}
                             onChange={(e) => setViosClientKey(e.target.value)}
                             disabled={!isAdmin}
@@ -593,22 +599,15 @@ export const PharmacyApiConfigDialog = ({
                           <Input
                             id="vios-client-secret"
                             type="password"
-                            placeholder="Enter VIOS client secret"
+                            placeholder="Enter VIOS Client Secret"
                             value={viosClientSecret}
                             onChange={(e) => setViosClientSecret(e.target.value)}
                             disabled={!isAdmin}
                           />
                         </div>
 
-                        <div className="mt-4 p-3 bg-background rounded border">
-                          <p className="text-xs font-medium mb-2">Supported Endpoints:</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            <li>• <code>/orders</code> - Create, Get, Cancel orders</li>
-                            <li>• <code>/refills</code> - Process refill requests</li>
-                            <li>• <code>/shipping</code> - Track shipping updates</li>
-                            <li>• <code>/lookups</code> - Reference data (allergies, products)</li>
-                          </ul>
-                        </div>
+                        {/* VIOS API Support Card with endpoints, auth flow, and curl examples */}
+                        <ViosApiSupportCard baseUrl={viosBaseUrl || "https://integrations.vioscompounding.com"} />
                       </div>
                     )}
 
