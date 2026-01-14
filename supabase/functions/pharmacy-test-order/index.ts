@@ -134,12 +134,10 @@ function createTestOrderPayload(shippingServiceCode: number, prescriberNpi: stri
     },
     rxs: [{
       rxType: "new",
-      drugName: "Test Compound 100mg Capsules",
+      // Use lfProductId per VIOS example - 12345 is a test product ID
+      lfProductId: 12345,
       quantity: "30",
-      directions: "Take one capsule daily",
-      refills: 0,
-      dateWritten: new Date().toISOString().split('T')[0],
-      specialInstructions: "TEST ORDER - DO NOT PROCESS"
+      directions: "Take as directed"
     }]
   };
 }
@@ -259,7 +257,15 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     } else {
-      edgeLogger.error('[TestOrder] Test order failed', { error: result.error });
+      // Properly serialize error object for logging
+      const errorDetails = typeof result.error === 'object' 
+        ? JSON.stringify(result.error) 
+        : result.error;
+      edgeLogger.error('[TestOrder] Test order failed', { 
+        error: errorDetails,
+        statusCode: result.statusCode,
+        responseData: result.data 
+      });
       return new Response(
         JSON.stringify({
           success: false,
