@@ -605,9 +605,10 @@ export const OrdersDataTable = () => {
           )}
         </div>
       ) : (
-        /* Desktop View */
-        <div className="min-w-[1600px]">
-        <Table>
+        /* Desktop View - Scrollable container for all screen sizes */
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-[1600px]">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Order ID</TableHead>
@@ -949,6 +950,7 @@ export const OrdersDataTable = () => {
             )}
           </TableBody>
         </Table>
+          </div>
         </div>
       )}
 
