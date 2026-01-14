@@ -174,15 +174,41 @@ export async function viosRequest<T>(
     }
     
     if (!response.ok) {
+      // Extract actionable error message from VIOS response
+      let errorMessage = `VIOS API error (${response.status})`;
+      
+      if (response.status === 400) {
+        // Validation error - extract field-level errors
+        const errors = responseData?.errors || responseData?.Errors || [];
+        if (Array.isArray(errors) && errors.length > 0) {
+          errorMessage = `Validation failed: ${errors.map((e: any) => e.message || e.Message || e).join('; ')}`;
+        } else if (responseData?.message || responseData?.Message) {
+          errorMessage = `Validation failed: ${responseData.message || responseData.Message}`;
+        }
+      } else if (response.status === 401) {
+        errorMessage = 'Authentication failed. Check VIOS credentials and ensure they are not expired.';
+      } else if (response.status === 403) {
+        errorMessage = 'Access denied. The VIOS account may not have permission for this operation.';
+      } else if (response.status === 404) {
+        errorMessage = 'Resource not found in VIOS. The order or entity may not exist.';
+      } else if (response.status === 422) {
+        errorMessage = `Schema error: ${responseData?.message || responseData?.Message || 'Invalid data format'}`;
+      } else if (response.status >= 500) {
+        errorMessage = 'VIOS server error. Please try again later or contact VIOS support.';
+      }
+      
       edgeLogger.error(`VIOS: ${method} ${endpoint} failed`, { 
         status: response.status, 
         duration, 
-        error: responseData 
+        error: responseData,
+        parsedError: errorMessage
       });
+      
       return {
         success: false,
-        error: `VIOS API error (${response.status}): ${JSON.stringify(responseData)}`,
-        statusCode: response.status
+        error: errorMessage,
+        statusCode: response.status,
+        data: responseData // Include raw response for debugging
       };
     }
     

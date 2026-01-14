@@ -60,7 +60,8 @@ function createTestOrderPayload(shippingServiceCode: number): any {
       // No practiceId - let VIOS use authenticated user's default
     },
     prescriber: {
-      // No NPI field - prevents VIOS from looking up any practice
+      // NPI is REQUIRED per VIOS Swagger spec - use test NPI format
+      npi: "0000000000",
       firstName: "Test",
       lastName: "Prescriber",
       address1: "123 Test Street",

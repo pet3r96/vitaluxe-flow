@@ -65,16 +65,17 @@ serve(async (req) => {
       );
     }
 
-    // Build query parameters
+    // Build query parameters - use exact Swagger parameter names (case-sensitive)
     const queryParams: Record<string, string> = {
-      page: String(page),
-      pageSize: String(page_size)
+      PageNumber: String(page),
+      PageSize: String(page_size)
     };
 
-    if (status) queryParams.status = status;
-    if (start_date) queryParams.startDate = start_date;
-    if (end_date) queryParams.endDate = end_date;
-    if (reference_id) queryParams.referenceId = reference_id;
+    // Optional filters - use exact Swagger parameter names
+    if (status) queryParams.OrderStatus = status;
+    if (start_date) queryParams.StartDate = start_date;
+    if (end_date) queryParams.EndDate = end_date;
+    if (reference_id) queryParams.ReferenceId = reference_id;
 
     // Make VIOS API request
     const result = await viosRequest<{ orders: ViosOrder[]; totalCount: number; page: number; pageSize: number }>(
