@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Clock, User, MapPin, Phone, Mail, FileText, CalendarClock, UserPlus, FolderOpen, Video } from "lucide-react";
+import { Calendar, Clock, User, MapPin, Phone, Mail, FileText, CalendarClock, UserPlus, FolderOpen } from "lucide-react";
 import { format } from "date-fns";
 import { getProviderDisplayName } from "@/utils/providers";
 import { toast } from "sonner";
@@ -23,7 +23,6 @@ import { CreateFollowUpFromAppointmentDialog } from "./CreateFollowUpFromAppoint
 import { logPatientPHIAccess } from "@/lib/auditLogger";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatPatientEmail } from "@/lib/email/emailValidation";
-import { JoinVideoButton } from "@/components/appointments/JoinVideoButton";
 
 interface AppointmentDetailsDialogProps {
   open: boolean;
@@ -378,17 +377,7 @@ export function AppointmentDetailsDialog({
                   </div>
                 )}
 
-                {appointment.visit_type === 'video' ? (
-                  <div className="flex items-center gap-2">
-                    <Video className="h-4 w-4 text-primary" />
-                    <div className="text-sm">
-                      <Badge variant="outline" className="gap-1.5">
-                        <Video className="h-3 w-3" />
-                        Video Consultation
-                      </Badge>
-                    </div>
-                  </div>
-                ) : appointment.practice_rooms && (
+                {appointment.practice_rooms && (
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <div className="text-sm">
@@ -461,14 +450,6 @@ export function AppointmentDetailsDialog({
             {/* Actions */}
             <div className="flex justify-between flex-wrap gap-2">
               <div className="flex gap-2 flex-wrap">
-                {appointment.visit_type === 'video' && appointment.video_session_id && (
-                  <JoinVideoButton
-                    videoSessionId={appointment.video_session_id}
-                    userType={userRole === 'patient' ? 'patient' : 'provider'}
-                    status={appointment.status}
-                    startTime={appointment.start_time}
-                  />
-                )}
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Button
