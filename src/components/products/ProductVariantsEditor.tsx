@@ -103,6 +103,18 @@ export function ProductVariantsEditor({
                     />
                   </div>
                   
+                  {/* Product Code (Med ID) - Admin Only */}
+                  <div className="col-span-2 sm:col-span-1">
+                    <Label className="text-xs">Product Code</Label>
+                    <Input
+                      value={variant.product_code || ''}
+                      onChange={(e) => handleUpdate(index, 'product_code', e.target.value)}
+                      placeholder="Pharmacy Med ID"
+                      disabled={disabled}
+                      className="mt-1"
+                    />
+                  </div>
+                  
                   {/* Base Price */}
                   <div className="col-span-2 sm:col-span-1">
                     <Label className="text-xs">Base Price *</Label>

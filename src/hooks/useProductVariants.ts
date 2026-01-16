@@ -92,6 +92,7 @@ export function useSyncProductVariants() {
           retail_price: variant.retail_price ? parseFloat(variant.retail_price) : null,
           active: variant.active,
           sort_order: i,
+          product_code: variant.product_code || null,
         };
         
         if (variant.id && !variant.isNew) {

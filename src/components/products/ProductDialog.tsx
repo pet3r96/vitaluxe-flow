@@ -211,6 +211,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
         downline_price: v.downline_price?.toString() || '',
         retail_price: v.retail_price?.toString() || '',
         active: v.active,
+        product_code: v.product_code || '',
         isNew: false,
       })));
       setVariantsOpen(true);
