@@ -14,6 +14,7 @@ export interface ProductVariant {
   retail_price?: number | null;
   active: boolean;
   sort_order: number;
+  product_code?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -26,6 +27,7 @@ export interface ProductVariantFormData {
   downline_price: string;
   retail_price: string;
   active: boolean;
+  product_code: string;
   isNew?: boolean;
   toDelete?: boolean;
 }
@@ -38,6 +40,7 @@ export function createEmptyVariant(): ProductVariantFormData {
     downline_price: '',
     retail_price: '',
     active: true,
+    product_code: '',
     isNew: true,
   };
 }

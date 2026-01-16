@@ -5325,6 +5325,7 @@ export type Database = {
           dosage_label: string
           downline_price: number | null
           id: string
+          product_code: string | null
           product_id: string
           retail_price: number | null
           sku: string | null
@@ -5339,6 +5340,7 @@ export type Database = {
           dosage_label: string
           downline_price?: number | null
           id?: string
+          product_code?: string | null
           product_id: string
           retail_price?: number | null
           sku?: string | null
@@ -5353,6 +5355,7 @@ export type Database = {
           dosage_label?: string
           downline_price?: number | null
           id?: string
+          product_code?: string | null
           product_id?: string
           retail_price?: number | null
           sku?: string | null

@@ -306,9 +306,9 @@ function transformToViosPayload(
     },
     rxs: [{
       rxType: orderLine.is_refill ? 'refill' : 'new',
-      // Use lfProductId if available (preferred by VIOS), otherwise fall back to drugName
-      lfProductId: orderLine.products?.vios_lf_product_id || undefined,
-      drugName: orderLine.products?.vios_lf_product_id ? undefined : (orderLine.products?.name || 'Unknown Product'),
+      // Use product code with priority: variant product_code > product vios_lf_product_id > drug name
+      lfProductId: orderLine.product_variants?.product_code || orderLine.products?.vios_lf_product_id || undefined,
+      drugName: (orderLine.product_variants?.product_code || orderLine.products?.vios_lf_product_id) ? undefined : (orderLine.products?.name || 'Unknown Product'),
       quantity: String(orderLine.quantity || 1),
       directions: orderLine.custom_sig || 'As directed',
       drugStrength: orderLine.custom_dosage || undefined,
@@ -698,7 +698,7 @@ serve(async (req) => {
       throw new Error(`Order not found: ${orderError?.message}`);
     }
 
-    // Fetch all order lines data with provider credentials, patient account data, and product details
+    // Fetch all order lines data with provider credentials, patient account data, product details, and variant info
     const { data: orderLines, error: linesError } = await supabaseAdmin
       .from("order_lines")
       .select(`
@@ -715,6 +715,11 @@ serve(async (req) => {
             is_glp,
             glp_clinical_statement
           )
+        ),
+        product_variants!order_lines_variant_id_fkey(
+          id,
+          dosage_label,
+          product_code
         ),
         providers!order_lines_provider_id_fkey(
           user_id,
