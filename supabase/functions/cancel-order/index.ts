@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send cancellation to VIOS pharmacy if applicable
+    // Update order lines to cancelled status
     try {
       const { data: orderLines } = await supabase
         .from('order_lines')
@@ -183,36 +183,16 @@ Deno.serve(async (req) => {
         .eq('order_id', orderId);
 
       if (orderLines && orderLines.length > 0) {
-        // Cancel each order line at VIOS that has a pharmacy_order_id
-        const cancelPromises = orderLines
-          .filter(line => line.pharmacy_order_id && line.assigned_pharmacy_id)
-          .map(line => {
-            edgeLogger.info('Sending cancellation to VIOS pharmacy', { 
-              orderLineId: line.id, 
-              pharmacyOrderId: line.pharmacy_order_id 
-            });
-            return supabase.functions.invoke('vios-cancel-order', {
-              body: {
-                order_line_id: line.id,
-                reason: reason || 'Customer cancelled order'
-              }
-            });
-          });
-
-        const results = await Promise.allSettled(cancelPromises);
-        const failures = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value.error));
+        // Update all order lines to cancelled
+        await supabase
+          .from('order_lines')
+          .update({ status: 'cancelled' })
+          .eq('order_id', orderId);
         
-        if (failures.length > 0) {
-          edgeLogger.warn('Some VIOS cancellations failed', { 
-            total: cancelPromises.length,
-            failed: failures.length 
-          });
-        } else if (cancelPromises.length > 0) {
-          edgeLogger.info('All VIOS cancellations succeeded', { count: cancelPromises.length });
-        }
+        edgeLogger.info('Order lines updated to cancelled', { count: orderLines.length });
       }
     } catch (error) {
-      edgeLogger.error('Failed to send VIOS pharmacy cancellation', error);
+      edgeLogger.error('Failed to update order lines status', error);
       // Non-fatal, continue with cancellation
     }
 
@@ -222,7 +202,7 @@ Deno.serve(async (req) => {
       ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
       operation: 'cancel_order',
       success: true,
-      duration_ms: Date.now() - Date.now(), // Will be very small since this is at the end
+      duration_ms: Date.now() - startTime,
       metadata: { orderId, reason: reason || 'No reason provided' }
     });
 

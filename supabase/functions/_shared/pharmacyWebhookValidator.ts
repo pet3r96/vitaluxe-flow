@@ -23,7 +23,7 @@ export async function validatePharmacyWebhookSignature(
     return { valid: false, reason: 'No signing key configured' };
   }
 
-  // OPTION 1: Simple API Key validation (for VIOS and systems that can only send static headers)
+  // OPTION 1: Simple API Key validation
   if (apiKey) {
     if (apiKey === signingKey) {
       edgeLogger.info('Webhook authenticated via API key');
@@ -32,7 +32,7 @@ export async function validatePharmacyWebhookSignature(
     return { valid: false, reason: 'API key mismatch' };
   }
 
-  // OPTION 2: HMAC-SHA512 signature validation (for systems that can compute signatures)
+  // OPTION 2: HMAC-SHA512 signature validation
   if (!signature) {
     return { valid: false, reason: 'Missing signature or API key header' };
   }
@@ -85,35 +85,9 @@ export async function validatePharmacyWebhookSignature(
 
 /**
  * Validates webhook payload structure
- * Supports both standard format and VIOS array format
  */
 export function validateWebhookPayload(payload: any): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
-
-  // Check for VIOS array format first
-  if (Array.isArray(payload)) {
-    if (payload.length === 0) {
-      errors.push('Empty payload array');
-      return { valid: false, errors };
-    }
-    
-    // Validate VIOS format - check first item has required fields
-    const firstItem = payload[0];
-    if (!firstItem || typeof firstItem !== 'object') {
-      errors.push('Invalid VIOS payload structure');
-      return { valid: false, errors };
-    }
-    
-    // VIOS payloads should have orderId and rxStatus
-    if (!firstItem.orderId && !firstItem.rxNumber) {
-      errors.push('Missing orderId or rxNumber in VIOS payload');
-    }
-    if (!firstItem.rxStatus) {
-      errors.push('Missing rxStatus in VIOS payload');
-    }
-    
-    return { valid: errors.length === 0, errors };
-  }
 
   // Standard payload validation
   if (!payload || typeof payload !== 'object') {
