@@ -85,6 +85,7 @@ export async function validatePharmacyWebhookSignature(
 
 /**
  * Validates webhook payload structure
+ * Supports both standard format and ShipStation format
  */
 export function validateWebhookPayload(payload: any): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -95,12 +96,30 @@ export function validateWebhookPayload(payload: any): { valid: boolean; errors: 
     return { valid: false, errors };
   }
 
-  if (!payload.order_line_id && !payload.vitaluxe_order_number && !payload.pharmacy_order_id) {
-    errors.push('Missing order_line_id, vitaluxe_order_number, or pharmacy_order_id');
+  // Accept multiple order identifier formats (including ShipStation)
+  const hasOrderId = payload.order_line_id || 
+                     payload.vitaluxe_order_number || 
+                     payload.pharmacy_order_id ||
+                     payload.order_key ||        // ShipStation snake_case
+                     payload.orderKey ||         // ShipStation camelCase
+                     payload.order_number ||
+                     payload.orderNumber ||
+                     payload.reference_id ||
+                     payload.referenceId;
+
+  if (!hasOrderId) {
+    errors.push('Missing order identifier (order_line_id, vitaluxe_order_number, pharmacy_order_id, or order_key)');
   }
 
-  if (!payload.status) {
-    errors.push('Missing status field');
+  // Accept multiple status formats (including ShipStation event types)
+  const hasStatus = payload.status || 
+                    payload.resource_type ||     // ShipStation event type
+                    payload.resourceType ||      // ShipStation camelCase
+                    payload.order_status ||
+                    payload.orderStatus;
+
+  if (!hasStatus) {
+    errors.push('Missing status field (status, resource_type, or order_status)');
   }
 
   return { valid: errors.length === 0, errors };
