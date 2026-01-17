@@ -96,9 +96,6 @@ verify_jwt = false
 [functions.check-key-rotation]
 verify_jwt = false
 
-[functions.check-pharmacy-alerts]
-verify_jwt = false
-
 [functions.check-trial-payment-reminders]
 verify_jwt = false
 
@@ -172,9 +169,6 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.generate-order-receipt]
-verify_jwt = true
-
-[functions.generate-pharmacy-order-summary]
 verify_jwt = true
 
 [functions.generate-practice-development-invoice]
@@ -297,9 +291,6 @@ verify_jwt = true
 [functions.penetration-test-storage]
 verify_jwt = true
 
-[functions.pharmacy-api-diagnostics]
-verify_jwt = true
-
 [functions.pharmacy-decline-order]
 verify_jwt = true
 
@@ -309,16 +300,10 @@ verify_jwt = true
 [functions.place-order]
 verify_jwt = true
 
-[functions.poll-pharmacy-tracking]
-verify_jwt = false
-
 [functions.practice-context]
 verify_jwt = true
 
 [functions.process-notification-queue]
-verify_jwt = false
-
-[functions.process-pharmacy-order-queue]
 verify_jwt = false
 
 [functions.process-subscription-payment]
