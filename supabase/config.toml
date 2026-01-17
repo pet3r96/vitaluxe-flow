@@ -1,303 +1,42 @@
 project_id = "qbtsfajshnrwwlfzkeog"
 
-[functions.email-dispatcher]
-verify_jwt = false
-
-[functions.email-diagnostics]
-verify_jwt = false
-
-[functions.get-patient-dashboard-data]
-verify_jwt = true
-
-[functions.cleanup-test-data]
-verify_jwt = true
-
-[functions.amazon-get-tracking]
-verify_jwt = true
-
-[functions.send-2fa-code]
-verify_jwt = true
-
-[functions.verify-2fa-code]
-verify_jwt = true
-
-[functions.reset-user-2fa]
-verify_jwt = true
-
-[functions.assign-user-role]
-verify_jwt = false
-
-[functions.track-failed-login]
-verify_jwt = true
-
-[functions.detect-brute-force]
-verify_jwt = true
-
-[functions.detect-anomalies]
-verify_jwt = true
-
-[functions.trigger-alert]
-verify_jwt = true
-
-[functions.archive-old-logs]
-verify_jwt = false
-
-[functions.approve-pending-rep]
-verify_jwt = true
-
-[functions.approve-pending-practice]
-verify_jwt = true
-
-[functions.bulk-verify-addresses]
-verify_jwt = true
-
-[functions.cancel-order]
-verify_jwt = true
-
-[functions.process-payment]
-verify_jwt = true
-
-[functions.send-verification-email]
-verify_jwt = false
-
-[functions.send-welcome-email]
-verify_jwt = false
-
-[functions.approve-pending-product]
-verify_jwt = true
-
 [functions.admin-get-password-status]
+verify_jwt = true
+
+[functions.admin-recompute-profits]
 verify_jwt = true
 
 [functions.admin-reset-user-password]
 verify_jwt = true
 
-[functions.send-temp-password-email]
+[functions.alert-webhook-receiver]
 verify_jwt = false
 
-[functions.send-password-reset-email]
-verify_jwt = false
-
-[functions.reset-password-with-token]
-verify_jwt = false
-
-[functions.reset-password]
-verify_jwt = false
-
-[functions.check-follow-ups]
-verify_jwt = false
-
-[functions.cleanup-cart-lines]
-verify_jwt = false
-
-[functions.delete-all-orders]
+[functions.amazon-get-tracking]
 verify_jwt = true
 
-[functions.sync-user-data]
-verify_jwt = false
-
-[functions.clear-storage-files]
+[functions.approve-pending-practice]
 verify_jwt = true
 
-[functions.factory-reset]
+[functions.approve-pending-product]
 verify_jwt = true
 
-[functions.google-validate-address]
-verify_jwt = true
-
-[functions.calculate-shipping]
-verify_jwt = true
-
-[functions.generate-shipping-label]
-verify_jwt = true
-
-[functions.pharmacy-order-action]
-verify_jwt = true
-
-[functions.generate-pharmacy-order-summary]
-verify_jwt = true
-
-[functions.pharmacy-decline-order]
-verify_jwt = true
-
-[functions.handleNotifications]
-verify_jwt = false
-
-[functions.get-user-context]
-verify_jwt = true
-
-[functions.start-impersonation]
-verify_jwt = true
-
-[functions.end-impersonation]
-verify_jwt = true
-
-[functions.get-active-impersonation]
-verify_jwt = true
-
-[functions.get-easypost-tracking]
-verify_jwt = true
-
-[functions.route-order-to-pharmacy]
-verify_jwt = true
-
-[functions.update-order-status]
-verify_jwt = true
-
-[functions.generate-order-receipt]
-verify_jwt = true
-
-[functions.log-error]
-verify_jwt = true
-
-[functions.send-patient-message]
+[functions.approve-pending-rep]
 verify_jwt = true
 
 [functions.approve-reschedule-request]
 verify_jwt = true
 
-[functions.cancel-appointment]
-verify_jwt = true
-
-[functions.book-appointment]
-verify_jwt = true
-
-[functions.reschedule-appointment-request]
-verify_jwt = true
-
-[functions.export-calendar-ics]
-verify_jwt = true
-
-[functions.calendar-feed]
+[functions.archive-old-logs]
 verify_jwt = false
 
-[functions.check-appointment-availability]
-verify_jwt = true
-
-[functions.generate-calendar-event]
-verify_jwt = true
-
-[functions.generate-calendar-sync-token]
-verify_jwt = true
-
-[functions.get-calendar-data]
-verify_jwt = true
-
-[functions.find-soonest-availability]
-verify_jwt = true
-
-[functions.update-appointment-time]
-verify_jwt = true
-
-[functions.create-bulk-appointments]
-verify_jwt = true
-
-[functions.update-appointment-settings]
-verify_jwt = true
-
-[functions.create-patient-portal-account]
-verify_jwt = true
-
-[functions.bulk-invite-patients]
-verify_jwt = true
-
-[functions.send-patient-welcome-email]
-verify_jwt = true
-
-[functions.create-provider-document]
-verify_jwt = true
-
-[functions.assign-document-to-patient]
-verify_jwt = true
-
-[functions.get-patient-practice]
-verify_jwt = true
-
-[functions.generate-prescription-pdf]
-verify_jwt = true
-
-[functions.generate-day-schedule-pdf]
-verify_jwt = true
-
-[functions.manage-product-type]
-verify_jwt = true
-
-[functions.manage-provider-status]
-verify_jwt = true
-
-[functions.manage-staff-status]
-verify_jwt = true
-
-[functions.manage-status-configs]
-verify_jwt = true
-
-[functions.get-s3-signed-url]
-verify_jwt = true
-
-[functions.create-blocked-time]
-verify_jwt = true
-
-[functions.delete-blocked-time]
-verify_jwt = true
-
-[functions.check-key-rotation]
+[functions.assign-user-role]
 verify_jwt = false
-
-[functions.subscribe-to-vitaluxepro]
-verify_jwt = true
-
-[functions.get-practice-subscription-status]
-verify_jwt = true
-
-[functions.cancel-subscription]
-verify_jwt = true
-
-[functions.get-subscription-details]
-verify_jwt = true
-
-[functions.patient-practice-context]
-verify_jwt = true
-
-[functions.practice-context]
-verify_jwt = true
-
-[functions.check-trial-payment-reminders]
-verify_jwt = false
-
-[functions.handle-subscription-renewal]
-verify_jwt = false
-
-[functions.convert-trial-to-active]
-verify_jwt = false
-
-[functions.process-subscription-payment]
-verify_jwt = false
-
-[functions.calculate-rep-commissions]
-verify_jwt = false
-
-[functions.calculate-daily-metrics]
-verify_jwt = false
-
-[functions.backfill-rep-links]
-verify_jwt = true
-
-[functions.list-providers]
-verify_jwt = true
-
-[functions.list-staff]
-verify_jwt = true
-
-[functions.upload-to-s3]
-verify_jwt = true
-
-[functions.generate-terms-pdf]
-verify_jwt = false
-
-[functions.authorizenet-create-customer-profile]
-verify_jwt = true
 
 [functions.authorizenet-charge-payment]
+verify_jwt = true
+
+[functions.authorizenet-create-customer-profile]
 verify_jwt = true
 
 [functions.authorizenet-refund-transaction]
@@ -306,38 +45,158 @@ verify_jwt = true
 [functions.authorizenet-webhook]
 verify_jwt = false
 
+[functions.backfill-rep-links]
+verify_jwt = true
+
+[functions.backfill-subscription-commissions]
+verify_jwt = true
+
+[functions.batch-generate-product-images]
+verify_jwt = false
+
+[functions.book-appointment]
+verify_jwt = true
+
+[functions.bulk-invite-patients]
+verify_jwt = true
+
+[functions.bulk-verify-addresses]
+verify_jwt = true
+
+[functions.cache-stats]
+verify_jwt = true
+
+[functions.calculate-daily-metrics]
+verify_jwt = false
+
+[functions.calculate-rep-commissions]
+verify_jwt = false
+
+[functions.calculate-shipping]
+verify_jwt = true
+
+[functions.calendar-feed]
+verify_jwt = false
+
+[functions.cancel-appointment]
+verify_jwt = true
+
+[functions.cancel-order]
+verify_jwt = true
+
+[functions.cancel-subscription]
+verify_jwt = true
+
+[functions.check-appointment-availability]
+verify_jwt = true
+
+[functions.check-follow-ups]
+verify_jwt = false
+
+[functions.check-key-rotation]
+verify_jwt = false
+
+[functions.check-pharmacy-alerts]
+verify_jwt = false
+
+[functions.check-trial-payment-reminders]
+verify_jwt = false
+
+[functions.cleanup-cart-lines]
+verify_jwt = false
+
+[functions.cleanup-logs]
+verify_jwt = false
+
+[functions.cleanup-orphan-orders]
+verify_jwt = false
+
+[functions.cleanup-test-data]
+verify_jwt = true
+
+[functions.clear-cart]
+verify_jwt = true
+
+[functions.clear-storage-files]
+verify_jwt = true
+
+[functions.convert-trial-to-active]
+verify_jwt = false
+
+[functions.create-blocked-time]
+verify_jwt = true
+
+[functions.create-bulk-appointments]
+verify_jwt = true
+
+[functions.create-patient-portal-account]
+verify_jwt = true
+
+[functions.delete-all-orders]
+verify_jwt = true
+
+[functions.delete-blocked-time]
+verify_jwt = true
+
+[functions.detect-anomalies]
+verify_jwt = true
+
+[functions.detect-brute-force]
+verify_jwt = true
+
+[functions.dismiss-intake-reminder]
+verify_jwt = true
+
+[functions.email-diagnostics]
+verify_jwt = false
+
+[functions.end-impersonation]
+verify_jwt = true
+
+[functions.export-calendar-ics]
+verify_jwt = true
+
+[functions.factory-reset]
+verify_jwt = true
+
+[functions.find-soonest-availability]
+verify_jwt = true
+
 [functions.generate-branding-preview-pdf]
 verify_jwt = true
 
-[functions.test-ghl-webhook]
-verify_jwt = false
+[functions.generate-calendar-sync-token]
+verify_jwt = true
 
-[functions.send-ghl-sms]
+[functions.generate-day-schedule-pdf]
+verify_jwt = true
+
+[functions.generate-order-receipt]
+verify_jwt = true
+
+[functions.generate-pharmacy-order-summary]
 verify_jwt = true
 
 [functions.generate-practice-development-invoice]
 verify_jwt = true
 
-[functions.validate-appointment-time]
+[functions.generate-prescription-pdf]
 verify_jwt = true
 
-[functions.get-dashboard-stats]
+[functions.generate-product-image]
 verify_jwt = true
 
-[functions.get-rep-dashboard-stats]
+[functions.generate-shipping-label]
 verify_jwt = true
 
-[functions.validate-rx-order]
-verify_jwt = true
-
-[functions.upgrade-trial-to-active]
-verify_jwt = true
-
-[functions.pharmacy-api-diagnostics]
-verify_jwt = true
-
-[functions.process-pharmacy-order-queue]
+[functions.generate-terms-pdf]
 verify_jwt = false
+
+[functions.get-active-impersonation]
+verify_jwt = true
+
+[functions.get-calendar-data]
+verify_jwt = true
 
 [functions.get-cart]
 verify_jwt = true
@@ -345,38 +204,242 @@ verify_jwt = true
 [functions.get-cart-count]
 verify_jwt = true
 
-[functions.add-to-cart]
+[functions.get-easypost-tracking]
 verify_jwt = true
 
-[functions.update-cart-lines]
+[functions.get-order-details]
 verify_jwt = true
 
-[functions.remove-cart-line]
+[functions.get-orders-page]
 verify_jwt = true
 
-[functions.clear-cart]
+[functions.get-patient-dashboard-data]
 verify_jwt = true
 
-[functions.update-shipping-speed]
+[functions.get-patient-practice]
 verify_jwt = true
 
-[functions.place-order]
+[functions.get-pharmacy-dashboard-stats]
+verify_jwt = true
+
+[functions.get-practice-rooms]
+verify_jwt = true
+
+[functions.get-practice-subscription-status]
+verify_jwt = true
+
+[functions.get-rep-dashboard-stats]
+verify_jwt = true
+
+[functions.get-subscription-details]
+verify_jwt = true
+
+[functions.get-top-products]
+verify_jwt = true
+
+[functions.get-user-context]
+verify_jwt = true
+
+[functions.get-visible-products]
+verify_jwt = true
+
+[functions.google-validate-address]
+verify_jwt = true
+
+[functions.handle-subscription-renewal]
+verify_jwt = false
+
+[functions.handleNotifications]
+verify_jwt = false
+
+[functions.invalidate-cache]
+verify_jwt = true
+
+[functions.list-providers]
+verify_jwt = true
+
+[functions.list-staff]
+verify_jwt = true
+
+[functions.log-error]
+verify_jwt = true
+
+[functions.manage-cart]
+verify_jwt = true
+
+[functions.manage-dashboard]
 verify_jwt = true
 
 [functions.manage-documents]
 verify_jwt = true
 
-[functions.send-order-to-pharmacy]
+[functions.manage-entity-status]
+verify_jwt = true
+
+[functions.manage-product-type]
+verify_jwt = true
+
+[functions.notify-patients-subscription-change]
+verify_jwt = true
+
+[functions.patient-practice-context]
+verify_jwt = true
+
+[functions.penetration-test-edge-functions]
+verify_jwt = true
+
+[functions.penetration-test-jwt]
+verify_jwt = true
+
+[functions.penetration-test-rls]
+verify_jwt = true
+
+[functions.penetration-test-storage]
+verify_jwt = true
+
+[functions.pharmacy-api-diagnostics]
+verify_jwt = true
+
+[functions.pharmacy-decline-order]
+verify_jwt = true
+
+[functions.pharmacy-order-action]
+verify_jwt = true
+
+[functions.place-order]
+verify_jwt = true
+
+[functions.poll-pharmacy-tracking]
 verify_jwt = false
 
-[functions.get-order-details]
+[functions.practice-context]
 verify_jwt = true
+
+[functions.process-notification-queue]
+verify_jwt = false
+
+[functions.process-pharmacy-order-queue]
+verify_jwt = false
+
+[functions.process-subscription-payment]
+verify_jwt = false
 
 [functions.receive-pharmacy-webhook]
 verify_jwt = false
 
-[functions.generate-product-image]
+[functions.refresh-prescription-url]
 verify_jwt = true
 
-[functions.batch-generate-product-images]
+[functions.refresh-rep-productivity]
 verify_jwt = false
+
+[functions.remove-cart-line]
+verify_jwt = true
+
+[functions.reschedule-appointment-request]
+verify_jwt = true
+
+[functions.reset-password-with-token]
+verify_jwt = false
+
+[functions.reset-user-2fa]
+verify_jwt = true
+
+[functions.revoke-user-sessions]
+verify_jwt = true
+
+[functions.route-order-to-pharmacy]
+verify_jwt = true
+
+[functions.run-security-tests]
+verify_jwt = true
+
+[functions.send-2fa-sms]
+verify_jwt = true
+
+[functions.send-ghl-sms]
+verify_jwt = true
+
+[functions.send-order-to-pharmacy]
+verify_jwt = false
+
+[functions.send-password-reset-email]
+verify_jwt = false
+
+[functions.send-patient-message]
+verify_jwt = true
+
+[functions.send-twilio-sms]
+verify_jwt = true
+
+[functions.send-verification-email]
+verify_jwt = false
+
+[functions.send-welcome-email]
+verify_jwt = false
+
+[functions.start-impersonation]
+verify_jwt = true
+
+[functions.subscribe-to-vitaluxepro]
+verify_jwt = true
+
+[functions.sync-user-data]
+verify_jwt = false
+
+[functions.test-phase2-audit-events]
+verify_jwt = true
+
+[functions.track-failed-login]
+verify_jwt = true
+
+[functions.trigger-alert]
+verify_jwt = true
+
+[functions.unified-email-sender]
+verify_jwt = false
+
+[functions.update-appointment-settings]
+verify_jwt = true
+
+[functions.update-appointment-time]
+verify_jwt = true
+
+[functions.update-cart-lines]
+verify_jwt = true
+
+[functions.update-order-status]
+verify_jwt = true
+
+[functions.update-payment-method]
+verify_jwt = true
+
+[functions.update-practice-sms-template]
+verify_jwt = true
+
+[functions.update-shipping-info]
+verify_jwt = true
+
+[functions.update-shipping-speed]
+verify_jwt = true
+
+[functions.upgrade-trial-to-active]
+verify_jwt = true
+
+[functions.validate-appointment-time]
+verify_jwt = true
+
+[functions.validate-password-token]
+verify_jwt = false
+
+[functions.validate-rx-order]
+verify_jwt = true
+
+[functions.verify-2fa-sms]
+verify_jwt = true
+
+[functions.verify-email]
+verify_jwt = false
+
+[functions.verify-npi]
+verify_jwt = true
