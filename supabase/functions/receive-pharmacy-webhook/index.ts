@@ -50,50 +50,11 @@ function mapPharmacyStatus(
   return defaultMappings[normalizedStatus];
 }
 
-// Transform VIOS webhook payload to standard format
-function transformViosPayload(viosItem: any): any {
-  return {
-    pharmacy_order_id: viosItem.orderId,
-    status: viosItem.rxStatus,
-    tracking_number: viosItem.trackingNumber || null,
-    carrier: viosItem.shipCarrier || null,
-    status_datetime: viosItem.rxStatusDateTime || null,
-    rx_number: viosItem.rxNumber || null,
-    fill_id: viosItem.fillId || null,
-    foreign_rx_number: viosItem.foreignRxNumber || null,
-    reference_id: viosItem.referenceId || null,
-    drug_name: viosItem.drugName || null,
-    delivery_service: viosItem.deliveryService || null,
-    ship_address: viosItem.shipAddressLine1 ? {
-      line1: viosItem.shipAddressLine1,
-      line2: viosItem.shipAddressLine2,
-      line3: viosItem.shipAddressLine3,
-      city: viosItem.shipCity,
-      state: viosItem.shipState,
-      zip: viosItem.shipZip,
-      country: viosItem.shipCountry
-    } : null,
-    // Keep original for raw storage
-    _original: viosItem
-  };
-}
-
-// Check if payload is VIOS format (array with orderId and rxStatus)
-function isViosPayload(payload: any): boolean {
-  if (!Array.isArray(payload)) return false;
-  if (payload.length === 0) return false;
-  const firstItem = payload[0];
-  return firstItem && 
-    typeof firstItem === 'object' && 
-    ('orderId' in firstItem || 'rxStatus' in firstItem);
-}
-
 // Process a single order update
 async function processOrderUpdate(
   supabaseAdmin: any,
   pharmacy: any,
-  payload: any,
-  isViosFormat: boolean
+  payload: any
 ): Promise<{ success: boolean; orderLineId?: string; error?: string }> {
   // Find order line by pharmacy_order_id
   let orderLineId: string | null = null;
@@ -151,11 +112,11 @@ async function processOrderUpdate(
       tracking_number: payload.tracking_number || null,
       carrier: payload.carrier || null,
       status: payload.status,
-      status_details: payload.status_details || payload.delivery_service || null,
+      status_details: payload.status_details || null,
       location: payload.location || null,
       estimated_delivery_date: payload.estimated_delivery || null,
       actual_delivery_date: payload.actual_delivery || null,
-      raw_tracking_data: isViosFormat ? payload._original : payload,
+      raw_tracking_data: payload,
     });
 
   if (insertError) {
@@ -301,44 +262,7 @@ serve(async (req) => {
       );
     }
 
-    // Check if this is VIOS format (array)
-    const isViosFormat = isViosPayload(payload);
-    
-    if (isViosFormat) {
-      edgeLogger.info('Processing VIOS webhook format', { 
-        itemCount: payload.length,
-        pharmacyId: pharmacy.id 
-      });
-      
-      // Process each item in the VIOS array
-      const results: Array<{ success: boolean; orderLineId?: string; error?: string }> = [];
-      
-      for (const viosItem of payload) {
-        const transformedPayload = transformViosPayload(viosItem);
-        const result = await processOrderUpdate(supabaseAdmin, pharmacy, transformedPayload, true);
-        results.push(result);
-      }
-      
-      const successCount = results.filter(r => r.success).length;
-      const failCount = results.filter(r => !r.success).length;
-      
-      edgeLogger.info('VIOS webhook processing complete', { 
-        successCount, 
-        failCount,
-        pharmacyName: pharmacy.name 
-      });
-      
-      return new Response(
-        JSON.stringify({ 
-          success: successCount > 0, 
-          message: `Processed ${successCount} of ${results.length} updates`,
-          results 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
-    }
-
-    // Standard payload validation for non-VIOS format
+    // Standard payload validation
     const payloadValidation = validateWebhookPayload(payload);
     if (!payloadValidation.valid) {
       return new Response(
@@ -348,7 +272,7 @@ serve(async (req) => {
     }
 
     // Process single standard payload
-    const result = await processOrderUpdate(supabaseAdmin, pharmacy, payload, false);
+    const result = await processOrderUpdate(supabaseAdmin, pharmacy, payload);
     
     if (!result.success) {
       return new Response(

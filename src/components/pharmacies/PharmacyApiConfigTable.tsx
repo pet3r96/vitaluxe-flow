@@ -1,14 +1,7 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,37 +21,13 @@ export const PharmacyApiConfigTable = () => {
 
   const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
-  const { data: pharmacies, isLoading, refetch } = useQuery({
+  const { data: pharmacies, isLoading } = useQuery({
     queryKey: ["pharmacies-api-config"],
     staleTime: 600000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pharmacies")
-        .select(`
-          id,
-          name,
-          contact_email,
-          active,
-          api_enabled,
-          api_handler_type,
-          api_environment,
-          api_endpoint_url,
-          api_sandbox_endpoint_url,
-          api_production_endpoint_url,
-          api_token_endpoint_url,
-          api_client_id,
-          api_http_method,
-          api_auth_type,
-          api_auth_key_name,
-          api_retry_count,
-          api_timeout_seconds,
-          api_custom_headers,
-          api_payload_template,
-          inbound_webhook_enabled,
-          inbound_webhook_path,
-          webhook_secret,
-          api_status_mapping
-        `)
+        .select(`id, name, contact_email, active, api_enabled, api_handler_type, api_endpoint_url, api_http_method, api_auth_type, inbound_webhook_enabled, inbound_webhook_path`)
         .order("name", { ascending: true });
 
       if (error) throw error;
@@ -66,25 +35,18 @@ export const PharmacyApiConfigTable = () => {
     },
   });
 
-  // Fetch credentials for all pharmacies
   const { data: allCredentials } = useQuery({
     queryKey: ["pharmacies-api-credentials-all"],
     staleTime: 600000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pharmacy_api_credentials")
-        .select("pharmacy_id, credential_type");
-
+      const { data, error } = await supabase.from("pharmacy_api_credentials").select("pharmacy_id, credential_type");
       if (error) throw error;
       return data;
     },
   });
 
-  // Group credentials by pharmacy_id
   const credentialsByPharmacy = allCredentials?.reduce((acc, cred) => {
-    if (!acc[cred.pharmacy_id]) {
-      acc[cred.pharmacy_id] = [];
-    }
+    if (!acc[cred.pharmacy_id]) acc[cred.pharmacy_id] = [];
     acc[cred.pharmacy_id].push(cred.credential_type);
     return acc;
   }, {} as Record<string, string[]>) || {};
@@ -94,15 +56,7 @@ export const PharmacyApiConfigTable = () => {
     pharmacy.contact_email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const {
-    currentPage,
-    totalPages,
-    startIndex,
-    endIndex,
-    goToPage,
-    hasNextPage,
-    hasPrevPage
-  } = usePagination({
+  const { currentPage, totalPages, startIndex, endIndex, goToPage, hasNextPage, hasPrevPage } = usePagination({
     totalItems: filteredPharmacies?.length || 0,
     itemsPerPage: 25
   });
@@ -114,11 +68,7 @@ export const PharmacyApiConfigTable = () => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search pharmacies..."
-            onChange={(e) => debouncedSetSearch(e.target.value)}
-            className="pl-9 w-full"
-          />
+          <Input placeholder="Search pharmacies..." onChange={(e) => debouncedSetSearch(e.target.value)} className="pl-9 w-full" />
         </div>
       </div>
 
@@ -127,43 +77,13 @@ export const PharmacyApiConfigTable = () => {
           rows={paginatedPharmacies?.map((pharmacy) => ({
             title: pharmacy.name,
             subtitle: pharmacy.contact_email,
-              fields: [
-                { 
-                  label: 'API Status', 
-                  value: pharmacy.api_enabled ? 'Enabled' : 'Disabled',
-                  badge: true,
-                  badgeVariant: pharmacy.api_enabled ? 'default' : 'secondary'
-                },
-                {
-                  label: 'API Type',
-                  value: !pharmacy.api_enabled ? 'Disabled' :
-                         pharmacy.api_handler_type === 'vios' ? 'VIOS' : 'Standard',
-                  badge: true,
-                  badgeVariant: pharmacy.api_enabled && pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'
-                },
-                {
-                  label: 'Credentials',
-                  value: credentialsByPharmacy[pharmacy.id]?.length > 0 ? 'Configured' : 'Not Set',
-                  badge: true,
-                  badgeVariant: credentialsByPharmacy[pharmacy.id]?.length > 0 ? 'default' : 'destructive'
-                },
-                { 
-                  label: 'Webhook', 
-                  value: pharmacy.inbound_webhook_enabled ? 'Active' : 'Off',
-                  badge: true,
-                  badgeVariant: pharmacy.inbound_webhook_enabled ? 'default' : 'secondary'
-                },
-                { 
-                  label: 'Endpoint', 
-                  value: pharmacy.api_endpoint_url || 'Not configured'
-                }
-              ],
-            actions: [
-              { label: 'Configure API', onClick: () => {
-                setSelectedPharmacy(pharmacy);
-                setDialogOpen(true);
-              }}
-            ]
+            fields: [
+              { label: 'API Status', value: pharmacy.api_enabled ? 'Enabled' : 'Disabled', badge: true, badgeVariant: pharmacy.api_enabled ? 'default' : 'secondary' },
+              { label: 'Credentials', value: credentialsByPharmacy[pharmacy.id]?.length > 0 ? 'Configured' : 'Not Set', badge: true, badgeVariant: credentialsByPharmacy[pharmacy.id]?.length > 0 ? 'default' : 'destructive' },
+              { label: 'Webhook', value: pharmacy.inbound_webhook_enabled ? 'Active' : 'Off', badge: true, badgeVariant: pharmacy.inbound_webhook_enabled ? 'default' : 'secondary' },
+              { label: 'Endpoint', value: pharmacy.api_endpoint_url || 'Not configured' }
+            ],
+            actions: [{ label: 'Configure API', onClick: () => { setSelectedPharmacy(pharmacy); setDialogOpen(true); }}]
           })) || []}
         />
       ) : (
@@ -173,7 +93,6 @@ export const PharmacyApiConfigTable = () => {
               <TableRow>
                 <TableHead>Pharmacy</TableHead>
                 <TableHead>API Status</TableHead>
-                <TableHead>API Type</TableHead>
                 <TableHead>Credentials</TableHead>
                 <TableHead>Endpoint</TableHead>
                 <TableHead>Method</TableHead>
@@ -183,17 +102,9 @@ export const PharmacyApiConfigTable = () => {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center">
-                    Loading...
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center">Loading...</TableCell></TableRow>
               ) : filteredPharmacies?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
-                    No pharmacies found
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No pharmacies found</TableCell></TableRow>
               ) : (
                 paginatedPharmacies?.map((pharmacy) => (
                   <TableRow key={pharmacy.id}>
@@ -205,78 +116,38 @@ export const PharmacyApiConfigTable = () => {
                     </TableCell>
                     <TableCell>
                       {pharmacy.api_enabled ? (
-                        <Badge variant="default" className="gap-1">
-                          <Check className="h-3 w-3" />
-                          Enabled
-                        </Badge>
+                        <Badge variant="default" className="gap-1"><Check className="h-3 w-3" />Enabled</Badge>
                       ) : (
-                        <Badge variant="secondary" className="gap-1">
-                          <X className="h-3 w-3" />
-                          Disabled
-                        </Badge>
+                        <Badge variant="secondary" className="gap-1"><X className="h-3 w-3" />Disabled</Badge>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge 
-                        variant={pharmacy.api_enabled && pharmacy.api_handler_type === 'vios' ? 'default' : 'outline'}
-                        className="text-xs"
-                      >
-                        {!pharmacy.api_enabled ? 'Disabled' :
-                         pharmacy.api_handler_type === 'vios' ? 'VIOS' : 'Standard'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
                       {credentialsByPharmacy[pharmacy.id]?.length > 0 ? (
-                        <Badge variant="default" className="gap-1">
-                          <Key className="h-3 w-3" />
-                          Configured
-                        </Badge>
+                        <Badge variant="default" className="gap-1"><Key className="h-3 w-3" />Configured</Badge>
                       ) : (
-                        <Badge variant="destructive" className="gap-1">
-                          <X className="h-3 w-3" />
-                          Not Set
-                        </Badge>
+                        <Badge variant="destructive" className="gap-1"><X className="h-3 w-3" />Not Set</Badge>
                       )}
                     </TableCell>
                     <TableCell>
                       {pharmacy.api_endpoint_url ? (
-                        <span className="text-xs font-mono truncate max-w-[200px] block">
-                          {pharmacy.api_endpoint_url}
-                        </span>
+                        <span className="text-xs font-mono truncate max-w-[200px] block">{pharmacy.api_endpoint_url}</span>
                       ) : (
                         <span className="text-muted-foreground text-xs">Not configured</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {pharmacy.api_http_method ? (
-                        <Badge variant="outline" className="text-xs">
-                          {pharmacy.api_http_method}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+                      {pharmacy.api_http_method ? <Badge variant="outline" className="text-xs">{pharmacy.api_http_method}</Badge> : <span className="text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell>
                       {pharmacy.inbound_webhook_enabled ? (
-                        <Badge variant="default" className="gap-1">
-                          <Webhook className="h-3 w-3" />
-                          Active
-                        </Badge>
+                        <Badge variant="default" className="gap-1"><Webhook className="h-3 w-3" />Active</Badge>
                       ) : (
                         <Badge variant="secondary">Off</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPharmacy(pharmacy);
-                          setDialogOpen(true);
-                        }}
-                      >
-                        <Settings2 className="h-4 w-4 mr-2" />
-                        Configure
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedPharmacy(pharmacy); setDialogOpen(true); }}>
+                        <Settings2 className="h-4 w-4 mr-2" />Configure
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -288,25 +159,11 @@ export const PharmacyApiConfigTable = () => {
       )}
 
       {filteredPharmacies && filteredPharmacies.length > 0 && (
-        <DataTablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={goToPage}
-          hasNextPage={hasNextPage}
-          hasPrevPage={hasPrevPage}
-          totalItems={filteredPharmacies.length}
-          startIndex={startIndex}
-          endIndex={Math.min(endIndex, filteredPharmacies.length)}
-        />
+        <DataTablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} hasNextPage={hasNextPage} hasPrevPage={hasPrevPage} totalItems={filteredPharmacies.length} startIndex={startIndex} endIndex={Math.min(endIndex, filteredPharmacies.length)} />
       )}
 
       {selectedPharmacy && (
-        <PharmacyApiConfigDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          pharmacyId={selectedPharmacy.id}
-          pharmacyName={selectedPharmacy.name}
-        />
+        <PharmacyApiConfigDialog open={dialogOpen} onOpenChange={setDialogOpen} pharmacyId={selectedPharmacy.id} pharmacyName={selectedPharmacy.name} />
       )}
     </div>
   );
