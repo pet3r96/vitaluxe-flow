@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { format } from "date-fns";
 import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 interface AdminAlert {
   id: string;
@@ -29,15 +28,13 @@ interface AdminAlert {
 
 const AdminAlerts = () => {
   usePagePerformance('AdminAlerts');
-  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [resolvedFilter, setResolvedFilter] = useState<string>("unresolved");
   const [detailsDialog, setDetailsDialog] = useState<AdminAlert | null>(null);
-  const navigate = useNavigate();
 
   // Query admin alerts - using helper cast to avoid type inference depth
   const { data: alerts, refetch } = useQuery<AdminAlert[]>({
-    queryKey: ["admin-alerts", typeFilter, severityFilter, resolvedFilter],
+    queryKey: ["admin-alerts", severityFilter, resolvedFilter],
     queryFn: async () => {
       let query: any = supabase
         .from("admin_alerts")
@@ -47,9 +44,6 @@ const AdminAlerts = () => {
         `)
         .order("created_at", { ascending: false});
 
-      if (typeFilter !== "all") {
-        query = query.eq("alert_type", typeFilter);
-      }
       if (severityFilter !== "all") {
         query = query.eq("severity", severityFilter);
       }
@@ -84,10 +78,6 @@ const AdminAlerts = () => {
     }
   };
 
-  const handleViewLogs = (pharmacyId: string) => {
-    navigate(`/admin/pharmacy-api-logs?pharmacy=${pharmacyId}`);
-  };
-
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case 'critical':
@@ -104,24 +94,12 @@ const AdminAlerts = () => {
       <div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">System Alerts</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-2">
-          Monitor pharmacy API health and tracking issues
+          Monitor system alerts and issues
         </p>
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder="All Types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="pharmacy_api_down">API Down</SelectItem>
-            <SelectItem value="missing_tracking_updates">Missing Tracking</SelectItem>
-            <SelectItem value="high_failure_rate">High Failure Rate</SelectItem>
-          </SelectContent>
-        </Select>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select value={severityFilter} onValueChange={setSeverityFilter}>
           <SelectTrigger>
             <SelectValue placeholder="All Severities" />
@@ -187,8 +165,7 @@ const AdminAlerts = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Severity</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Pharmacy</TableHead>
+              <TableHead>Title</TableHead>
               <TableHead>Message</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Status</TableHead>
@@ -206,16 +183,7 @@ const AdminAlerts = () => {
                     </Badge>
                   </div>
                 </TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {/* JUSTIFIED: Complex nested Supabase query - alert_type field from joined data */}
-                    {(alert as any).alert_type?.replace(/_/g, ' ') || 'Unknown'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {/* JUSTIFIED: Complex nested Supabase query - pharmacies joined relation */}
-                  {(alert.pharmacies as any)?.name || 'Unknown'}
-                </TableCell>
+                <TableCell className="font-medium">{alert.title}</TableCell>
                 <TableCell className="max-w-md truncate">{alert.message}</TableCell>
                 <TableCell className="text-sm">
                   {format(new Date(alert.created_at), "MMM d, yyyy HH:mm")}
@@ -237,11 +205,6 @@ const AdminAlerts = () => {
                     {!alert.resolved && (
                       <Button onClick={() => handleResolve(alert.id)} variant="ghost" size="sm">
                         Resolve
-                      </Button>
-                    )}
-                    {alert.pharmacy_id && (
-                      <Button onClick={() => handleViewLogs(alert.pharmacy_id)} variant="ghost" size="sm">
-                        View Logs
                       </Button>
                     )}
                   </div>
