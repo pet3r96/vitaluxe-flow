@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
-import { searchAllergens } from "@/lib/medical-api-service";
+import { searchViosAllergens, type ViosAllergenOption } from "@/lib/vios-allergen-service";
 import { useQueryClient } from "@tanstack/react-query";
 import { logMedicalVaultChange, mapRoleToAuditRole } from "@/hooks/useAuditLogs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +31,7 @@ const allergySchema = z.object({
     "Date recorded must be in YYYY-MM format"
   ),
   notes: z.string().optional(),
+  vios_code: z.number().optional(),
 }).refine((data) => {
   if (data.nka) return true;
   return data.allergen_name && data.allergen_name.length > 0;
@@ -62,6 +63,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
       severity: undefined,
       date_recorded: new Date().toISOString().substring(0, 7),
       notes: "",
+      vios_code: undefined,
     },
   });
 
@@ -81,6 +83,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
         severity: (data.severity || undefined) as "mild" | "moderate" | "severe" | undefined,
         date_recorded: monthYear,
         notes: data.notes || "",
+        vios_code: data.vios_code || undefined,
       });
     } else if (!allergy && open) {
       reset({
@@ -90,6 +93,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
         severity: undefined,
         date_recorded: new Date().toISOString().substring(0, 7),
         notes: "",
+        vios_code: undefined,
       });
     }
   }, [allergy, open, reset]);
@@ -100,6 +104,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
       setValue("allergen_name", "");
       setValue("reaction_type", "");
       setValue("severity", undefined);
+      setValue("vios_code", undefined);
     }
   }, [nkaChecked, setValue]);
 
@@ -151,6 +156,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
         severity: data.severity || null,
         date_recorded: fullDate,
         notes: data.notes || null,
+        vios_code: data.vios_code || null,
       };
 
       if (mode === "edit" && allergy) {
@@ -182,6 +188,7 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
           severity: data.severity || null,
           date_recorded: fullDate,
           notes: data.notes || null,
+          vios_code: data.vios_code || null,
         };
         
         const { error } = await insertVaultRecord(supabase, {
@@ -282,8 +289,16 @@ export function AllergyDialog({ open, onOpenChange, patientAccountId, allergy, m
                   <AutocompleteInput
                     id="allergen_name"
                     value={watch("allergen_name") || ""}
-                    onChange={(value) => setValue("allergen_name", value)}
-                    onSearch={searchAllergens}
+                    onChange={(value, option) => {
+                      setValue("allergen_name", value);
+                      // Capture VIOS code when user selects from autocomplete
+                      if (option?.code) {
+                        setValue("vios_code", parseInt(option.code, 10));
+                      } else {
+                        setValue("vios_code", undefined);
+                      }
+                    }}
+                    onSearch={searchViosAllergens}
                     placeholder="Start typing allergen name..."
                     disabled={isReadOnly}
                     className={errors.allergen_name ? "border-red-500" : ""}

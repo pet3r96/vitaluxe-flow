@@ -204,7 +204,7 @@ serve(async (req) => {
 
     // Fetch allergies from patient_medical_vault for each patient
     const patientIds = [...new Set(unsent_lines.map(l => l.patient_id).filter(Boolean))];
-    const patientAllergiesMap: Record<string, string[]> = {};
+    const patientAllergiesMap: Record<string, { names: string[]; viosCodes: number[] }> = {};
     
     if (patientIds.length > 0) {
       const { data: allergyRecords } = await supabaseAdmin
@@ -218,16 +218,26 @@ serve(async (req) => {
         for (const record of allergyRecords) {
           const patientId = record.patient_account_id;
           if (!patientAllergiesMap[patientId]) {
-            patientAllergiesMap[patientId] = [];
+            patientAllergiesMap[patientId] = { names: [], viosCodes: [] };
           }
-          const allergenName = (record.record_data as any)?.allergen_name;
+          const recordData = record.record_data as any;
+          const allergenName = recordData?.allergen_name;
+          const viosCode = recordData?.vios_code;
+          
+          // Skip NKA records
+          if (recordData?.nka) continue;
+          
           if (allergenName) {
-            patientAllergiesMap[patientId].push(allergenName);
+            patientAllergiesMap[patientId].names.push(allergenName);
+          }
+          if (typeof viosCode === 'number') {
+            patientAllergiesMap[patientId].viosCodes.push(viosCode);
           }
         }
         edgeLogger.info("Fetched patient allergies", { 
           patientCount: Object.keys(patientAllergiesMap).length,
-          totalAllergies: Object.values(patientAllergiesMap).flat().length 
+          totalAllergies: Object.values(patientAllergiesMap).reduce((sum, p) => sum + p.names.length, 0),
+          totalViosCodes: Object.values(patientAllergiesMap).reduce((sum, p) => sum + p.viosCodes.length, 0)
         });
       }
     }
@@ -235,14 +245,23 @@ serve(async (req) => {
     // Attach allergies to each order line's patient_accounts object
     for (const line of unsent_lines) {
       if (line.patient_id && patientAllergiesMap[line.patient_id]) {
-        const allergiesStr = patientAllergiesMap[line.patient_id].join(", ");
+        const patientAllergies = patientAllergiesMap[line.patient_id];
+        const allergiesStr = patientAllergies.names.length > 0 
+          ? patientAllergies.names.join(", ") 
+          : "NKA";
         if (line.patient_accounts) {
-          line.patient_accounts.allergies = allergiesStr || "NKA";
+          line.patient_accounts.allergies = allergiesStr;
+          // Add VIOS codes array for pharmacy API
+          (line.patient_accounts as any).allergy_codes = patientAllergies.viosCodes;
         } else {
-          line.patient_accounts = { allergies: allergiesStr || "NKA" };
+          line.patient_accounts = { 
+            allergies: allergiesStr,
+            allergy_codes: patientAllergies.viosCodes 
+          } as any;
         }
       } else if (line.patient_accounts && !line.patient_accounts.allergies) {
         line.patient_accounts.allergies = "NKA"; // No Known Allergies
+        (line.patient_accounts as any).allergy_codes = [];
       }
     }
 
@@ -287,6 +306,8 @@ serve(async (req) => {
           patient_address: line.patient_address || "[ENCRYPTED]",
           patient_phone: line.patient_phone || "[ENCRYPTED]",
           patient_email: line.patient_email || "[ENCRYPTED]",
+          patient_allergies: line.patient_accounts?.allergies || "NKA",
+          patient_allergy_codes: (line.patient_accounts as any)?.allergy_codes || [],
           ship_to: line.ship_to || "patient",
           shipping_address: shippingAddress,
           product: {

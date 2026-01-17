@@ -38,6 +38,7 @@ export interface AllergyRecordData {
   notes?: string;
   nka?: boolean;
   is_active?: boolean;
+  vios_code?: number;  // VIOS pharmacy allergy code
 }
 
 export interface VitalRecordData {

@@ -50,6 +50,7 @@ export function asAllergy(r: VaultRecordBase) {
     notes?: string;
     nka?: boolean;
     is_active?: boolean;
+    vios_code?: number;
   };
 }
 
