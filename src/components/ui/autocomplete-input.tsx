@@ -14,7 +14,7 @@ export interface AutocompleteOption {
 
 interface AutocompleteInputProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, option?: AutocompleteOption) => void;
   onSearch: (query: string) => Promise<AutocompleteOption[]>;
   placeholder?: string;
   disabled?: boolean;
@@ -80,11 +80,12 @@ export const AutocompleteInput = React.forwardRef<HTMLInputElement, Autocomplete
       };
     }, []);
 
-    const handleSelect = (selectedValue: string) => {
-      setInputValue(selectedValue);
-      onChange(selectedValue);
-      setOpen(false);
-    };
+  const handleSelect = (selectedValue: string) => {
+    const selectedOption = options.find(o => o.value === selectedValue);
+    setInputValue(selectedValue);
+    onChange(selectedValue, selectedOption);
+    setOpen(false);
+  };
 
     return (
       <Popover open={open} onOpenChange={setOpen}>

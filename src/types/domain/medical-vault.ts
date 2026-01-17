@@ -17,6 +17,7 @@ export interface AllergyRecordData extends BaseRecordData {
   onset_date?: string;
   notes?: string;
   nka?: boolean; // No Known Allergies flag
+  vios_code?: number; // VIOS pharmacy allergy code
 }
 
 // Medication record data

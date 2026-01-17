@@ -9,13 +9,14 @@ import type { Database } from '@/integrations/supabase/types';
 
 // Specific record data types for each vault record type
 export interface AllergyRecordData {
-  allergen_name?: string;
-  reaction_type?: string;
-  severity?: 'mild' | 'moderate' | 'severe';
-  date_recorded?: string;
-  notes?: string;
-  nka?: boolean;
-  is_active?: boolean;
+  allergen_name?: string | null;
+  reaction_type?: string | null;
+  severity?: 'mild' | 'moderate' | 'severe' | null;
+  date_recorded?: string | null;
+  notes?: string | null;
+  nka?: boolean | null;
+  is_active?: boolean | null;
+  vios_code?: number | null;
 }
 
 export interface MedicationRecordData {

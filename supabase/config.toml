@@ -372,6 +372,9 @@ verify_jwt = true
 [functions.sync-user-data]
 verify_jwt = false
 
+[functions.sync-vios-allergies]
+verify_jwt = false
+
 [functions.test-phase2-audit-events]
 verify_jwt = true
 

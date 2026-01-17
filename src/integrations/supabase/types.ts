@@ -7651,6 +7651,36 @@ export type Database = {
         }
         Relationships: []
       }
+      vios_allergies: {
+        Row: {
+          alternate_names: string[] | null
+          created_at: string | null
+          id: number
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          vios_code: number
+        }
+        Insert: {
+          alternate_names?: string[] | null
+          created_at?: string | null
+          id?: number
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          vios_code: number
+        }
+        Update: {
+          alternate_names?: string[] | null
+          created_at?: string | null
+          id?: number
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          vios_code?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       cart_lines_masked: {
