@@ -198,6 +198,30 @@ export interface SendNotificationResponse {
   message?: string;
 }
 
+// ============= VIOS Integration =============
+
+export interface SendViosOrderRequest {
+  order_id: string;
+  order_line_ids: string[];
+  pharmacy_id: string;
+  is_test_order?: boolean;
+}
+
+export interface ViosOrderResult {
+  orderLineId: string;
+  success: boolean;
+  viosOrderId?: string;
+  viosRxNumber?: string;
+  error?: string;
+}
+
+export interface SendViosOrderResponse {
+  success: boolean;
+  message: string;
+  results: ViosOrderResult[];
+  isTestOrder: boolean;
+}
+
 // ============= Error Logging =============
 
 export interface LogErrorResponse {
