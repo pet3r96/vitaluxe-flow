@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { validatePharmacyWebhookSignature, validateWebhookPayload } from "../_shared/pharmacyWebhookValidator.ts";
+import { transformViosPayload, isShipStationPayload } from "../_shared/viosPayloadTransformer.ts";
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -260,6 +261,19 @@ serve(async (req) => {
         JSON.stringify({ error: "Invalid JSON payload" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
+    }
+
+    // Check if this is a VIOS pharmacy or ShipStation payload and transform if needed
+    const isViosPharmacy = pharmacy.name?.toLowerCase().includes('vios') || 
+                           webhookPath?.toLowerCase().includes('vios');
+    
+    if (isViosPharmacy || isShipStationPayload(payload)) {
+      edgeLogger.info('Detected VIOS/ShipStation payload, transforming...', {
+        pharmacyName: pharmacy.name,
+        webhookPath,
+        originalKeys: Object.keys(payload)
+      });
+      payload = transformViosPayload(payload);
     }
 
     // Standard payload validation
