@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { viosApiRequest, VIOS_API_URL } from '../_shared/viosAuth.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +12,15 @@ interface SendOrderRequest {
   order_id: string;
   order_line_ids: string[];
   pharmacy_id: string;
+  is_test_order?: boolean;
 }
+
+// Known VIOS pharmacy identifiers
+const VIOS_PHARMACY_IDENTIFIERS = [
+  'd5e75179-e66c-450f-8cae-1f4df93b097c', // VIOS Compounding ID
+  'vios',
+  'vios compounding',
+];
 
 // Template variable replacement for generic handler
 function applyPayloadTemplate(template: any, data: Record<string, any>): any {
@@ -42,7 +51,8 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createAdminClient();
 
-    const { order_id, order_line_ids, pharmacy_id }: SendOrderRequest = await req.json();
+    const requestBody: SendOrderRequest = await req.json();
+    const { order_id, order_line_ids, pharmacy_id, is_test_order } = requestBody;
 
     edgeLogger.info("Sending order to pharmacy", { order_id, lineCount: order_line_ids.length, pharmacy_id });
 
@@ -63,6 +73,52 @@ serve(async (req) => {
         JSON.stringify({ success: true, message: "Pharmacy API not enabled" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
+    }
+
+    // Check if this is VIOS pharmacy - route to dedicated handler
+    const isViosPharmacy = 
+      VIOS_PHARMACY_IDENTIFIERS.includes(pharmacy_id) ||
+      pharmacy.name?.toLowerCase().includes('vios') ||
+      pharmacy.api_endpoint_url?.includes('vioscompounding.com');
+
+    if (isViosPharmacy) {
+      edgeLogger.info("Detected VIOS pharmacy, routing to dedicated handler", { pharmacy_id });
+      
+      // Call VIOS-specific order submission
+      const viosPayload = {
+        order_id,
+        order_line_ids,
+        pharmacy_id,
+        is_test_order: is_test_order || false,
+      };
+      
+      // Forward to VIOS handler via internal call
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      
+      if (supabaseUrl && supabaseServiceKey) {
+        const viosResponse = await fetch(`${supabaseUrl}/functions/v1/send-vios-order`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify(viosPayload),
+        });
+        
+        const viosResult = await viosResponse.json();
+        
+        return new Response(
+          JSON.stringify(viosResult),
+          { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+            status: viosResponse.ok ? 200 : 500 
+          }
+        );
+      } else {
+        edgeLogger.error("Missing Supabase environment variables for VIOS routing");
+        throw new Error("Unable to route to VIOS handler - missing configuration");
+      }
     }
 
     // Fetch order data with practice info including credentials for fallback
