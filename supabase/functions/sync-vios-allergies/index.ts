@@ -52,28 +52,60 @@ serve(async (req) => {
 
     edgeLogger.info("Starting VIOS allergies sync");
 
-    // Get VIOS API credentials from pharmacy_api_credentials
-    const { data: credentials, error: credError } = await supabaseAdmin.rpc('decrypt_pharmacy_credentials_batch', {
-      p_pharmacy_id: null // Get default VIOS credentials
-    });
+    // Get VIOS credentials from environment
+    const viosClientId = Deno.env.get("VIOS_CLIENT_ID");
+    const viosClientSecret = Deno.env.get("VIOS_CLIENT_SECRET");
+    const viosApiUrl = "https://integrations.vioscompounding.com";
 
-    // Alternatively, get from environment or a specific pharmacy
-    const viosApiKey = Deno.env.get("VIOS_API_KEY");
-    const viosApiUrl = Deno.env.get("VIOS_API_URL") || "https://api.viosrx.com";
-
-    if (!viosApiKey) {
-      edgeLogger.error("VIOS API key not configured");
+    if (!viosClientId || !viosClientSecret) {
+      edgeLogger.error("VIOS credentials not configured");
       return new Response(
-        JSON.stringify({ error: "VIOS API key not configured" }),
+        JSON.stringify({ error: "VIOS credentials not configured (VIOS_CLIENT_ID and VIOS_CLIENT_SECRET required)" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Get OAuth token using client credentials
+    edgeLogger.info("Obtaining VIOS OAuth token");
+    const tokenResponse = await fetch(`${viosApiUrl}/Token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: viosClientId,
+        client_secret: viosClientSecret,
+      }).toString(),
+    });
+
+    if (!tokenResponse.ok) {
+      const tokenError = await tokenResponse.text();
+      edgeLogger.error("VIOS token request failed", { status: tokenResponse.status, error: tokenError });
+      return new Response(
+        JSON.stringify({ error: `VIOS authentication failed: ${tokenResponse.status}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    if (!accessToken) {
+      edgeLogger.error("No access token in VIOS response", { tokenData });
+      return new Response(
+        JSON.stringify({ error: "Failed to obtain VIOS access token" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    edgeLogger.info("VIOS OAuth token obtained successfully");
+
     // Call VIOS API to get allergies list
-    const response = await fetch(`${viosApiUrl}/Allergies`, {
+    const response = await fetch(`${viosApiUrl}/api/Allergies`, {
       method: "GET",
       headers: {
-        "Authorization": `Bearer ${viosApiKey}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
     });
