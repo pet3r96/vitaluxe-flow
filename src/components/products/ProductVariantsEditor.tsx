@@ -6,6 +6,7 @@ import { Plus, Trash2, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProductVariantFormData } from "@/types/domain/productVariant";
 import { createEmptyVariant } from "@/types/domain/productVariant";
+import { ViosProductSearch } from "./ViosProductSearch";
 
 interface ProductVariantsEditorProps {
   variants: ProductVariantFormData[];
@@ -103,16 +104,17 @@ export function ProductVariantsEditor({
                     />
                   </div>
                   
-                  {/* Product Code (Med ID) - Admin Only */}
+                  {/* Product Code (VIOS Med ID) */}
                   <div className="col-span-2 sm:col-span-1">
-                    <Label className="text-xs">Product Code</Label>
-                    <Input
-                      value={variant.product_code || ''}
-                      onChange={(e) => handleUpdate(index, 'product_code', e.target.value)}
-                      placeholder="Pharmacy Med ID"
-                      disabled={disabled}
-                      className="mt-1"
-                    />
+                    <Label className="text-xs">VIOS Product Code</Label>
+                    <div className="mt-1">
+                      <ViosProductSearch
+                        value={variant.product_code || ''}
+                        onChange={(medId) => handleUpdate(index, 'product_code', medId)}
+                        disabled={disabled}
+                        placeholder="Search VIOS catalog..."
+                      />
+                    </div>
                   </div>
                   
                   {/* Base Price */}

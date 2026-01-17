@@ -12,12 +12,13 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope } from "lucide-react";
+import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope, Database } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
 import { UsageBillingDashboard } from "@/components/admin/UsageBillingDashboard";
 import { SubscriptionDiagnostics } from "@/components/admin/SubscriptionDiagnostics";
+import { ViosCatalogImporter } from "@/components/admin/ViosCatalogImporter";
 import { lazy, Suspense } from "react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
@@ -92,6 +93,10 @@ const AdminSettings = () => {
           <TabsTrigger value="usage" className="gap-2">
             <Clock className="h-4 w-4" />
             Usage & Billing
+          </TabsTrigger>
+          <TabsTrigger value="vios-catalog" className="gap-2">
+            <Database className="h-4 w-4" />
+            VIOS Catalog
           </TabsTrigger>
           <TabsTrigger value="danger-zone" className="gap-2 text-destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -256,6 +261,10 @@ const AdminSettings = () => {
 
         <TabsContent value="usage" className="space-y-4">
           <UsageBillingDashboard />
+        </TabsContent>
+
+        <TabsContent value="vios-catalog" className="space-y-4">
+          <ViosCatalogImporter />
         </TabsContent>
 
         <TabsContent value="danger-zone" className="space-y-4">

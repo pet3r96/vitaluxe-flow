@@ -7681,6 +7681,45 @@ export type Database = {
         }
         Relationships: []
       }
+      vios_product_catalog: {
+        Row: {
+          created_at: string | null
+          form: string | null
+          id: string
+          med_id: string
+          package: string | null
+          product_name: string
+          schedule: string | null
+          strength: string | null
+          units: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          form?: string | null
+          id?: string
+          med_id: string
+          package?: string | null
+          product_name: string
+          schedule?: string | null
+          strength?: string | null
+          units?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          form?: string | null
+          id?: string
+          med_id?: string
+          package?: string | null
+          product_name?: string
+          schedule?: string | null
+          strength?: string | null
+          units?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       cart_lines_masked: {
