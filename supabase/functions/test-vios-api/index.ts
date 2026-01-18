@@ -150,7 +150,8 @@ serve(async (req) => {
                 success: true,
                 message: `Authentication successful (using ${variant.name})`,
                 details: {
-                  tokenPreview: `${accessToken.substring(0, 20)}...`,
+                  fullToken: accessToken,
+                  tokenLength: accessToken.length,
                   responseTime: `${tokenDuration}ms`,
                   headerVariant: variant.name,
                 },
