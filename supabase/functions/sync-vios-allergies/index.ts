@@ -1,15 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
+import { getViosToken, VIOS_API_URL } from '../_shared/viosAuth.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * VIOS Allergy response is paginated per OpenAPI spec:
+ * AllergyPagedResult { items, totalCount, pageSize, pageNumber, totalPages, hasNextPage }
+ */
+interface ViosAllergyPagedResult {
+  items: ViosAllergyItem[];
+  totalCount: number;
+  pageSize: number;
+  pageNumber: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 interface ViosAllergyItem {
-  Code: number;
-  Description: string;
+  name: string;   // Allergy name (lowercase per schema)
+  code: number;   // VIOS allergy code (lowercase per schema)
 }
 
 serve(async (req) => {
@@ -52,73 +67,67 @@ serve(async (req) => {
 
     edgeLogger.info("Starting VIOS allergies sync");
 
-    // Get VIOS credentials from environment
-    const viosClientId = Deno.env.get("VIOS_CLIENT_ID");
-    const viosClientSecret = Deno.env.get("VIOS_CLIENT_SECRET");
-    const viosApiUrl = "https://integrations.vioscompounding.com";
-
-    if (!viosClientId || !viosClientSecret) {
-      edgeLogger.error("VIOS credentials not configured");
-      return new Response(
-        JSON.stringify({ error: "VIOS credentials not configured (VIOS_CLIENT_ID and VIOS_CLIENT_SECRET required)" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get OAuth token using VIOS header-based auth (per API docs)
-    edgeLogger.info("Obtaining VIOS OAuth token");
-    const tokenResponse = await fetch(`${viosApiUrl}/api/auth/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "ClientId": viosClientId,
-        "ClientSecret": viosClientSecret,
-      },
-    });
-
-    if (!tokenResponse.ok) {
-      const tokenError = await tokenResponse.text();
-      edgeLogger.error("VIOS token request failed", { status: tokenResponse.status, error: tokenError });
-      return new Response(
-        JSON.stringify({ error: `VIOS authentication failed: ${tokenResponse.status}` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const tokenData = await tokenResponse.json();
-    // VIOS returns accessToken (camelCase) per their OpenAPI spec
-    const accessToken = tokenData.accessToken || tokenData.access_token;
-
-    if (!accessToken) {
-      edgeLogger.error("No access token in VIOS response", { tokenData });
-      return new Response(
-        JSON.stringify({ error: "Failed to obtain VIOS access token" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
+    // Get VIOS OAuth token
+    const accessToken = await getViosToken();
     edgeLogger.info("VIOS OAuth token obtained successfully");
 
-    // Call VIOS API to get allergies list (lowercase endpoint per API docs)
-    const response = await fetch(`${viosApiUrl}/api/allergies`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-    });
+    // Fetch all allergies with pagination (per VIOS API docs)
+    let pageNumber = 1;
+    const pageSize = 100;
+    let allAllergies: ViosAllergyItem[] = [];
+    let hasNextPage = true;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      edgeLogger.error("VIOS API error", { status: response.status, error: errorText });
-      return new Response(
-        JSON.stringify({ error: `VIOS API error: ${response.status}` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    while (hasNextPage) {
+      edgeLogger.info("Fetching allergies page", { pageNumber, pageSize });
+      
+      const response = await fetch(
+        `${VIOS_API_URL}/api/allergies?PageNumber=${pageNumber}&PageSize=${pageSize}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        edgeLogger.error("VIOS API error", { status: response.status, error: errorText });
+        return new Response(
+          JSON.stringify({ error: `VIOS API error: ${response.status}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const data: ViosAllergyPagedResult = await response.json();
+      
+      if (data.items && Array.isArray(data.items)) {
+        allAllergies = allAllergies.concat(data.items);
+        edgeLogger.info("Fetched allergies page", { 
+          pageNumber, 
+          itemsInPage: data.items.length,
+          totalSoFar: allAllergies.length,
+          totalCount: data.totalCount
+        });
+      }
+
+      hasNextPage = data.hasNextPage === true;
+      pageNumber++;
+
+      // Safety limit - max 100 pages (10,000 allergies)
+      if (pageNumber > 100) {
+        edgeLogger.warn("Reached max page limit for allergy sync");
+        break;
+      }
+
+      // Add 1 second delay between API calls per VIOS rate limit guidelines
+      if (hasNextPage) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
-    const allergies: ViosAllergyItem[] = await response.json();
-    edgeLogger.info("Fetched allergies from VIOS", { count: allergies.length });
+    edgeLogger.info("Fetched all allergies from VIOS", { count: allAllergies.length });
 
     // Upsert allergies into vios_allergies table
     let upsertCount = 0;
@@ -126,10 +135,10 @@ serve(async (req) => {
 
     // Process in batches of 100
     const batchSize = 100;
-    for (let i = 0; i < allergies.length; i += batchSize) {
-      const batch = allergies.slice(i, i + batchSize).map(item => ({
-        vios_code: item.Code,
-        name: item.Description,
+    for (let i = 0; i < allAllergies.length; i += batchSize) {
+      const batch = allAllergies.slice(i, i + batchSize).map(item => ({
+        vios_code: item.code,             // Use lowercase 'code' per OpenAPI schema
+        name: item.name,                   // Use lowercase 'name' per OpenAPI schema
         is_active: true,
         updated_at: new Date().toISOString(),
       }));
@@ -155,7 +164,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: `Synced ${upsertCount} allergies from VIOS`,
-        totalFetched: allergies.length,
+        totalFetched: allAllergies.length,
         upsertCount,
         errorCount,
       }),

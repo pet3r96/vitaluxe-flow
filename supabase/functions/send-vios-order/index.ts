@@ -15,6 +15,8 @@ interface SendViosOrderRequest {
   is_test_order?: boolean;
 }
 
+// ============= VIOS Types per OpenAPI Spec =============
+
 // VIOS Shipping Service Codes (per VIOS documentation)
 const VIOS_SHIPPING_CODES: Record<string, number> = {
   'priority_overnight': 7617,      // FedEx Priority Overnight
@@ -29,29 +31,38 @@ const VIOS_SHIPPING_CODES: Record<string, number> = {
 };
 
 /**
- * VIOS Order Payload - Nested structure per OpenAPI spec
- * Using camelCase per VIOS API documentation
+ * VIOS Order Payload - per CreateOrderRequest schema
  */
 interface ViosOrderPayload {
   general: {
-    isTestOrder: boolean;
-    referenceId: string;
+    memo?: string;
+    referenceId?: string;
+    isTestOrder?: boolean;
+    masterOrderLinkRequest?: number;
+    masterOrderLinkScope?: 'Billing' | 'Shipping' | 'All';
+  };
+  document?: {
+    pdfBase64?: string;
   };
   prescriber: {
     npi: string;
-    firstName: string;
     lastName: string;
+    firstName: string;
     dea?: string;
-    phone: string;
+    phone?: string;
+    fax?: string;
   };
   patient: {
-    firstName: string;
     lastName: string;
+    firstName: string;
+    middleName?: string;
+    gender: 'm' | 'f' | 'a' | 'u';
     dateOfBirth: string;
-    gender: string;
-    phone: string;
+    phoneHome?: string;
+    phoneMobile?: string;
     email?: string;
-    allergyIds?: number[];
+    allergies?: number[];
+    allergiesRaw?: string[];
   };
   shipping: {
     service: number;
@@ -59,23 +70,37 @@ interface ViosOrderPayload {
     addressLine2?: string;
     city: string;
     state: string;
-    zip: string;
+    zipCode: string;        // NOTE: "zipCode" not "zip" per OpenAPI spec
+    recipientType?: 'clinic' | 'patient';
+    recipientFirstName?: string;
+    recipientLastName?: string;
+    recipientPhone?: string;
+    requireSignature?: boolean;
+    saturdayDelivery?: boolean;
   };
   rxs: Array<{
-    lfProductId?: string;
+    rxType: 'new' | 'refill' | 'transfer';  // REQUIRED per spec
+    quantity: string;                        // STRING per spec, MUST be VOLUME
+    directions: string;                      // "directions" not "sig" per spec
+    lfProductId?: number;                    // integer per spec
     drugName?: string;
     drugStrength?: string;
     drugForm?: string;
-    quantity: number;
     quantityUnits?: string;
-    sig: string;
-    clinicalStatement?: string;
-    prescriptionPdfUrl?: string;
+    foreignRxNumber?: string;
+    clinicalDifferenceStatement?: string;    // REQUIRED for GLP-1
+    specialInstructions?: string;
+    scheduleCode?: '2' | '3' | '4' | '5' | 'L' | 'O';
+    refills?: number;
+    daysSupply?: number;
+    dateWritten?: string;
   }>;
 }
 
 interface ViosOrderResponse {
-  orderId?: string;
+  orderId?: number;
+  orderLfId?: number;
+  rxs?: Array<{ rxLfId?: number; foreignRxNumber?: string }>;
   OrderId?: string;
   rxNumber?: string;
   RxNumber?: string;
@@ -89,6 +114,8 @@ interface ViosOrderResponse {
   Errors?: string[];
 }
 
+// ============= Utility Functions =============
+
 /**
  * Validate volume-based quantity per VIOS critical requirements
  */
@@ -99,6 +126,20 @@ function validateVolumeQuantity(quantity: number, productName: string): { warnin
     };
   }
   return {};
+}
+
+/**
+ * Format phone number to VIOS required format: (XXX) XXX-XXXX
+ */
+function formatViosPhone(phone: string | null | undefined): string {
+  if (!phone) return '';
+  
+  const digits = phone.replace(/\D/g, '');
+  const last10 = digits.slice(-10);
+  
+  if (last10.length !== 10) return phone;
+  
+  return `(${last10.slice(0, 3)}) ${last10.slice(3, 6)}-${last10.slice(6)}`;
 }
 
 /**
@@ -133,12 +174,10 @@ function parsePrescriberName(fullName: string): { firstName: string; lastName: s
 function formatDateOfBirth(dob: string | null): string {
   if (!dob) return '';
   
-  // Already in correct format
   if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
     return dob;
   }
   
-  // Try to parse and reformat
   try {
     const date = new Date(dob);
     if (!isNaN(date.getTime())) {
@@ -169,13 +208,12 @@ function parseAddress(address: string | null): {
   addressLine2?: string;
   city: string;
   state: string;
-  zip: string;
+  zipCode: string;
 } {
   if (!address) {
-    return { addressLine1: '', city: '', state: '', zip: '' };
+    return { addressLine1: '', city: '', state: '', zipCode: '' };
   }
 
-  // Try to parse formatted address (e.g., "123 Main St, City, ST 12345")
   const parts = address.split(',').map(p => p.trim());
   
   if (parts.length >= 3) {
@@ -183,16 +221,28 @@ function parseAddress(address: string | null): {
     const city = parts[1];
     const stateZipPart = parts[2] || '';
     
-    // Extract state and zip from "ST 12345"
     const stateZipMatch = stateZipPart.match(/([A-Z]{2})\s*(\d{5}(-\d{4})?)?/);
     const state = stateZipMatch?.[1] || '';
-    const zip = stateZipMatch?.[2] || '';
+    const zipCode = stateZipMatch?.[2] || '';
     
-    return { addressLine1, city, state, zip };
+    return { addressLine1, city, state, zipCode };
   }
   
-  // Return as single line if can't parse
-  return { addressLine1: address, city: '', state: '', zip: '' };
+  return { addressLine1: address, city: '', state: '', zipCode: '' };
+}
+
+/**
+ * Check if product requires clinical difference statement (GLP-1)
+ */
+function requiresClinicalStatement(productName: string): boolean {
+  const glp1Keywords = [
+    'semaglutide', 'tirzepatide', 'liraglutide', 'dulaglutide',
+    'exenatide', 'glp-1', 'glp1', 'ozempic', 'wegovy', 'mounjaro',
+    'saxenda', 'victoza', 'trulicity', 'byetta', 'bydureon'
+  ];
+  
+  const lowerName = productName?.toLowerCase() || '';
+  return glp1Keywords.some(keyword => lowerName.includes(keyword));
 }
 
 serve(async (req) => {
@@ -397,16 +447,19 @@ serve(async (req) => {
     for (const line of unsentLines) {
       try {
         // Get product code - prefer variant, then product-level
-        const productCode = line.product_variants?.product_code || 
+        const productCodeRaw = line.product_variants?.product_code || 
                            line.products?.vios_lf_product_id || 
                            null;
+        
+        // Convert to number for lfProductId (integer per OpenAPI spec)
+        const productCode = productCodeRaw ? parseInt(String(productCodeRaw), 10) : null;
 
         // Validate product code if catalog is populated
-        if (productCode) {
+        if (productCode && !isNaN(productCode)) {
           const { data: catalogEntry } = await supabaseAdmin
             .from("vios_product_catalog")
             .select("med_id, product_name")
-            .eq("med_id", productCode)
+            .eq("med_id", String(productCode))
             .single();
           
           if (!catalogEntry) {
@@ -414,7 +467,6 @@ serve(async (req) => {
               productCode, 
               productName: line.products?.name 
             });
-            // Continue anyway - VIOS might still accept it
           }
         }
 
@@ -424,7 +476,8 @@ serve(async (req) => {
         // Get patient data from patient_accounts or line directly
         const patient = line.patient_accounts || {} as any;
         const dob = formatDateOfBirth(patient.date_of_birth || patient.birth_date || null);
-        const gender = (line.gender_at_birth || patient.gender_at_birth || 'U').toUpperCase().charAt(0);
+        const genderRaw = (line.gender_at_birth || patient.gender_at_birth || 'u').toLowerCase().charAt(0);
+        const gender = ['m', 'f', 'a', 'u'].includes(genderRaw) ? genderRaw as 'm' | 'f' | 'a' | 'u' : 'u';
         
         // Get prescriber info
         const providerProfile = line.providers?.profiles || {} as any;
@@ -443,11 +496,12 @@ serve(async (req) => {
           parsedAddress.addressLine1 = patient.address_street || parsedAddress.addressLine1;
           parsedAddress.city = patient.address_city;
           parsedAddress.state = patient.address_state || line.destination_state || '';
-          parsedAddress.zip = patient.address_zip || '';
+          parsedAddress.zipCode = patient.address_zip || '';
         }
         
         // Validate quantity for volume-based products (VIOS critical requirement)
-        const quantityValidation = validateVolumeQuantity(line.quantity || 1, line.products?.name || '');
+        const quantityVal = line.quantity || 1;
+        const quantityValidation = validateVolumeQuantity(quantityVal, line.products?.name || '');
         if (quantityValidation.warning) {
           edgeLogger.warn("Volume quantity warning", { 
             orderLineId: line.id,
@@ -455,15 +509,16 @@ serve(async (req) => {
           });
         }
 
-        // Build Rx item
+        // Build Rx item per VIOS CreateOrderRequestRxModel
         const rxItem: ViosOrderPayload['rxs'][0] = {
-          quantity: line.quantity || 1,
-          sig: line.custom_sig || 'Use as directed',
+          rxType: 'new',                            // REQUIRED field
+          quantity: String(quantityVal),            // STRING per OpenAPI spec, VOLUME based
+          directions: line.custom_sig || 'Use as directed',  // "directions" not "sig"
         };
 
         // Add product identification (prefer lfProductId for faster processing)
-        if (productCode) {
-          rxItem.lfProductId = productCode;
+        if (productCode && !isNaN(productCode)) {
+          rxItem.lfProductId = productCode;  // integer per spec
         } else {
           // Fall back to drug name/strength/form (all required without lfProductId)
           rxItem.drugName = line.products?.name || '';
@@ -471,41 +526,42 @@ serve(async (req) => {
           rxItem.drugForm = line.product_variants?.form || line.products?.form || '';
         }
 
-        // Add clinical statement for GLP-1 products (VIOS requirement)
-        const isGlp1 = line.products?.is_glp1 || line.products?.product_types?.is_glp;
+        // Add clinical difference statement for GLP-1 products (VIOS requirement)
+        const isGlp1 = line.products?.is_glp1 || line.products?.product_types?.is_glp || 
+                       requiresClinicalStatement(line.products?.name || '');
         if (isGlp1) {
-          rxItem.clinicalStatement = 
+          rxItem.clinicalDifferenceStatement = 
             line.products?.glp1_clinical_statement || 
             line.products?.product_types?.glp_clinical_statement ||
             'This compounded medication is being prescribed as a clinically different formulation from available FDA-approved products.';
         }
 
-        // Add prescription URL if available
-        if (line.prescription_url) {
-          rxItem.prescriptionPdfUrl = line.prescription_url;
+        // Add order notes as special instructions
+        if (line.order_notes) {
+          rxItem.specialInstructions = line.order_notes;
         }
 
-        // Build VIOS payload with nested structure per OpenAPI spec
+        // Build VIOS payload per CreateOrderRequest schema
         const viosPayload: ViosOrderPayload = {
           general: {
             isTestOrder: is_test_order,
-            referenceId: line.id,
+            referenceId: line.id,  // Our order_line.id for webhook matching
           },
           prescriber: {
             npi: providerProfile.npi || '',
             firstName: prescriberName.firstName,
             lastName: prescriberName.lastName,
             dea: providerProfile.dea,
-            phone: providerProfile.phone || '',
+            phone: formatViosPhone(providerProfile.phone),
           },
           patient: {
             firstName: patient.first_name || patientName.firstName,
             lastName: patient.last_name || patientName.lastName,
             dateOfBirth: dob,
             gender: gender,
-            phone: line.patient_phone || patient.phone || '',
+            phoneHome: formatViosPhone(line.patient_phone || patient.phone),
             email: line.patient_email || patient.email,
-            allergyIds: patientAllergiesMap[line.patient_id] || [],
+            allergies: patientAllergiesMap[line.patient_id] || [],
           },
           shipping: {
             service: getViosShippingCode(line.shipping_speed),
@@ -513,7 +569,8 @@ serve(async (req) => {
             addressLine2: parsedAddress.addressLine2,
             city: parsedAddress.city,
             state: parsedAddress.state || line.destination_state || '',
-            zip: parsedAddress.zip,
+            zipCode: parsedAddress.zipCode,  // "zipCode" per OpenAPI spec
+            recipientType: shipToPractice ? 'clinic' : 'patient',
           },
           rxs: [rxItem],
         };
@@ -524,7 +581,9 @@ serve(async (req) => {
           orderLineId: line.id,
           productCode,
           isTestOrder: is_test_order,
-          hasLfProductId
+          hasLfProductId,
+          rxType: rxItem.rxType,
+          hasGlp1Statement: !!rxItem.clinicalDifferenceStatement
         });
 
         // Submit to VIOS API
@@ -533,7 +592,7 @@ serve(async (req) => {
           body: viosPayload,
         });
 
-        const viosOrderId = viosResponse.orderId || viosResponse.OrderId;
+        const viosOrderId = viosResponse.orderId?.toString() || viosResponse.OrderId;
         const viosRxNumber = viosResponse.rxNumber || viosResponse.RxNumber;
         const viosFillId = viosResponse.fillId || viosResponse.FillId;
 
