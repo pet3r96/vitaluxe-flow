@@ -57,12 +57,30 @@ async function processOrderUpdate(
   pharmacy: any,
   payload: any
 ): Promise<{ success: boolean; orderLineId?: string; error?: string }> {
-  // Find order line by pharmacy_order_id
-  // For VIOS, pharmacy_order_id comes from referenceId or foreignRxNumber
+  // Find order line - try multiple lookup methods
   let orderLineId: string | null = null;
   
-  if (payload.pharmacy_order_id) {
-    // Try to find by pharmacy_order_id first
+  // 1. First, try direct order_line_id (set by VIOS transformer from referenceId)
+  if (payload.order_line_id) {
+    const { data: orderLineById } = await supabaseAdmin
+      .from("order_lines")
+      .select("id")
+      .eq("id", payload.order_line_id)
+      .eq("assigned_pharmacy_id", pharmacy.id)
+      .single();
+    
+    orderLineId = orderLineById?.id || null;
+    
+    if (orderLineId) {
+      edgeLogger.info('Found order line by order_line_id', { 
+        orderLineId,
+        source: 'order_line_id' 
+      });
+    }
+  }
+  
+  // 2. Try pharmacy_order_id (VIOS's orderId stored when we submitted)
+  if (!orderLineId && payload.pharmacy_order_id) {
     const { data: orderLineByPharmacyId } = await supabaseAdmin
       .from("order_lines")
       .select("id")
@@ -72,26 +90,16 @@ async function processOrderUpdate(
     
     orderLineId = orderLineByPharmacyId?.id || null;
     
-    // If not found, try matching by order_line.id directly
-    // (in case referenceId was set to our order_line.id)
-    if (!orderLineId) {
-      const { data: orderLineById } = await supabaseAdmin
-        .from("order_lines")
-        .select("id")
-        .eq("id", payload.pharmacy_order_id)
-        .eq("assigned_pharmacy_id", pharmacy.id)
-        .single();
-      
-      orderLineId = orderLineById?.id || null;
+    if (orderLineId) {
+      edgeLogger.info('Found order line by pharmacy_order_id', { 
+        orderLineId,
+        pharmacyOrderId: payload.pharmacy_order_id,
+        source: 'pharmacy_order_id' 
+      });
     }
   }
   
-  // Fall back to order_line_id if provided
-  if (!orderLineId && payload.order_line_id) {
-    orderLineId = payload.order_line_id;
-  }
-  
-  // Fall back to vitaluxe_order_number
+  // 3. Fall back to vitaluxe_order_number
   if (!orderLineId && payload.vitaluxe_order_number) {
     const { data: order } = await supabaseAdmin
       .from("orders")

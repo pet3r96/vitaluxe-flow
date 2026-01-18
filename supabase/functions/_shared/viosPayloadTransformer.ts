@@ -140,19 +140,25 @@ function normalizeCarrier(carrier: string | undefined): string | undefined {
  * - shipAddressLine1, shipAddressLine2, shipCity, shipState, shipZip, shipCountry
  */
 export function transformViosPayload(item: any): StandardWebhookPayload {
-  // Use referenceId first (what we send as ReferenceId to VIOS)
-  // Fall back to foreignRxNumber (what we send as ForeignRxNumber)
-  const pharmacyOrderId = item.referenceId || item.foreignRxNumber;
+  // IMPORTANT: referenceId is what we send as ReferenceId to VIOS (our order_line.id)
+  // This should be mapped to order_line_id for direct lookup
+  // foreignRxNumber is also our reference, but less commonly used
+  // VIOS's orderId is their internal ID (stored in our pharmacy_order_id column)
+  const ourOrderLineId = item.referenceId || item.foreignRxNumber;
+  const viosOrderId = item.orderId;
   
   const transformed: StandardWebhookPayload = {
-    pharmacy_order_id: pharmacyOrderId,
+    // Our order_line.id (from referenceId we sent to VIOS)
+    order_line_id: ourOrderLineId,
+    // VIOS's internal order ID (what we store in pharmacy_order_id column)
+    pharmacy_order_id: viosOrderId,
     status: mapViosStatus(item.rxStatus),
     status_details: item.rxStatus, // Keep original status as details
     tracking_number: item.trackingNumber || undefined,
     carrier: normalizeCarrier(item.shipCarrier),
     status_datetime: item.rxStatusDateTime || new Date().toISOString(),
     vios_rx_number: item.rxNumber,
-    vios_order_id: item.orderId,
+    vios_order_id: viosOrderId,
     vios_fill_id: item.fillId,
     raw_vios_data: item,
   };
@@ -168,6 +174,7 @@ export function transformViosPayload(item: any): StandardWebhookPayload {
   }
   
   edgeLogger.info('Transformed VIOS payload', {
+    orderLineId: transformed.order_line_id,
     pharmacyOrderId: transformed.pharmacy_order_id,
     status: transformed.status,
     originalStatus: item.rxStatus,
