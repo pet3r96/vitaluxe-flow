@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { validatePharmacyWebhookSignature, validateWebhookPayload } from "../_shared/pharmacyWebhookValidator.ts";
-import { transformViosPayload, isShipStationPayload } from "../_shared/viosPayloadTransformer.ts";
+import { isViosPayload, transformViosPayload, extractViosPayloadItem } from "../_shared/viosPayloadTransformer.ts";
 import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
@@ -58,17 +58,32 @@ async function processOrderUpdate(
   payload: any
 ): Promise<{ success: boolean; orderLineId?: string; error?: string }> {
   // Find order line by pharmacy_order_id
+  // For VIOS, pharmacy_order_id comes from referenceId or foreignRxNumber
   let orderLineId: string | null = null;
   
   if (payload.pharmacy_order_id) {
-    const { data: orderLine } = await supabaseAdmin
+    // Try to find by pharmacy_order_id first
+    const { data: orderLineByPharmacyId } = await supabaseAdmin
       .from("order_lines")
       .select("id")
       .eq("pharmacy_order_id", payload.pharmacy_order_id)
       .eq("assigned_pharmacy_id", pharmacy.id)
       .single();
     
-    orderLineId = orderLine?.id || null;
+    orderLineId = orderLineByPharmacyId?.id || null;
+    
+    // If not found, try matching by order_line.id directly
+    // (in case referenceId was set to our order_line.id)
+    if (!orderLineId) {
+      const { data: orderLineById } = await supabaseAdmin
+        .from("order_lines")
+        .select("id")
+        .eq("id", payload.pharmacy_order_id)
+        .eq("assigned_pharmacy_id", pharmacy.id)
+        .single();
+      
+      orderLineId = orderLineById?.id || null;
+    }
   }
   
   // Fall back to order_line_id if provided
@@ -263,22 +278,48 @@ serve(async (req) => {
       );
     }
 
-    // Check if this is a VIOS pharmacy or ShipStation payload and transform if needed
-    const isViosPharmacy = pharmacy.name?.toLowerCase().includes('vios') || 
-                           webhookPath?.toLowerCase().includes('vios');
-    
-    if (isViosPharmacy || isShipStationPayload(payload)) {
-      edgeLogger.info('Detected VIOS/ShipStation payload, transforming...', {
+    edgeLogger.info('Received webhook payload', {
+      pharmacyName: pharmacy.name,
+      webhookPath,
+      isArray: Array.isArray(payload),
+      payloadKeys: Array.isArray(payload) 
+        ? (payload.length > 0 ? Object.keys(payload[0]) : [])
+        : Object.keys(payload)
+    });
+
+    // Check if this is a VIOS payload (can be array or object with VIOS-specific fields)
+    if (isViosPayload(payload)) {
+      edgeLogger.info('Detected VIOS payload, transforming...', {
         pharmacyName: pharmacy.name,
         webhookPath,
-        originalKeys: Object.keys(payload)
+        isArray: Array.isArray(payload),
+        arrayLength: Array.isArray(payload) ? payload.length : 1
       });
-      payload = transformViosPayload(payload);
+      
+      // VIOS sends webhooks as arrays with one item per prescription
+      const viosItem = extractViosPayloadItem(payload);
+      payload = transformViosPayload(viosItem);
+    } else if (Array.isArray(payload)) {
+      // Non-VIOS array payload - take first item
+      if (payload.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "Empty payload array" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+      edgeLogger.info('Non-VIOS array payload, using first item', { 
+        arrayLength: payload.length 
+      });
+      payload = payload[0];
     }
 
-    // Standard payload validation
+    // Standard payload validation (after transformation)
     const payloadValidation = validateWebhookPayload(payload);
     if (!payloadValidation.valid) {
+      edgeLogger.error('Payload validation failed', { 
+        errors: payloadValidation.errors,
+        payloadKeys: Object.keys(payload)
+      });
       return new Response(
         JSON.stringify({ error: "Invalid payload", details: payloadValidation.errors }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
