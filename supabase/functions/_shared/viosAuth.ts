@@ -31,7 +31,7 @@ export async function getViosToken(): Promise<string> {
     return cachedToken.token;
   }
 
-  // Fetch new token from VIOS
+  // Fetch new token from VIOS using their /api/auth/token endpoint
   const viosClientId = Deno.env.get("VIOS_CLIENT_ID");
   const viosClientSecret = Deno.env.get("VIOS_CLIENT_SECRET");
 
@@ -41,16 +41,14 @@ export async function getViosToken(): Promise<string> {
 
   edgeLogger.info("Fetching new VIOS OAuth token");
 
-  const response = await fetch(`${VIOS_API_URL}/Token`, {
+  // VIOS uses header-based client credentials per their OpenAPI spec
+  const response = await fetch(`${VIOS_API_URL}/api/auth/token`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
+      "ClientId": viosClientId,
+      "ClientSecret": viosClientSecret,
+      "Content-Type": "application/json",
     },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: viosClientId,
-      client_secret: viosClientSecret,
-    }).toString(),
   });
 
   if (!response.ok) {
@@ -63,7 +61,8 @@ export async function getViosToken(): Promise<string> {
   }
 
   const tokenData = await response.json();
-  const accessToken = tokenData.access_token;
+  // VIOS returns { accessToken: "..." } per their OpenAPI spec
+  const accessToken = tokenData.accessToken || tokenData.access_token;
 
   if (!accessToken) {
     edgeLogger.error("No access token in VIOS response", { tokenData });
