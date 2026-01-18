@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const VIOS_API_URL = "https://integrationapi.vioscompounding.com";
+const VIOS_API_URL = "https://integrations.vioscompounding.com";
 
 interface TestResult {
   success: boolean;

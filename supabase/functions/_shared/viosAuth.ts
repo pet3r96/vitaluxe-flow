@@ -7,7 +7,7 @@
 
 import { edgeLogger } from './logger.ts';
 
-const VIOS_API_URL = "https://integrationapi.vioscompounding.com";
+const VIOS_API_URL = "https://integrations.vioscompounding.com";
 const TOKEN_TTL_MS = 14 * 60 * 1000; // 14 minutes (1 minute buffer before 15-min expiry)
 
 interface CachedToken {
