@@ -65,18 +65,15 @@ serve(async (req) => {
       );
     }
 
-    // Get OAuth token using client credentials
+    // Get OAuth token using VIOS header-based auth (per API docs)
     edgeLogger.info("Obtaining VIOS OAuth token");
-    const tokenResponse = await fetch(`${viosApiUrl}/Token`, {
+    const tokenResponse = await fetch(`${viosApiUrl}/api/auth/token`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
+        "ClientId": viosClientId,
+        "ClientSecret": viosClientSecret,
       },
-      body: new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: viosClientId,
-        client_secret: viosClientSecret,
-      }).toString(),
     });
 
     if (!tokenResponse.ok) {
@@ -89,7 +86,8 @@ serve(async (req) => {
     }
 
     const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
+    // VIOS returns accessToken (camelCase) per their OpenAPI spec
+    const accessToken = tokenData.accessToken || tokenData.access_token;
 
     if (!accessToken) {
       edgeLogger.error("No access token in VIOS response", { tokenData });
@@ -101,8 +99,8 @@ serve(async (req) => {
 
     edgeLogger.info("VIOS OAuth token obtained successfully");
 
-    // Call VIOS API to get allergies list
-    const response = await fetch(`${viosApiUrl}/api/Allergies`, {
+    // Call VIOS API to get allergies list (lowercase endpoint per API docs)
+    const response = await fetch(`${viosApiUrl}/api/allergies`, {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${accessToken}`,

@@ -3,12 +3,16 @@
  * 
  * Handles OAuth token management with 14-minute caching (tokens expire at 15 min)
  * Provides auto-refresh on expiration for seamless API calls
+ * 
+ * API Docs: https://integrations-portal.vioscompounding.com/api-docs
+ * Rate Limits: 100 req/min general, 50 orders/min
  */
 
 import { edgeLogger } from './logger.ts';
 
 const VIOS_API_URL = "https://integrations.vioscompounding.com";
 const TOKEN_TTL_MS = 14 * 60 * 1000; // 14 minutes (1 minute buffer before 15-min expiry)
+const MIN_REQUEST_INTERVAL_MS = 1000; // 1 second delay between requests per VIOS guidelines
 
 interface CachedToken {
   token: string;
@@ -146,6 +150,34 @@ export async function viosApiRequest<T = any>(
 
   const data = await response.json();
   return data as T;
+}
+
+// Rate limiting for VIOS API requests
+let lastRequestTime = 0;
+
+/**
+ * Make a rate-limited authenticated request to VIOS API
+ * Adds 1 second delay between requests per VIOS guidelines
+ */
+export async function throttledViosApiRequest<T = any>(
+  endpoint: string,
+  options: {
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    body?: any;
+    retryOnAuthError?: boolean;
+  } = {}
+): Promise<T> {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+  
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL_MS) {
+    await new Promise(resolve => 
+      setTimeout(resolve, MIN_REQUEST_INTERVAL_MS - timeSinceLastRequest)
+    );
+  }
+  
+  lastRequestTime = Date.now();
+  return viosApiRequest<T>(endpoint, options);
 }
 
 export { VIOS_API_URL };
