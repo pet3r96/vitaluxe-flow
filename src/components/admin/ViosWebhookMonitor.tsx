@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Webhook, Copy, RefreshCw, Clock, Trash2, CheckCircle2, XCircle, Loader2, Play, Settings, FlaskConical, History } from "lucide-react";
+import { Webhook, Copy, RefreshCw, Clock, Trash2, CheckCircle2, XCircle, Loader2, Play, Settings, FlaskConical, History, Send, FileText } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -37,12 +38,25 @@ interface WebhookSimResult {
   sentPayload: Record<string, unknown>;
 }
 
+interface TestOrderResult {
+  success: boolean;
+  testReferenceId: string;
+  duration_ms: number;
+  payload_sent: Record<string, unknown>;
+  vios_response: Record<string, unknown> | null;
+  error: { message: string; details: unknown } | null;
+  validation_checks: Record<string, unknown>;
+}
+
 export function ViosWebhookMonitor() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTestingApi, setIsTestingApi] = useState(false);
   const [apiTestResults, setApiTestResults] = useState<ApiTestResults | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simResult, setSimResult] = useState<WebhookSimResult | null>(null);
+  const [isSubmittingTestOrder, setIsSubmittingTestOrder] = useState(false);
+  const [testOrderResult, setTestOrderResult] = useState<TestOrderResult | null>(null);
+  const [showPayloadDetails, setShowPayloadDetails] = useState(false);
   
   // Webhook simulator form state
   const [simRxStatus, setSimRxStatus] = useState("Shipping");
@@ -230,6 +244,35 @@ export function ViosWebhookMonitor() {
     }
   };
 
+  const submitTestOrder = async () => {
+    setIsSubmittingTestOrder(true);
+    setTestOrderResult(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("test-vios-order-submit");
+      
+      if (error) {
+        console.error("[VIOS Test Order] Function invoke error:", error);
+        toast.error(`Test order failed: ${error.message}`);
+        return;
+      }
+      
+      setTestOrderResult(data as TestOrderResult);
+      
+      if (data.success) {
+        const orderId = data.vios_response?.orderId || data.vios_response?.OrderId;
+        toast.success(`Test order submitted! VIOS Order ID: ${orderId}`);
+      } else {
+        toast.error("Test order failed - see details below");
+      }
+    } catch (error: any) {
+      console.error("[VIOS Test Order] Unexpected error:", error);
+      toast.error(`Test order failed: ${error.message}`);
+    } finally {
+      setIsSubmittingTestOrder(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusLower = status?.toLowerCase() || "";
     
@@ -409,6 +452,133 @@ export function ViosWebhookMonitor() {
               {!apiTestResults && !isTestingApi && (
                 <p className="text-sm text-muted-foreground py-4 text-center">
                   Click "Run All Tests" to verify VIOS API connectivity
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Submit Test Order Card */}
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                Submit Test Order to VIOS
+              </CardTitle>
+              <CardDescription>
+                Send a test order with isTestOrder: true to verify payload structure and integration
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  <strong>Note:</strong> This sends a real API request to VIOS with <code className="bg-amber-100 dark:bg-amber-800 px-1 rounded">isTestOrder: true</code>. 
+                  VIOS should recognize this as a test and not process it as a real order.
+                </p>
+              </div>
+
+              <Button 
+                onClick={submitTestOrder} 
+                disabled={isSubmittingTestOrder}
+                className="w-full sm:w-auto"
+                variant="default"
+              >
+                {isSubmittingTestOrder ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting Test Order...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Submit Test Order
+                  </>
+                )}
+              </Button>
+
+              {testOrderResult && (
+                <div className="mt-4 space-y-4">
+                  {/* Result Summary */}
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border">
+                    {testOrderResult.success ? (
+                      <CheckCircle2 className="h-8 w-8 text-green-500 shrink-0" />
+                    ) : (
+                      <XCircle className="h-8 w-8 text-destructive shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {testOrderResult.success ? (
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            Order Submitted Successfully
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">Order Submission Failed</Badge>
+                        )}
+                        <span className="text-sm text-muted-foreground">
+                          {testOrderResult.duration_ms}ms
+                        </span>
+                      </div>
+                      {testOrderResult.success && testOrderResult.vios_response && (
+                        <p className="text-sm mt-1">
+                          <strong>VIOS Order ID:</strong>{" "}
+                          <code className="bg-muted px-2 py-0.5 rounded font-mono">
+                            {String(testOrderResult.vios_response.orderId || testOrderResult.vios_response.OrderId || 'N/A')}
+                          </code>
+                        </p>
+                      )}
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Reference ID: <code className="font-mono">{testOrderResult.testReferenceId}</code>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Error Details */}
+                  {testOrderResult.error && (
+                    <div className="space-y-2">
+                      <Label className="text-sm text-destructive">Error Details</Label>
+                      <pre className="text-xs p-3 bg-destructive/10 text-destructive rounded-lg overflow-x-auto">
+                        {JSON.stringify(testOrderResult.error, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* VIOS Response */}
+                  {testOrderResult.vios_response && (
+                    <div className="space-y-2">
+                      <Label className="text-sm">VIOS Response</Label>
+                      <pre className="text-xs p-3 bg-muted rounded-lg overflow-x-auto max-h-48">
+                        {JSON.stringify(testOrderResult.vios_response, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Validation Checks */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Validation Checks</Label>
+                    <pre className="text-xs p-3 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-lg overflow-x-auto">
+                      {JSON.stringify(testOrderResult.validation_checks, null, 2)}
+                    </pre>
+                  </div>
+
+                  {/* Collapsible Payload Details */}
+                  <Collapsible open={showPayloadDetails} onOpenChange={setShowPayloadDetails}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <FileText className="h-4 w-4" />
+                        {showPayloadDetails ? "Hide" : "Show"} Full Payload Sent
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2">
+                      <pre className="text-xs p-3 bg-muted rounded-lg overflow-x-auto max-h-96">
+                        {JSON.stringify(testOrderResult.payload_sent, null, 2)}
+                      </pre>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              )}
+
+              {!testOrderResult && !isSubmittingTestOrder && (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  Click "Submit Test Order" to send a test order to VIOS and verify the integration
                 </p>
               )}
             </CardContent>
