@@ -19,7 +19,7 @@ import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
 import { UsageBillingDashboard } from "@/components/admin/UsageBillingDashboard";
 import { SubscriptionDiagnostics } from "@/components/admin/SubscriptionDiagnostics";
 import { ViosCatalogImporter } from "@/components/admin/ViosCatalogImporter";
-import { ViosWebhookTester } from "@/components/admin/ViosWebhookTester";
+import { ViosWebhookMonitor } from "@/components/admin/ViosWebhookMonitor";
 import { lazy, Suspense } from "react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
@@ -99,9 +99,9 @@ const AdminSettings = () => {
             <Database className="h-4 w-4" />
             VIOS Catalog
           </TabsTrigger>
-          <TabsTrigger value="vios-webhook" className="gap-2">
+          <TabsTrigger value="vios-tracking" className="gap-2">
             <Webhook className="h-4 w-4" />
-            VIOS Webhook
+            VIOS Tracking
           </TabsTrigger>
           <TabsTrigger value="danger-zone" className="gap-2 text-destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -272,8 +272,8 @@ const AdminSettings = () => {
           <ViosCatalogImporter />
         </TabsContent>
 
-        <TabsContent value="vios-webhook" className="space-y-4">
-          <ViosWebhookTester />
+        <TabsContent value="vios-tracking" className="space-y-4">
+          <ViosWebhookMonitor />
         </TabsContent>
 
         <TabsContent value="danger-zone" className="space-y-4">
