@@ -1,6 +1,9 @@
 /**
- * VIOS/ShipStation Payload Transformer
- * Converts ShipStation webhook payloads to our standard format
+ * VIOS Webhook Payload Transformer
+ * Converts VIOS prescription webhook payloads to our standard format
+ * 
+ * VIOS sends webhooks per prescription (rx), not per order.
+ * Each webhook contains an array with exactly one item representing a single prescription's status update.
  */
 
 import { edgeLogger } from './logger.ts';
@@ -17,152 +20,181 @@ export interface StandardWebhookPayload {
   actual_delivery?: string;
   location?: string;
   status_datetime?: string;
-  raw_shipstation_data?: any;
+  vios_rx_number?: string;
+  vios_order_id?: string;
+  vios_fill_id?: string;
+  raw_vios_data?: any;
 }
 
 /**
- * Detects if payload is in ShipStation format
+ * Detects if payload is in VIOS format
+ * VIOS webhooks have fields like: rxNumber, rxStatus, pharmacyLocation, referenceId
  */
-export function isShipStationPayload(payload: any): boolean {
+export function isViosPayload(payload: any): boolean {
   if (!payload || typeof payload !== 'object') return false;
   
-  // ShipStation webhooks typically have these fields
+  // If it's an array, check the first item
+  if (Array.isArray(payload)) {
+    if (payload.length === 0) return false;
+    const first = payload[0];
+    return !!(
+      first.rxNumber || 
+      first.rxStatus || 
+      first.pharmacyLocation ||
+      first.foreignRxNumber ||
+      first.referenceId
+    );
+  }
+  
+  // Check single object for VIOS-specific fields
   return !!(
-    payload.resource_type ||
-    payload.resourceType ||
-    payload.order_key ||
-    payload.orderKey ||
-    (payload.resource_url && payload.resource_url.includes('shipstation'))
+    payload.rxNumber || 
+    payload.rxStatus || 
+    payload.pharmacyLocation ||
+    payload.foreignRxNumber ||
+    payload.referenceId
   );
 }
 
 /**
- * Maps ShipStation resource_type to our standard status
+ * Maps VIOS rxStatus to our standard status
  */
-function mapShipStationStatus(resourceType: string, payload: any): string {
-  const normalizedType = (resourceType || '').toUpperCase().replace(/-/g, '_');
+function mapViosStatus(rxStatus: string): string {
+  const normalized = (rxStatus || '').toLowerCase().trim();
   
-  switch (normalizedType) {
-    // Shipping events
-    case 'SHIP_NOTIFY':
-    case 'FULFILLMENT_SHIPPED':
-    case 'ITEM_SHIP_NOTIFY':
-    case 'SHIPPED':
+  switch (normalized) {
+    // Shipping/shipped states
+    case 'shipping':
+    case 'shipped':
+    case 'in transit':
+    case 'in_transit':
       return 'shipped';
     
-    // Delivery events
-    case 'DELIVERED':
-    case 'FULFILLMENT_DELIVERED':
+    // Delivered states
+    case 'delivered':
+    case 'complete':
+    case 'completed':
       return 'delivered';
     
-    // Order events
-    case 'ORDER_NOTIFY':
-    case 'ORDER_CREATED':
-    case 'ORDER_RECEIVED':
-      return payload.order_status?.toLowerCase() || 'processing';
+    // Processing states
+    case 'processing':
+    case 'compounding':
+    case 'pending':
+    case 'received':
+    case 'queued':
+    case 'verified':
+      return 'processing';
     
-    // In transit events
-    case 'IN_TRANSIT':
-    case 'OUT_FOR_DELIVERY':
-      return 'shipped';
-    
-    // Cancellation events
-    case 'CANCELLED':
-    case 'CANCELED':
-    case 'ORDER_CANCELLED':
+    // Cancelled states
+    case 'cancelled':
+    case 'canceled':
+    case 'voided':
+    case 'rejected':
       return 'cancelled';
     
+    // Out for delivery
+    case 'out for delivery':
+    case 'out_for_delivery':
+      return 'shipped';
+    
     default:
-      // Try to use the type as-is if it's a valid status
-      if (resourceType) {
-        return resourceType.toLowerCase().replace(/-/g, '_');
-      }
-      return 'unknown';
+      // Return as-is if we don't have a mapping
+      edgeLogger.warn('Unknown VIOS status, using as-is', { rxStatus: normalized });
+      return normalized || 'unknown';
   }
 }
 
 /**
- * Extracts carrier name from ShipStation payload
+ * Normalizes carrier name from VIOS format
  */
-function extractCarrier(payload: any): string | undefined {
-  const carrier = payload.carrier_code || 
-                  payload.carrierCode || 
-                  payload.carrier ||
-                  payload.shipment?.carrier_code ||
-                  payload.shipment?.carrierCode;
-  
+function normalizeCarrier(carrier: string | undefined): string | undefined {
   if (!carrier) return undefined;
   
-  // Normalize carrier names
-  const normalizedCarrier = carrier.toLowerCase();
-  if (normalizedCarrier.includes('fedex')) return 'FedEx';
-  if (normalizedCarrier.includes('ups')) return 'UPS';
-  if (normalizedCarrier.includes('usps')) return 'USPS';
-  if (normalizedCarrier.includes('dhl')) return 'DHL';
+  const normalized = carrier.toLowerCase();
+  if (normalized.includes('fedex')) return 'FedEx';
+  if (normalized.includes('ups')) return 'UPS';
+  if (normalized.includes('usps')) return 'USPS';
+  if (normalized.includes('dhl')) return 'DHL';
   
   return carrier;
 }
 
 /**
- * Transforms VIOS/ShipStation webhook payload to our standard format
+ * Transforms a single VIOS prescription webhook item to our standard format
+ * 
+ * VIOS payload fields:
+ * - pharmacyLocation: "vioscompounding"
+ * - fillId: "100482"
+ * - rxNumber: "66692847"
+ * - foreignRxNumber: "rx_m8XvL9NdWpR2eTfk" (our reference when submitting)
+ * - orderId: "7771349652" (VIOS internal order ID)
+ * - referenceId: "rx_n5QwP7BkJmX4rYuL" (our reference ID)
+ * - practiceId, providerId, patientId, lfdrugId
+ * - rxStatus: "Shipping"
+ * - rxStatusDateTime: "2025-12-12T15:42:33"
+ * - deliveryService: "UPS Ground"
+ * - service: "Ground"
+ * - trackingNumber: "1Z999AA1234567890"
+ * - shipCarrier: "UPS"
+ * - drugName: "Semaglutide/Methylcobalamin/Glycine (1ml)"
+ * - shipAddressLine1, shipAddressLine2, shipCity, shipState, shipZip, shipCountry
  */
-export function transformViosPayload(payload: any): StandardWebhookPayload {
-  // If already in our standard format, return as-is
-  if (payload.pharmacy_order_id || payload.order_line_id || payload.vitaluxe_order_number) {
-    // Check if it also has status
-    if (payload.status) {
-      edgeLogger.info('Payload already in standard format');
-      return payload;
-    }
-  }
-  
-  // Extract order identifier (order_key is our ReferenceId in ShipStation)
-  const pharmacyOrderId = payload.order_key || 
-                          payload.orderKey ||
-                          payload.order_number ||
-                          payload.orderNumber ||
-                          payload.reference_id ||
-                          payload.referenceId;
-  
-  // Extract tracking number
-  const trackingNumber = payload.tracking_number || 
-                         payload.trackingNumber ||
-                         payload.shipment?.tracking_number ||
-                         payload.shipment?.trackingNumber;
-  
-  // Determine status
-  const resourceType = payload.resource_type || payload.resourceType;
-  const status = mapShipStationStatus(resourceType, payload);
-  
-  // Extract dates
-  const shipDate = payload.ship_date || payload.shipDate || payload.shipment?.ship_date;
-  const deliveryDate = payload.delivery_date || payload.deliveryDate;
+export function transformViosPayload(item: any): StandardWebhookPayload {
+  // Use referenceId first (what we send as ReferenceId to VIOS)
+  // Fall back to foreignRxNumber (what we send as ForeignRxNumber)
+  const pharmacyOrderId = item.referenceId || item.foreignRxNumber;
   
   const transformed: StandardWebhookPayload = {
     pharmacy_order_id: pharmacyOrderId,
-    status: status,
-    status_details: resourceType || payload.status_description || payload.statusDescription,
-    tracking_number: trackingNumber,
-    carrier: extractCarrier(payload),
-    status_datetime: payload.create_date || payload.createDate || new Date().toISOString(),
-    raw_shipstation_data: payload,
+    status: mapViosStatus(item.rxStatus),
+    status_details: item.rxStatus, // Keep original status as details
+    tracking_number: item.trackingNumber || undefined,
+    carrier: normalizeCarrier(item.shipCarrier),
+    status_datetime: item.rxStatusDateTime || new Date().toISOString(),
+    vios_rx_number: item.rxNumber,
+    vios_order_id: item.orderId,
+    vios_fill_id: item.fillId,
+    raw_vios_data: item,
   };
   
-  // Add delivery dates if available
-  if (status === 'shipped' && shipDate) {
-    transformed.status_datetime = shipDate;
-  }
-  if (status === 'delivered' && deliveryDate) {
-    transformed.actual_delivery = deliveryDate;
+  // Build location string if shipping info available
+  if (item.shipCity && item.shipState) {
+    transformed.location = `${item.shipCity}, ${item.shipState}`;
   }
   
-  edgeLogger.info('Transformed ShipStation payload', {
-    originalKeys: Object.keys(payload),
+  // If delivered, set actual delivery date
+  if (transformed.status === 'delivered' && item.rxStatusDateTime) {
+    transformed.actual_delivery = item.rxStatusDateTime;
+  }
+  
+  edgeLogger.info('Transformed VIOS payload', {
     pharmacyOrderId: transformed.pharmacy_order_id,
     status: transformed.status,
+    originalStatus: item.rxStatus,
     trackingNumber: transformed.tracking_number,
     carrier: transformed.carrier,
+    viosRxNumber: transformed.vios_rx_number,
+    viosOrderId: transformed.vios_order_id,
   });
   
   return transformed;
+}
+
+/**
+ * Extracts the first item from a VIOS webhook array
+ * VIOS sends one Rx per webhook, but as an array
+ */
+export function extractViosPayloadItem(payload: any): any {
+  if (Array.isArray(payload)) {
+    if (payload.length === 0) {
+      throw new Error('Empty VIOS payload array');
+    }
+    if (payload.length > 1) {
+      edgeLogger.warn('VIOS payload has multiple items, processing first only', {
+        itemCount: payload.length
+      });
+    }
+    return payload[0];
+  }
+  return payload;
 }
