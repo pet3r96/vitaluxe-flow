@@ -12,13 +12,13 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope, Database, Webhook } from "lucide-react";
+import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope, Webhook } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
 import { UsageBillingDashboard } from "@/components/admin/UsageBillingDashboard";
 import { SubscriptionDiagnostics } from "@/components/admin/SubscriptionDiagnostics";
-import { ViosCatalogImporter } from "@/components/admin/ViosCatalogImporter";
+
 import { ViosWebhookMonitor } from "@/components/admin/ViosWebhookMonitor";
 import { lazy, Suspense } from "react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -94,10 +94,6 @@ const AdminSettings = () => {
           <TabsTrigger value="usage" className="gap-2">
             <Clock className="h-4 w-4" />
             Usage & Billing
-          </TabsTrigger>
-          <TabsTrigger value="vios-catalog" className="gap-2">
-            <Database className="h-4 w-4" />
-            VIOS Catalog
           </TabsTrigger>
           <TabsTrigger value="vios-tracking" className="gap-2">
             <Webhook className="h-4 w-4" />
@@ -268,9 +264,6 @@ const AdminSettings = () => {
           <UsageBillingDashboard />
         </TabsContent>
 
-        <TabsContent value="vios-catalog" className="space-y-4">
-          <ViosCatalogImporter />
-        </TabsContent>
 
         <TabsContent value="vios-tracking" className="space-y-4">
           <ViosWebhookMonitor />
