@@ -85,50 +85,39 @@ export async function validatePharmacyWebhookSignature(
 
 /**
  * Validates webhook payload structure
- * Supports standard format, ShipStation format, and VIOS format
+ * Supports standard format and VIOS format
  */
 export function validateWebhookPayload(payload: any): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  // Standard payload validation
   if (!payload || typeof payload !== 'object') {
     errors.push('Payload must be a JSON object');
     return { valid: false, errors };
   }
 
-  // Accept multiple order identifier formats
+  // Accept order identifier formats
   // Standard: order_line_id, vitaluxe_order_number, pharmacy_order_id
-  // ShipStation: order_key, orderKey, order_number, orderNumber
   // VIOS: referenceId, foreignRxNumber, rxNumber
   const hasOrderId = payload.order_line_id || 
                      payload.vitaluxe_order_number || 
                      payload.pharmacy_order_id ||
-                     payload.order_key ||        // ShipStation snake_case
-                     payload.orderKey ||         // ShipStation camelCase
-                     payload.order_number ||
-                     payload.orderNumber ||
                      payload.reference_id ||
                      payload.referenceId ||      // VIOS
                      payload.foreignRxNumber ||  // VIOS
                      payload.rxNumber;           // VIOS
 
   if (!hasOrderId) {
-    errors.push('Missing order identifier (order_line_id, vitaluxe_order_number, pharmacy_order_id, referenceId, or rxNumber)');
+    errors.push('Missing order identifier (order_line_id, pharmacy_order_id, referenceId, or rxNumber)');
   }
 
-  // Accept multiple status formats
+  // Accept status formats
   // Standard: status
-  // ShipStation: resource_type, resourceType, order_status, orderStatus
   // VIOS: rxStatus
   const hasStatus = payload.status || 
-                    payload.resource_type ||     // ShipStation event type
-                    payload.resourceType ||      // ShipStation camelCase
-                    payload.order_status ||
-                    payload.orderStatus ||
                     payload.rxStatus;            // VIOS status
 
   if (!hasStatus) {
-    errors.push('Missing status field (status, resource_type, order_status, or rxStatus)');
+    errors.push('Missing status field (status or rxStatus)');
   }
 
   return { valid: errors.length === 0, errors };
