@@ -449,3 +449,6 @@ verify_jwt = true
 
 [functions.update-vios-shipping]
 verify_jwt = true
+
+[functions.test-vios-order-submit]
+verify_jwt = true
