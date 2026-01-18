@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,13 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Webhook, Copy, RefreshCw, Clock } from "lucide-react";
+import { Webhook, Copy, RefreshCw, Clock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const VIOS_PHARMACY_ID = "d5e75179-e66c-450f-8cae-1f4df93b097c";
 
 export function ViosWebhookMonitor() {
+  const [isDeleting, setIsDeleting] = useState(false);
   // Fetch VIOS pharmacy config
   const { data: pharmacyConfig } = useQuery({
     queryKey: ["vios-pharmacy-config"],
@@ -73,6 +76,26 @@ export function ViosWebhookMonitor() {
     if (pharmacyConfig?.webhook_secret) {
       navigator.clipboard.writeText(pharmacyConfig.webhook_secret);
       toast.success("API Key copied to clipboard");
+    }
+  };
+
+  const clearHistory = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("pharmacy_tracking_updates")
+        .delete()
+        .eq("pharmacy_id", VIOS_PHARMACY_ID);
+      
+      if (error) throw error;
+      
+      toast.success("Tracking history cleared");
+      refetchUpdates();
+    } catch (error) {
+      toast.error("Failed to clear history");
+      console.error(error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -162,10 +185,39 @@ export function ViosWebhookMonitor() {
               Webhook updates received from VIOS (auto-refreshes every 30 seconds)
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetchUpdates()} className="gap-2">
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2 text-destructive hover:text-destructive"
+                  disabled={!recentUpdates?.length || isDeleting}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Clear
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear tracking history?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will delete all VIOS tracking updates from the history. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={clearHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete All
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button variant="outline" size="sm" onClick={() => refetchUpdates()} className="gap-2">
+              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {recentUpdates && recentUpdates.length > 0 ? (
