@@ -5527,6 +5527,7 @@ export type Database = {
           temp_password: boolean | null
           updated_at: string | null
           verified_at: string | null
+          vios_practice_id: string | null
         }
         Insert: {
           active?: boolean | null
@@ -5583,6 +5584,7 @@ export type Database = {
           temp_password?: boolean | null
           updated_at?: string | null
           verified_at?: string | null
+          vios_practice_id?: string | null
         }
         Update: {
           active?: boolean | null
@@ -5639,6 +5641,7 @@ export type Database = {
           temp_password?: boolean | null
           updated_at?: string | null
           verified_at?: string | null
+          vios_practice_id?: string | null
         }
         Relationships: [
           {

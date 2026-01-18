@@ -23,6 +23,7 @@ interface ViosOrderPayload {
     memo?: string;
     referenceId?: string;
     isTestOrder?: boolean;
+    practiceId?: string;  // VIOS Practice ID
   };
   prescriber: {
     npi: string;
@@ -115,6 +116,10 @@ serve(async (req) => {
 
     console.log('[test-vios-order-submit] Admin verified, creating test order payload');
 
+    // Parse request body to get optional vios_practice_id
+    const body = await req.json().catch(() => ({}));
+    const viosPracticeId = body.vios_practice_id;
+
     // Build a complete test order payload per VIOS OpenAPI spec
     const testReferenceId = `TEST-${Date.now()}`;
     
@@ -122,6 +127,7 @@ serve(async (req) => {
       general: {
         isTestOrder: true,
         referenceId: testReferenceId,
+        practiceId: viosPracticeId || undefined,
         memo: "VitaLuxe integration test order - DO NOT PROCESS"
       },
       prescriber: {
@@ -212,7 +218,10 @@ serve(async (req) => {
           service: "✅ Integer type (7623)",
           allergies: "✅ Array of integers"
         },
-        isTestOrder: "✅ Set to true"
+        isTestOrder: "✅ Set to true",
+        practiceId: viosPracticeId 
+          ? `✅ Included (${viosPracticeId})` 
+          : "⚠️ Not provided - may be required by VIOS"
       }
     };
 
