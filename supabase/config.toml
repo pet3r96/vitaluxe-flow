@@ -349,10 +349,10 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.send-password-reset-email]
+verify_jwt = false
 
 [functions.send-vios-order]
 verify_jwt = true
-verify_jwt = false
 
 [functions.send-patient-message]
 verify_jwt = true
@@ -361,6 +361,12 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-verification-email]
+verify_jwt = false
+
+[functions.simulate-vios-webhook]
+verify_jwt = false
+
+[functions.test-vios-api]
 verify_jwt = false
 
 [functions.send-welcome-email]
