@@ -141,18 +141,57 @@ export function ViosWebhookMonitor() {
     try {
       const { data, error } = await supabase.functions.invoke("test-vios-api");
       
-      if (error) throw error;
+      if (error) {
+        // Show more detailed error info
+        console.error("[VIOS API Test] Function invoke error:", error);
+        toast.error(`API test failed: ${error.message}. Check console for details.`);
+        
+        // Create a synthetic result to show the error in the UI
+        setApiTestResults({
+          tokenTest: { 
+            success: false, 
+            message: `Function invoke error: ${error.message}`,
+            details: {
+              errorType: error.name || "Unknown",
+              hint: "This may indicate an auth issue (are you an admin?) or the function failed to deploy.",
+              rawError: JSON.stringify(error, null, 2),
+            }
+          },
+          ordersTest: { success: false, message: "Skipped - function error" },
+          allergiesTest: { success: false, message: "Skipped - function error" },
+          overallSuccess: false,
+        });
+        return;
+      }
       
       setApiTestResults(data as ApiTestResults);
       
       if (data.overallSuccess) {
         toast.success("All API tests passed!");
       } else {
-        toast.warning("Some API tests failed");
+        // Show traceId if available
+        const traceId = data.tokenTest?.details?.traceId;
+        if (traceId) {
+          toast.warning(`Some tests failed. VIOS TraceId: ${traceId}`);
+        } else {
+          toast.warning("Some API tests failed - see details below");
+        }
       }
     } catch (error: any) {
+      console.error("[VIOS API Test] Unexpected error:", error);
       toast.error(`API test failed: ${error.message}`);
-      console.error(error);
+      
+      // Show error in UI
+      setApiTestResults({
+        tokenTest: { 
+          success: false, 
+          message: `Unexpected error: ${error.message}`,
+          details: { stack: error.stack }
+        },
+        ordersTest: { success: false, message: "Skipped" },
+        allergiesTest: { success: false, message: "Skipped" },
+        overallSuccess: false,
+      });
     } finally {
       setIsTestingApi(false);
     }

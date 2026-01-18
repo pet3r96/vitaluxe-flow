@@ -32,14 +32,17 @@ export async function getViosToken(): Promise<string> {
   }
 
   // Fetch new token from VIOS using their /api/auth/token endpoint
-  const viosClientId = Deno.env.get("VIOS_CLIENT_ID");
-  const viosClientSecret = Deno.env.get("VIOS_CLIENT_SECRET");
+  const viosClientId = Deno.env.get("VIOS_CLIENT_ID")?.trim();
+  const viosClientSecret = Deno.env.get("VIOS_CLIENT_SECRET")?.trim();
 
   if (!viosClientId || !viosClientSecret) {
     throw new Error("VIOS credentials not configured (VIOS_CLIENT_ID and VIOS_CLIENT_SECRET required)");
   }
 
-  edgeLogger.info("Fetching new VIOS OAuth token");
+  edgeLogger.info("Fetching new VIOS OAuth token", {
+    clientIdLength: viosClientId.length,
+    clientSecretLength: viosClientSecret.length,
+  });
 
   // VIOS uses header-based client credentials per their OpenAPI spec
   const response = await fetch(`${VIOS_API_URL}/api/auth/token`, {

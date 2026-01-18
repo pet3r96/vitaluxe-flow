@@ -97,52 +97,105 @@ serve(async (req) => {
       overallSuccess: false,
     };
 
-    // Test 1: Token Authentication
+    // Test 1: Token Authentication with header variants
     let accessToken: string | null = null;
     const tokenStart = Date.now();
+    
+    // Header variants to try (some APIs are case-sensitive)
+    const headerVariants: Array<{ name: string; clientIdKey: string; clientSecretKey: string }> = [
+      { name: "ClientId/ClientSecret", clientIdKey: "ClientId", clientSecretKey: "ClientSecret" },
+      { name: "clientId/clientSecret", clientIdKey: "clientId", clientSecretKey: "clientSecret" },
+      { name: "client_id/client_secret", clientIdKey: "client_id", clientSecretKey: "client_secret" },
+    ];
+    
+    const attemptResults: Array<{ variant: string; status: number; body: string; success: boolean }> = [];
+    
     try {
       console.log("[VIOS Test] Testing token endpoint...");
       console.log("[VIOS Test] Request URL:", `${VIOS_API_URL}/api/auth/token`);
+      console.log("[VIOS Test] Trying", headerVariants.length, "header variants");
       
-      const tokenResponse = await fetch(`${VIOS_API_URL}/api/auth/token`, {
-        method: "POST",
-        headers: {
-          "ClientId": viosClientId,
-          "ClientSecret": viosClientSecret,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const tokenDuration = Date.now() - tokenStart;
-
-      if (tokenResponse.ok) {
-        const tokenData = await tokenResponse.json();
-        accessToken = tokenData.accessToken || tokenData.access_token;
+      for (const variant of headerVariants) {
+        console.log(`[VIOS Test] Attempting: ${variant.name}`);
         
-        if (accessToken) {
-          results.tokenTest = {
-            success: true,
-            message: "Authentication successful",
-            details: {
-              tokenPreview: `${accessToken.substring(0, 20)}...`,
-              responseTime: `${tokenDuration}ms`,
-            },
-            duration: tokenDuration,
-          };
-        } else {
-          results.tokenTest = {
-            success: false,
-            message: "No access token in response",
-            details: { responseKeys: Object.keys(tokenData) },
-            duration: tokenDuration,
-          };
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        headers[variant.clientIdKey] = viosClientId;
+        headers[variant.clientSecretKey] = viosClientSecret;
+        
+        const tokenResponse = await fetch(`${VIOS_API_URL}/api/auth/token`, {
+          method: "POST",
+          headers,
+        });
+
+        const responseBody = await tokenResponse.text();
+        attemptResults.push({
+          variant: variant.name,
+          status: tokenResponse.status,
+          body: responseBody.substring(0, 500),
+          success: tokenResponse.ok,
+        });
+        
+        console.log(`[VIOS Test] ${variant.name}: ${tokenResponse.status} ${tokenResponse.statusText}`);
+
+        if (tokenResponse.ok) {
+          try {
+            const tokenData = JSON.parse(responseBody);
+            accessToken = tokenData.accessToken || tokenData.access_token;
+            
+            if (accessToken) {
+              const tokenDuration = Date.now() - tokenStart;
+              results.tokenTest = {
+                success: true,
+                message: `Authentication successful (using ${variant.name})`,
+                details: {
+                  tokenPreview: `${accessToken.substring(0, 20)}...`,
+                  responseTime: `${tokenDuration}ms`,
+                  headerVariant: variant.name,
+                },
+                duration: tokenDuration,
+              };
+              break; // Stop trying variants
+            }
+          } catch (parseErr) {
+            console.log("[VIOS Test] Failed to parse response as JSON");
+          }
         }
-      } else {
-        const errorText = await tokenResponse.text();
+      }
+      
+      const tokenDuration = Date.now() - tokenStart;
+      
+      // If no successful token, report all attempts
+      if (!accessToken) {
+        // Parse traceId from any error response
+        let traceId: string | undefined;
+        for (const attempt of attemptResults) {
+          try {
+            const parsed = JSON.parse(attempt.body);
+            if (parsed.traceId) {
+              traceId = parsed.traceId;
+              break;
+            }
+          } catch {}
+        }
+        
+        const lastAttempt = attemptResults[attemptResults.length - 1];
         results.tokenTest = {
           success: false,
-          message: `HTTP ${tokenResponse.status}: ${tokenResponse.statusText}`,
-          details: { error: errorText.substring(0, 200) },
+          message: `All ${headerVariants.length} header variants failed. Last: HTTP ${lastAttempt?.status}`,
+          details: {
+            traceId,
+            attempts: attemptResults.map(a => ({
+              variant: a.variant,
+              status: a.status,
+              responsePreview: a.body.substring(0, 200),
+            })),
+            requestUrl: `${VIOS_API_URL}/api/auth/token`,
+            clientIdLength: viosClientId.length,
+            clientSecretLength: viosClientSecret.length,
+            hint: "Check if credentials are for the correct VIOS environment (sandbox vs production)",
+          },
           duration: tokenDuration,
         };
       }
@@ -151,6 +204,10 @@ serve(async (req) => {
       results.tokenTest = {
         success: false,
         message: `Connection error: ${errorMessage}`,
+        details: {
+          attemptResults,
+          requestUrl: `${VIOS_API_URL}/api/auth/token`,
+        },
         duration: Date.now() - tokenStart,
       };
     }
