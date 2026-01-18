@@ -3,6 +3,13 @@
  * 
  * Type-safe interfaces for VIOS Compounding API integration
  * Based on VIOS OpenAPI spec at https://integrations.vioscompounding.com/swagger/v1/swagger.json
+ * 
+ * CRITICAL REQUIREMENTS PER VIOS DOCS:
+ * 1. Quantity MUST be passed in VOLUME (e.g., 5ml vial = 5, not 1 vial)
+ * 2. GLP-1 medications REQUIRE clinicalDifferenceStatement
+ * 3. When lfProductId provided, DrugName/DrugStrength/DrugForm/QuantityUnits optional
+ * 4. rxType is REQUIRED for all rxs
+ * 5. Phone format: (XXX) XXX-XXXX
  */
 
 // ============= Authentication =============
@@ -13,68 +20,137 @@ export interface ViosTokenResponse {
   expiresIn?: number;
 }
 
-// ============= Order Submission (Nested Structure per VIOS API) =============
+// ============= Order Submission (per VIOS OpenAPI Spec) =============
 
 /**
  * VIOS Order Payload - Nested structure per OpenAPI spec
- * Note: When lfProductId is provided, DrugName/DrugStrength/DrugForm/QuantityUnits become optional
+ * Reference: CreateOrderRequest schema
  */
 export interface ViosOrderPayload {
   general: ViosOrderGeneral;
+  document?: ViosOrderDocument;
   prescriber: ViosPrescriber;
   patient: ViosPatient;
   shipping: ViosShipping;
   rxs: ViosRxItem[];
 }
 
+/**
+ * General order info - CreateOrderRequestGeneralModel
+ */
 export interface ViosOrderGeneral {
-  isTestOrder: boolean;
-  referenceId: string;
+  memo?: string;                    // maxLength: 120
+  referenceId?: string;             // maxLength: 200 - our order_line.id
+  isTestOrder?: boolean;
+  masterOrderLinkRequest?: number;
+  masterOrderLinkScope?: 'Billing' | 'Shipping' | 'All';
+  fax?: ViosFaxInfo;
 }
 
+export interface ViosFaxInfo {
+  ani?: string;
+  csid?: string;
+  did?: string;
+}
+
+/**
+ * Document model - for PDF prescriptions
+ * CreateOrderRequestDocumentModel
+ */
+export interface ViosOrderDocument {
+  pdfBase64?: string;  // Required for controlled substances
+}
+
+/**
+ * Patient model - CreateOrderRequestPatientModel
+ */
 export interface ViosPatient {
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;  // YYYY-MM-DD format
-  gender: string;       // M/F/U
-  phone: string;
+  lastName: string;                 // required, maxLength: 30
+  firstName: string;                // required, maxLength: 30
+  middleName?: string;
+  gender: 'm' | 'f' | 'a' | 'u';    // required - Gender enum
+  dateOfBirth: string;              // required, pattern: yyyy-mm-dd
+  address1?: string;                // maxLength: 60
+  address2?: string;
+  address3?: string;
+  city?: string;                    // maxLength: 30
+  state?: string;                   // 2-letter code
+  zip?: string;
+  phoneHome?: string;               // pattern: (XXX) XXX-XXXX
+  phoneMobile?: string;
+  phoneWork?: string;
   email?: string;
-  allergyIds?: number[];
+  // For controlled substances:
+  stateIssuedId?: string;
+  driverLicenseNumber?: string;     // pattern: ^[a-zA-Z0-9]{1,20}$
+  driverLicenseState?: string;
+  socialSecurityNumber?: string;
+  // Allergies
+  allergies?: number[];             // VIOS allergy codes from /api/allergies
+  allergiesRaw?: string[];          // Custom allergies (may slow processing)
 }
 
+/**
+ * Prescriber model - CreateOrderRequestPrescriberModel
+ */
 export interface ViosPrescriber {
-  npi: string;
-  firstName: string;
-  lastName: string;
+  npi: string;                      // required
+  lastName: string;                 // required
+  firstName: string;                // required
   dea?: string;
-  phone: string;
+  phone?: string;                   // pattern: (XXX) XXX-XXXX
+  fax?: string;
 }
 
+/**
+ * Shipping model - CreateOrderRequestShippingModel
+ */
 export interface ViosShipping {
-  service: number;      // VIOS shipping service code (required)
-  addressLine1: string;
+  service: number;                  // required - VIOS shipping code
+  addressLine1: string;             // required, maxLength: 60
   addressLine2?: string;
-  city: string;
-  state: string;
-  zip: string;
+  city: string;                     // required, maxLength: 30
+  state: string;                    // required, 2-letter code
+  zipCode: string;                  // required - NOTE: "zipCode" not "zip"
+  recipientType?: 'clinic' | 'patient';  // RecipientType enum
+  recipientFirstName?: string;
+  recipientLastName?: string;
+  recipientPhone?: string;
+  requireSignature?: boolean;
+  saturdayDelivery?: boolean;
 }
 
+/**
+ * Rx item model - CreateOrderRequestRxModel
+ */
 export interface ViosRxItem {
-  lfProductId?: string;           // Preferred - maps to VIOS catalog
-  drugName?: string;              // Required if no lfProductId
-  drugStrength?: string;          // Required if no lfProductId
-  drugForm?: string;              // Required if no lfProductId
-  quantity: number;               // CRITICAL: Must be in VOLUME (e.g., 5ml, not 1 vial)
-  quantityUnits?: string;         // Required if no lfProductId
-  sig: string;                    // Prescription instructions
-  clinicalStatement?: string;     // REQUIRED for GLP-1 medications
-  prescriptionPdfUrl?: string;
+  rxType: 'new' | 'refill' | 'transfer';  // required - RxType enum
+  quantity: string;                        // required - NOTE: STRING not number!
+  directions: string;                      // required - NOTE: "directions" not "sig"
+  lfProductId?: number;                    // integer - VIOS product ID (preferred)
+  drugName?: string;                       // Required if no lfProductId
+  drugStrength?: string;
+  drugForm?: string;
+  quantityUnits?: string;
+  foreignRxNumber?: string;                // Our reference for this rx
+  clinicalDifferenceStatement?: string;    // REQUIRED for GLP-1 medications!
+  specialInstructions?: string;
+  scheduleCode?: '2' | '3' | '4' | '5' | 'L' | 'O';  // ScheduleCode enum
+  refills?: number;
+  daysSupply?: number;
+  dateWritten?: string;                    // pattern: yyyy-mm-dd
 }
 
-// ============= Order Response =============
+// ============= Order Response - CreateOrderResponse =============
 
 export interface ViosOrderResponse {
-  orderId?: string;
+  orderId?: number;
+  orderLfId?: number;
+  rxs?: Array<{
+    rxLfId?: number;
+    foreignRxNumber?: string;
+  }>;
+  // Also handle legacy/alternate field names
   OrderId?: string;
   rxNumber?: string;
   RxNumber?: string;
@@ -86,6 +162,33 @@ export interface ViosOrderResponse {
   Message?: string;
   errors?: string[];
   Errors?: string[];
+}
+
+// ============= Refill Order - RefillOrderRequest =============
+
+export interface ViosRefillOrderRequest {
+  refilledReferenceId?: string;     // Our order reference OR...
+  refilledLfOrderId?: number;       // VIOS order ID
+  refilledForeignRxNumber: string;  // required - original rx reference
+  newReferenceId?: string;          // New order reference
+  newForeignRxNumber?: string;      // New rx reference
+}
+
+// ============= Update Shipping - OrderShippingModel =============
+
+export interface ViosUpdateShippingRequest {
+  service: number;                  // required
+  addressLine1: string;             // required
+  addressLine2?: string;
+  city: string;                     // required
+  state: string;                    // required
+  zipCode: string;                  // required
+  recipientType?: 'clinic' | 'patient';
+  recipientFirstName?: string;
+  recipientLastName?: string;
+  recipientPhone?: string;
+  requireSignature?: boolean;
+  saturdayDelivery?: boolean;
 }
 
 // ============= Shipping Codes (per VIOS documentation) =============
@@ -115,11 +218,21 @@ export const SHIPPING_SPEED_TO_VIOS: Record<string, ViosShippingCode> = {
   'standard': VIOS_SHIPPING_CODES.FEDEX_GROUND,
 };
 
-// ============= Allergy Types =============
+// ============= Allergy Types (from /api/allergies - AllergyPagedResult) =============
+
+export interface ViosAllergyPagedResult {
+  items: ViosAllergy[];
+  totalCount: number;
+  pageSize: number;
+  pageNumber: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
 
 export interface ViosAllergy {
-  Code: number;
-  Description: string;
+  name: string;       // Allergy name
+  code: number;       // VIOS allergy code to use in orders
 }
 
 // ============= Product Catalog =============
@@ -133,10 +246,10 @@ export interface ViosCatalogProduct {
   is_active?: boolean;
 }
 
-// ============= Order Metadata (stored in order_lines) =============
+// ============= Order Metadata (stored in order_lines.pharmacy_order_metadata) =============
 
 export interface ViosOrderMetadata {
-  vios_order_id?: string;
+  vios_order_id?: string | number;
   vios_rx_number?: string;
   vios_fill_id?: string;
   submitted_at: string;
@@ -149,30 +262,30 @@ export interface ViosOrderMetadata {
 // Payload is always an array with exactly one item per prescription
 
 export interface ViosWebhookPayload {
-  pharmacyLocation?: string;
-  fillId?: string;
-  rxNumber: string;
-  foreignRxNumber?: string;
-  orderId: string;
-  referenceId: string;          // Maps to our order_line_id
+  pharmacyLocation?: string;        // "vioscompounding"
+  fillId?: string;                  // "100482"
+  rxNumber: string;                 // "66692847"
+  foreignRxNumber?: string;         // Our rx reference (from foreignRxNumber in order)
+  orderId: string;                  // VIOS order ID "7771349652"
+  referenceId: string;              // Our order_line.id (from referenceId in order)
   practiceId?: string;
   providerId?: string;
   patientId?: string;
   lfdrugId?: string;
-  rxStatus: string;             // Current status of the prescription
-  rxStatusDateTime: string;     // When status changed
-  deliveryService?: string;
-  service?: string;
-  trackingNumber?: string;
+  rxStatus: string;                 // "Shipping", "Delivered", etc.
+  rxStatusDateTime: string;         // "2025-12-12T15:42:33"
+  deliveryService?: string;         // "UPS Ground"
+  service?: string;                 // "Ground"
+  trackingNumber?: string;          // "1Z999AA1234567890"
   shipAddressLine1?: string;
   shipAddressLine2?: string;
   shipAddressLine3?: string;
-  shipCity?: string;
-  shipState?: string;
-  shipZip?: string;
-  shipCountry?: string;
-  shipCarrier?: string;
-  drugName?: string;
+  shipCity?: string;                // "Austin"
+  shipState?: string;               // "TX"
+  shipZip?: string;                 // "78701"
+  shipCountry?: string;             // "US"
+  shipCarrier?: string;             // "UPS"
+  drugName?: string;                // "Semaglutide/Methylcobalamin/Glycine (1ml)"
 }
 
 // ============= Type Guards =============
@@ -190,7 +303,9 @@ export function hasViosOrderId(response: ViosOrderResponse): boolean {
 }
 
 export function getViosOrderId(response: ViosOrderResponse): string | undefined {
-  return response.orderId || response.OrderId;
+  if (response.orderId) return String(response.orderId);
+  if (response.OrderId) return response.OrderId;
+  return undefined;
 }
 
 export function getViosRxNumber(response: ViosOrderResponse): string | undefined {
@@ -199,6 +314,9 @@ export function getViosRxNumber(response: ViosOrderResponse): string | undefined
 
 // ============= Utility Functions =============
 
+/**
+ * Get VIOS shipping service code from shipping speed string
+ */
 export function getViosShippingCode(shippingSpeed: string | null | undefined): ViosShippingCode {
   if (!shippingSpeed) return VIOS_SHIPPING_CODES.FEDEX_GROUND;
   
@@ -206,6 +324,9 @@ export function getViosShippingCode(shippingSpeed: string | null | undefined): V
   return SHIPPING_SPEED_TO_VIOS[normalizedSpeed] || VIOS_SHIPPING_CODES.FEDEX_GROUND;
 }
 
+/**
+ * Format date of birth to YYYY-MM-DD format required by VIOS
+ */
 export function formatViosDateOfBirth(dob: string | Date | null | undefined): string {
   if (!dob) return '';
   
@@ -231,6 +352,26 @@ export function formatViosDateOfBirth(dob: string | Date | null | undefined): st
 }
 
 /**
+ * Format phone number to VIOS required format: (XXX) XXX-XXXX
+ */
+export function formatViosPhone(phone: string | null | undefined): string {
+  if (!phone) return '';
+  
+  // Extract digits only
+  const digits = phone.replace(/\D/g, '');
+  
+  // Get last 10 digits (handles +1 prefix)
+  const last10 = digits.slice(-10);
+  
+  if (last10.length !== 10) {
+    // Return original if can't format
+    return phone;
+  }
+  
+  return `(${last10.slice(0, 3)}) ${last10.slice(3, 6)}-${last10.slice(6)}`;
+}
+
+/**
  * Validate volume-based quantity per VIOS critical requirements
  * VIOS requires quantity in VOLUME (e.g., 5ml vial = quantity 5, 10, 15 ml)
  * NOT in count (e.g., 1, 2, 3 vials)
@@ -251,6 +392,7 @@ export function validateVolumeQuantity(
 
 /**
  * Check if a product requires a clinical difference statement (GLP-1 medications)
+ * Per VIOS: "Clinical difference statement is required for all GLP-1s"
  */
 export function requiresClinicalStatement(productName: string): boolean {
   const glp1Keywords = [

@@ -440,3 +440,12 @@ verify_jwt = false
 
 [functions.verify-npi]
 verify_jwt = true
+
+[functions.refill-vios-order]
+verify_jwt = true
+
+[functions.cancel-vios-order]
+verify_jwt = true
+
+[functions.update-vios-shipping]
+verify_jwt = true

@@ -4,6 +4,8 @@
  * 
  * VIOS sends webhooks per prescription (rx), not per order.
  * Each webhook contains an array with exactly one item representing a single prescription's status update.
+ * 
+ * Reference: VIOS Integration Portal documentation
  */
 
 import { edgeLogger } from './logger.ts';
@@ -16,6 +18,8 @@ export interface StandardWebhookPayload {
   status_details?: string;
   tracking_number?: string;
   carrier?: string;
+  delivery_service?: string;       // e.g., "UPS Ground"
+  service?: string;                // e.g., "Ground"
   estimated_delivery?: string;
   actual_delivery?: string;
   location?: string;
@@ -122,13 +126,13 @@ function normalizeCarrier(carrier: string | undefined): string | undefined {
 /**
  * Transforms a single VIOS prescription webhook item to our standard format
  * 
- * VIOS payload fields:
+ * VIOS payload fields (per Integration Portal docs):
  * - pharmacyLocation: "vioscompounding"
  * - fillId: "100482"
  * - rxNumber: "66692847"
  * - foreignRxNumber: "rx_m8XvL9NdWpR2eTfk" (our reference when submitting)
  * - orderId: "7771349652" (VIOS internal order ID)
- * - referenceId: "rx_n5QwP7BkJmX4rYuL" (our reference ID)
+ * - referenceId: "rx_n5QwP7BkJmX4rYuL" (our order_line.id)
  * - practiceId, providerId, patientId, lfdrugId
  * - rxStatus: "Shipping"
  * - rxStatusDateTime: "2025-12-12T15:42:33"
@@ -137,7 +141,8 @@ function normalizeCarrier(carrier: string | undefined): string | undefined {
  * - trackingNumber: "1Z999AA1234567890"
  * - shipCarrier: "UPS"
  * - drugName: "Semaglutide/Methylcobalamin/Glycine (1ml)"
- * - shipAddressLine1, shipAddressLine2, shipCity, shipState, shipZip, shipCountry
+ * - shipAddressLine1, shipAddressLine2, shipAddressLine3
+ * - shipCity, shipState, shipZip, shipCountry
  */
 export function transformViosPayload(item: any): StandardWebhookPayload {
   // IMPORTANT: referenceId is what we send as ReferenceId to VIOS (our order_line.id)
@@ -156,6 +161,8 @@ export function transformViosPayload(item: any): StandardWebhookPayload {
     status_details: item.rxStatus, // Keep original status as details
     tracking_number: item.trackingNumber || undefined,
     carrier: normalizeCarrier(item.shipCarrier),
+    delivery_service: item.deliveryService || undefined,  // "UPS Ground"
+    service: item.service || undefined,                   // "Ground"
     status_datetime: item.rxStatusDateTime || new Date().toISOString(),
     vios_rx_number: item.rxNumber,
     vios_order_id: viosOrderId,
@@ -180,6 +187,7 @@ export function transformViosPayload(item: any): StandardWebhookPayload {
     originalStatus: item.rxStatus,
     trackingNumber: transformed.tracking_number,
     carrier: transformed.carrier,
+    deliveryService: transformed.delivery_service,
     viosRxNumber: transformed.vios_rx_number,
     viosOrderId: transformed.vios_order_id,
   });
