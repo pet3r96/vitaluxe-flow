@@ -38,6 +38,7 @@ interface ViosOrderPayload {
     memo?: string;
     referenceId?: string;
     isTestOrder?: boolean;
+    practiceId?: string;              // VIOS Practice ID
     masterOrderLinkRequest?: number;
     masterOrderLinkScope?: 'Billing' | 'Shipping' | 'All';
   };
@@ -278,7 +279,7 @@ serve(async (req) => {
       throw new Error(`Pharmacy not found: ${pharmacyError?.message}`);
     }
 
-    // Fetch order data with practice info
+    // Fetch order data with practice info (including vios_practice_id)
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
       .select(`
@@ -291,7 +292,8 @@ serve(async (req) => {
           shipping_address_formatted,
           npi,
           dea,
-          phone
+          phone,
+          vios_practice_id
         )
       `)
       .eq("id", order_id)
@@ -546,6 +548,7 @@ serve(async (req) => {
           general: {
             isTestOrder: is_test_order,
             referenceId: line.id,  // Our order_line.id for webhook matching
+            practiceId: order.profiles?.vios_practice_id || undefined,  // VIOS Practice ID
           },
           prescriber: {
             npi: providerProfile.npi || '',
