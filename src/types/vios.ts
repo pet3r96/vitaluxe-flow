@@ -2,60 +2,73 @@
  * VIOS API Type Definitions
  * 
  * Type-safe interfaces for VIOS Compounding API integration
+ * Based on VIOS OpenAPI spec at https://integrations.vioscompounding.com/swagger/v1/swagger.json
  */
 
 // ============= Authentication =============
 
 export interface ViosTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
+  accessToken: string;      // VIOS returns camelCase
+  tokenType?: string;
+  expiresIn?: number;
 }
 
-// ============= Order Submission =============
+// ============= Order Submission (Nested Structure per VIOS API) =============
 
+/**
+ * VIOS Order Payload - Nested structure per OpenAPI spec
+ * Note: When lfProductId is provided, DrugName/DrugStrength/DrugForm/QuantityUnits become optional
+ */
 export interface ViosOrderPayload {
-  IsTestOrder: boolean;
-  ReferenceId: string;
-  lfProductId?: string;
-  DrugName?: string;
-  DrugStrength?: string;
-  DrugForm?: string;
-  Quantity: number;
-  QuantityUnits?: string;
-  Sig: string;
-  ClinicalStatement?: string;
-  Patient: ViosPatient;
-  Prescriber: ViosPrescriber;
-  Shipping: ViosShipping;
-  PrescriptionPdfUrl?: string;
+  general: ViosOrderGeneral;
+  prescriber: ViosPrescriber;
+  patient: ViosPatient;
+  shipping: ViosShipping;
+  rxs: ViosRxItem[];
+}
+
+export interface ViosOrderGeneral {
+  isTestOrder: boolean;
+  referenceId: string;
 }
 
 export interface ViosPatient {
-  FirstName: string;
-  LastName: string;
-  DateOfBirth: string; // YYYY-MM-DD format
-  Gender: string; // M/F/U
-  Phone: string;
-  Email?: string;
-  AllergyIds?: number[];
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;  // YYYY-MM-DD format
+  gender: string;       // M/F/U
+  phone: string;
+  email?: string;
+  allergyIds?: number[];
 }
 
 export interface ViosPrescriber {
-  NPI: string;
-  FirstName: string;
-  LastName: string;
-  DEA?: string;
-  Phone: string;
+  npi: string;
+  firstName: string;
+  lastName: string;
+  dea?: string;
+  phone: string;
 }
 
 export interface ViosShipping {
-  Service: number;
-  AddressLine1: string;
-  AddressLine2?: string;
-  City: string;
-  State: string;
-  Zip: string;
+  service: number;      // VIOS shipping service code (required)
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+export interface ViosRxItem {
+  lfProductId?: string;           // Preferred - maps to VIOS catalog
+  drugName?: string;              // Required if no lfProductId
+  drugStrength?: string;          // Required if no lfProductId
+  drugForm?: string;              // Required if no lfProductId
+  quantity: number;               // CRITICAL: Must be in VOLUME (e.g., 5ml, not 1 vial)
+  quantityUnits?: string;         // Required if no lfProductId
+  sig: string;                    // Prescription instructions
+  clinicalStatement?: string;     // REQUIRED for GLP-1 medications
+  prescriptionPdfUrl?: string;
 }
 
 // ============= Order Response =============
@@ -75,15 +88,15 @@ export interface ViosOrderResponse {
   Errors?: string[];
 }
 
-// ============= Shipping Codes =============
+// ============= Shipping Codes (per VIOS documentation) =============
 
 export const VIOS_SHIPPING_CODES = {
+  FEDEX_2_DAY: 7608,
+  USPS_PRIORITY: 7615,
   FEDEX_PRIORITY_OVERNIGHT: 7617,
   FEDEX_STANDARD_OVERNIGHT: 7618,
   FEDEX_OVERNIGHT_CALIFORNIA: 7620,
-  FEDEX_2_DAY: 7608,
   FEDEX_GROUND: 7623,
-  USPS_PRIORITY: 7615,
 } as const;
 
 export type ViosShippingCode = typeof VIOS_SHIPPING_CODES[keyof typeof VIOS_SHIPPING_CODES];
@@ -120,7 +133,7 @@ export interface ViosCatalogProduct {
   is_active?: boolean;
 }
 
-// ============= Order Metadata =============
+// ============= Order Metadata (stored in order_lines) =============
 
 export interface ViosOrderMetadata {
   vios_order_id?: string;
@@ -131,17 +144,35 @@ export interface ViosOrderMetadata {
   used_lf_product_id: boolean;
 }
 
-// ============= Webhook Types =============
+// ============= Webhook Payload (per VIOS documentation) =============
+// Note: VIOS sends webhooks per prescription (rx), not per order
+// Payload is always an array with exactly one item per prescription
 
 export interface ViosWebhookPayload {
-  event: string;
+  pharmacyLocation?: string;
+  fillId?: string;
+  rxNumber: string;
+  foreignRxNumber?: string;
   orderId: string;
-  rxNumber?: string;
-  status?: string;
+  referenceId: string;          // Maps to our order_line_id
+  practiceId?: string;
+  providerId?: string;
+  patientId?: string;
+  lfdrugId?: string;
+  rxStatus: string;             // Current status of the prescription
+  rxStatusDateTime: string;     // When status changed
+  deliveryService?: string;
+  service?: string;
   trackingNumber?: string;
-  carrier?: string;
-  shipDate?: string;
-  estimatedDelivery?: string;
+  shipAddressLine1?: string;
+  shipAddressLine2?: string;
+  shipAddressLine3?: string;
+  shipCity?: string;
+  shipState?: string;
+  shipZip?: string;
+  shipCountry?: string;
+  shipCarrier?: string;
+  drugName?: string;
 }
 
 // ============= Type Guards =============
@@ -197,4 +228,37 @@ export function formatViosDateOfBirth(dob: string | Date | null | undefined): st
   }
   
   return '';
+}
+
+/**
+ * Validate volume-based quantity per VIOS critical requirements
+ * VIOS requires quantity in VOLUME (e.g., 5ml vial = quantity 5, 10, 15 ml)
+ * NOT in count (e.g., 1, 2, 3 vials)
+ */
+export function validateVolumeQuantity(
+  quantity: number, 
+  productName: string
+): { valid: boolean; warning?: string } {
+  // Flag potential issues for vial products with suspiciously low quantities
+  if (productName?.toLowerCase().includes('vial') && quantity <= 3) {
+    return {
+      valid: true,
+      warning: `Low quantity (${quantity}) for vial product "${productName}" - verify this is in mL, not vial count`
+    };
+  }
+  return { valid: true };
+}
+
+/**
+ * Check if a product requires a clinical difference statement (GLP-1 medications)
+ */
+export function requiresClinicalStatement(productName: string): boolean {
+  const glp1Keywords = [
+    'semaglutide', 'tirzepatide', 'liraglutide', 'dulaglutide',
+    'exenatide', 'glp-1', 'glp1', 'ozempic', 'wegovy', 'mounjaro',
+    'saxenda', 'victoza', 'trulicity', 'byetta', 'bydureon'
+  ];
+  
+  const lowerName = productName?.toLowerCase() || '';
+  return glp1Keywords.some(keyword => lowerName.includes(keyword));
 }

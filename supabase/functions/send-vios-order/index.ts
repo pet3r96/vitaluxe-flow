@@ -15,7 +15,7 @@ interface SendViosOrderRequest {
   is_test_order?: boolean;
 }
 
-// VIOS Shipping Service Codes
+// VIOS Shipping Service Codes (per VIOS documentation)
 const VIOS_SHIPPING_CODES: Record<string, number> = {
   'priority_overnight': 7617,      // FedEx Priority Overnight
   'standard_overnight': 7618,      // FedEx Standard Overnight
@@ -28,42 +28,50 @@ const VIOS_SHIPPING_CODES: Record<string, number> = {
   'standard': 7623,                // Standard = Ground
 };
 
+/**
+ * VIOS Order Payload - Nested structure per OpenAPI spec
+ * Using camelCase per VIOS API documentation
+ */
 interface ViosOrderPayload {
-  IsTestOrder: boolean;
-  ReferenceId: string;
-  lfProductId?: string;
-  DrugName?: string;
-  DrugStrength?: string;
-  DrugForm?: string;
-  Quantity: number;
-  QuantityUnits?: string;
-  Sig: string;
-  ClinicalStatement?: string;
-  Patient: {
-    FirstName: string;
-    LastName: string;
-    DateOfBirth: string;
-    Gender: string;
-    Phone: string;
-    Email?: string;
-    AllergyIds?: number[];
+  general: {
+    isTestOrder: boolean;
+    referenceId: string;
   };
-  Prescriber: {
-    NPI: string;
-    FirstName: string;
-    LastName: string;
-    DEA?: string;
-    Phone: string;
+  prescriber: {
+    npi: string;
+    firstName: string;
+    lastName: string;
+    dea?: string;
+    phone: string;
   };
-  Shipping: {
-    Service: number;
-    AddressLine1: string;
-    AddressLine2?: string;
-    City: string;
-    State: string;
-    Zip: string;
+  patient: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    gender: string;
+    phone: string;
+    email?: string;
+    allergyIds?: number[];
   };
-  PrescriptionPdfUrl?: string;
+  shipping: {
+    service: number;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
+  rxs: Array<{
+    lfProductId?: string;
+    drugName?: string;
+    drugStrength?: string;
+    drugForm?: string;
+    quantity: number;
+    quantityUnits?: string;
+    sig: string;
+    clinicalStatement?: string;
+    prescriptionPdfUrl?: string;
+  }>;
 }
 
 interface ViosOrderResponse {
@@ -79,6 +87,18 @@ interface ViosOrderResponse {
   Message?: string;
   errors?: string[];
   Errors?: string[];
+}
+
+/**
+ * Validate volume-based quantity per VIOS critical requirements
+ */
+function validateVolumeQuantity(quantity: number, productName: string): { warning?: string } {
+  if (productName?.toLowerCase().includes('vial') && quantity <= 3) {
+    return {
+      warning: `Low quantity (${quantity}) for vial product - verify this is in mL, not vial count`
+    };
+  }
+  return {};
 }
 
 /**
@@ -426,52 +446,35 @@ serve(async (req) => {
           parsedAddress.zip = patient.address_zip || '';
         }
         
-        // Build VIOS payload
-        const viosPayload: ViosOrderPayload = {
-          IsTestOrder: is_test_order,
-          ReferenceId: line.id,
-          Quantity: line.quantity || 1,
-          Sig: line.custom_sig || 'Use as directed',
-          Patient: {
-            FirstName: patient.first_name || patientName.firstName,
-            LastName: patient.last_name || patientName.lastName,
-            DateOfBirth: dob,
-            Gender: gender,
-            Phone: line.patient_phone || patient.phone || '',
-            Email: line.patient_email || patient.email,
-            AllergyIds: patientAllergiesMap[line.patient_id] || [],
-          },
-          Prescriber: {
-            NPI: providerProfile.npi || '',
-            FirstName: prescriberName.firstName,
-            LastName: prescriberName.lastName,
-            DEA: providerProfile.dea,
-            Phone: providerProfile.phone || '',
-          },
-          Shipping: {
-            Service: getViosShippingCode(line.shipping_speed),
-            AddressLine1: parsedAddress.addressLine1,
-            AddressLine2: parsedAddress.addressLine2,
-            City: parsedAddress.city,
-            State: parsedAddress.state || line.destination_state || '',
-            Zip: parsedAddress.zip,
-          },
+        // Validate quantity for volume-based products (VIOS critical requirement)
+        const quantityValidation = validateVolumeQuantity(line.quantity || 1, line.products?.name || '');
+        if (quantityValidation.warning) {
+          edgeLogger.warn("Volume quantity warning", { 
+            orderLineId: line.id,
+            warning: quantityValidation.warning
+          });
+        }
+
+        // Build Rx item
+        const rxItem: ViosOrderPayload['rxs'][0] = {
+          quantity: line.quantity || 1,
+          sig: line.custom_sig || 'Use as directed',
         };
 
         // Add product identification (prefer lfProductId for faster processing)
         if (productCode) {
-          viosPayload.lfProductId = productCode;
+          rxItem.lfProductId = productCode;
         } else {
-          // Fall back to drug name/strength/form
-          viosPayload.DrugName = line.products?.name || '';
-          viosPayload.DrugStrength = line.custom_dosage || line.product_variants?.dosage_label || line.products?.dosage || '';
-          viosPayload.DrugForm = line.product_variants?.form || line.products?.form || '';
+          // Fall back to drug name/strength/form (all required without lfProductId)
+          rxItem.drugName = line.products?.name || '';
+          rxItem.drugStrength = line.custom_dosage || line.product_variants?.dosage_label || line.products?.dosage || '';
+          rxItem.drugForm = line.product_variants?.form || line.products?.form || '';
         }
 
-        // Add clinical statement for GLP-1 products
+        // Add clinical statement for GLP-1 products (VIOS requirement)
         const isGlp1 = line.products?.is_glp1 || line.products?.product_types?.is_glp;
         if (isGlp1) {
-          viosPayload.ClinicalStatement = 
+          rxItem.clinicalStatement = 
             line.products?.glp1_clinical_statement || 
             line.products?.product_types?.glp_clinical_statement ||
             'This compounded medication is being prescribed as a clinically different formulation from available FDA-approved products.';
@@ -479,14 +482,49 @@ serve(async (req) => {
 
         // Add prescription URL if available
         if (line.prescription_url) {
-          viosPayload.PrescriptionPdfUrl = line.prescription_url;
+          rxItem.prescriptionPdfUrl = line.prescription_url;
         }
+
+        // Build VIOS payload with nested structure per OpenAPI spec
+        const viosPayload: ViosOrderPayload = {
+          general: {
+            isTestOrder: is_test_order,
+            referenceId: line.id,
+          },
+          prescriber: {
+            npi: providerProfile.npi || '',
+            firstName: prescriberName.firstName,
+            lastName: prescriberName.lastName,
+            dea: providerProfile.dea,
+            phone: providerProfile.phone || '',
+          },
+          patient: {
+            firstName: patient.first_name || patientName.firstName,
+            lastName: patient.last_name || patientName.lastName,
+            dateOfBirth: dob,
+            gender: gender,
+            phone: line.patient_phone || patient.phone || '',
+            email: line.patient_email || patient.email,
+            allergyIds: patientAllergiesMap[line.patient_id] || [],
+          },
+          shipping: {
+            service: getViosShippingCode(line.shipping_speed),
+            addressLine1: parsedAddress.addressLine1,
+            addressLine2: parsedAddress.addressLine2,
+            city: parsedAddress.city,
+            state: parsedAddress.state || line.destination_state || '',
+            zip: parsedAddress.zip,
+          },
+          rxs: [rxItem],
+        };
+
+        const hasLfProductId = !!rxItem.lfProductId;
 
         edgeLogger.info("Submitting order to VIOS", { 
           orderLineId: line.id,
           productCode,
           isTestOrder: is_test_order,
-          hasLfProductId: !!viosPayload.lfProductId
+          hasLfProductId
         });
 
         // Submit to VIOS API
@@ -526,7 +564,7 @@ serve(async (req) => {
               vios_fill_id: viosFillId,
               submitted_at: new Date().toISOString(),
               is_test_order: is_test_order,
-              used_lf_product_id: !!viosPayload.lfProductId,
+              used_lf_product_id: hasLfProductId,
             },
             status: 'processing',
             processing_at: new Date().toISOString(),
