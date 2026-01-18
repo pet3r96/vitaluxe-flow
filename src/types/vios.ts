@@ -257,10 +257,45 @@ export interface ViosOrderMetadata {
   used_lf_product_id: boolean;
 }
 
-// ============= Webhook Payload (per VIOS documentation) =============
-// Note: VIOS sends webhooks per prescription (rx), not per order
-// Payload is always an array with exactly one item per prescription
-
+// ============= Webhook Payload (per VIOS Integration Portal) =============
+/**
+ * VIOS Webhook Payload
+ * 
+ * IMPORTANT: Webhooks are sent per prescription (rx), not per order.
+ * Each webhook contains an array with exactly one item.
+ * If an order contains multiple prescriptions and they both get shipped,
+ * you will receive SEPARATE webhook notifications for each prescription.
+ * 
+ * Example payload from VIOS documentation:
+ * [
+ *   {
+ *     "pharmacyLocation": "vioscompounding",
+ *     "fillId": "100482",
+ *     "rxNumber": "66692847",
+ *     "foreignRxNumber": "rx_m8XvL9NdWpR2eTfk",
+ *     "orderId": "7771349652",
+ *     "referenceId": "rx_n5QwP7BkJmX4rYuL",
+ *     "practiceId": "11157",
+ *     "providerId": "208591473",
+ *     "patientId": "208742695",
+ *     "lfdrugId": "305896241",
+ *     "rxStatus": "Shipping",
+ *     "rxStatusDateTime": "2025-12-12T15:42:33",
+ *     "deliveryService": "UPS Ground",
+ *     "service": "Ground",
+ *     "trackingNumber": "1Z999AA1234567890",
+ *     "shipAddressLine1": "123 Main Street",
+ *     "shipAddressLine2": "Suite 200",
+ *     "shipAddressLine3": null,
+ *     "shipCity": "Austin",
+ *     "shipState": "TX",
+ *     "shipZip": "78701",
+ *     "shipCountry": "US",
+ *     "shipCarrier": "UPS",
+ *     "drugName": "Semaglutide/Methylcobalamin/Glycine (1ml)"
+ *   }
+ * ]
+ */
 export interface ViosWebhookPayload {
   pharmacyLocation?: string;        // "vioscompounding"
   fillId?: string;                  // "100482"
@@ -268,18 +303,18 @@ export interface ViosWebhookPayload {
   foreignRxNumber?: string;         // Our rx reference (from foreignRxNumber in order)
   orderId: string;                  // VIOS order ID "7771349652"
   referenceId: string;              // Our order_line.id (from referenceId in order)
-  practiceId?: string;
-  providerId?: string;
-  patientId?: string;
-  lfdrugId?: string;
+  practiceId?: string;              // "11157"
+  providerId?: string;              // "208591473"
+  patientId?: string;               // "208742695"
+  lfdrugId?: string;                // "305896241"
   rxStatus: string;                 // "Shipping", "Delivered", etc.
   rxStatusDateTime: string;         // "2025-12-12T15:42:33"
-  deliveryService?: string;         // "UPS Ground"
-  service?: string;                 // "Ground"
+  deliveryService?: string;         // "UPS Ground" - full delivery service name
+  service?: string;                 // "Ground" - service type only
   trackingNumber?: string;          // "1Z999AA1234567890"
-  shipAddressLine1?: string;
-  shipAddressLine2?: string;
-  shipAddressLine3?: string;
+  shipAddressLine1?: string;        // "123 Main Street"
+  shipAddressLine2?: string;        // "Suite 200"
+  shipAddressLine3?: string | null; // Can be null
   shipCity?: string;                // "Austin"
   shipState?: string;               // "TX"
   shipZip?: string;                 // "78701"

@@ -15,6 +15,8 @@ interface SimulateRequest {
   carrier?: string;
   rxNumber?: string;
   orderId?: number;
+  foreignRxNumber?: string;
+  drugName?: string;
 }
 
 serve(async (req) => {
@@ -72,7 +74,7 @@ serve(async (req) => {
 
     // Get request body
     const body: SimulateRequest = await req.json();
-    const { referenceId, rxStatus, trackingNumber, carrier, rxNumber, orderId } = body;
+    const { referenceId, rxStatus, trackingNumber, carrier, rxNumber, orderId, foreignRxNumber, drugName } = body;
 
     if (!rxStatus) {
       return new Response(
@@ -96,18 +98,49 @@ serve(async (req) => {
     }
 
     // Build VIOS-format payload (single item array as VIOS sends)
+    // Per VIOS docs: Webhooks are sent per prescription (rx), not per order.
+    // Each webhook contains an array with exactly one item.
+    const generatedOrderId = orderId || Math.floor(Math.random() * 1000000);
+    const generatedRxNumber = rxNumber || `TEST-RX-${Date.now()}`;
+    const generatedFillId = String(Math.floor(Math.random() * 100000));
+    const isShippingOrDelivered = rxStatus === "Shipping" || rxStatus === "Delivered";
+    
     const viosPayload = [
       {
+        // Required identifiers
+        pharmacyLocation: "vioscompounding",
+        fillId: generatedFillId,
+        rxNumber: generatedRxNumber,
+        foreignRxNumber: foreignRxNumber || `frx-${Date.now()}`,
+        orderId: String(generatedOrderId),
         referenceId: referenceId || `TEST-${Date.now()}`,
-        orderId: orderId || Math.floor(Math.random() * 1000000),
-        rxNumber: rxNumber || `TEST-RX-${Date.now()}`,
+        
+        // Practice/Provider/Patient IDs (from VIOS system)
+        practiceId: "11157",
+        providerId: "208591473",
+        patientId: "208742695",
+        lfdrugId: "305896241",
+        
+        // Status info
         rxStatus: rxStatus,
-        rxStatusDateTime: new Date().toISOString(),
-        trackingNumber: trackingNumber || (rxStatus === "Shipping" ? `TEST-TRACK-${Date.now()}` : undefined),
-        shipCarrier: carrier || (rxStatus === "Shipping" ? "UPS" : undefined),
-        shipCity: rxStatus === "Shipping" || rxStatus === "Delivered" ? "Test City" : undefined,
-        shipState: rxStatus === "Shipping" || rxStatus === "Delivered" ? "CA" : undefined,
-        fillId: Math.floor(Math.random() * 100000),
+        rxStatusDateTime: new Date().toISOString().replace('Z', ''),
+        
+        // Shipping info (populated when available)
+        deliveryService: isShippingOrDelivered ? `${carrier || "UPS"} Ground` : undefined,
+        service: isShippingOrDelivered ? "Ground" : undefined,
+        trackingNumber: trackingNumber || (rxStatus === "Shipping" ? `1Z999AA${Date.now()}` : undefined),
+        shipAddressLine1: isShippingOrDelivered ? "123 Main Street" : undefined,
+        shipAddressLine2: isShippingOrDelivered ? "Suite 200" : undefined,
+        shipAddressLine3: null,
+        shipCity: isShippingOrDelivered ? "Austin" : undefined,
+        shipState: isShippingOrDelivered ? "TX" : undefined,
+        shipZip: isShippingOrDelivered ? "78701" : undefined,
+        shipCountry: isShippingOrDelivered ? "US" : undefined,
+        shipCarrier: carrier || (isShippingOrDelivered ? "UPS" : undefined),
+        
+        // Drug info
+        drugName: drugName || "Semaglutide/Methylcobalamin/Glycine (1ml)",
+        
         // Mark as simulated for debugging
         _simulated: true,
         _simulatedAt: new Date().toISOString(),
