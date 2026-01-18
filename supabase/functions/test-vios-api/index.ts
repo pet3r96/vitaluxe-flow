@@ -70,9 +70,12 @@ serve(async (req) => {
       );
     }
 
-    // Get VIOS credentials
-    const viosClientId = Deno.env.get("VIOS_CLIENT_ID");
-    const viosClientSecret = Deno.env.get("VIOS_CLIENT_SECRET");
+    // Get VIOS credentials (trim to remove any whitespace/encoding issues)
+    const viosClientId = Deno.env.get("VIOS_CLIENT_ID")?.trim();
+    const viosClientSecret = Deno.env.get("VIOS_CLIENT_SECRET")?.trim();
+    
+    console.log("[VIOS Test] ClientId configured:", !!viosClientId, "length:", viosClientId?.length);
+    console.log("[VIOS Test] ClientSecret configured:", !!viosClientSecret, "length:", viosClientSecret?.length);
 
     if (!viosClientId || !viosClientSecret) {
       return new Response(
@@ -99,6 +102,7 @@ serve(async (req) => {
     const tokenStart = Date.now();
     try {
       console.log("[VIOS Test] Testing token endpoint...");
+      console.log("[VIOS Test] Request URL:", `${VIOS_API_URL}/api/auth/token`);
       
       const tokenResponse = await fetch(`${VIOS_API_URL}/api/auth/token`, {
         method: "POST",
