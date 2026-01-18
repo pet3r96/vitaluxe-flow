@@ -2,8 +2,13 @@
  * VIOS Webhook Payload Transformer
  * Converts VIOS prescription webhook payloads to our standard format
  * 
- * VIOS sends webhooks per prescription (rx), not per order.
- * Each webhook contains an array with exactly one item representing a single prescription's status update.
+ * KEY POINTS (per VIOS Integration Portal):
+ * - Webhooks are sent per prescription (rx), NOT per order
+ * - Each webhook contains an array with exactly one item
+ * - If an order contains multiple prescriptions and they both get shipped,
+ *   you will receive SEPARATE webhook notifications for each prescription
+ * - Shipping and tracking information will be populated when available
+ * - Always an array format, even for single prescriptions
  * 
  * Reference: VIOS Integration Portal documentation
  */
