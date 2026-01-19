@@ -116,9 +116,23 @@ serve(async (req) => {
 
     console.log('[test-vios-order-submit] Admin verified, creating test order payload');
 
-    // Parse request body to get optional vios_practice_id
+    // Parse request body to get prescriber NPI (used as practice ID in VIOS)
     const body = await req.json().catch(() => ({}));
-    const viosPracticeId = body.vios_practice_id;
+    const prescriberNpi = body.prescriber_npi || "1033620489"; // Default to Demo Practice NPI
+
+    // Validate NPI format (10 digits)
+    const npiDigits = prescriberNpi.replace(/\D/g, '');
+    if (npiDigits.length !== 10) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid NPI format', 
+          message: 'Prescriber NPI must be exactly 10 digits' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[test-vios-order-submit] Using prescriber NPI as practiceId:', prescriberNpi);
 
     // Build a complete test order payload per VIOS OpenAPI spec
     const testReferenceId = `TEST-${Date.now()}`;
@@ -127,11 +141,11 @@ serve(async (req) => {
       general: {
         isTestOrder: true,
         referenceId: testReferenceId,
-        practiceId: viosPracticeId || undefined,
+        practiceId: prescriberNpi,  // Use NPI as Practice ID per VIOS requirement
         memo: "VitaLuxe integration test order - DO NOT PROCESS"
       },
       prescriber: {
-        npi: "1234567890",           // Valid format 10-digit NPI
+        npi: prescriberNpi,          // Same NPI used for prescriber
         firstName: "Test",
         lastName: "Prescriber",
         phone: "(555) 555-1234"      // Required format per VIOS
@@ -219,9 +233,7 @@ serve(async (req) => {
           allergies: "✅ Array of integers"
         },
         isTestOrder: "✅ Set to true",
-        practiceId: viosPracticeId 
-          ? `✅ Included (${viosPracticeId})` 
-          : "⚠️ Not provided - may be required by VIOS"
+        practiceId: `✅ Using prescriber NPI (${prescriberNpi})`
       }
     };
 
