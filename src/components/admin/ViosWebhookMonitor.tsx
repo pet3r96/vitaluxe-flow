@@ -57,7 +57,7 @@ export function ViosWebhookMonitor() {
   const [isSubmittingTestOrder, setIsSubmittingTestOrder] = useState(false);
   const [testOrderResult, setTestOrderResult] = useState<TestOrderResult | null>(null);
   const [showPayloadDetails, setShowPayloadDetails] = useState(false);
-  const [testViosPracticeId, setTestViosPracticeId] = useState("");
+  const [testPrescriberNpi, setTestPrescriberNpi] = useState("");
   
   // Webhook simulator form state
   const [simRxStatus, setSimRxStatus] = useState("Shipping");
@@ -251,7 +251,7 @@ export function ViosWebhookMonitor() {
     
     try {
       const { data, error } = await supabase.functions.invoke("test-vios-order-submit", {
-        body: { vios_practice_id: testViosPracticeId || undefined },
+        body: { prescriber_npi: testPrescriberNpi || undefined },
       });
       
       if (error) {
@@ -480,16 +480,17 @@ export function ViosWebhookMonitor() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="testViosPracticeId">VIOS Practice ID</Label>
+                <Label htmlFor="testPrescriberNpi">Prescriber NPI</Label>
                 <Input
-                  id="testViosPracticeId"
-                  placeholder="Enter your VIOS Practice ID"
-                  value={testViosPracticeId}
-                  onChange={(e) => setTestViosPracticeId(e.target.value)}
+                  id="testPrescriberNpi"
+                  placeholder="Enter prescriber NPI (10 digits)"
+                  value={testPrescriberNpi}
+                  onChange={(e) => setTestPrescriberNpi(e.target.value)}
                   className="max-w-sm"
+                  maxLength={10}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Your practice's ID in the VIOS system (provided during onboarding). Required for API order submissions.
+                  The prescriber's NPI is used as the Practice ID for VIOS orders. Leave blank to use default test NPI.
                 </p>
               </div>
 

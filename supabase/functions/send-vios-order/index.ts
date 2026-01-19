@@ -548,7 +548,7 @@ serve(async (req) => {
           general: {
             isTestOrder: is_test_order,
             referenceId: line.id,  // Our order_line.id for webhook matching
-            practiceId: order.profiles?.vios_practice_id || undefined,  // VIOS Practice ID
+            practiceId: providerProfile.npi || undefined,  // Use prescriber NPI as Practice ID
           },
           prescriber: {
             npi: providerProfile.npi || '',
