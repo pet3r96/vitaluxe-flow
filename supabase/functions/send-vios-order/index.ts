@@ -64,6 +64,11 @@ interface ViosOrderPayload {
     email?: string;
     allergies?: number[];
     allergiesRaw?: string[];
+    // Controlled substance patient ID fields
+    driverLicenseNumber?: string;
+    driverLicenseState?: string;
+    stateIssuedId?: string;
+    socialSecurityNumber?: string;
   };
   shipping: {
     service: number;
@@ -246,6 +251,77 @@ function requiresClinicalStatement(productName: string): boolean {
   return glp1Keywords.some(keyword => lowerName.includes(keyword));
 }
 
+/**
+ * Check if product is a controlled substance based on DEA schedule code
+ * Per VIOS: Schedules 2-5 are controlled substances requiring PDF prescription & patient ID
+ */
+function isControlledSubstance(scheduleCode: string | null | undefined): boolean {
+  return ['2', '3', '4', '5'].includes(scheduleCode || '');
+}
+
+/**
+ * Fetch and convert prescription PDF to base64 for VIOS submission
+ */
+async function fetchPrescriptionBase64(
+  supabaseAdmin: any,
+  prescriptionUrl: string | null,
+  orderLineId: string
+): Promise<string | null> {
+  if (!prescriptionUrl) return null;
+  
+  try {
+    // Handle full URLs vs storage paths
+    let storagePath = prescriptionUrl;
+    if (prescriptionUrl.startsWith('http')) {
+      // Extract path from full URL
+      const match = prescriptionUrl.match(/\/storage\/v1\/object\/public\/(.+)/);
+      if (match) {
+        storagePath = match[1];
+      } else {
+        edgeLogger.warn("Could not extract storage path from URL", { 
+          orderLineId, 
+          prescriptionUrl 
+        });
+        return null;
+      }
+    }
+    
+    // Parse bucket and path
+    const parts = storagePath.split('/');
+    const bucket = parts[0] || 'prescriptions';
+    const filePath = parts.slice(1).join('/');
+    
+    const { data: pdfData, error: pdfError } = await supabaseAdmin.storage
+      .from(bucket)
+      .download(filePath);
+    
+    if (pdfError || !pdfData) {
+      edgeLogger.warn("Failed to download prescription PDF", { 
+        orderLineId, 
+        bucket,
+        filePath,
+        error: pdfError?.message 
+      });
+      return null;
+    }
+    
+    // Convert to base64
+    const arrayBuffer = await pdfData.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  } catch (err) {
+    edgeLogger.warn("Error processing prescription PDF", { 
+      orderLineId,
+      error: err instanceof Error ? err.message : String(err)
+    });
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -303,7 +379,7 @@ serve(async (req) => {
       throw new Error(`Order not found: ${orderError?.message}`);
     }
 
-    // Fetch order lines with all related data
+    // Fetch order lines with all related data including controlled substance fields
     const { data: orderLines, error: linesError } = await supabaseAdmin
       .from("order_lines")
       .select(`
@@ -316,6 +392,7 @@ serve(async (req) => {
           glp1_clinical_statement,
           dosage,
           form,
+          schedule_code,
           product_types(
             id,
             name,
@@ -355,7 +432,11 @@ serve(async (req) => {
           address_city,
           address_state,
           address_zip,
-          address_formatted
+          address_formatted,
+          driver_license_number,
+          driver_license_state,
+          state_issued_id,
+          social_security_number
         )
       `)
       .in("id", order_line_ids);
@@ -511,11 +592,14 @@ serve(async (req) => {
         // Convert to number for lfProductId (integer per OpenAPI spec)
         const productCode = productCodeRaw ? parseInt(String(productCodeRaw), 10) : null;
 
-        // Validate product code if catalog is populated
+        // Get schedule code from product or catalog
+        let scheduleCode = line.products?.schedule_code || null;
+
+        // Validate product code and get catalog data
         if (productCode && !isNaN(productCode)) {
           const { data: catalogEntry } = await supabaseAdmin
             .from("vios_product_catalog")
-            .select("med_id, product_name")
+            .select("med_id, product_name, schedule")
             .eq("med_id", String(productCode))
             .single();
           
@@ -524,14 +608,97 @@ serve(async (req) => {
               productCode, 
               productName: line.products?.name 
             });
+          } else {
+            // Use schedule from catalog if not set on product
+            if (!scheduleCode && catalogEntry.schedule) {
+              scheduleCode = catalogEntry.schedule;
+            }
+          }
+        }
+
+        // ============= Controlled Substance Validation =============
+        const isControlled = isControlledSubstance(scheduleCode);
+        const patient = line.patient_accounts || {} as any;
+        let pdfBase64: string | null = null;
+
+        if (isControlled) {
+          edgeLogger.info("Processing controlled substance order", {
+            orderLineId: line.id,
+            scheduleCode,
+            productName: line.products?.name
+          });
+
+          // Fetch and attach prescription PDF (REQUIRED for controlled substances)
+          pdfBase64 = await fetchPrescriptionBase64(
+            supabaseAdmin, 
+            line.prescription_url, 
+            line.id
+          );
+
+          if (!pdfBase64) {
+            edgeLogger.error("PDF prescription required for controlled substance", {
+              orderLineId: line.id,
+              productName: line.products?.name,
+              scheduleCode
+            });
+            
+            await supabaseAdmin
+              .from("order_lines")
+              .update({
+                status: 'pharmacy_routing_error',
+                pharmacy_order_metadata: {
+                  error: 'PDF prescription required for controlled substance',
+                  schedule_code: scheduleCode,
+                  skipped_at: new Date().toISOString()
+                }
+              })
+              .eq("id", line.id);
+            
+            results.push({
+              orderLineId: line.id,
+              success: false,
+              error: `PDF prescription required for controlled substance (Schedule ${scheduleCode})`
+            });
+            continue;
+          }
+
+          // Validate patient has required ID for controlled substances
+          const hasPatientId = patient.driver_license_number || 
+                              patient.state_issued_id || 
+                              patient.social_security_number;
+          
+          if (!hasPatientId) {
+            edgeLogger.error("Patient identification required for controlled substance", {
+              orderLineId: line.id,
+              patientId: line.patient_id,
+              scheduleCode
+            });
+            
+            await supabaseAdmin
+              .from("order_lines")
+              .update({
+                status: 'pharmacy_routing_error',
+                pharmacy_order_metadata: {
+                  error: 'Patient identification (DL, State ID, or SSN) required for controlled substance',
+                  schedule_code: scheduleCode,
+                  skipped_at: new Date().toISOString()
+                }
+              })
+              .eq("id", line.id);
+            
+            results.push({
+              orderLineId: line.id,
+              success: false,
+              error: `Patient ID required for controlled substance (Schedule ${scheduleCode})`
+            });
+            continue;
           }
         }
 
         // Parse patient name
         const patientName = parsePatientName(line.patient_name || '');
         
-        // Get patient data from patient_accounts or line directly
-        const patient = line.patient_accounts || {} as any;
+        // Get patient DOB and gender
         const dob = formatDateOfBirth(patient.date_of_birth || patient.birth_date || null);
         const genderRaw = (line.gender_at_birth || patient.gender_at_birth || 'u').toLowerCase().charAt(0);
         const gender = ['m', 'f', 'a', 'u'].includes(genderRaw) ? genderRaw as 'm' | 'f' | 'a' | 'u' : 'u';
@@ -581,6 +748,11 @@ serve(async (req) => {
           rxItem.drugName = line.products?.name || '';
           rxItem.drugStrength = line.custom_dosage || line.product_variants?.dosage_label || line.products?.dosage || '';
           rxItem.drugForm = line.product_variants?.form || line.products?.form || '';
+        }
+
+        // Add schedule code for controlled substances
+        if (scheduleCode) {
+          rxItem.scheduleCode = scheduleCode as '2' | '3' | '4' | '5' | 'L' | 'O';
         }
 
         // Add clinical difference statement for GLP-1 products (VIOS requirement)
@@ -633,7 +805,43 @@ serve(async (req) => {
           rxs: [rxItem],
         };
 
+        // Add PDF prescription for controlled substances
+        if (pdfBase64) {
+          viosPayload.document = { pdfBase64 };
+        }
+
+        // Add patient identification for controlled substances
+        if (isControlled) {
+          if (patient.driver_license_number) {
+            viosPayload.patient.driverLicenseNumber = patient.driver_license_number;
+            viosPayload.patient.driverLicenseState = patient.driver_license_state || '';
+          }
+          if (patient.state_issued_id) {
+            viosPayload.patient.stateIssuedId = patient.state_issued_id;
+          }
+          if (patient.social_security_number) {
+            viosPayload.patient.socialSecurityNumber = patient.social_security_number;
+          }
+        }
+
         const hasLfProductId = !!rxItem.lfProductId;
+        const hasPdfAttached = !!pdfBase64;
+        const hasPatientId = !!(viosPayload.patient.driverLicenseNumber || 
+                               viosPayload.patient.stateIssuedId ||
+                               viosPayload.patient.socialSecurityNumber);
+
+        // Pre-submission validation summary
+        edgeLogger.info("Pre-submission validation", {
+          orderLineId: line.id,
+          hasLfProductId,
+          hasPdfPrescription: hasPdfAttached,
+          isControlledSubstance: isControlled,
+          scheduleCode,
+          hasPatientId,
+          isGlp1,
+          hasGlp1Statement: !!rxItem.clinicalDifferenceStatement,
+          quantityIsVolumeBased: !quantityValidation.warning
+        });
 
         edgeLogger.info("Submitting order to VIOS", { 
           orderLineId: line.id,
@@ -641,7 +849,9 @@ serve(async (req) => {
           isTestOrder: is_test_order,
           hasLfProductId,
           rxType: rxItem.rxType,
-          hasGlp1Statement: !!rxItem.clinicalDifferenceStatement
+          hasGlp1Statement: !!rxItem.clinicalDifferenceStatement,
+          isControlled,
+          hasPdfAttached
         });
 
         // Submit to VIOS API

@@ -2341,6 +2341,8 @@ export type Database = {
           city: string | null
           created_at: string
           date_of_birth: string | null
+          driver_license_number: string | null
+          driver_license_state: string | null
           email: string
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -2359,6 +2361,7 @@ export type Database = {
           primary_provider_id: string | null
           provider_id: string | null
           state: string | null
+          state_issued_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -2379,6 +2382,8 @@ export type Database = {
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
+          driver_license_number?: string | null
+          driver_license_state?: string | null
           email?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -2397,6 +2402,7 @@ export type Database = {
           primary_provider_id?: string | null
           provider_id?: string | null
           state?: string | null
+          state_issued_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -2417,6 +2423,8 @@ export type Database = {
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
+          driver_license_number?: string | null
+          driver_license_state?: string | null
           email?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -2435,6 +2443,7 @@ export type Database = {
           primary_provider_id?: string | null
           provider_id?: string | null
           state?: string | null
+          state_issued_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -5405,6 +5414,7 @@ export type Database = {
           product_type_id: string
           requires_prescription: boolean
           retail_price: number | null
+          schedule_code: string | null
           sig: string | null
           topline_price: number | null
           updated_at: string | null
@@ -5427,6 +5437,7 @@ export type Database = {
           product_type_id: string
           requires_prescription?: boolean
           retail_price?: number | null
+          schedule_code?: string | null
           sig?: string | null
           topline_price?: number | null
           updated_at?: string | null
@@ -5449,6 +5460,7 @@ export type Database = {
           product_type_id?: string
           requires_prescription?: boolean
           retail_price?: number | null
+          schedule_code?: string | null
           sig?: string | null
           topline_price?: number | null
           updated_at?: string | null
