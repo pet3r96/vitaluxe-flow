@@ -437,6 +437,31 @@ serve(async (req) => {
       }
     }
 
+    // ============= Product-Pharmacy Assignment Validation =============
+    // Only send orders for products explicitly assigned to this pharmacy
+    const productIds = [...new Set(unsentLines.map(l => l.product_id).filter(Boolean))];
+
+    const { data: validProductPharmacies, error: ppError } = await supabaseAdmin
+      .from("product_pharmacies")
+      .select("product_id")
+      .eq("pharmacy_id", pharmacy_id)
+      .in("product_id", productIds);
+
+    if (ppError) {
+      edgeLogger.error("Failed to validate product-pharmacy assignments", { error: ppError });
+    }
+
+    const enabledProductIds = new Set(
+      validProductPharmacies?.map(pp => pp.product_id) || []
+    );
+
+    edgeLogger.info("Product-pharmacy validation complete", {
+      pharmacyId: pharmacy_id,
+      totalProducts: productIds.length,
+      enabledProducts: enabledProductIds.size,
+      disabledProducts: productIds.length - enabledProductIds.size
+    });
+
     // Process each order line
     const results: Array<{
       orderLineId: string;
@@ -448,6 +473,36 @@ serve(async (req) => {
 
     for (const line of unsentLines) {
       try {
+        // VALIDATION: Check if product is assigned to this VIOS pharmacy
+        if (!line.product_id || !enabledProductIds.has(line.product_id)) {
+          edgeLogger.warn("Product not assigned to VIOS pharmacy - skipping", {
+            orderLineId: line.id,
+            productId: line.product_id,
+            productName: line.products?.name,
+            pharmacyId: pharmacy_id
+          });
+          
+          // Update order line status to indicate routing error
+          await supabaseAdmin
+            .from("order_lines")
+            .update({
+              status: 'pharmacy_routing_error',
+              pharmacy_order_metadata: {
+                error: 'Product not assigned to this pharmacy',
+                pharmacy_id: pharmacy_id,
+                skipped_at: new Date().toISOString()
+              }
+            })
+            .eq("id", line.id);
+          
+          results.push({
+            orderLineId: line.id,
+            success: false,
+            error: `Product "${line.products?.name}" is not assigned to VIOS pharmacy`
+          });
+          continue; // Skip to next order line
+        }
+
         // Get product code - prefer variant, then product-level
         const productCodeRaw = line.product_variants?.product_code || 
                            line.products?.vios_lf_product_id || 
