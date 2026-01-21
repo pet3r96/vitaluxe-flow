@@ -508,22 +508,6 @@ export function ViosWebhookMonitor() {
                   VIOS should recognize this as a test and not process it as a real order.
                 </p>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="testPrescriberNpi">Prescriber NPI</Label>
-                <Input
-                  id="testPrescriberNpi"
-                  placeholder="Enter prescriber NPI (10 digits)"
-                  value={testPrescriberNpi}
-                  onChange={(e) => setTestPrescriberNpi(e.target.value)}
-                  className="max-w-sm"
-                  maxLength={10}
-                />
-                <p className="text-xs text-muted-foreground">
-                  The prescriber NPI is validated against VIOS requirements. Practice is determined by API credentials. Leave blank to use default test NPI.
-                </p>
-              </div>
-
               <Button
                 onClick={submitTestOrder} 
                 disabled={isSubmittingTestOrder}
