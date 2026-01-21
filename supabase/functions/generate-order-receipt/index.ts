@@ -258,26 +258,65 @@ serve(async (req) => {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    // VitalLuxe logo and header
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.text('VitalLuxe', pageWidth / 2, 30, { align: 'center' });
+    // Fetch logo from storage and embed in PDF header
+    let logoBase64: string | null = null;
+    try {
+      const { data: logoData, error: logoError } = await adminClient.storage
+        .from('branding-assets')
+        .download('vitaluxe-logo-light-bg.png');
+      
+      if (logoData && !logoError) {
+        const arrayBuffer = await logoData.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        logoBase64 = btoa(binary);
+        edgeLogger.info('Logo loaded successfully for receipt');
+      } else if (logoError) {
+        edgeLogger.warn('Failed to load logo from storage', { error: logoError.message });
+      }
+    } catch (logoErr) {
+      edgeLogger.warn('Error fetching logo for receipt', { error: String(logoErr) });
+    }
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Premium Healthcare Solutions', pageWidth / 2, 38, { align: 'center' });
+    // Header with logo or fallback to text
+    if (logoBase64) {
+      // Add logo centered at top - logo is square, scale to fit nicely
+      const logoWidth = 45;
+      const logoHeight = 45;
+      doc.addImage(
+        `data:image/png;base64,${logoBase64}`,
+        'PNG',
+        pageWidth / 2 - logoWidth / 2,  // Center horizontally
+        8,                               // Y position from top
+        logoWidth,
+        logoHeight
+      );
+    } else {
+      // Fallback to text if logo fails to load
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('VitalLuxe', pageWidth / 2, 30, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Premium Healthcare Solutions', pageWidth / 2, 38, { align: 'center' });
+    }
 
-    // Divider line
+    // Divider line - position adjusted based on whether logo was used
+    const dividerY = logoBase64 ? 58 : 45;
     doc.setDrawColor(200, 200, 200);
-    doc.line(20, 45, pageWidth - 20, 45);
+    doc.line(20, dividerY, pageWidth - 20, dividerY);
 
     // Invoice title
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('RECEIPT', pageWidth / 2, 58, { align: 'center' });
+    doc.text('RECEIPT', pageWidth / 2, dividerY + 13, { align: 'center' });
 
-    // Order metadata
-    let yPos = 72;
+    // Order metadata - position adjusted based on header height
+    let yPos = logoBase64 ? 85 : 72;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
 
@@ -476,7 +515,7 @@ serve(async (req) => {
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(100, 100, 100);
     doc.text('Thank you for your business!', pageWidth / 2, footerY, { align: 'center' });
-    doc.text('VitalLuxe - Premium Healthcare Solutions', pageWidth / 2, footerY + 4, { align: 'center' });
+    doc.text('Vitaluxe Services LLC', pageWidth / 2, footerY + 4, { align: 'center' });
 
     // Generate PDF buffer
     const pdfBuffer = doc.output('arraybuffer');
