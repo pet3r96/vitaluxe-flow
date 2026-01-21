@@ -391,7 +391,7 @@ serve(async (req) => {
           is_glp1,
           glp1_clinical_statement,
           dosage,
-          form,
+          dosage_form,
           schedule_code,
           product_types(
             id,
@@ -747,7 +747,7 @@ serve(async (req) => {
           // Fall back to drug name/strength/form (all required without lfProductId)
           rxItem.drugName = line.products?.name || '';
           rxItem.drugStrength = line.custom_dosage || line.product_variants?.dosage_label || line.products?.dosage || '';
-          rxItem.drugForm = line.product_variants?.form || line.products?.form || '';
+          rxItem.drugForm = line.products?.dosage_form || '';
         }
 
         // Add schedule code for controlled substances
