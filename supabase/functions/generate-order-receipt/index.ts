@@ -263,7 +263,7 @@ serve(async (req) => {
     try {
       const { data: logoData, error: logoError } = await adminClient.storage
         .from('branding-assets')
-        .download('vitaluxe-logo-light-bg.png');
+        .download('vitaluxe-logo-dark-bg.png');
       
       if (logoData && !logoError) {
         const arrayBuffer = await logoData.arrayBuffer();
