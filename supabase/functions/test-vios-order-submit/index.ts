@@ -8,9 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// VIOS pharmacy record used to pull configured test NPI
-const VIOS_PHARMACY_ID = "d5e75179-e66c-450f-8cae-1f4df93b097c";
-
 /**
  * Test VIOS Order Submission
  * 
@@ -26,7 +23,6 @@ interface ViosOrderPayload {
     memo?: string;
     referenceId?: string;
     isTestOrder?: boolean;
-    practiceId?: string;  // VIOS Practice ID (10-digit NPI per VIOS requirements)
   };
   prescriber: {
     npi: string;
@@ -119,69 +115,49 @@ serve(async (req) => {
 
     console.log('[test-vios-order-submit] Admin verified, creating test order payload');
 
-    // Build a complete test order payload per VIOS OpenAPI spec
-    // NOTE: VIOS requires practiceId to be a 10-digit NPI that is authorized for the API credentials.
-    // Allow callers to override the test NPI without persisting any "test prescriber" setting.
-    const body = await req.json().catch(() => ({}));
-    const prescriberNpi = (body?.prescriber_npi || "1234567890").toString();
-
-    // Validate NPI format (10 digits)
-    const npiDigits = prescriberNpi.replace(/\D/g, '');
-    if (npiDigits.length !== 10) {
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid NPI format',
-          message: 'prescriber_npi must be exactly 10 digits'
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const testReferenceId = `TEST-${Date.now()}`;
-    
-    console.log('[test-vios-order-submit] Creating test order payload');
 
+    // Build test order payload per VIOS OpenAPI spec
+    // NOTE: No practiceId - VIOS determines practice from API credentials
     const testPayload: ViosOrderPayload = {
       general: {
         isTestOrder: true,
         referenceId: testReferenceId,
-        // VIOS requires practiceId and it must be a 10-digit NPI (practice/prescriber NPI)
-        practiceId: prescriberNpi,
         memo: "VitaLuxe integration test order - DO NOT PROCESS"
       },
       prescriber: {
-        npi: prescriberNpi,          // Same NPI used for prescriber
+        npi: "1234567890",
         firstName: "Test",
         lastName: "Prescriber",
-        phone: "(555) 555-1234"      // Required format per VIOS
+        phone: "(555) 555-1234"
       },
       patient: {
         firstName: "Test",
         lastName: "Patient",
-        dateOfBirth: "1990-01-15",   // YYYY-MM-DD format required
+        dateOfBirth: "1990-01-15",
         gender: "m",
-        phoneHome: "(555) 555-5678", // Format: (XXX) XXX-XXXX
+        phoneHome: "(555) 555-5678",
         email: "testpatient@vitaluxe-test.com",
         address1: "123 Test Street",
         city: "Boca Raton",
         state: "FL",
         zip: "33446",
-        allergies: []                // Empty array = no known allergies
+        allergies: []
       },
       shipping: {
-        service: 7623,               // FedEx Ground per VIOS codes
+        service: 7623,
         addressLine1: "123 Test Street",
         city: "Boca Raton",
         state: "FL",
-        zipCode: "33446",            // NOTE: zipCode not zip!
+        zipCode: "33446",
         recipientType: "patient",
         recipientFirstName: "Test",
         recipientLastName: "Patient",
         recipientPhone: "(555) 555-5678"
       },
       rxs: [{
-        rxType: "new",               // Required per spec
-        quantity: "10",              // STRING - volume in mL
+        rxType: "new",
+        quantity: "10",
         directions: "Inject 0.5mL subcutaneously once daily in the morning",
         drugName: "Test B12 Compound",
         drugStrength: "1000mcg/mL",
@@ -193,36 +169,28 @@ serve(async (req) => {
       }]
     };
 
-    // Never log full payloads (may contain PHI)
-    console.log('[test-vios-order-submit] Payload built; preparing to run test');
+    console.log('[test-vios-order-submit] Submitting test order to VIOS');
 
-    // Dummy mode (default): validate + return payload without calling VIOS.
-    // To actually hit VIOS, send { "submit_to_vios": true } in the body.
-    const submitToVios = Boolean(body?.submit_to_vios);
-
+    // Submit to VIOS API
     const startTime = Date.now();
     let response: any = null;
     let error: any = null;
 
-    if (submitToVios) {
-      try {
-        response = await viosApiRequest('/api/orders', {
-          method: 'POST',
-          body: testPayload,
-        });
-      } catch (e) {
-        error = e;
-        console.error('[test-vios-order-submit] VIOS API error:', e);
-      }
+    try {
+      response = await viosApiRequest('/api/orders', {
+        method: 'POST',
+        body: testPayload,
+      });
+    } catch (e) {
+      error = e;
+      console.error('[test-vios-order-submit] VIOS API error:', e);
     }
 
     const duration = Date.now() - startTime;
 
     // Build result
     const result = {
-      success: submitToVios
-        ? (!error && response && (response.orderId || response.OrderId))
-        : true,
+      success: !error && response && (response.orderId || response.OrderId),
       testReferenceId,
       duration_ms: duration,
       payload_sent: testPayload,
@@ -234,7 +202,6 @@ serve(async (req) => {
       validation_checks: {
         auth_token: "✅ Obtained (via ClientId/ClientSecret headers)",
         payload_structure: "✅ Nested camelCase (general, prescriber, patient, shipping, rxs)",
-        submission_mode: submitToVios ? "✅ Submitted to VIOS" : "ℹ️ Dummy mode (not submitted)",
         field_names: {
           zipCode: "✅ Using 'zipCode' (not 'zip') in shipping",
           directions: "✅ Using 'directions' (not 'sig') in rxs",
@@ -246,26 +213,21 @@ serve(async (req) => {
           service: "✅ Integer type (7623)",
           allergies: "✅ Array of integers"
         },
-        isTestOrder: "✅ Set to true",
-        practiceId: `✅ Set to prescriber NPI (${prescriberNpi})`
+        isTestOrder: "✅ Set to true"
       }
     };
 
     // Log for debugging
-     if (result.success) {
-       console.log(
-         submitToVios
-           ? `[test-vios-order-submit] ✅ SUCCESS! VIOS Order ID: ${response?.orderId || response?.OrderId}`
-           : '[test-vios-order-submit] ✅ SUCCESS! Dummy test completed (not submitted)'
-       );
-     } else {
-       console.log('[test-vios-order-submit] ❌ FAILED:', result.error);
-     }
+    if (result.success) {
+      console.log('[test-vios-order-submit] ✅ SUCCESS! VIOS Order ID:', response?.orderId || response?.OrderId);
+    } else {
+      console.log('[test-vios-order-submit] ❌ FAILED:', result.error);
+    }
 
     return new Response(
       JSON.stringify(result, null, 2),
       { 
-       status: result.success ? 200 : 400, 
+        status: result.success ? 200 : 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
