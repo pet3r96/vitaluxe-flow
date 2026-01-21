@@ -9,11 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Webhook, Copy, RefreshCw, Clock, Trash2, CheckCircle2, XCircle, Loader2, Play, Settings, FlaskConical, History, Send, FileText } from "lucide-react";
+import { Webhook, Copy, RefreshCw, Clock, Trash2, CheckCircle2, XCircle, Loader2, Play, Settings, FlaskConical, History, Send, FileText, FileSearch, ShieldCheck } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ViosWebhookAuditLog } from "./ViosWebhookAuditLog";
 
 const VIOS_PHARMACY_ID = "d5e75179-e66c-450f-8cae-1f4df93b097c";
 
@@ -325,7 +326,7 @@ export function ViosWebhookMonitor() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="config" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="config" className="gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Configuration</span>
@@ -337,6 +338,10 @@ export function ViosWebhookMonitor() {
           <TabsTrigger value="webhook-sim" className="gap-2">
             <FlaskConical className="h-4 w-4" />
             <span className="hidden sm:inline">Simulator</span>
+          </TabsTrigger>
+          <TabsTrigger value="audit-log" className="gap-2">
+            <FileSearch className="h-4 w-4" />
+            <span className="hidden sm:inline">Audit Log</span>
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <History className="h-4 w-4" />
@@ -357,8 +362,33 @@ export function ViosWebhookMonitor() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* API Credentials Status */}
+              <div className="p-3 bg-muted/30 rounded-lg border space-y-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-medium">VIOS API Credentials</Label>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 text-sm">
+                  <div className="flex items-center justify-between p-2 bg-background rounded">
+                    <span className="text-muted-foreground">VIOS_CLIENT_ID</span>
+                    <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                      Configured
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-background rounded">
+                    <span className="text-muted-foreground">VIOS_CLIENT_SECRET</span>
+                    <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                      Configured
+                    </Badge>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Practice is determined server-side by these API credentials. No practiceId is sent in payloads.
+                </p>
+              </div>
+
               <div>
-                <Label className="text-sm text-muted-foreground">Webhook URL</Label>
+                <Label className="text-sm text-muted-foreground">Webhook URL (for VIOS to send updates)</Label>
                 <div className="flex gap-2 mt-1">
                   <Input 
                     value={webhookUrl || "Not configured"} 
@@ -372,7 +402,7 @@ export function ViosWebhookMonitor() {
               </div>
               
               <div>
-                <Label className="text-sm text-muted-foreground">API Key (x-api-key header)</Label>
+                <Label className="text-sm text-muted-foreground">Webhook API Key (x-api-key header)</Label>
                 <div className="flex gap-2 mt-1">
                   <Input 
                     value={pharmacyConfig?.webhook_secret ? "••••••••••••••••" : "Not configured"} 
@@ -387,7 +417,7 @@ export function ViosWebhookMonitor() {
               
               <div className="flex items-center gap-6 pt-2">
                 <div>
-                  <Label className="text-sm text-muted-foreground">Status</Label>
+                  <Label className="text-sm text-muted-foreground">Inbound Webhooks</Label>
                   <div className="mt-1">
                     <Badge variant={pharmacyConfig?.inbound_webhook_enabled ? "default" : "secondary"}>
                       {pharmacyConfig?.inbound_webhook_enabled ? "Enabled" : "Disabled"}
@@ -395,8 +425,8 @@ export function ViosWebhookMonitor() {
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">Format</Label>
-                  <p className="text-sm mt-1">VIOS API Format</p>
+                  <Label className="text-sm text-muted-foreground">Payload Format</Label>
+                  <p className="text-sm mt-1">VIOS Single-Item Array</p>
                 </div>
               </div>
             </CardContent>
@@ -490,7 +520,7 @@ export function ViosWebhookMonitor() {
                   maxLength={10}
                 />
                 <p className="text-xs text-muted-foreground">
-                  The prescriber's NPI is used as the Practice ID for VIOS orders. Leave blank to use default test NPI.
+                  The prescriber NPI is validated against VIOS requirements. Practice is determined by API credentials. Leave blank to use default test NPI.
                 </p>
               </div>
 
@@ -723,6 +753,24 @@ export function ViosWebhookMonitor() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Audit Log Tab */}
+        <TabsContent value="audit-log">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileSearch className="h-5 w-5" />
+                Webhook Event Audit Log
+              </CardTitle>
+              <CardDescription>
+                Full history of all webhook events received from VIOS with payload details and replay capability
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ViosWebhookAuditLog />
             </CardContent>
           </Card>
         </TabsContent>
