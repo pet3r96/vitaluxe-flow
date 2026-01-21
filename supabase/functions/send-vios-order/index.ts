@@ -358,7 +358,6 @@ serve(async (req) => {
 
      // Effective test mode: request flag OR pharmacy-level test mode
      const effectiveTestMode = Boolean(is_test_order || pharmacy.api_test_mode);
-     const testPrescriberNpi = (pharmacy.test_prescriber_npi || '1234567890').toString();
 
     // Fetch order data with practice info (including vios_practice_id)
     const { data: order, error: orderError } = await supabaseAdmin
@@ -706,12 +705,10 @@ serve(async (req) => {
         const genderRaw = (line.gender_at_birth || patient.gender_at_birth || 'u').toLowerCase().charAt(0);
         const gender = ['m', 'f', 'a', 'u'].includes(genderRaw) ? genderRaw as 'm' | 'f' | 'a' | 'u' : 'u';
         
-        // Get prescriber info
+        // Get prescriber info - always use real provider NPI (test mode uses isTestOrder flag)
         const providerProfile = line.providers?.profiles || {} as any;
         const prescriberName = parsePrescriberName(providerProfile.name || '');
-        const prescriberNpi = effectiveTestMode
-          ? testPrescriberNpi
-          : (providerProfile.npi || '');
+        const prescriberNpi = providerProfile.npi || '';
         
         // Parse shipping address
         const shipToPractice = line.ship_to === "practice";

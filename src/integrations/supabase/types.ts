@@ -3882,7 +3882,6 @@ export type Database = {
           phone: string | null
           priority_map: Json | null
           states_serviced: string[] | null
-          test_prescriber_npi: string | null
           updated_at: string | null
           user_id: string | null
           webhook_secret: string | null
@@ -3927,7 +3926,6 @@ export type Database = {
           phone?: string | null
           priority_map?: Json | null
           states_serviced?: string[] | null
-          test_prescriber_npi?: string | null
           updated_at?: string | null
           user_id?: string | null
           webhook_secret?: string | null
@@ -3972,7 +3970,6 @@ export type Database = {
           phone?: string | null
           priority_map?: Json | null
           states_serviced?: string[] | null
-          test_prescriber_npi?: string | null
           updated_at?: string | null
           user_id?: string | null
           webhook_secret?: string | null
