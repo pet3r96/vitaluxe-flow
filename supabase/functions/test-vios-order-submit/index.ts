@@ -139,7 +139,7 @@ serve(async (req) => {
 
     const testReferenceId = `TEST-${Date.now()}`;
     
-    console.log('[test-vios-order-submit] Creating test order with NPI:', prescriberNpi);
+    console.log('[test-vios-order-submit] Creating test order payload');
 
     const testPayload: ViosOrderPayload = {
       general: {
@@ -193,28 +193,36 @@ serve(async (req) => {
       }]
     };
 
-    console.log('[test-vios-order-submit] Submitting test payload:', JSON.stringify(testPayload, null, 2));
+    // Never log full payloads (may contain PHI)
+    console.log('[test-vios-order-submit] Payload built; preparing to run test');
 
-    // Submit to VIOS API
+    // Dummy mode (default): validate + return payload without calling VIOS.
+    // To actually hit VIOS, send { "submit_to_vios": true } in the body.
+    const submitToVios = Boolean(body?.submit_to_vios);
+
     const startTime = Date.now();
-    let response: any;
+    let response: any = null;
     let error: any = null;
 
-    try {
-      response = await viosApiRequest('/api/orders', {
-        method: 'POST',
-        body: testPayload
-      });
-    } catch (e) {
-      error = e;
-      console.error('[test-vios-order-submit] VIOS API error:', e);
+    if (submitToVios) {
+      try {
+        response = await viosApiRequest('/api/orders', {
+          method: 'POST',
+          body: testPayload,
+        });
+      } catch (e) {
+        error = e;
+        console.error('[test-vios-order-submit] VIOS API error:', e);
+      }
     }
 
     const duration = Date.now() - startTime;
 
     // Build result
     const result = {
-      success: !error && response && (response.orderId || response.OrderId),
+      success: submitToVios
+        ? (!error && response && (response.orderId || response.OrderId))
+        : true,
       testReferenceId,
       duration_ms: duration,
       payload_sent: testPayload,
@@ -226,6 +234,7 @@ serve(async (req) => {
       validation_checks: {
         auth_token: "✅ Obtained (via ClientId/ClientSecret headers)",
         payload_structure: "✅ Nested camelCase (general, prescriber, patient, shipping, rxs)",
+        submission_mode: submitToVios ? "✅ Submitted to VIOS" : "ℹ️ Dummy mode (not submitted)",
         field_names: {
           zipCode: "✅ Using 'zipCode' (not 'zip') in shipping",
           directions: "✅ Using 'directions' (not 'sig') in rxs",
@@ -243,16 +252,20 @@ serve(async (req) => {
     };
 
     // Log for debugging
-    if (result.success) {
-      console.log('[test-vios-order-submit] ✅ SUCCESS! VIOS Order ID:', response.orderId || response.OrderId);
-    } else {
-      console.log('[test-vios-order-submit] ❌ FAILED:', result.error);
-    }
+     if (result.success) {
+       console.log(
+         submitToVios
+           ? `[test-vios-order-submit] ✅ SUCCESS! VIOS Order ID: ${response?.orderId || response?.OrderId}`
+           : '[test-vios-order-submit] ✅ SUCCESS! Dummy test completed (not submitted)'
+       );
+     } else {
+       console.log('[test-vios-order-submit] ❌ FAILED:', result.error);
+     }
 
     return new Response(
       JSON.stringify(result, null, 2),
       { 
-        status: result.success ? 200 : 400, 
+       status: result.success ? 200 : 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
