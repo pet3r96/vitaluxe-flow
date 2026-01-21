@@ -120,9 +120,24 @@ serve(async (req) => {
     console.log('[test-vios-order-submit] Admin verified, creating test order payload');
 
     // Build a complete test order payload per VIOS OpenAPI spec
-    // Use hardcoded test NPI - VIOS determines practice association from API credentials
+    // NOTE: VIOS requires practiceId to be a 10-digit NPI that is authorized for the API credentials.
+    // Allow callers to override the test NPI without persisting any "test prescriber" setting.
+    const body = await req.json().catch(() => ({}));
+    const prescriberNpi = (body?.prescriber_npi || "1234567890").toString();
+
+    // Validate NPI format (10 digits)
+    const npiDigits = prescriberNpi.replace(/\D/g, '');
+    if (npiDigits.length !== 10) {
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid NPI format',
+          message: 'prescriber_npi must be exactly 10 digits'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const testReferenceId = `TEST-${Date.now()}`;
-    const prescriberNpi = "1234567890";  // Standard test NPI for payload validation
     
     console.log('[test-vios-order-submit] Creating test order with NPI:', prescriberNpi);
 
