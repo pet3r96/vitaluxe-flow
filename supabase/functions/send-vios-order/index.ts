@@ -434,8 +434,7 @@ serve(async (req) => {
           address_formatted,
           driver_license_number,
           driver_license_state,
-          state_issued_id,
-          social_security_number
+          state_issued_id
         )
       `)
       .in("id", order_line_ids);
