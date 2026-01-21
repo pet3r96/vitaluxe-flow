@@ -42,7 +42,8 @@ export interface ViosOrderGeneral {
   memo?: string;                    // maxLength: 120
   referenceId?: string;             // maxLength: 200 - our order_line.id
   isTestOrder?: boolean;
-  practiceId?: string;              // VIOS Practice ID - required for API orders
+  // Note: practiceId is NOT in VIOS OpenAPI CreateOrderRequestGeneralModel
+  // Practice is determined server-side by the API credentials (ClientId/ClientSecret)
   masterOrderLinkRequest?: number;
   masterOrderLinkScope?: 'Billing' | 'Shipping' | 'All';
   fax?: ViosFaxInfo;

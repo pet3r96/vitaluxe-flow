@@ -774,7 +774,7 @@ serve(async (req) => {
           general: {
             isTestOrder: is_test_order,
             referenceId: line.id,  // Our order_line.id for webhook matching
-            practiceId: getViosPracticeIdFromUuid(order.doctor_id),  // Convert practice UUID to int32
+            // Note: practiceId is NOT in VIOS OpenAPI spec - practice is determined by API credentials
           },
           prescriber: {
             npi: providerProfile.npi || '',
