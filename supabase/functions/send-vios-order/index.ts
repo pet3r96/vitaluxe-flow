@@ -356,6 +356,10 @@ serve(async (req) => {
       throw new Error(`Pharmacy not found: ${pharmacyError?.message}`);
     }
 
+     // Effective test mode: request flag OR pharmacy-level test mode
+     const effectiveTestMode = Boolean(is_test_order || pharmacy.api_test_mode);
+     const testPrescriberNpi = (pharmacy.test_prescriber_npi || '1234567890').toString();
+
     // Fetch order data with practice info (including vios_practice_id)
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
@@ -705,6 +709,9 @@ serve(async (req) => {
         // Get prescriber info
         const providerProfile = line.providers?.profiles || {} as any;
         const prescriberName = parsePrescriberName(providerProfile.name || '');
+        const prescriberNpi = effectiveTestMode
+          ? testPrescriberNpi
+          : (providerProfile.npi || '');
         
         // Parse shipping address
         const shipToPractice = line.ship_to === "practice";
@@ -772,12 +779,13 @@ serve(async (req) => {
         // Build VIOS payload per CreateOrderRequest schema
         const viosPayload: ViosOrderPayload = {
           general: {
-            isTestOrder: is_test_order,
+            isTestOrder: effectiveTestMode,
             referenceId: line.id,  // Our order_line.id for webhook matching
-            // Note: practiceId is NOT in VIOS OpenAPI spec - practice is determined by API credentials
+            // VIOS requires practiceId as a 10-digit NPI (practice/prescriber NPI)
+            practiceId: prescriberNpi,
           },
           prescriber: {
-            npi: providerProfile.npi || '',
+            npi: prescriberNpi,
             firstName: prescriberName.firstName,
             lastName: prescriberName.lastName,
             dea: providerProfile.dea,
@@ -845,7 +853,7 @@ serve(async (req) => {
         edgeLogger.info("Submitting order to VIOS", { 
           orderLineId: line.id,
           productCode,
-          isTestOrder: is_test_order,
+          isTestOrder: effectiveTestMode,
           hasLfProductId,
           rxType: rxItem.rxType,
           hasGlp1Statement: !!rxItem.clinicalDifferenceStatement,
@@ -889,7 +897,7 @@ serve(async (req) => {
               vios_rx_number: viosRxNumber,
               vios_fill_id: viosFillId,
               submitted_at: new Date().toISOString(),
-              is_test_order: is_test_order,
+              is_test_order: effectiveTestMode,
               used_lf_product_id: hasLfProductId,
             },
             status: 'processing',
@@ -947,7 +955,7 @@ serve(async (req) => {
     edgeLogger.info("VIOS order submission complete", { 
       successCount, 
       failCount,
-      isTestOrder: is_test_order
+      isTestOrder: effectiveTestMode
     });
 
     return new Response(
@@ -955,7 +963,7 @@ serve(async (req) => {
         success: failCount === 0,
         message: `Submitted ${successCount}/${results.length} order lines to VIOS`,
         results,
-        isTestOrder: is_test_order,
+        isTestOrder: effectiveTestMode,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

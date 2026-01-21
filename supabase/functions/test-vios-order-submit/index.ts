@@ -2,12 +2,14 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isAdmin } from "../_shared/roleChecker.ts";
 import { viosApiRequest } from "../_shared/viosAuth.ts";
-import { getViosPracticeIdFromUuid } from "../_shared/viosHelpers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// VIOS pharmacy record used to pull configured test NPI
+const VIOS_PHARMACY_ID = "d5e75179-e66c-450f-8cae-1f4df93b097c";
 
 /**
  * Test VIOS Order Submission
@@ -24,7 +26,7 @@ interface ViosOrderPayload {
     memo?: string;
     referenceId?: string;
     isTestOrder?: boolean;
-    practiceId?: string;  // VIOS Practice ID
+    practiceId?: string;  // VIOS Practice ID (10-digit NPI per VIOS requirements)
   };
   prescriber: {
     npi: string;
@@ -117,9 +119,18 @@ serve(async (req) => {
 
     console.log('[test-vios-order-submit] Admin verified, creating test order payload');
 
-    // Parse request body to get prescriber NPI (used as practice ID in VIOS)
+    // Load configured test prescriber NPI from pharmacy settings (preferred)
+    const { data: pharmacySettings } = await supabase
+      .from('pharmacies')
+      .select('test_prescriber_npi')
+      .eq('id', VIOS_PHARMACY_ID)
+      .maybeSingle();
+
+    const configuredTestNpi = pharmacySettings?.test_prescriber_npi || undefined;
+
+    // Parse request body to optionally override prescriber NPI (used as practiceId in VIOS)
     const body = await req.json().catch(() => ({}));
-    const prescriberNpi = body.prescriber_npi || "1033620489"; // Default to Demo Practice NPI
+    const prescriberNpi = body.prescriber_npi || configuredTestNpi || "1234567890";
 
     // Validate NPI format (10 digits)
     const npiDigits = prescriberNpi.replace(/\D/g, '');
@@ -142,7 +153,8 @@ serve(async (req) => {
       general: {
         isTestOrder: true,
         referenceId: testReferenceId,
-        // Note: practiceId is NOT in VIOS OpenAPI spec - practice is determined by API credentials
+        // VIOS requires practiceId and it must be a 10-digit NPI (practice/prescriber NPI)
+        practiceId: prescriberNpi,
         memo: "VitaLuxe integration test order - DO NOT PROCESS"
       },
       prescriber: {
@@ -234,7 +246,7 @@ serve(async (req) => {
           allergies: "✅ Array of integers"
         },
         isTestOrder: "✅ Set to true",
-        practiceId: "✅ Not sent - determined by API credentials"
+        practiceId: `✅ Set to prescriber NPI (${prescriberNpi})`
       }
     };
 
