@@ -58,7 +58,6 @@ export function ViosWebhookMonitor() {
   const [isSubmittingTestOrder, setIsSubmittingTestOrder] = useState(false);
   const [testOrderResult, setTestOrderResult] = useState<TestOrderResult | null>(null);
   const [showPayloadDetails, setShowPayloadDetails] = useState(false);
-  const [testPrescriberNpi, setTestPrescriberNpi] = useState("");
   
   // Webhook simulator form state
   const [simRxStatus, setSimRxStatus] = useState("Shipping");
@@ -252,7 +251,7 @@ export function ViosWebhookMonitor() {
     
     try {
       const { data, error } = await supabase.functions.invoke("test-vios-order-submit", {
-        body: { prescriber_npi: testPrescriberNpi || undefined },
+        body: {},
       });
       
       if (error) {
