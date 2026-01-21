@@ -403,8 +403,7 @@ serve(async (req) => {
         product_variants!order_lines_variant_id_fkey(
           id,
           dosage_label,
-          product_code,
-          form
+          product_code
         ),
         providers!order_lines_provider_id_fkey(
           user_id,
