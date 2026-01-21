@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { viosApiRequest, VIOS_API_URL } from '../_shared/viosAuth.ts';
+import { getViosPracticeIdFromUuid } from '../_shared/viosHelpers.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -773,7 +774,7 @@ serve(async (req) => {
           general: {
             isTestOrder: is_test_order,
             referenceId: line.id,  // Our order_line.id for webhook matching
-            practiceId: providerProfile.npi || undefined,  // Use prescriber NPI as Practice ID
+            practiceId: getViosPracticeIdFromUuid(order.doctor_id),  // Convert practice UUID to int32
           },
           prescriber: {
             npi: providerProfile.npi || '',
