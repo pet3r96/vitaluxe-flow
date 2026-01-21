@@ -1025,6 +1025,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       logger.info('User role fetched (parallel)', { role });
       setUserRole(role);
+      
+      // Update realtime manager with role to suppress admin warnings
+      realtimeManager.setUserRole(role);
 
       // Process provider data (only if provider role)
       if (role === 'provider' && providerResult.status === 'fulfilled') {
@@ -1729,6 +1732,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     await supabase.auth.signOut();
+    realtimeManager.setUserRole(null);
     setUserRole(null);
     setImpersonatedRole(null);
     setImpersonatedUserId(null);

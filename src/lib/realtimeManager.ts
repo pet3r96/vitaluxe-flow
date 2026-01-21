@@ -16,6 +16,19 @@ class RealtimeManager implements IRealtimeManager {
   private queryClient: QueryClient | null = null;
   private pendingInvalidations = new Map<string, NodeJS.Timeout>();
   private readonly DEBOUNCE_MS = 0; // NO debounce - instant updates for medical appointments
+  private currentUserRole: string | null = null;
+  
+  /**
+   * Set current user role to control logging behavior
+   * Admin roles will suppress channel error warnings (expected behavior)
+   */
+  setUserRole(role: string | null) {
+    this.currentUserRole = role;
+  }
+  
+  private isAdminRole(): boolean {
+    return this.currentUserRole === 'admin' || this.currentUserRole === 'super_admin';
+  }
   
   // Cross-table dependencies - when table A changes, also invalidate queries for B, C
   private tableDependencies: TableDependencies = {
@@ -122,9 +135,14 @@ class RealtimeManager implements IRealtimeManager {
         if (status === 'SUBSCRIBED') {
           logger.info(`Successfully subscribed to ${table} realtime updates`);
         } else if (status === 'CHANNEL_ERROR') {
-          logger.warn(`Realtime subscription unavailable for ${table} - using fallback`);
+          // Suppress warnings for admin roles - they have different access patterns
+          if (!this.isAdminRole()) {
+            logger.warn(`Realtime subscription unavailable for ${table} - using fallback`);
+          }
         } else if (status === 'TIMED_OUT') {
-          logger.warn(`Realtime subscription timed out for ${table}`);
+          if (!this.isAdminRole()) {
+            logger.warn(`Realtime subscription timed out for ${table}`);
+          }
         }
       });
 

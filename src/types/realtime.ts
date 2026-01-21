@@ -61,6 +61,7 @@ export interface IRealtimeManager {
   unsubscribeAll(): void;
   isSubscribed(table: string): boolean;
   getActiveSubscriptions(): string[];
+  setUserRole(role: string | null): void;
 }
 
 /**
