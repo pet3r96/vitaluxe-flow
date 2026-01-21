@@ -1657,6 +1657,7 @@ export type Database = {
           gender_at_birth: string | null
           id: string
           is_refill: boolean | null
+          last_status_update_at: string | null
           order_id: string
           order_notes: string | null
           original_order_line_id: string | null
@@ -1708,6 +1709,7 @@ export type Database = {
           gender_at_birth?: string | null
           id?: string
           is_refill?: boolean | null
+          last_status_update_at?: string | null
           order_id: string
           order_notes?: string | null
           original_order_line_id?: string | null
@@ -1759,6 +1761,7 @@ export type Database = {
           gender_at_birth?: string | null
           id?: string
           is_refill?: boolean | null
+          last_status_update_at?: string | null
           order_id?: string
           order_notes?: string | null
           original_order_line_id?: string | null
@@ -4410,6 +4413,79 @@ export type Database = {
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_webhook_events: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          is_duplicate: boolean | null
+          order_line_id: string | null
+          pharmacy_id: string
+          processing_time_ms: number | null
+          raw_payload: Json
+          replayed_from_event_id: string | null
+          request_headers: Json | null
+          response_body: Json | null
+          status_code: number
+          transformed_payload: Json | null
+          webhook_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          is_duplicate?: boolean | null
+          order_line_id?: string | null
+          pharmacy_id: string
+          processing_time_ms?: number | null
+          raw_payload: Json
+          replayed_from_event_id?: string | null
+          request_headers?: Json | null
+          response_body?: Json | null
+          status_code: number
+          transformed_payload?: Json | null
+          webhook_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          is_duplicate?: boolean | null
+          order_line_id?: string | null
+          pharmacy_id?: string
+          processing_time_ms?: number | null
+          raw_payload?: Json
+          replayed_from_event_id?: string | null
+          request_headers?: Json | null
+          response_body?: Json | null
+          status_code?: number
+          transformed_payload?: Json | null
+          webhook_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_webhook_events_order_line_id_fkey"
+            columns: ["order_line_id"]
+            isOneToOne: false
+            referencedRelation: "order_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_webhook_events_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_webhook_events_replayed_from_event_id_fkey"
+            columns: ["replayed_from_event_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_webhook_events"
             referencedColumns: ["id"]
           },
         ]

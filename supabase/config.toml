@@ -452,3 +452,6 @@ verify_jwt = true
 
 [functions.test-vios-order-submit]
 verify_jwt = true
+
+[functions.replay-pharmacy-webhook]
+verify_jwt = true
