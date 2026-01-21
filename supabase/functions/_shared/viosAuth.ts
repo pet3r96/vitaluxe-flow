@@ -140,10 +140,10 @@ export async function viosApiRequest<T = any>(
 
   if (!response.ok) {
     const errorText = await response.text();
-    edgeLogger.error("VIOS API error", { 
+    edgeLogger.error("VIOS API error", new Error(`${response.status}: ${errorText}`), { 
       status: response.status, 
       endpoint,
-      error: errorText 
+      responseBody: errorText 
     });
     throw new Error(`VIOS API error (${response.status}): ${errorText}`);
   }
