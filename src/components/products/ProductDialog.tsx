@@ -719,7 +719,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             </p>
           </div>
 
-          {/* VIOS API Integration */}
+          {/* VIOS INTEGRATION DISABLED - Uncomment when re-enabling
           <div className="space-y-2">
             <Label htmlFor="vios_lf_product_id">VIOS Product ID</Label>
             <Input
@@ -732,6 +732,7 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
               Optional: For direct VIOS pharmacy mapping. Get this ID from the VIOS product catalog.
             </p>
           </div>
+          */}
 
           <div className="space-y-2">
             <Label htmlFor="sig">Pre-set SIG (Instructions)</Label>

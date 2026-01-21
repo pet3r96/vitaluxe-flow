@@ -81,44 +81,22 @@ serve(async (req) => {
       pharmacy.name?.toLowerCase().includes('vios') ||
       pharmacy.api_endpoint_url?.includes('vioscompounding.com');
 
+    // VIOS INTEGRATION DISABLED
+    // If this pharmacy is identified as VIOS, reject the order with a clear message
     if (isViosPharmacy) {
-      edgeLogger.info("Detected VIOS pharmacy, routing to dedicated handler", { pharmacy_id });
+      edgeLogger.warn("VIOS pharmacy detected but integration is disabled", { pharmacy_id });
       
-      // Call VIOS-specific order submission
-      const viosPayload = {
-        order_id,
-        order_line_ids,
-        pharmacy_id,
-        is_test_order: is_test_order || false,
-      };
-      
-      // Forward to VIOS handler via internal call
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-      
-      if (supabaseUrl && supabaseServiceKey) {
-        const viosResponse = await fetch(`${supabaseUrl}/functions/v1/send-vios-order`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-          },
-          body: JSON.stringify(viosPayload),
-        });
-        
-        const viosResult = await viosResponse.json();
-        
-        return new Response(
-          JSON.stringify(viosResult),
-          { 
-            headers: { ...corsHeaders, "Content-Type": "application/json" }, 
-            status: viosResponse.ok ? 200 : 500 
-          }
-        );
-      } else {
-        edgeLogger.error("Missing Supabase environment variables for VIOS routing");
-        throw new Error("Unable to route to VIOS handler - missing configuration");
-      }
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "VIOS pharmacy integration is currently disabled. Please assign this product to a different pharmacy.",
+          code: "VIOS_DISABLED"
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+          status: 400 
+        }
+      );
     }
 
     // Fetch order data with practice info including credentials for fallback
