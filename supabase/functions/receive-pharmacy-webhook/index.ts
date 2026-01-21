@@ -6,7 +6,7 @@ import { edgeLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-pharmacy-signature, x-pharmacy-id, x-api-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-pharmacy-signature, x-pharmacy-id, x-api-key, x-vios-webhook-secret",
 };
 
 // Map pharmacy status to our standard order status
@@ -51,12 +51,128 @@ function mapPharmacyStatus(
   return defaultMappings[normalizedStatus];
 }
 
+/**
+ * Log webhook event for audit trail and replay capability
+ */
+async function logWebhookEvent(
+  supabaseAdmin: any,
+  pharmacyId: string,
+  webhookPath: string | null,
+  headers: Record<string, string>,
+  rawPayload: any,
+  transformedPayload: any,
+  orderLineId: string | null,
+  statusCode: number,
+  responseBody: any,
+  errorMessage: string | null,
+  processingTimeMs: number,
+  isDuplicate: boolean = false,
+  replayedFromEventId: string | null = null
+): Promise<string | null> {
+  try {
+    // Sanitize headers - remove sensitive values
+    const sanitizedHeaders: Record<string, string> = {};
+    for (const [key, value] of Object.entries(headers)) {
+      if (key.toLowerCase().includes('secret') || key.toLowerCase().includes('authorization')) {
+        sanitizedHeaders[key] = '[REDACTED]';
+      } else {
+        sanitizedHeaders[key] = value;
+      }
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('pharmacy_webhook_events')
+      .insert({
+        pharmacy_id: pharmacyId,
+        webhook_path: webhookPath,
+        request_headers: sanitizedHeaders,
+        raw_payload: rawPayload,
+        transformed_payload: transformedPayload,
+        order_line_id: orderLineId,
+        status_code: statusCode,
+        response_body: responseBody,
+        error_message: errorMessage,
+        processing_time_ms: processingTimeMs,
+        is_duplicate: isDuplicate,
+        replayed_from_event_id: replayedFromEventId,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      edgeLogger.error('Failed to log webhook event', error);
+      return null;
+    }
+    
+    return data?.id || null;
+  } catch (err) {
+    edgeLogger.error('Error logging webhook event', err);
+    return null;
+  }
+}
+
+/**
+ * Check if this webhook is a duplicate based on idempotency rules
+ * - Same order_line_id + same status + newer or equal timestamp = duplicate
+ */
+async function checkIdempotency(
+  supabaseAdmin: any,
+  orderLineId: string,
+  newStatus: string,
+  newStatusDateTime: string | null
+): Promise<{ isDuplicate: boolean; reason?: string }> {
+  try {
+    // Get the latest tracking update for this order line
+    const { data: latestUpdate, error } = await supabaseAdmin
+      .from('pharmacy_tracking_updates')
+      .select('status, created_at, raw_tracking_data')
+      .eq('order_line_id', orderLineId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !latestUpdate) {
+      // No previous updates - not a duplicate
+      return { isDuplicate: false };
+    }
+
+    // Same status check
+    if (latestUpdate.status === newStatus) {
+      // Check timestamp if available
+      if (newStatusDateTime) {
+        const newTime = new Date(newStatusDateTime).getTime();
+        const existingTime = new Date(latestUpdate.created_at).getTime();
+        
+        // If new timestamp is older or same, it's a duplicate
+        if (newTime <= existingTime) {
+          return { 
+            isDuplicate: true, 
+            reason: `Status "${newStatus}" already recorded at ${latestUpdate.created_at}` 
+          };
+        }
+      } else {
+        // No timestamp provided, same status = duplicate
+        return { 
+          isDuplicate: true, 
+          reason: `Status "${newStatus}" already recorded` 
+        };
+      }
+    }
+
+    return { isDuplicate: false };
+  } catch (err) {
+    edgeLogger.error('Error checking idempotency', err);
+    // On error, proceed with processing (fail open for webhooks)
+    return { isDuplicate: false };
+  }
+}
+
 // Process a single order update
 async function processOrderUpdate(
   supabaseAdmin: any,
   pharmacy: any,
   payload: any
-): Promise<{ success: boolean; orderLineId?: string; error?: string }> {
+): Promise<{ success: boolean; orderLineId?: string; error?: string; isDuplicate?: boolean }> {
   // Find order line - try multiple lookup methods
   let orderLineId: string | null = null;
   
@@ -122,9 +238,27 @@ async function processOrderUpdate(
   if (!orderLineId) {
     edgeLogger.warn('Order not found for webhook', { 
       pharmacy_order_id: payload.pharmacy_order_id,
+      order_line_id: payload.order_line_id,
       pharmacyId: pharmacy.id 
     });
     return { success: false, error: "Order not found" };
+  }
+
+  // Check idempotency - is this a duplicate?
+  const idempotencyCheck = await checkIdempotency(
+    supabaseAdmin,
+    orderLineId,
+    payload.status,
+    payload.status_datetime || null
+  );
+
+  if (idempotencyCheck.isDuplicate) {
+    edgeLogger.info('Duplicate webhook detected, skipping', {
+      orderLineId,
+      status: payload.status,
+      reason: idempotencyCheck.reason
+    });
+    return { success: true, orderLineId, isDuplicate: true };
   }
 
   // Insert tracking update
@@ -152,7 +286,9 @@ async function processOrderUpdate(
   const mappedStatus = mapPharmacyStatus(payload.status, pharmacy.api_status_mapping);
 
   // Update order line with tracking info and mapped status
-  const updateData: Record<string, any> = {};
+  const updateData: Record<string, any> = {
+    last_status_update_at: new Date().toISOString(),
+  };
   
   if (payload.tracking_number) {
     updateData.tracking_number = payload.tracking_number;
@@ -170,12 +306,10 @@ async function processOrderUpdate(
     }
   }
   
-  if (Object.keys(updateData).length > 0) {
-    await supabaseAdmin
-      .from("order_lines")
-      .update(updateData)
-      .eq("id", orderLineId);
-  }
+  await supabaseAdmin
+    .from("order_lines")
+    .update(updateData)
+    .eq("id", orderLineId);
 
   edgeLogger.info('Successfully processed webhook update', { 
     pharmacyName: pharmacy.name, 
@@ -189,9 +323,16 @@ async function processOrderUpdate(
 }
 
 serve(async (req) => {
+  const startTime = Date.now();
+  
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  let pharmacy: any = null;
+  let webhookPath: string | null = null;
+  let rawPayload: any = null;
+  let transformedPayload: any = null;
 
   try {
     const supabaseAdmin = createAdminClient();
@@ -201,7 +342,6 @@ serve(async (req) => {
     const pathSegments = url.pathname.split('/').filter(Boolean);
     
     // Check if webhook path is in URL (e.g., /receive-pharmacy-webhook/abc123xyz)
-    let webhookPath: string | null = null;
     if (pathSegments.length >= 2) {
       webhookPath = pathSegments[pathSegments.length - 1];
     }
@@ -209,12 +349,16 @@ serve(async (req) => {
     // Get raw body and headers
     const rawBody = await req.text();
     const signature = req.headers.get("x-pharmacy-signature");
-    const apiKey = req.headers.get("x-api-key");
+    const apiKey = req.headers.get("x-api-key") || req.headers.get("x-vios-webhook-secret");
     let pharmacyIdHeader = req.headers.get("x-pharmacy-id");
 
+    // Collect headers for logging (will be sanitized later)
+    const headersForLog: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      headersForLog[key] = value;
+    });
+
     // Try to find pharmacy by webhook path first
-    let pharmacy: any = null;
-    
     if (webhookPath && webhookPath !== 'receive-pharmacy-webhook') {
       const { data: pharmacyByPath, error: pathError } = await supabaseAdmin
         .from("pharmacies")
@@ -251,6 +395,13 @@ serve(async (req) => {
     }
 
     if (!pharmacy.api_enabled) {
+      const processingTime = Date.now() - startTime;
+      await logWebhookEvent(
+        supabaseAdmin, pharmacy.id, webhookPath, headersForLog,
+        null, null, null, 403,
+        { error: "Pharmacy API not enabled" }, "Pharmacy API not enabled",
+        processingTime
+      );
       return new Response(
         JSON.stringify({ error: "Pharmacy API not enabled" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
@@ -268,18 +419,31 @@ serve(async (req) => {
 
       if (!signatureValidation.valid) {
         edgeLogger.error('Signature validation failed', { reason: signatureValidation.reason });
+        const processingTime = Date.now() - startTime;
+        await logWebhookEvent(
+          supabaseAdmin, pharmacy.id, webhookPath, headersForLog,
+          null, null, null, 401,
+          { error: "Invalid signature" }, signatureValidation.reason || "Auth failed",
+          processingTime
+        );
         return new Response(
           JSON.stringify({ error: "Invalid signature" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
         );
       }
     }
 
     // Parse payload
-    let payload: any;
     try {
-      payload = JSON.parse(rawBody);
+      rawPayload = JSON.parse(rawBody);
     } catch {
+      const processingTime = Date.now() - startTime;
+      await logWebhookEvent(
+        supabaseAdmin, pharmacy.id, webhookPath, headersForLog,
+        rawBody, null, null, 400,
+        { error: "Invalid JSON payload" }, "JSON parse error",
+        processingTime
+      );
       return new Response(
         JSON.stringify({ error: "Invalid JSON payload" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
@@ -289,36 +453,67 @@ serve(async (req) => {
     edgeLogger.info('Received webhook payload', {
       pharmacyName: pharmacy.name,
       webhookPath,
-      isArray: Array.isArray(payload),
-      payloadKeys: Array.isArray(payload) 
-        ? (payload.length > 0 ? Object.keys(payload[0]) : [])
-        : Object.keys(payload)
+      isArray: Array.isArray(rawPayload),
+      payloadKeys: Array.isArray(rawPayload) 
+        ? (rawPayload.length > 0 ? Object.keys(rawPayload[0]) : [])
+        : Object.keys(rawPayload)
     });
 
     // Check if this is a VIOS payload (can be array or object with VIOS-specific fields)
-    if (isViosPayload(payload)) {
+    let payload = rawPayload;
+    if (isViosPayload(rawPayload)) {
       edgeLogger.info('Detected VIOS payload, transforming...', {
         pharmacyName: pharmacy.name,
         webhookPath,
-        isArray: Array.isArray(payload),
-        arrayLength: Array.isArray(payload) ? payload.length : 1
+        isArray: Array.isArray(rawPayload),
+        arrayLength: Array.isArray(rawPayload) ? rawPayload.length : 1
       });
       
-      // VIOS sends webhooks as arrays with one item per prescription
-      const viosItem = extractViosPayloadItem(payload);
+      // Validate VIOS array format - must be array with exactly 1 item
+      if (Array.isArray(rawPayload)) {
+        if (rawPayload.length === 0) {
+          const processingTime = Date.now() - startTime;
+          await logWebhookEvent(
+            supabaseAdmin, pharmacy.id, webhookPath, headersForLog,
+            rawPayload, null, null, 400,
+            { error: "Empty VIOS payload array" }, "Empty array",
+            processingTime
+          );
+          return new Response(
+            JSON.stringify({ error: "Empty payload array" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+        if (rawPayload.length > 1) {
+          edgeLogger.warn('VIOS payload has multiple items - processing first only per spec', {
+            itemCount: rawPayload.length
+          });
+        }
+      }
+      
+      const viosItem = extractViosPayloadItem(rawPayload);
       payload = transformViosPayload(viosItem);
-    } else if (Array.isArray(payload)) {
+      transformedPayload = payload;
+    } else if (Array.isArray(rawPayload)) {
       // Non-VIOS array payload - take first item
-      if (payload.length === 0) {
+      if (rawPayload.length === 0) {
+        const processingTime = Date.now() - startTime;
+        await logWebhookEvent(
+          supabaseAdmin, pharmacy.id, webhookPath, headersForLog,
+          rawPayload, null, null, 400,
+          { error: "Empty payload array" }, "Empty array",
+          processingTime
+        );
         return new Response(
           JSON.stringify({ error: "Empty payload array" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
       edgeLogger.info('Non-VIOS array payload, using first item', { 
-        arrayLength: payload.length 
+        arrayLength: rawPayload.length 
       });
-      payload = payload[0];
+      payload = rawPayload[0];
+      transformedPayload = payload;
     }
 
     // Standard payload validation (after transformation)
@@ -328,6 +523,14 @@ serve(async (req) => {
         errors: payloadValidation.errors,
         payloadKeys: Object.keys(payload)
       });
+      const processingTime = Date.now() - startTime;
+      await logWebhookEvent(
+        supabaseAdmin, pharmacy.id, webhookPath, headersForLog,
+        rawPayload, transformedPayload, null, 400,
+        { error: "Invalid payload", details: payloadValidation.errors }, 
+        payloadValidation.errors.join(', '),
+        processingTime
+      );
       return new Response(
         JSON.stringify({ error: "Invalid payload", details: payloadValidation.errors }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
@@ -336,13 +539,28 @@ serve(async (req) => {
 
     // Process single standard payload
     const result = await processOrderUpdate(supabaseAdmin, pharmacy, payload);
+    const processingTime = Date.now() - startTime;
     
     if (!result.success) {
+      await logWebhookEvent(
+        supabaseAdmin, pharmacy.id, webhookPath, headersForLog,
+        rawPayload, transformedPayload, result.orderLineId || null, 404,
+        { error: result.error }, result.error || "Processing failed",
+        processingTime
+      );
       return new Response(
         JSON.stringify({ error: result.error }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
       );
     }
+
+    // Log successful webhook event
+    await logWebhookEvent(
+      supabaseAdmin, pharmacy.id, webhookPath, headersForLog,
+      rawPayload, transformedPayload, result.orderLineId || null, 200,
+      { success: true, message: "Tracking update received" }, null,
+      processingTime, result.isDuplicate || false
+    );
 
     return new Response(
       JSON.stringify({ success: true, message: "Tracking update received" }),
@@ -351,6 +569,24 @@ serve(async (req) => {
 
   } catch (error) {
     edgeLogger.error('Error in receive-pharmacy-webhook', error);
+    const processingTime = Date.now() - startTime;
+    
+    // Try to log the error event
+    if (pharmacy) {
+      try {
+        const supabaseAdmin = createAdminClient();
+        await logWebhookEvent(
+          supabaseAdmin, pharmacy.id, webhookPath, {},
+          rawPayload, transformedPayload, null, 500,
+          { error: error instanceof Error ? error.message : String(error) },
+          error instanceof Error ? error.message : String(error),
+          processingTime
+        );
+      } catch (logError) {
+        edgeLogger.error('Failed to log error event', logError);
+      }
+    }
+    
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
