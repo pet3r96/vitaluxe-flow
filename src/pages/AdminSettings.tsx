@@ -19,7 +19,7 @@ import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
 import { UsageBillingDashboard } from "@/components/admin/UsageBillingDashboard";
 import { SubscriptionDiagnostics } from "@/components/admin/SubscriptionDiagnostics";
 
-import { ViosWebhookMonitor } from "@/components/admin/ViosWebhookMonitor";
+// VIOS INTEGRATION DISABLED - import { ViosWebhookMonitor } from "@/components/admin/ViosWebhookMonitor";
 import { lazy, Suspense } from "react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
@@ -95,10 +95,12 @@ const AdminSettings = () => {
             <Clock className="h-4 w-4" />
             Usage & Billing
           </TabsTrigger>
+          {/* VIOS INTEGRATION DISABLED
           <TabsTrigger value="vios-tracking" className="gap-2">
             <Webhook className="h-4 w-4" />
             VIOS Tracking
           </TabsTrigger>
+          */}
           <TabsTrigger value="danger-zone" className="gap-2 text-destructive">
             <AlertTriangle className="h-4 w-4" />
             Danger Zone
@@ -265,9 +267,11 @@ const AdminSettings = () => {
         </TabsContent>
 
 
+        {/* VIOS INTEGRATION DISABLED
         <TabsContent value="vios-tracking" className="space-y-4">
           <ViosWebhookMonitor />
         </TabsContent>
+        */}
 
         <TabsContent value="danger-zone" className="space-y-4">
           <Suspense fallback={<TableSkeleton rows={5} columns={3} />}>
