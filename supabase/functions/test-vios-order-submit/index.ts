@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isAdmin } from "../_shared/roleChecker.ts";
 import { viosApiRequest } from "../_shared/viosAuth.ts";
+import { getViosPracticeIdFromUuid } from "../_shared/viosHelpers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -137,11 +138,15 @@ serve(async (req) => {
     // Build a complete test order payload per VIOS OpenAPI spec
     const testReferenceId = `TEST-${Date.now()}`;
     
+    // Convert authenticated user's UUID to int32 for VIOS practiceId
+    const viosPracticeId = getViosPracticeIdFromUuid(user.id);
+    console.log('[test-vios-order-submit] Generated VIOS practice ID:', viosPracticeId, 'from user:', user.id);
+
     const testPayload: ViosOrderPayload = {
       general: {
         isTestOrder: true,
         referenceId: testReferenceId,
-        practiceId: prescriberNpi,  // Use NPI as Practice ID per VIOS requirement
+        practiceId: viosPracticeId,  // Convert user UUID to int32 for VIOS
         memo: "VitaLuxe integration test order - DO NOT PROCESS"
       },
       prescriber: {
@@ -233,7 +238,7 @@ serve(async (req) => {
           allergies: "✅ Array of integers"
         },
         isTestOrder: "✅ Set to true",
-        practiceId: `✅ Using prescriber NPI (${prescriberNpi})`
+        practiceId: `✅ Using UUID-to-int32 conversion (${viosPracticeId})`
       }
     };
 
