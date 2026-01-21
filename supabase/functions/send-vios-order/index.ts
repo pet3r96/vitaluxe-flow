@@ -912,9 +912,8 @@ serve(async (req) => {
       } catch (lineError) {
         const errorMsg = lineError instanceof Error ? lineError.message : String(lineError);
         
-        edgeLogger.error("Failed to submit order line to VIOS", { 
-          orderLineId: line.id,
-          error: errorMsg
+        edgeLogger.error("Failed to submit order line to VIOS", lineError instanceof Error ? lineError : new Error(errorMsg), { 
+          orderLineId: line.id
         });
 
         // Log failed transmission
