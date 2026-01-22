@@ -65,9 +65,10 @@ serve(async (req) => {
       );
     }
 
-    const { data: order } = await supabaseAdmin.from("orders").select(`doctor_id, profiles!orders_doctor_id_fkey(id, name, npi, dea, phone)`).eq("id", order_id).single();
+    const { data: order } = await supabaseAdmin.from("orders").select(`doctor_id, profiles!orders_doctor_id_fkey(id, name, npi, dea, phone)`).eq("id", order_id).maybeSingle();
     
-    const practice: PracticeData = { id: order?.doctor_id || '', name: order?.profiles?.name, npi: order?.profiles?.npi, dea: order?.profiles?.dea, phone: order?.profiles?.phone };
+    const profileData = Array.isArray(order?.profiles) ? order.profiles[0] : order?.profiles;
+    const practice: PracticeData = { id: order?.doctor_id || '', name: profileData?.name, npi: profileData?.npi, dea: profileData?.dea, phone: profileData?.phone };
     const orderLineData = orderLine as unknown as OrderLineData;
     
     const validation = validateOrderLineForVios(orderLineData, practice);
