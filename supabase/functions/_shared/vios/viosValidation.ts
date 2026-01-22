@@ -87,18 +87,30 @@ export interface PracticeData {
 
 /**
  * Format phone number to VIOS required format: (XXX) XXX-XXXX
+ * Throws if phone cannot be normalized to 10 digits.
+ * Returns undefined (not null) for type compatibility with VIOS types.
  */
-export function formatViosPhone(phone: string | null | undefined): string {
-  if (!phone) return '';
-  
-  const digits = phone.replace(/\D/g, '');
-  const last10 = digits.slice(-10);
-  
-  if (last10.length !== 10) {
-    return phone; // Return original if can't format
+export function formatViosPhone(raw: string | null | undefined): string | undefined {
+  if (!raw) return undefined;
+
+  // Remove all non-digits
+  const digits = raw.replace(/\D/g, '');
+
+  // Handle optional leading country code (1)
+  const normalized =
+    digits.length === 11 && digits.startsWith('1')
+      ? digits.slice(1)
+      : digits;
+
+  if (normalized.length !== 10) {
+    throw new Error(`Invalid phone number length for VIOS: got ${normalized.length} digits from "${raw}"`);
   }
-  
-  return `(${last10.slice(0, 3)}) ${last10.slice(3, 6)}-${last10.slice(6)}`;
+
+  const area = normalized.slice(0, 3);
+  const prefix = normalized.slice(3, 6);
+  const line = normalized.slice(6);
+
+  return `(${area}) ${prefix}-${line}`;
 }
 
 /**

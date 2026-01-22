@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { edgeLogger } from '../_shared/logger.ts';
 import { isViosEnabled, throttledViosApiRequest, getViosOrderId, type ViosOrderResponse } from '../_shared/vios/index.ts';
+import { formatViosPhone } from '../_shared/vios/viosValidation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,6 +48,21 @@ serve(async (req) => {
       );
     }
 
+    // Normalize phone - use test default if not provided or invalid
+    let patientPhone: string;
+    try {
+      patientPhone = formatViosPhone(test_data.patient_phone as string) || "(555) 555-5555";
+    } catch {
+      patientPhone = "(555) 555-5555"; // Safe fallback for test orders
+    }
+
+    let prescriberPhone: string;
+    try {
+      prescriberPhone = formatViosPhone(test_data.prescriber_phone as string) || "(555) 555-5555";
+    } catch {
+      prescriberPhone = "(555) 555-5555";
+    }
+
     // Build payload WITHOUT practiceId - let VIOS infer from API credentials
     const payload = {
       general: { 
@@ -58,7 +74,7 @@ serve(async (req) => {
         npi: prescriberNpi, 
         firstName: test_data.prescriber_first_name || "Test", 
         lastName: test_data.prescriber_last_name || "Prescriber", 
-        phone: "(555) 555-5555" 
+        phone: prescriberPhone
       },
       patient: { 
         firstName: test_data.patient_first_name || "Test", 
@@ -69,7 +85,7 @@ serve(async (req) => {
         city: test_data.patient_city || "TestCity", 
         state: test_data.patient_state || "TX", 
         zip: test_data.patient_zip || "75001", 
-        phoneHome: test_data.patient_phone || "5555555555", 
+        phoneHome: patientPhone, 
         allergiesRaw: ["NKA"] 
       },
       shipping: { 
@@ -81,7 +97,7 @@ serve(async (req) => {
         recipientType: 'patient', 
         recipientFirstName: test_data.patient_first_name || "Test", 
         recipientLastName: test_data.patient_last_name || "Patient", 
-        recipientPhone: test_data.patient_phone || "5555555555" 
+        recipientPhone: patientPhone
       },
       rxs: [{ 
         rxType: 'new', 
