@@ -690,12 +690,11 @@ export function ViosWebhookMonitor() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-
-Event Audit Log<FileSearch className="h-5 w-5" />
-                Webhook Event Audit Log
+                <FileSearch className="h-5 w-5" />
+                VIOS Event History & Audit Log
               </CardTitle>
               <CardDescription>
-                Full history of all webhook events received from VIOS with payload details and replay capability
+                Complete history of all VIOS communications - inbound webhooks and outbound API transmissions with payload details and replay capability
               </CardDescription>
             </CardHeader>
             <CardContent>
