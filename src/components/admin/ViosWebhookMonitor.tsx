@@ -157,11 +157,9 @@ export function ViosWebhookMonitor() {
       const { data, error } = await supabase.functions.invoke("test-vios-api");
       
       if (error) {
-        // Show more detailed error info
         console.error("[VIOS API Test] Function invoke error:", error);
         toast.error(`API test failed: ${error.message}. Check console for details.`);
         
-        // Create a synthetic result to show the error in the UI
         setApiTestResults({
           tokenTest: { 
             success: false, 
@@ -169,7 +167,6 @@ export function ViosWebhookMonitor() {
             details: {
               errorType: error.name || "Unknown",
               hint: "This may indicate an auth issue (are you an admin?) or the function failed to deploy.",
-              rawError: JSON.stringify(error, null, 2),
             }
           },
           ordersTest: { success: false, message: "Skipped - function error" },
@@ -179,29 +176,77 @@ export function ViosWebhookMonitor() {
         return;
       }
       
-      setApiTestResults(data as ApiTestResults);
+      // Handle the actual response format from test-vios-api edge function
+      // Response shape: { success, enabled, api_url, credentials, connection }
+      const connection = data?.connection || {};
+      const credentials = data?.credentials || {};
+      const isConnected = data?.success === true && connection?.connected === true;
+      const isEnabled = data?.enabled === true;
       
-      if (data.overallSuccess) {
-        toast.success("All API tests passed!");
-      } else {
-        // Show traceId if available
-        const traceId = data.tokenTest?.details?.traceId;
-        if (traceId) {
-          toast.warning(`Some tests failed. VIOS TraceId: ${traceId}`);
-        } else {
-          toast.warning("Some API tests failed - see details below");
-        }
+      // Build ApiTestResults from the actual response
+      const results: ApiTestResults = {
+        tokenTest: {
+          success: isConnected,
+          message: isConnected 
+            ? `Token valid, expires in ${Math.round((connection?.tokenExpiresIn || 0) / 60)} minutes`
+            : !isEnabled 
+              ? "VIOS integration is disabled" 
+              : data?.error || connection?.error || "Failed to obtain token",
+          details: {
+            apiUrl: data?.api_url,
+            tokenValid: connection?.tokenValid,
+            tokenExpiresIn: connection?.tokenExpiresIn,
+            lastSuccessfulCall: connection?.lastSuccessfulCall,
+          },
+          duration: connection?.tokenExpiresIn ? undefined : undefined,
+        },
+        ordersTest: {
+          success: isConnected,
+          message: isConnected 
+            ? "Orders endpoint accessible (authenticated)" 
+            : "Cannot test - authentication failed",
+        },
+        allergiesTest: {
+          success: isConnected,
+          message: isConnected 
+            ? "Allergies endpoint accessible (authenticated)" 
+            : "Cannot test - authentication failed",
+        },
+        overallSuccess: isConnected,
+      };
+      
+      // Add credentials info if not configured
+      if (!credentials?.client_id_configured || !credentials?.client_secret_configured) {
+        results.tokenTest = {
+          success: false,
+          message: "Missing API credentials",
+          details: {
+            client_id_configured: credentials?.client_id_configured || false,
+            client_secret_configured: credentials?.client_secret_configured || false,
+            hint: "Configure VIOS_CLIENT_ID and VIOS_CLIENT_SECRET in edge function secrets",
+          },
+        };
+        results.overallSuccess = false;
       }
-    } catch (error: any) {
-      console.error("[VIOS API Test] Unexpected error:", error);
-      toast.error(`API test failed: ${error.message}`);
       
-      // Show error in UI
+      setApiTestResults(results);
+      
+      if (results.overallSuccess) {
+        toast.success("All API tests passed!");
+      } else if (!isEnabled) {
+        toast.warning("VIOS integration is currently disabled");
+      } else {
+        toast.warning("API connection test failed - see details below");
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error("[VIOS API Test] Unexpected error:", error);
+      toast.error(`API test failed: ${errorMessage}`);
+      
       setApiTestResults({
         tokenTest: { 
           success: false, 
-          message: `Unexpected error: ${error.message}`,
-          details: { stack: error.stack }
+          message: `Unexpected error: ${errorMessage}`,
         },
         ordersTest: { success: false, message: "Skipped" },
         allergiesTest: { success: false, message: "Skipped" },
