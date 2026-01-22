@@ -347,7 +347,7 @@ export function ViosWebhookMonitor() {
   };
   return <div className="space-y-6">
       <Tabs defaultValue="config" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="config" className="gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Configuration</span>
@@ -360,13 +360,9 @@ export function ViosWebhookMonitor() {
             <FlaskConical className="h-4 w-4" />
             <span className="hidden sm:inline">Simulator</span>
           </TabsTrigger>
-          <TabsTrigger value="audit-log" className="gap-2">
-            <FileSearch className="h-4 w-4" />
-            <span className="hidden sm:inline">Audit Log</span>
-          </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <History className="h-4 w-4" />
-            <span className="hidden sm:inline">History</span>
+            <span className="hidden sm:inline">History & Audit</span>
           </TabsTrigger>
         </TabsList>
 
@@ -685,107 +681,111 @@ export function ViosWebhookMonitor() {
           </Card>
         </TabsContent>
 
-        {/* Audit Log Tab */}
-        <TabsContent value="audit-log">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSearch className="h-5 w-5" />
-                VIOS Event History & Audit Log
-              </CardTitle>
-              <CardDescription>
-                Complete history of all VIOS communications - inbound webhooks and outbound API transmissions with payload details and replay capability
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ViosWebhookAuditLog />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* History Tab */}
+        {/* History & Audit Log Tab (Unified) */}
         <TabsContent value="history">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Incoming Tracking Updates</CardTitle>
+          <div className="space-y-6">
+            {/* Tracking Updates Section */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Tracking Updates
+                  </CardTitle>
+                  <CardDescription>
+                    Order status and tracking updates received from VIOS (auto-refreshes every 30 seconds)
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2 text-destructive hover:text-destructive" disabled={!recentUpdates?.length || isDeleting}>
+                        <Trash2 className="h-4 w-4" />
+                        Clear
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Clear tracking history?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will delete all VIOS tracking updates from the history. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={clearHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete All
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <Button variant="outline" size="sm" onClick={() => refetchUpdates()} className="gap-2">
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {recentUpdates && recentUpdates.length > 0 ? <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order</TableHead>
+                        <TableHead>Patient</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Tracking</TableHead>
+                        <TableHead>Received</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentUpdates.map(update => <TableRow key={update.id}>
+                          <TableCell className="font-mono text-sm">
+                            {update.order_lines?.order_id?.slice(0, 8) || "-"}...
+                          </TableCell>
+                          <TableCell>{update.order_lines?.patient_name || "-"}</TableCell>
+                          <TableCell>
+                            {getStatusBadge(update.status)}
+                            {update.status_details && <p className="text-xs text-muted-foreground mt-1 max-w-[200px] truncate">
+                                {update.status_details}
+                              </p>}
+                          </TableCell>
+                          <TableCell>
+                            {update.tracking_number ? <div className="text-sm">
+                                <span className="font-mono">{update.tracking_number}</span>
+                                {update.carrier && <span className="text-muted-foreground ml-1">({update.carrier})</span>}
+                              </div> : <span className="text-muted-foreground">-</span>}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {formatDistanceToNow(new Date(update.created_at), {
+                          addSuffix: true
+                        })}
+                            </div>
+                          </TableCell>
+                        </TableRow>)}
+                    </TableBody>
+                  </Table> : <div className="text-center py-8 text-muted-foreground">
+                    No tracking updates received yet. Updates will appear here when VIOS sends webhooks.
+                  </div>}
+              </CardContent>
+            </Card>
+
+            {/* Audit Log Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileSearch className="h-5 w-5" />
+                  Event Audit Log
+                </CardTitle>
                 <CardDescription>
-                  Webhook updates received from VIOS (auto-refreshes every 30 seconds)
+                  Complete history of all VIOS communications - inbound webhooks and outbound API transmissions with payload details
                 </CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 text-destructive hover:text-destructive" disabled={!recentUpdates?.length || isDeleting}>
-                      <Trash2 className="h-4 w-4" />
-                      Clear
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Clear tracking history?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will delete all VIOS tracking updates from the history. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={clearHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Delete All
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                <Button variant="outline" size="sm" onClick={() => refetchUpdates()} className="gap-2">
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-                  Refresh
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {recentUpdates && recentUpdates.length > 0 ? <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Patient</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Tracking</TableHead>
-                      <TableHead>Received</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentUpdates.map(update => <TableRow key={update.id}>
-                        <TableCell className="font-mono text-sm">
-                          {update.order_lines?.order_id?.slice(0, 8) || "-"}...
-                        </TableCell>
-                        <TableCell>{update.order_lines?.patient_name || "-"}</TableCell>
-                        <TableCell>
-                          {getStatusBadge(update.status)}
-                          {update.status_details && <p className="text-xs text-muted-foreground mt-1 max-w-[200px] truncate">
-                              {update.status_details}
-                            </p>}
-                        </TableCell>
-                        <TableCell>
-                          {update.tracking_number ? <div className="text-sm">
-                              <span className="font-mono">{update.tracking_number}</span>
-                              {update.carrier && <span className="text-muted-foreground ml-1">({update.carrier})</span>}
-                            </div> : <span className="text-muted-foreground">-</span>}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(update.created_at), {
-                        addSuffix: true
-                      })}
-                          </div>
-                        </TableCell>
-                      </TableRow>)}
-                  </TableBody>
-                </Table> : <div className="text-center py-8 text-muted-foreground">
-                  No tracking updates received yet. Updates will appear here when VIOS sends webhooks.
-                </div>}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <ViosWebhookAuditLog />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>;
