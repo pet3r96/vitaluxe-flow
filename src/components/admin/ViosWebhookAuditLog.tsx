@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { RefreshCw, Clock, ChevronDown, ChevronRight, RotateCcw, Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { RefreshCw, Clock, ChevronDown, ChevronRight, RotateCcw, Loader2, CheckCircle2, XCircle, AlertCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
@@ -41,11 +41,32 @@ interface AuditLogFilters {
 export function ViosWebhookAuditLog() {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [replayingId, setReplayingId] = useState<string | null>(null);
+  const [isClearing, setIsClearing] = useState(false);
   const [filters, setFilters] = useState<AuditLogFilters>({
     statusCode: "all",
     hideDuplicates: false,
     searchOrderLine: "",
   });
+
+  const clearAuditLogs = async () => {
+    setIsClearing(true);
+    try {
+      const { error } = await supabase
+        .from("pharmacy_webhook_events")
+        .delete()
+        .eq("pharmacy_id", VIOS_PHARMACY_ID);
+
+      if (error) throw error;
+
+      toast.success("Audit logs cleared successfully");
+      refetch();
+    } catch (error: any) {
+      toast.error(`Failed to clear audit logs: ${error.message}`);
+      console.error("Clear audit logs error:", error);
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   // Fetch webhook events from audit log
   const { data: webhookEvents, refetch, isLoading } = useQuery({
@@ -191,6 +212,42 @@ export function ViosWebhookAuditLog() {
           <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              disabled={!webhookEvents?.length || isClearing}
+            >
+              {isClearing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Clear All
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear all webhook audit logs?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete all VIOS webhook event logs.
+                This action cannot be undone and you will lose all historical payload data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={clearAuditLogs}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete All Logs
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {/* Table */}
