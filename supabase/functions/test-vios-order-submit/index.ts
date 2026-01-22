@@ -23,17 +23,18 @@ serve(async (req) => {
   }
 
   try {
-    const { test_data } = await req.json();
-    if (!test_data) {
-      return new Response(
-        JSON.stringify({ success: false, error: "test_data required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Parse body - test_data is optional, use defaults if not provided
+    let test_data: Record<string, unknown> = {};
+    try {
+      const body = await req.json();
+      test_data = body.test_data || body || {};
+    } catch {
+      // Empty body is fine, use defaults
+      test_data = {};
     }
 
     // Use provided NPI or default sandbox NPI (must be authorized in VIOS API Network)
-    const prescriberNpi = test_data.prescriber_npi || "1234567890";
-    
+    const prescriberNpi = String(test_data.prescriber_npi || "1234567890");
     // Validate NPI format (exactly 10 digits)
     if (!/^\d{10}$/.test(prescriberNpi)) {
       return new Response(
