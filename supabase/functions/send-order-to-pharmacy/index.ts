@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { edgeLogger } from '../_shared/logger.ts';
-import { viosApiRequest, VIOS_API_URL } from '../_shared/viosAuth.ts';
+import { isViosEnabled, VIOS_PHARMACY_IDENTIFIERS as VIOS_IDS } from '../_shared/vios/index.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,12 +15,8 @@ interface SendOrderRequest {
   is_test_order?: boolean;
 }
 
-// Known VIOS pharmacy identifiers
-const VIOS_PHARMACY_IDENTIFIERS = [
-  'd5e75179-e66c-450f-8cae-1f4df93b097c', // VIOS Compounding ID
-  'vios',
-  'vios compounding',
-];
+// Known VIOS pharmacy identifiers (use unified list from vios module)
+const VIOS_PHARMACY_IDENTIFIERS = VIOS_IDS;
 
 // Template variable replacement for generic handler
 function applyPayloadTemplate(template: any, data: Record<string, any>): any {
@@ -81,20 +77,78 @@ serve(async (req) => {
       pharmacy.name?.toLowerCase().includes('vios') ||
       pharmacy.api_endpoint_url?.includes('vioscompounding.com');
 
-    // VIOS INTEGRATION DISABLED
-    // If this pharmacy is identified as VIOS, reject the order with a clear message
+    // Route VIOS orders to the dedicated VIOS handler
     if (isViosPharmacy) {
-      edgeLogger.warn("VIOS pharmacy detected but integration is disabled", { pharmacy_id });
+      // Check if VIOS integration is enabled
+      if (!isViosEnabled()) {
+        edgeLogger.warn("VIOS pharmacy detected but integration is disabled", { pharmacy_id });
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "VIOS pharmacy integration is currently disabled. Please assign this product to a different pharmacy.",
+            code: "VIOS_DISABLED"
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+
+      edgeLogger.info("Routing order to VIOS handler", { pharmacy_id, order_id, lineCount: order_line_ids.length });
+      
+      // Route each order line to the dedicated VIOS handler
+      const results: Array<{ order_line_id: string; success: boolean; vios_order_id?: string; error?: string }> = [];
+      
+      for (const order_line_id of order_line_ids) {
+        try {
+          const { data: viosResult, error: viosError } = await supabaseAdmin.functions.invoke(
+            'send-vios-order',
+            {
+              body: {
+                order_id,
+                order_line_id,
+                is_test_order: is_test_order || false
+              }
+            }
+          );
+          
+          if (viosError) {
+            results.push({ order_line_id, success: false, error: viosError.message });
+          } else {
+            results.push({ 
+              order_line_id, 
+              success: viosResult?.success || false, 
+              vios_order_id: viosResult?.vios_order_id,
+              error: viosResult?.error
+            });
+          }
+        } catch (err) {
+          results.push({ 
+            order_line_id, 
+            success: false, 
+            error: err instanceof Error ? err.message : String(err)
+          });
+        }
+      }
+      
+      const allSuccess = results.every(r => r.success);
+      const successCount = results.filter(r => r.success).length;
+      
+      edgeLogger.info("VIOS order routing complete", { 
+        order_id, 
+        totalLines: results.length, 
+        successCount,
+        allSuccess
+      });
       
       return new Response(
         JSON.stringify({ 
-          success: false, 
-          error: "VIOS pharmacy integration is currently disabled. Please assign this product to a different pharmacy.",
-          code: "VIOS_DISABLED"
+          success: allSuccess,
+          handler: "vios",
+          results,
+          summary: `${successCount}/${results.length} order lines submitted successfully`
         }),
         { 
           headers: { ...corsHeaders, "Content-Type": "application/json" }, 
-          status: 400 
+          status: allSuccess ? 200 : 207 // 207 Multi-Status for partial success
         }
       );
     }

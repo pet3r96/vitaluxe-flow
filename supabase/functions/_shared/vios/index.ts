@@ -66,6 +66,7 @@ export {
   validatePatientData,
   validatePrescriberData,
   validateOrderLineForVios,
+  isControlledSubstance,
   type ValidationResult,
   type OrderLineData,
   type PracticeData

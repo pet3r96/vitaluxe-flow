@@ -118,9 +118,10 @@ export function buildViosOrderPayload(
   options: {
     isTestOrder?: boolean;
     memo?: string;
+    pdfBase64?: string | null;
   } = {}
 ): ViosOrderPayload {
-  const { isTestOrder = false, memo } = options;
+  const { isTestOrder = false, memo, pdfBase64 } = options;
   
   // Get patient data
   const patient = orderLine.patient_accounts;
@@ -168,6 +169,8 @@ export function buildViosOrderPayload(
       isTestOrder,
       ...(memo && { memo: memo.substring(0, 120) })
     },
+    // Include prescription PDF if provided
+    ...(pdfBase64 && { document: { pdfBase64 } }),
     prescriber: {
       npi: prescriberNpi,
       firstName: prescriberName.firstName,
@@ -238,9 +241,10 @@ export async function submitViosOrder(
     isTestOrder?: boolean;
     memo?: string;
     skipValidation?: boolean;
+    pdfBase64?: string | null;
   } = {}
 ): Promise<SubmitOrderResult> {
-  const { isTestOrder = false, memo, skipValidation = false } = options;
+  const { isTestOrder = false, memo, skipValidation = false, pdfBase64 } = options;
   
   // Validate order line before submission
   if (!skipValidation) {
@@ -261,8 +265,8 @@ export async function submitViosOrder(
   }
   
   try {
-    // Build payload
-    const payload = buildViosOrderPayload(orderLine, practice, { isTestOrder, memo });
+    // Build payload with optional PDF
+    const payload = buildViosOrderPayload(orderLine, practice, { isTestOrder, memo, pdfBase64 });
     
     edgeLogger.info("Submitting order to VIOS", { 
       orderLineId: orderLine.id,
