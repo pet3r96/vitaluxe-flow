@@ -1,151 +1,152 @@
 /**
  * Import VIOS Product Catalog
  * 
- * Supports:
- * 1. CSV data upload (Content-Type: text/csv)
- * 2. JSON array upload (Content-Type: application/json)
- * 3. VIOS API fetch (fallback - typically 404s)
+ * Attempts to fetch products from VIOS API endpoints and populates the vios_product_catalog table.
+ * Falls back to manual catalog population if API doesn't expose product listing.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { edgeLogger } from "../_shared/logger.ts";
+import { isViosEnabled, throttledViosApiRequest } from "../_shared/vios/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface CatalogRecord {
-  med_id: string;
-  product_name: string;
-  form: string | null;
-  strength: string | null;
-  units: string | null;
-  package: string | null;
-  schedule: string | null;
+interface ViosCatalogProduct {
+  lfProductId?: number;
+  medId?: number;
+  id?: number;
+  productName?: string;
+  name?: string;
+  form?: string;
+  strength?: string;
+  units?: string;
+  package?: string;
+  schedule?: string;
+  scheduleCode?: number;
 }
 
-/**
- * Parse CSV content into catalog records
- */
-function parseCSV(csvContent: string): CatalogRecord[] {
-  const lines = csvContent.split('\n');
-  if (lines.length < 2) return [];
-  
-  // Parse header to get column indices
-  const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
-  const medIdIdx = header.findIndex(h => h === 'med_id' || h === 'medid');
-  const nameIdx = header.findIndex(h => h === 'product_name' || h === 'productname' || h === 'name');
-  const formIdx = header.findIndex(h => h === 'form');
-  const strengthIdx = header.findIndex(h => h === 'strength');
-  const unitsIdx = header.findIndex(h => h === 'units');
-  const packageIdx = header.findIndex(h => h === 'package');
-  const scheduleIdx = header.findIndex(h => h === 'schedule');
-  
-  if (medIdIdx === -1 || nameIdx === -1) {
-    throw new Error('CSV must have Med ID and Product Name columns');
-  }
-  
-  const records: CatalogRecord[] = [];
-  
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    
-    // Handle quoted CSV fields
-    const fields: string[] = [];
-    let field = '';
-    let inQuotes = false;
-    
-    for (const char of line) {
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        fields.push(field.trim());
-        field = '';
-      } else {
-        field += char;
-      }
-    }
-    fields.push(field.trim());
-    
-    const medId = fields[medIdIdx]?.replace(/"/g, '').trim();
-    if (!medId) continue;
-    
-    records.push({
-      med_id: medId,
-      product_name: fields[nameIdx]?.replace(/"/g, '').trim() || 'Unknown Product',
-      form: formIdx >= 0 ? fields[formIdx]?.replace(/"/g, '').trim() || null : null,
-      strength: strengthIdx >= 0 ? fields[strengthIdx]?.replace(/"/g, '').trim() || null : null,
-      units: unitsIdx >= 0 ? fields[unitsIdx]?.replace(/"/g, '').trim() || null : null,
-      package: packageIdx >= 0 ? fields[packageIdx]?.replace(/"/g, '').trim() || null : null,
-      schedule: scheduleIdx >= 0 ? fields[scheduleIdx]?.replace(/"/g, '').trim() || null : null,
-    });
-  }
-  
-  return records;
-}
+// Possible VIOS API endpoints for product catalog
+const CATALOG_ENDPOINTS = [
+  '/api/drugs',
+  '/api/formulary', 
+  '/api/products',
+  '/api/catalog',
+  '/api/medications'
+];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (!isViosEnabled()) {
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: "VIOS integration is disabled. Set VIOS_ENABLED=true to enable.",
+        code: "VIOS_DISABLED"
+      }),
+      { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
-    const contentType = req.headers.get('content-type') || '';
-    let catalogRecords: CatalogRecord[] = [];
-    let source = 'unknown';
-    
-    // Handle CSV upload
-    if (contentType.includes('text/csv') || contentType.includes('text/plain')) {
-      const csvContent = await req.text();
-      catalogRecords = parseCSV(csvContent);
-      source = 'csv_upload';
-      edgeLogger.info(`Parsed ${catalogRecords.length} products from CSV`);
-    }
-    // Handle JSON upload
-    else if (contentType.includes('application/json')) {
+    // Check for manual catalog data in request body
+    let manualData: ViosCatalogProduct[] = [];
+    try {
       const body = await req.json();
-      
-      // Support { products: [...] } or direct array
-      const products = body.products || (Array.isArray(body) ? body : []);
-      
-      catalogRecords = products.map((p: any) => ({
-        med_id: String(p.med_id || p.medId || p.lfProductId || p.id || ''),
-        product_name: p.product_name || p.productName || p.name || 'Unknown Product',
-        form: p.form || null,
-        strength: p.strength || null,
-        units: p.units || null,
-        package: p.package || null,
-        schedule: p.schedule || null,
-      })).filter((r: CatalogRecord) => r.med_id && r.med_id !== '');
-      
-      source = 'json_upload';
-      edgeLogger.info(`Received ${catalogRecords.length} products from JSON`);
+      if (body.products && Array.isArray(body.products)) {
+        manualData = body.products;
+      }
+    } catch {
+      // No body provided, will try API endpoints
     }
-    else {
+
+    let allProducts: ViosCatalogProduct[] = [];
+    let successfulEndpoint: string | null = null;
+    const attemptedEndpoints: string[] = [];
+
+    // If manual data provided, use it directly
+    if (manualData.length > 0) {
+      allProducts = manualData;
+      successfulEndpoint = 'manual_upload';
+      edgeLogger.info(`Using ${manualData.length} manually provided products`);
+    } else {
+      // Try each possible endpoint
+      for (const endpoint of CATALOG_ENDPOINTS) {
+        try {
+          edgeLogger.info(`Attempting VIOS catalog endpoint: ${endpoint}`);
+          attemptedEndpoints.push(endpoint);
+          
+          const response = await throttledViosApiRequest<any>(
+            `${endpoint}?pageNumber=1&pageSize=100`,
+            { method: "GET" }
+          );
+          
+          // Check for products in response
+          const items = Array.isArray(response) 
+            ? response 
+            : (response.items || response.data || response.products || response.drugs || []);
+          
+          if (items.length > 0) {
+            allProducts = items;
+            successfulEndpoint = endpoint;
+            edgeLogger.info(`Found ${items.length} products at ${endpoint}`);
+            
+            // Fetch remaining pages if paginated
+            if (response.hasNextPage || response.totalPages > 1) {
+              const totalPages = response.totalPages || Math.ceil((response.totalCount || 500) / 100);
+              for (let page = 2; page <= Math.min(totalPages, 50); page++) {
+                const pageResponse = await throttledViosApiRequest<any>(
+                  `${endpoint}?pageNumber=${page}&pageSize=100`,
+                  { method: "GET" }
+                );
+                const pageItems = Array.isArray(pageResponse) 
+                  ? pageResponse 
+                  : (pageResponse.items || pageResponse.data || []);
+                allProducts.push(...pageItems);
+              }
+            }
+            break;
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          edgeLogger.info(`Endpoint ${endpoint} returned: ${errorMsg}`);
+          // Continue to next endpoint
+        }
+      }
+    }
+
+    // If no products found via API
+    if (allProducts.length === 0) {
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: "Please upload CSV or JSON data",
-          instructions: {
-            csv: "POST with Content-Type: text/csv and CSV body with columns: Med ID, Product Name, Form, Strength, Units, Package, Schedule",
-            json: "POST with Content-Type: application/json and body: { products: [{ med_id, product_name, form, strength, units, package, schedule }] }"
+          imported: 0,
+          attempted_endpoints: attemptedEndpoints,
+          message: "VIOS API does not expose a product catalog endpoint. Products must be imported manually or via spreadsheet upload.",
+          manual_import_instructions: {
+            method: "POST",
+            body_format: {
+              products: [
+                { 
+                  lfProductId: 12345, 
+                  productName: "Example Product", 
+                  form: "Injection",
+                  strength: "10mg/mL"
+                }
+              ]
+            }
           }
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (catalogRecords.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "No valid products found in uploaded data"
-        }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    edgeLogger.info(`Processing ${allProducts.length} products from ${successfulEndpoint}`);
 
     // Create Supabase admin client
     const supabaseAdmin = createClient(
@@ -153,39 +154,49 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Batch upsert (1000 records per batch for safety)
-    const BATCH_SIZE = 1000;
-    let totalImported = 0;
-    let errors: string[] = [];
-    
-    for (let i = 0; i < catalogRecords.length; i += BATCH_SIZE) {
-      const batch = catalogRecords.slice(i, i + BATCH_SIZE);
-      
-      const { error } = await supabaseAdmin
-        .from("vios_product_catalog")
-        .upsert(batch, { 
-          onConflict: "med_id",
-          ignoreDuplicates: false 
-        });
+    // Transform to catalog records
+    const catalogRecords = allProducts.map((p) => ({
+      med_id: String(p.lfProductId || p.medId || p.id || ''),
+      product_name: p.productName || p.name || 'Unknown Product',
+      form: p.form || null,
+      strength: p.strength || null,
+      units: p.units || null,
+      package: p.package || null,
+      schedule: p.schedule || (p.scheduleCode ? String(p.scheduleCode) : null),
+    })).filter(r => r.med_id && r.med_id !== ''); // Only include records with valid med_id
 
-      if (error) {
-        edgeLogger.error(`Batch ${Math.floor(i/BATCH_SIZE) + 1} failed`, error);
-        errors.push(`Batch ${Math.floor(i/BATCH_SIZE) + 1}: ${error.message}`);
-      } else {
-        totalImported += batch.length;
-      }
+    if (catalogRecords.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "No valid product IDs found in data. Each product must have lfProductId, medId, or id.",
+          sample_data: allProducts.slice(0, 3)
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    edgeLogger.info(`Successfully imported ${totalImported}/${catalogRecords.length} VIOS products`);
+    // Upsert into vios_product_catalog
+    const { error } = await supabaseAdmin
+      .from("vios_product_catalog")
+      .upsert(catalogRecords, { 
+        onConflict: "med_id",
+        ignoreDuplicates: false 
+      });
+
+    if (error) {
+      edgeLogger.error("Failed to upsert VIOS catalog", error);
+      throw error;
+    }
+
+    edgeLogger.info(`Successfully imported ${catalogRecords.length} VIOS products`);
 
     return new Response(
       JSON.stringify({ 
-        success: errors.length === 0, 
-        imported: totalImported,
-        total: catalogRecords.length,
-        source,
-        errors: errors.length > 0 ? errors : undefined,
-        sample: catalogRecords.slice(0, 3)
+        success: true, 
+        imported: catalogRecords.length,
+        source: successfulEndpoint,
+        sample: catalogRecords.slice(0, 5)
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
