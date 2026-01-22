@@ -339,10 +339,14 @@ export function validateOrderLineForVios(
   const errors: string[] = [];
   const warnings: string[] = [];
   
-  // 1. Validate product has VIOS ID
+  // 1. Validate product has VIOS ID (INVARIANT - must be enforced at product management)
   const viosProductId = orderLine.products?.vios_lf_product_id;
   if (!viosProductId) {
-    errors.push(`Product "${orderLine.products?.name || 'Unknown'}" is not mapped to a VIOS product ID`);
+    errors.push(
+      `Invariant violation: Product "${orderLine.products?.name || 'Unknown'}" ` +
+      `routed to VIOS without vios_lf_product_id. This is a catalog configuration error — ` +
+      `check Admin → Product Management.`
+    );
   }
   
   // 2. Validate quantity

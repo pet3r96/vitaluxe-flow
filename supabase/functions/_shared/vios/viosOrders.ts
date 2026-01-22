@@ -208,11 +208,7 @@ export function buildViosOrderPayload(
       quantity: String(orderLine.quantity || 1),
       directions: orderLine.custom_sig || orderLine.custom_dosage || 'As directed',
       foreignRxNumber: orderLine.id,
-      ...(viosProductId && { lfProductId: Number(viosProductId) }),
-      ...(!viosProductId && { 
-        drugName: productName,
-        drugStrength: orderLine.product_variants?.dosage_label
-      }),
+      lfProductId: Number(viosProductId), // Required — validated upstream by product management
       ...(isGlp1 && clinicalStatement && { clinicalDifferenceStatement: clinicalStatement })
     }]
   };

@@ -104,7 +104,8 @@ serve(async (req) => {
         quantity: String(test_data.quantity || 1), 
         directions: test_data.directions || "Take as directed", 
         foreignRxNumber: `test_rx_${Date.now()}`, 
-        ...(test_data.vios_product_id ? { lfProductId: test_data.vios_product_id } : { drugName: test_data.product_name || "Test Compound" }) 
+        // lfProductId is required - use provided ID or a known valid catalog ID for testing
+        lfProductId: Number(test_data.vios_product_id) || 12345 // Replace 12345 with real catalog ID after import
       }]
     };
 

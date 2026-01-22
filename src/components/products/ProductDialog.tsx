@@ -30,6 +30,10 @@ import { ProductVariantsEditor } from "./ProductVariantsEditor";
 import { useProductVariants, useSyncProductVariants } from "@/hooks/useProductVariants";
 import type { ProductVariantFormData } from "@/types/domain/productVariant";
 import { createEmptyVariant } from "@/types/domain/productVariant";
+import { ViosProductSearch } from "./ViosProductSearch";
+
+// VIOS Compounding Pharmacy ID - used to enforce catalog linkage
+const VIOS_PHARMACY_ID = "d5e75179-e66c-450f-8cae-1f4df93b097c";
 
 interface ProductDialogProps {
   open: boolean;
@@ -250,6 +254,13 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
     // Validate pharmacy selection
     if (formData.assigned_pharmacies.length === 0) {
       toast.error("Please assign at least one pharmacy");
+      return;
+    }
+
+    // VIOS invariant enforcement: If VIOS is selected, require catalog linkage
+    const isViosAssigned = formData.assigned_pharmacies.includes(VIOS_PHARMACY_ID);
+    if (isViosAssigned && !formData.vios_lf_product_id?.trim()) {
+      toast.error("VIOS Compounding requires a VIOS Product ID to be set. Please select a product from the VIOS catalog.");
       return;
     }
 
@@ -719,20 +730,37 @@ export const ProductDialog = ({ open, onOpenChange, product, onSuccess }: Produc
             </p>
           </div>
 
-          {/* VIOS INTEGRATION DISABLED - Uncomment when re-enabling
-          <div className="space-y-2">
-            <Label htmlFor="vios_lf_product_id">VIOS Product ID</Label>
-            <Input
-              id="vios_lf_product_id"
-              value={formData.vios_lf_product_id}
-              onChange={(e) => setFormData({ ...formData, vios_lf_product_id: e.target.value })}
-              placeholder="Enter lfProductId from VIOS catalog"
-            />
-            <p className="text-xs text-muted-foreground">
-              Optional: For direct VIOS pharmacy mapping. Get this ID from the VIOS product catalog.
-            </p>
-          </div>
-          */}
+          {/* VIOS Catalog Linkage - Required when VIOS Compounding is assigned */}
+          {formData.assigned_pharmacies.includes(VIOS_PHARMACY_ID) && (
+            <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
+              <Label htmlFor="vios_lf_product_id" className="flex items-center gap-2">
+                VIOS Catalog Product <span className="text-destructive">*</span>
+              </Label>
+              <ViosProductSearch
+                value={formData.vios_lf_product_id}
+                onChange={(medId, selectedProduct) => {
+                  setFormData({ 
+                    ...formData, 
+                    vios_lf_product_id: medId || "",
+                    // Auto-fill dosage form from catalog if not already set
+                    ...(selectedProduct?.form && !formData.dosage_form && { dosage_form: selectedProduct.form })
+                  });
+                }}
+                placeholder="Search VIOS catalog by name or Med ID..."
+              />
+              {!formData.vios_lf_product_id && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Products assigned to VIOS must be linked to a valid VIOS catalog product for API fulfillment.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Select the matching product from the VIOS catalog. This enables direct API order routing.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="sig">Pre-set SIG (Instructions)</Label>
