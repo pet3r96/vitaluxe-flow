@@ -31,12 +31,64 @@ serve(async (req) => {
       );
     }
 
+    // Use provided NPI or default sandbox NPI (must be authorized in VIOS API Network)
+    const prescriberNpi = test_data.prescriber_npi || "1234567890";
+    
+    // Validate NPI format (exactly 10 digits)
+    if (!/^\d{10}$/.test(prescriberNpi)) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Invalid NPI format: "${prescriberNpi}". NPI must be exactly 10 digits.`,
+          code: "INVALID_NPI"
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build payload WITHOUT practiceId - let VIOS infer from API credentials
     const payload = {
-      general: { referenceId: `test_${Date.now()}`, isTestOrder: true },
-      prescriber: { npi: test_data.prescriber_npi, firstName: test_data.prescriber_first_name, lastName: test_data.prescriber_last_name, phone: "(555) 555-5555" },
-      patient: { firstName: test_data.patient_first_name, lastName: test_data.patient_last_name, dateOfBirth: test_data.patient_dob, gender: 'u', address1: test_data.patient_address, city: test_data.patient_city, state: test_data.patient_state, zip: test_data.patient_zip, phoneHome: test_data.patient_phone, allergiesRaw: ["NKA"] },
-      shipping: { service: test_data.shipping_service || 7623, addressLine1: test_data.patient_address, city: test_data.patient_city, state: test_data.patient_state, zipCode: test_data.patient_zip, recipientType: 'patient', recipientFirstName: test_data.patient_first_name, recipientLastName: test_data.patient_last_name, recipientPhone: test_data.patient_phone },
-      rxs: [{ rxType: 'new', quantity: String(test_data.quantity), directions: test_data.directions, foreignRxNumber: `test_rx_${Date.now()}`, ...(test_data.vios_product_id ? { lfProductId: test_data.vios_product_id } : { drugName: test_data.product_name }) }]
+      general: { 
+        referenceId: `test_${Date.now()}`, 
+        isTestOrder: true
+        // NO practiceId - VIOS determines practice from ClientId credentials
+      },
+      prescriber: { 
+        npi: prescriberNpi, 
+        firstName: test_data.prescriber_first_name || "Test", 
+        lastName: test_data.prescriber_last_name || "Prescriber", 
+        phone: "(555) 555-5555" 
+      },
+      patient: { 
+        firstName: test_data.patient_first_name || "Test", 
+        lastName: test_data.patient_last_name || "Patient", 
+        dateOfBirth: test_data.patient_dob || "1990-01-01", 
+        gender: 'u', 
+        address1: test_data.patient_address || "123 Test St", 
+        city: test_data.patient_city || "TestCity", 
+        state: test_data.patient_state || "TX", 
+        zip: test_data.patient_zip || "75001", 
+        phoneHome: test_data.patient_phone || "5555555555", 
+        allergiesRaw: ["NKA"] 
+      },
+      shipping: { 
+        service: test_data.shipping_service || 7623, 
+        addressLine1: test_data.patient_address || "123 Test St", 
+        city: test_data.patient_city || "TestCity", 
+        state: test_data.patient_state || "TX", 
+        zipCode: test_data.patient_zip || "75001", 
+        recipientType: 'patient', 
+        recipientFirstName: test_data.patient_first_name || "Test", 
+        recipientLastName: test_data.patient_last_name || "Patient", 
+        recipientPhone: test_data.patient_phone || "5555555555" 
+      },
+      rxs: [{ 
+        rxType: 'new', 
+        quantity: String(test_data.quantity || 1), 
+        directions: test_data.directions || "Take as directed", 
+        foreignRxNumber: `test_rx_${Date.now()}`, 
+        ...(test_data.vios_product_id ? { lfProductId: test_data.vios_product_id } : { drugName: test_data.product_name || "Test Compound" }) 
+      }]
     };
 
     const response = await throttledViosApiRequest<ViosOrderResponse>('/api/orders', { method: 'POST', body: payload });
