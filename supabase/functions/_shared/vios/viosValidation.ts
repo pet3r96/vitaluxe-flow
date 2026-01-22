@@ -30,12 +30,14 @@ export interface OrderLineData {
   patient_email?: string;
   patient_address?: string;
   shipping_address?: string;
+  prescription_url?: string; // Required for real orders
   products?: {
     id: string;
     name: string;
     vios_lf_product_id?: number | string | null;
     is_glp1?: boolean;
     glp1_clinical_statement?: string;
+    schedule_code?: string; // For controlled substances
     product_types?: {
       is_glp?: boolean;
       glp_clinical_statement?: string;
@@ -67,6 +69,9 @@ export interface OrderLineData {
     address_state?: string;
     address_zip?: string;
     address_street?: string;
+    driver_license_number?: string;
+    driver_license_state?: string;
+    state_issued_id?: string;
   };
 }
 
@@ -303,11 +308,21 @@ export function validatePrescriberData(
 }
 
 /**
+ * Check if product is a controlled substance requiring special handling
+ */
+export function isControlledSubstance(orderLine: OrderLineData): boolean {
+  const scheduleCode = orderLine.products?.schedule_code;
+  if (!scheduleCode) return false;
+  return ['2', '3', '4', '5', 'II', 'III', 'IV', 'V'].includes(scheduleCode);
+}
+
+/**
  * Full order line validation for VIOS submission
  */
 export function validateOrderLineForVios(
   orderLine: OrderLineData,
-  practice: PracticeData | null
+  practice: PracticeData | null,
+  options?: { isTestOrder?: boolean }
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -355,6 +370,29 @@ export function validateOrderLineForVios(
   // 7. Validate directions/sig
   if (!orderLine.custom_sig && !orderLine.custom_dosage) {
     errors.push("Directions (sig) are required for VIOS orders");
+  }
+  
+  // 8. Prescription/RX requirement for real orders
+  if (!options?.isTestOrder) {
+    if (!orderLine.prescription_url) {
+      errors.push("Prescription document (RX) is required for real orders");
+    }
+  }
+  
+  // 9. Controlled substance patient ID requirement
+  if (isControlledSubstance(orderLine)) {
+    const patient = orderLine.patient_accounts;
+    const hasDriverLicense = patient?.driver_license_number && patient?.driver_license_state;
+    const hasStateId = patient?.state_issued_id;
+    
+    if (!hasDriverLicense && !hasStateId) {
+      errors.push("Controlled substance orders require patient ID (driver's license or state ID)");
+    }
+    
+    // Controlled substances always require prescription PDF
+    if (!orderLine.prescription_url) {
+      errors.push("Controlled substance orders require attached prescription PDF");
+    }
   }
   
   // Log validation result
