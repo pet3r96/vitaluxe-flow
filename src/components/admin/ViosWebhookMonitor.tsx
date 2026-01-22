@@ -15,40 +15,37 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ViosWebhookAuditLog } from "./ViosWebhookAuditLog";
-
 const VIOS_PHARMACY_ID = "d5e75179-e66c-450f-8cae-1f4df93b097c";
-
 interface TestResult {
   success: boolean;
   message: string;
   details?: Record<string, unknown>;
   duration?: number;
 }
-
 interface ApiTestResults {
   tokenTest: TestResult;
   ordersTest: TestResult;
   allergiesTest: TestResult;
   overallSuccess: boolean;
 }
-
 interface WebhookSimResult {
   success: boolean;
   httpStatus: number;
   webhookResponse: Record<string, unknown>;
   sentPayload: Record<string, unknown>;
 }
-
 interface TestOrderResult {
   success: boolean;
   testReferenceId: string;
   duration_ms: number;
   payload_sent: Record<string, unknown>;
   vios_response: Record<string, unknown> | null;
-  error: { message: string; details: unknown } | null;
+  error: {
+    message: string;
+    details: unknown;
+  } | null;
   validation_checks: Record<string, unknown>;
 }
-
 export function ViosWebhookMonitor() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTestingApi, setIsTestingApi] = useState(false);
@@ -58,7 +55,7 @@ export function ViosWebhookMonitor() {
   const [isSubmittingTestOrder, setIsSubmittingTestOrder] = useState(false);
   const [testOrderResult, setTestOrderResult] = useState<TestOrderResult | null>(null);
   const [showPayloadDetails, setShowPayloadDetails] = useState(false);
-  
+
   // Webhook simulator form state
   const [simRxStatus, setSimRxStatus] = useState("Shipping");
   const [simReferenceId, setSimReferenceId] = useState("");
@@ -67,27 +64,32 @@ export function ViosWebhookMonitor() {
   const [simRxNumber, setSimRxNumber] = useState("");
 
   // Fetch VIOS pharmacy config
-  const { data: pharmacyConfig } = useQuery({
+  const {
+    data: pharmacyConfig
+  } = useQuery({
     queryKey: ["vios-pharmacy-config"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pharmacies")
-        .select("id, name, inbound_webhook_enabled, inbound_webhook_path, webhook_secret")
-        .eq("id", VIOS_PHARMACY_ID)
-        .single();
-      
+      const {
+        data,
+        error
+      } = await supabase.from("pharmacies").select("id, name, inbound_webhook_enabled, inbound_webhook_path, webhook_secret").eq("id", VIOS_PHARMACY_ID).single();
       if (error) throw error;
       return data;
-    },
+    }
   });
 
   // Fetch recent tracking updates
-  const { data: recentUpdates, refetch: refetchUpdates, isLoading } = useQuery({
+  const {
+    data: recentUpdates,
+    refetch: refetchUpdates,
+    isLoading
+  } = useQuery({
     queryKey: ["vios-tracking-updates"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pharmacy_tracking_updates")
-        .select(`
+      const {
+        data,
+        error
+      } = await supabase.from("pharmacy_tracking_updates").select(`
           id,
           status,
           status_details,
@@ -100,45 +102,34 @@ export function ViosWebhookMonitor() {
             patient_name,
             order_id
           )
-        `)
-        .eq("pharmacy_id", VIOS_PHARMACY_ID)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      
+        `).eq("pharmacy_id", VIOS_PHARMACY_ID).order("created_at", {
+        ascending: false
+      }).limit(20);
       if (error) throw error;
       return data;
     },
-    refetchInterval: 30000,
+    refetchInterval: 30000
   });
-
-  const webhookUrl = pharmacyConfig?.inbound_webhook_path 
-    ? `https://qbtsfajshnrwwlfzkeog.supabase.co/functions/v1/receive-pharmacy-webhook/${pharmacyConfig.inbound_webhook_path}`
-    : null;
-
+  const webhookUrl = pharmacyConfig?.inbound_webhook_path ? `https://qbtsfajshnrwwlfzkeog.supabase.co/functions/v1/receive-pharmacy-webhook/${pharmacyConfig.inbound_webhook_path}` : null;
   const copyWebhookUrl = () => {
     if (webhookUrl) {
       navigator.clipboard.writeText(webhookUrl);
       toast.success("Webhook URL copied to clipboard");
     }
   };
-
   const copyApiKey = () => {
     if (pharmacyConfig?.webhook_secret) {
       navigator.clipboard.writeText(pharmacyConfig.webhook_secret);
       toast.success("API Key copied to clipboard");
     }
   };
-
   const clearHistory = async () => {
     setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from("pharmacy_tracking_updates")
-        .delete()
-        .eq("pharmacy_id", VIOS_PHARMACY_ID);
-      
+      const {
+        error
+      } = await supabase.from("pharmacy_tracking_updates").delete().eq("pharmacy_id", VIOS_PHARMACY_ID);
       if (error) throw error;
-      
       toast.success("Tracking history cleared");
       refetchUpdates();
     } catch (error) {
@@ -148,73 +139,70 @@ export function ViosWebhookMonitor() {
       setIsDeleting(false);
     }
   };
-
   const runApiTests = async () => {
     setIsTestingApi(true);
     setApiTestResults(null);
-    
     try {
-      const { data, error } = await supabase.functions.invoke("test-vios-api");
-      
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke("test-vios-api");
       if (error) {
         console.error("[VIOS API Test] Function invoke error:", error);
         toast.error(`API test failed: ${error.message}. Check console for details.`);
-        
         setApiTestResults({
-          tokenTest: { 
-            success: false, 
+          tokenTest: {
+            success: false,
             message: `Function invoke error: ${error.message}`,
             details: {
               errorType: error.name || "Unknown",
-              hint: "This may indicate an auth issue (are you an admin?) or the function failed to deploy.",
+              hint: "This may indicate an auth issue (are you an admin?) or the function failed to deploy."
             }
           },
-          ordersTest: { success: false, message: "Skipped - function error" },
-          allergiesTest: { success: false, message: "Skipped - function error" },
-          overallSuccess: false,
+          ordersTest: {
+            success: false,
+            message: "Skipped - function error"
+          },
+          allergiesTest: {
+            success: false,
+            message: "Skipped - function error"
+          },
+          overallSuccess: false
         });
         return;
       }
-      
+
       // Handle the actual response format from test-vios-api edge function
       // Response shape: { success, enabled, api_url, credentials, connection }
       const connection = data?.connection || {};
       const credentials = data?.credentials || {};
       const isConnected = data?.success === true && connection?.connected === true;
       const isEnabled = data?.enabled === true;
-      
+
       // Build ApiTestResults from the actual response
       const results: ApiTestResults = {
         tokenTest: {
           success: isConnected,
-          message: isConnected 
-            ? `Token valid, expires in ${Math.round((connection?.tokenExpiresIn || 0) / 60)} minutes`
-            : !isEnabled 
-              ? "VIOS integration is disabled" 
-              : data?.error || connection?.error || "Failed to obtain token",
+          message: isConnected ? `Token valid, expires in ${Math.round((connection?.tokenExpiresIn || 0) / 60)} minutes` : !isEnabled ? "VIOS integration is disabled" : data?.error || connection?.error || "Failed to obtain token",
           details: {
             apiUrl: data?.api_url,
             tokenValid: connection?.tokenValid,
             tokenExpiresIn: connection?.tokenExpiresIn,
-            lastSuccessfulCall: connection?.lastSuccessfulCall,
+            lastSuccessfulCall: connection?.lastSuccessfulCall
           },
-          duration: connection?.tokenExpiresIn ? undefined : undefined,
+          duration: connection?.tokenExpiresIn ? undefined : undefined
         },
         ordersTest: {
           success: isConnected,
-          message: isConnected 
-            ? "Orders endpoint accessible (authenticated)" 
-            : "Cannot test - authentication failed",
+          message: isConnected ? "Orders endpoint accessible (authenticated)" : "Cannot test - authentication failed"
         },
         allergiesTest: {
           success: isConnected,
-          message: isConnected 
-            ? "Allergies endpoint accessible (authenticated)" 
-            : "Cannot test - authentication failed",
+          message: isConnected ? "Allergies endpoint accessible (authenticated)" : "Cannot test - authentication failed"
         },
-        overallSuccess: isConnected,
+        overallSuccess: isConnected
       };
-      
+
       // Add credentials info if not configured
       if (!credentials?.client_id_configured || !credentials?.client_secret_configured) {
         results.tokenTest = {
@@ -223,14 +211,12 @@ export function ViosWebhookMonitor() {
           details: {
             client_id_configured: credentials?.client_id_configured || false,
             client_secret_configured: credentials?.client_secret_configured || false,
-            hint: "Configure VIOS_CLIENT_ID and VIOS_CLIENT_SECRET in edge function secrets",
-          },
+            hint: "Configure VIOS_CLIENT_ID and VIOS_CLIENT_SECRET in edge function secrets"
+          }
         };
         results.overallSuccess = false;
       }
-      
       setApiTestResults(results);
-      
       if (results.overallSuccess) {
         toast.success("All API tests passed!");
       } else if (!isEnabled) {
@@ -242,40 +228,43 @@ export function ViosWebhookMonitor() {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.error("[VIOS API Test] Unexpected error:", error);
       toast.error(`API test failed: ${errorMessage}`);
-      
       setApiTestResults({
-        tokenTest: { 
-          success: false, 
-          message: `Unexpected error: ${errorMessage}`,
+        tokenTest: {
+          success: false,
+          message: `Unexpected error: ${errorMessage}`
         },
-        ordersTest: { success: false, message: "Skipped" },
-        allergiesTest: { success: false, message: "Skipped" },
-        overallSuccess: false,
+        ordersTest: {
+          success: false,
+          message: "Skipped"
+        },
+        allergiesTest: {
+          success: false,
+          message: "Skipped"
+        },
+        overallSuccess: false
       });
     } finally {
       setIsTestingApi(false);
     }
   };
-
   const simulateWebhook = async () => {
     setIsSimulating(true);
     setSimResult(null);
-    
     try {
-      const { data, error } = await supabase.functions.invoke("simulate-vios-webhook", {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke("simulate-vios-webhook", {
         body: {
           rxStatus: simRxStatus,
           referenceId: simReferenceId || undefined,
           trackingNumber: simTrackingNumber || undefined,
           carrier: simCarrier || undefined,
-          rxNumber: simRxNumber || undefined,
-        },
+          rxNumber: simRxNumber || undefined
+        }
       });
-      
       if (error) throw error;
-      
       setSimResult(data as WebhookSimResult);
-      
       if (data.success) {
         toast.success("Webhook simulation successful!");
         refetchUpdates();
@@ -289,24 +278,22 @@ export function ViosWebhookMonitor() {
       setIsSimulating(false);
     }
   };
-
   const submitTestOrder = async () => {
     setIsSubmittingTestOrder(true);
     setTestOrderResult(null);
-    
     try {
-      const { data, error } = await supabase.functions.invoke("test-vios-order-submit", {
-        body: {},
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke("test-vios-order-submit", {
+        body: {}
       });
-      
       if (error) {
         console.error("[VIOS Test Order] Function invoke error:", error);
         toast.error(`Test order failed: ${error.message}`);
         return;
       }
-      
       setTestOrderResult(data as TestOrderResult);
-      
       if (data.success) {
         const orderId = data.vios_response?.orderId || data.vios_response?.OrderId;
         toast.success(`Test order submitted! VIOS Order ID: ${orderId}`);
@@ -320,10 +307,8 @@ export function ViosWebhookMonitor() {
       setIsSubmittingTestOrder(false);
     }
   };
-
   const getStatusBadge = (status: string) => {
     const statusLower = status?.toLowerCase() || "";
-    
     if (statusLower.includes("deliver")) {
       return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">{status}</Badge>;
     }
@@ -338,37 +323,29 @@ export function ViosWebhookMonitor() {
     }
     return <Badge variant="secondary">{status}</Badge>;
   };
-
-  const TestResultRow = ({ label, result }: { label: string; result?: TestResult }) => {
+  const TestResultRow = ({
+    label,
+    result
+  }: {
+    label: string;
+    result?: TestResult;
+  }) => {
     if (!result) return null;
-    
-    return (
-      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-        {result.success ? (
-          <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-        ) : (
-          <XCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
-        )}
+    return <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+        {result.success ? <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /> : <XCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium">{label}</span>
-            {result.duration && (
-              <span className="text-xs text-muted-foreground">{result.duration}ms</span>
-            )}
+            {result.duration && <span className="text-xs text-muted-foreground">{result.duration}ms</span>}
           </div>
           <p className="text-sm text-muted-foreground">{result.message}</p>
-          {result.details && (
-            <pre className="text-xs mt-1 p-2 bg-background rounded overflow-x-auto">
+          {result.details && <pre className="text-xs mt-1 p-2 bg-background rounded overflow-x-auto">
               {JSON.stringify(result.details, null, 2)}
-            </pre>
-          )}
+            </pre>}
         </div>
-      </div>
-    );
+      </div>;
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <Tabs defaultValue="config" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="config" className="gap-2">
@@ -434,11 +411,7 @@ export function ViosWebhookMonitor() {
               <div>
                 <Label className="text-sm text-muted-foreground">Webhook URL (for VIOS to send updates)</Label>
                 <div className="flex gap-2 mt-1">
-                  <Input 
-                    value={webhookUrl || "Not configured"} 
-                    readOnly 
-                    className="font-mono text-sm"
-                  />
+                  <Input value={webhookUrl || "Not configured"} readOnly className="font-mono text-sm" />
                   <Button variant="outline" size="icon" onClick={copyWebhookUrl} disabled={!webhookUrl}>
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -448,11 +421,7 @@ export function ViosWebhookMonitor() {
               <div>
                 <Label className="text-sm text-muted-foreground">Webhook API Key (x-api-key header)</Label>
                 <div className="flex gap-2 mt-1">
-                  <Input 
-                    value={pharmacyConfig?.webhook_secret ? "••••••••••••••••" : "Not configured"} 
-                    readOnly 
-                    className="font-mono text-sm"
-                  />
+                  <Input value={pharmacyConfig?.webhook_secret ? "••••••••••••••••" : "Not configured"} readOnly className="font-mono text-sm" />
                   <Button variant="outline" size="icon" onClick={copyApiKey} disabled={!pharmacyConfig?.webhook_secret}>
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -490,47 +459,31 @@ export function ViosWebhookMonitor() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button 
-                onClick={runApiTests} 
-                disabled={isTestingApi}
-                className="w-full sm:w-auto"
-              >
-                {isTestingApi ? (
-                  <>
+              <Button onClick={runApiTests} disabled={isTestingApi} className="w-full sm:w-auto">
+                {isTestingApi ? <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Running Tests...
-                  </>
-                ) : (
-                  <>
+                  </> : <>
                     <Play className="h-4 w-4 mr-2" />
                     Run All Tests
-                  </>
-                )}
+                  </>}
               </Button>
 
-              {apiTestResults && (
-                <div className="space-y-3 mt-4">
+              {apiTestResults && <div className="space-y-3 mt-4">
                   <div className="flex items-center gap-2 pb-2 border-b">
-                    {apiTestResults.overallSuccess ? (
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                    {apiTestResults.overallSuccess ? <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                         All Tests Passed
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive">Some Tests Failed</Badge>
-                    )}
+                      </Badge> : <Badge variant="destructive">Some Tests Failed</Badge>}
                   </div>
                   
                   <TestResultRow label="Token Authentication" result={apiTestResults.tokenTest} />
                   <TestResultRow label="Orders Endpoint" result={apiTestResults.ordersTest} />
                   <TestResultRow label="Allergies Endpoint" result={apiTestResults.allergiesTest} />
-                </div>
-              )}
+                </div>}
 
-              {!apiTestResults && !isTestingApi && (
-                <p className="text-sm text-muted-foreground py-4 text-center">
+              {!apiTestResults && !isTestingApi && <p className="text-sm text-muted-foreground py-4 text-center">
                   Click "Run All Tests" to verify VIOS API connectivity
-                </p>
-              )}
+                </p>}
             </CardContent>
           </Card>
 
@@ -552,55 +505,35 @@ export function ViosWebhookMonitor() {
                   VIOS should recognize this as a test and not process it as a real order.
                 </p>
               </div>
-              <Button
-                onClick={submitTestOrder} 
-                disabled={isSubmittingTestOrder}
-                className="w-full sm:w-auto"
-                variant="default"
-              >
-                {isSubmittingTestOrder ? (
-                  <>
+              <Button onClick={submitTestOrder} disabled={isSubmittingTestOrder} className="w-full sm:w-auto" variant="default">
+                {isSubmittingTestOrder ? <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Submitting Test Order...
-                  </>
-                ) : (
-                  <>
+                  </> : <>
                     <Send className="h-4 w-4 mr-2" />
                     Submit Test Order
-                  </>
-                )}
+                  </>}
               </Button>
 
-              {testOrderResult && (
-                <div className="mt-4 space-y-4">
+              {testOrderResult && <div className="mt-4 space-y-4">
                   {/* Result Summary */}
                   <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border">
-                    {testOrderResult.success ? (
-                      <CheckCircle2 className="h-8 w-8 text-green-500 shrink-0" />
-                    ) : (
-                      <XCircle className="h-8 w-8 text-destructive shrink-0" />
-                    )}
+                    {testOrderResult.success ? <CheckCircle2 className="h-8 w-8 text-green-500 shrink-0" /> : <XCircle className="h-8 w-8 text-destructive shrink-0" />}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {testOrderResult.success ? (
-                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        {testOrderResult.success ? <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                             Order Submitted Successfully
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive">Order Submission Failed</Badge>
-                        )}
+                          </Badge> : <Badge variant="destructive">Order Submission Failed</Badge>}
                         <span className="text-sm text-muted-foreground">
                           {testOrderResult.duration_ms}ms
                         </span>
                       </div>
-                      {testOrderResult.success && testOrderResult.vios_response && (
-                        <p className="text-sm mt-1">
+                      {testOrderResult.success && testOrderResult.vios_response && <p className="text-sm mt-1">
                           <strong>VIOS Order ID:</strong>{" "}
                           <code className="bg-muted px-2 py-0.5 rounded font-mono">
                             {String(testOrderResult.vios_response.orderId || testOrderResult.vios_response.OrderId || 'N/A')}
                           </code>
-                        </p>
-                      )}
+                        </p>}
                       <p className="text-sm text-muted-foreground mt-1">
                         Reference ID: <code className="font-mono">{testOrderResult.testReferenceId}</code>
                       </p>
@@ -608,24 +541,20 @@ export function ViosWebhookMonitor() {
                   </div>
 
                   {/* Error Details */}
-                  {testOrderResult.error && (
-                    <div className="space-y-2">
+                  {testOrderResult.error && <div className="space-y-2">
                       <Label className="text-sm text-destructive">Error Details</Label>
                       <pre className="text-xs p-3 bg-destructive/10 text-destructive rounded-lg overflow-x-auto">
                         {JSON.stringify(testOrderResult.error, null, 2)}
                       </pre>
-                    </div>
-                  )}
+                    </div>}
 
                   {/* VIOS Response */}
-                  {testOrderResult.vios_response && (
-                    <div className="space-y-2">
+                  {testOrderResult.vios_response && <div className="space-y-2">
                       <Label className="text-sm">VIOS Response</Label>
                       <pre className="text-xs p-3 bg-muted rounded-lg overflow-x-auto max-h-48">
                         {JSON.stringify(testOrderResult.vios_response, null, 2)}
                       </pre>
-                    </div>
-                  )}
+                    </div>}
 
                   {/* Validation Checks */}
                   <div className="space-y-2">
@@ -649,14 +578,11 @@ export function ViosWebhookMonitor() {
                       </pre>
                     </CollapsibleContent>
                   </Collapsible>
-                </div>
-              )}
+                </div>}
 
-              {!testOrderResult && !isSubmittingTestOrder && (
-                <p className="text-sm text-muted-foreground py-4 text-center">
+              {!testOrderResult && !isSubmittingTestOrder && <p className="text-sm text-muted-foreground py-4 text-center">
                   Click "Submit Test Order" to send a test order to VIOS and verify the integration
-                </p>
-              )}
+                </p>}
             </CardContent>
           </Card>
         </TabsContent>
@@ -708,62 +634,37 @@ export function ViosWebhookMonitor() {
 
                 <div className="space-y-2">
                   <Label>Reference ID (order_line.id)</Label>
-                  <Input
-                    placeholder="Optional - links to existing order"
-                    value={simReferenceId}
-                    onChange={(e) => setSimReferenceId(e.target.value)}
-                  />
+                  <Input placeholder="Optional - links to existing order" value={simReferenceId} onChange={e => setSimReferenceId(e.target.value)} />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Tracking Number</Label>
-                  <Input
-                    placeholder="Auto-generated if empty"
-                    value={simTrackingNumber}
-                    onChange={(e) => setSimTrackingNumber(e.target.value)}
-                  />
+                  <Input placeholder="Auto-generated if empty" value={simTrackingNumber} onChange={e => setSimTrackingNumber(e.target.value)} />
                 </div>
 
                 <div className="space-y-2 sm:col-span-2">
                   <Label>RX Number</Label>
-                  <Input
-                    placeholder="Auto-generated if empty"
-                    value={simRxNumber}
-                    onChange={(e) => setSimRxNumber(e.target.value)}
-                  />
+                  <Input placeholder="Auto-generated if empty" value={simRxNumber} onChange={e => setSimRxNumber(e.target.value)} />
                 </div>
               </div>
 
-              <Button 
-                onClick={simulateWebhook} 
-                disabled={isSimulating}
-                className="w-full sm:w-auto"
-              >
-                {isSimulating ? (
-                  <>
+              <Button onClick={simulateWebhook} disabled={isSimulating} className="w-full sm:w-auto">
+                {isSimulating ? <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Sending...
-                  </>
-                ) : (
-                  <>
+                  </> : <>
                     <FlaskConical className="h-4 w-4 mr-2" />
                     Send Test Webhook
-                  </>
-                )}
+                  </>}
               </Button>
 
-              {simResult && (
-                <div className="mt-4 space-y-3">
+              {simResult && <div className="mt-4 space-y-3">
                   <div className="flex items-center gap-2 pb-2 border-b">
-                    {simResult.success ? (
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                    {simResult.success ? <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                         Webhook Received (HTTP {simResult.httpStatus})
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive">
+                      </Badge> : <Badge variant="destructive">
                         Failed (HTTP {simResult.httpStatus})
-                      </Badge>
-                    )}
+                      </Badge>}
                   </div>
                   
                   <div className="space-y-2">
@@ -779,8 +680,7 @@ export function ViosWebhookMonitor() {
                       {JSON.stringify(simResult.webhookResponse, null, 2)}
                     </pre>
                   </div>
-                </div>
-              )}
+                </div>}
             </CardContent>
           </Card>
         </TabsContent>
@@ -790,7 +690,8 @@ export function ViosWebhookMonitor() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileSearch className="h-5 w-5" />
+
+Event Audit Log<FileSearch className="h-5 w-5" />
                 Webhook Event Audit Log
               </CardTitle>
               <CardDescription>
@@ -816,12 +717,7 @@ export function ViosWebhookMonitor() {
               <div className="flex gap-2">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-2 text-destructive hover:text-destructive"
-                      disabled={!recentUpdates?.length || isDeleting}
-                    >
+                    <Button variant="outline" size="sm" className="gap-2 text-destructive hover:text-destructive" disabled={!recentUpdates?.length || isDeleting}>
                       <Trash2 className="h-4 w-4" />
                       Clear
                     </Button>
@@ -848,8 +744,7 @@ export function ViosWebhookMonitor() {
               </div>
             </CardHeader>
             <CardContent>
-              {recentUpdates && recentUpdates.length > 0 ? (
-                <Table>
+              {recentUpdates && recentUpdates.length > 0 ? <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Order</TableHead>
@@ -860,51 +755,39 @@ export function ViosWebhookMonitor() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentUpdates.map((update) => (
-                      <TableRow key={update.id}>
+                    {recentUpdates.map(update => <TableRow key={update.id}>
                         <TableCell className="font-mono text-sm">
                           {update.order_lines?.order_id?.slice(0, 8) || "-"}...
                         </TableCell>
                         <TableCell>{update.order_lines?.patient_name || "-"}</TableCell>
                         <TableCell>
                           {getStatusBadge(update.status)}
-                          {update.status_details && (
-                            <p className="text-xs text-muted-foreground mt-1 max-w-[200px] truncate">
+                          {update.status_details && <p className="text-xs text-muted-foreground mt-1 max-w-[200px] truncate">
                               {update.status_details}
-                            </p>
-                          )}
+                            </p>}
                         </TableCell>
                         <TableCell>
-                          {update.tracking_number ? (
-                            <div className="text-sm">
+                          {update.tracking_number ? <div className="text-sm">
                               <span className="font-mono">{update.tracking_number}</span>
-                              {update.carrier && (
-                                <span className="text-muted-foreground ml-1">({update.carrier})</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
+                              {update.carrier && <span className="text-muted-foreground ml-1">({update.carrier})</span>}
+                            </div> : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(update.created_at), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(update.created_at), {
+                        addSuffix: true
+                      })}
                           </div>
                         </TableCell>
-                      </TableRow>
-                    ))}
+                      </TableRow>)}
                   </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                </Table> : <div className="text-center py-8 text-muted-foreground">
                   No tracking updates received yet. Updates will appear here when VIOS sends webhooks.
-                </div>
-              )}
+                </div>}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 }
