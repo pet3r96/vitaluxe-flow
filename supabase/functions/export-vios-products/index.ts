@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
       .select(`
         id,
         name,
-        product_type,
+        product_types(name),
         dosage_form,
         base_price,
         vios_lf_product_id,
@@ -124,7 +124,7 @@ Deno.serve(async (req: Request) => {
         // Product without variants - use product-level data
         csvRows.push([
           escapeCSV(product.name || ""),
-          escapeCSV(product.product_type || ""),
+          escapeCSV((product.product_types as any)?.name || ""),
           escapeCSV(product.dosage_form || ""),
           "", // No variant dosage
           String(product.base_price || 0),
@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
         for (const variant of variants) {
           csvRows.push([
             escapeCSV(product.name || ""),
-            escapeCSV(product.product_type || ""),
+            escapeCSV((product.product_types as any)?.name || ""),
             escapeCSV(product.dosage_form || ""),
             escapeCSV(variant.dosage_label || ""),
             String(variant.base_price || product.base_price || 0),
