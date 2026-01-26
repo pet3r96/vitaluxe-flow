@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
         vios_lf_product_id,
         product_variants (
           id,
-          label,
+          dosage_label,
           base_price,
           product_code
         )
@@ -138,7 +138,7 @@ Deno.serve(async (req: Request) => {
             escapeCSV(product.name || ""),
             escapeCSV(product.product_type || ""),
             escapeCSV(product.dosage_form || ""),
-            escapeCSV(variant.label || ""),
+            escapeCSV(variant.dosage_label || ""),
             String(variant.base_price || product.base_price || 0),
             variant.id,
             variant.product_code || "" // Existing Med ID if any
