@@ -14,13 +14,13 @@ const VIOS_PHARMACY_ID = "d5e75179-e66c-450f-8cae-1f4df93b097c";
 
 interface ProductVariant {
   id: string;
-  label: string;
+  dosage_label: string;
   base_price: number;
   product_code: string | null;
   product: {
     id: string;
     name: string;
-    product_type: string | null;
+    product_types: { name: string } | null;
     dosage_form: string | null;
   };
 }
@@ -60,18 +60,18 @@ export function ViosMedIdManager() {
         .from("product_variants")
         .select(`
           id,
-          label,
+          dosage_label,
           base_price,
           product_code,
           product:products!inner (
             id,
             name,
-            product_type,
+            product_types(name),
             dosage_form
           )
         `)
         .in("product_id", productIds)
-        .order("label");
+        .order("dosage_label");
 
       if (variantError) throw variantError;
       return variantData as unknown as ProductVariant[];
@@ -84,7 +84,7 @@ export function ViosMedIdManager() {
     const search = searchQuery.toLowerCase();
     return (
       v.product.name.toLowerCase().includes(search) ||
-      v.label.toLowerCase().includes(search) ||
+      v.dosage_label.toLowerCase().includes(search) ||
       v.product_code?.toLowerCase().includes(search)
     );
   });
@@ -187,7 +187,7 @@ export function ViosMedIdManager() {
             variant_id: variantId,
             vios_med_id: medId,
             productName: variant?.product.name,
-            variantLabel: variant?.label,
+            variantLabel: variant?.dosage_label,
             status: variant ? "pending" : "error",
             message: variant ? undefined : "Variant not found"
           });
@@ -449,8 +449,8 @@ export function ViosMedIdManager() {
                   {filteredVariants?.map((variant) => (
                     <TableRow key={variant.id}>
                       <TableCell className="font-medium">{variant.product.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{variant.product.product_type || "—"}</TableCell>
-                      <TableCell>{variant.label}</TableCell>
+                      <TableCell className="text-muted-foreground">{variant.product.product_types?.name || "—"}</TableCell>
+                      <TableCell>{variant.dosage_label}</TableCell>
                       <TableCell>${variant.base_price?.toFixed(2)}</TableCell>
                       <TableCell className="font-mono text-xs">
                         {variant.product_code || "—"}
