@@ -481,6 +481,8 @@ export function PharmacyProfileForm() {
         </div>
       </div>
 
+      <PharmacyTeamSection />
+
       <SignedAgreementSection userId={effectiveUserId} />
 
       <NotificationPreferencesDialog
