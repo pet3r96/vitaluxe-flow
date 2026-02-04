@@ -401,6 +401,23 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+    } else if (signupData.role === 'pharmacy_staff' as any) {
+      // Pharmacy staff validation - must be linked to a pharmacy
+      if (!signupData.roleData.pharmacyId) {
+        return new Response(
+          JSON.stringify({ error: 'Pharmacy staff members must be linked to a pharmacy' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!signupData.roleData.roleType) {
+        return new Response(
+          JSON.stringify({ error: 'Pharmacy staff members must have a role type' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      // Pharmacy staff get the 'pharmacy' role in user_roles (not a new enum value)
+      // This ensures existing RLS policies work automatically
+      signupData.role = 'pharmacy' as any;
     }
 
     // PHASE 2: Normalize email before any processing
