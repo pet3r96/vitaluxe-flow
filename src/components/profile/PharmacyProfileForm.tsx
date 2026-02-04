@@ -134,9 +134,11 @@ export function PharmacyProfileForm() {
     }
   }, [pharmacy, form]);
 
-  // Update mutation
+  // Update mutation - use pharmacy id instead of user_id for staff compatibility
   const updateMutation = useMutation({
     mutationFn: async (values: PharmacyFormValues) => {
+      if (!pharmacy?.id) throw new Error("Pharmacy not found");
+      
       const { error } = await supabase
         .from("pharmacies")
         .update({
@@ -149,7 +151,7 @@ export function PharmacyProfileForm() {
           address_formatted: values.address.formatted,
           states_serviced: values.states_serviced,
         })
-        .eq("user_id", effectiveUserId);
+        .eq("id", pharmacy.id);
 
       if (error) throw error;
     },
