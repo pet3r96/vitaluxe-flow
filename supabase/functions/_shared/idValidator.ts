@@ -307,18 +307,14 @@ export async function validateUserOwnsResource(
           edgeLogger.info('[ID_VALIDATOR] User is staff, checking practice access', { userId });
         }
 
-        // ✅ PHARMACY FIX: Check if user is a pharmacy
-        const { data: pharmacyData } = await supabase
-          .from('pharmacies')
-          .select('id')
-          .eq('user_id', userId)
-          .maybeSingle();
+        // ✅ PHARMACY FIX: Check if user is a pharmacy (owner OR staff)
+        const pharmacyId = await getUserPharmacyId(supabase, userId);
 
-        if (pharmacyData) {
-          // User is a pharmacy - check if they're assigned to this order
+        if (pharmacyId) {
+          // User is a pharmacy owner or staff - check if they're assigned to this order
           edgeLogger.info('[ID_VALIDATOR] Pharmacy user detected, checking order assignment', { 
             userId, 
-            pharmacyId: pharmacyData.id,
+            pharmacyId,
             orderId: resourceId 
           });
           
@@ -326,14 +322,14 @@ export async function validateUserOwnsResource(
             .from('order_lines')
             .select('id')
             .eq('order_id', resourceId)
-            .eq('assigned_pharmacy_id', pharmacyData.id)
+            .eq('assigned_pharmacy_id', pharmacyId)
             .limit(1);
           
           const isAssigned = !!assignedLines && assignedLines.length > 0;
           edgeLogger.info('[ID_VALIDATOR] Pharmacy order check result', { 
             isAssigned,
             orderId: resourceId,
-            pharmacyId: pharmacyData.id
+            pharmacyId
           });
           
           return {
