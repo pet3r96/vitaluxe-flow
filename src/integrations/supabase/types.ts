@@ -9124,6 +9124,10 @@ export type Database = {
         Args: { order_uuid: string; pharmacy_user_id: string }
         Returns: boolean
       }
+      pharmacy_staff_access: {
+        Args: { pharmacy_uuid: string }
+        Returns: boolean
+      }
       provider_can_view_order: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
