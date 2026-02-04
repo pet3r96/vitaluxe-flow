@@ -1,253 +1,205 @@
 
-# Add Multiple Users to a Pharmacy Account
 
-## Status: ✅ IMPLEMENTED
+# Audit Results: Pharmacy Staff Multi-User Implementation
 
-## Overview
+## Summary
 
-Pharmacy accounts now support multiple users. The main pharmacy user (owner) can add additional staff members who have full access to the pharmacy dashboard, orders, and shipping.
-
----
-
-## Current Architecture
-
-| Entity | Single User | Multi-User Support |
-|--------|-------------|-------------------|
-| Practice (doctor) | `profiles.id` | ✅ Via `practice_staff` table |
-| Pharmacy | `pharmacies.user_id` | ❌ Single user only |
-
-**Key Files:**
-- `practice_staff` table - links multiple users to a practice
-- `AddStaffDialog.tsx` - UI for adding staff to practices
-- `assign-user-role` edge function - handles user creation for all roles
+The implementation has been reviewed and several critical issues have been identified that will prevent the pharmacy staff feature from working correctly.
 
 ---
 
-## Proposed Solution
+## Issues Found
 
-Create a **`pharmacy_staff`** table that mirrors the `practice_staff` pattern:
+### CRITICAL: Missing RLS Policies for Pharmacy Staff
 
-1. **New Database Table**: `pharmacy_staff`
-2. **New Role**: Re-use existing `pharmacy` role OR add `pharmacy_staff` to enum
-3. **Updated RLS Policies**: Allow pharmacy staff same access as pharmacy owner
-4. **Updated Edge Functions**: Modify access checks to include pharmacy staff
-5. **New UI Component**: `AddPharmacyStaffDialog.tsx`
+**Problem**: The RLS policies on multiple tables only check for `pharmacies.user_id = auth.uid()` - they do NOT include the `pharmacy_staff` table. This means pharmacy staff members will be BLOCKED from accessing data at the database level.
 
----
+**Affected Tables and Policies:**
 
-## Database Changes
+| Table | Policy Name | Current Check |
+|-------|-------------|---------------|
+| `orders` | `pharmacy_view_orders` | `pharmacies.user_id = auth.uid()` |
+| `orders` | `pharmacy_update_orders` | `pharmacies.user_id = auth.uid()` |
+| `order_lines` | `pharmacy_view_lines` | `pharmacies.user_id = auth.uid()` |
+| `order_lines` | `pharmacy_update_lines` | `pharmacies.user_id = auth.uid()` |
+| `order_status_history` | `Pharmacies can view assigned order status history` | `pharmacies.user_id = auth.uid()` |
+| `pharmacy_order_jobs` | `pharmacy_jobs_select_assigned` | `pharmacies.user_id = auth.uid()` |
+| `pharmacy_order_jobs` | `pharmacy_jobs_update_assigned` | `pharmacies.user_id = auth.uid()` |
+| `pharmacy_order_transmissions` | `Pharmacies can view their own transmissions` | `pharmacies.user_id = auth.uid()` |
+| `pharmacy_shipping_rates` | `Pharmacies manage their shipping rates` | `pharmacies.user_id = auth.uid()` |
+| `pharmacy_tracking_updates` | `Pharmacies can view their own tracking updates` | `pharmacies.user_id = auth.uid()` |
+| `support_tickets` | `Pharmacies can view/update their support tickets` | `pharmacies.user_id = auth.uid()` |
+| `support_ticket_replies` | `Users can view replies to accessible tickets` | `pharmacies.user_id = auth.uid()` |
+| `pharmacy_idempotency_keys` | `Admins can view idempotency keys` | `pharmacies.user_id = auth.uid()` |
 
-### 1. Create `pharmacy_staff` Table
+**Required Fix**: Each policy needs to be updated to also check the `pharmacy_staff` table:
 
 ```sql
-CREATE TABLE public.pharmacy_staff (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  pharmacy_id uuid NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
-  role_type text NOT NULL DEFAULT 'staff',
-  active boolean NOT NULL DEFAULT true,
-  can_manage_orders boolean NOT NULL DEFAULT true,
-  can_manage_shipping boolean NOT NULL DEFAULT true,
-  can_view_api_config boolean NOT NULL DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (user_id, pharmacy_id)
-);
-
--- Enable RLS
-ALTER TABLE pharmacy_staff ENABLE ROW LEVEL SECURITY;
-
--- Indexes for fast lookups
-CREATE INDEX idx_pharmacy_staff_user_id ON pharmacy_staff(user_id);
-CREATE INDEX idx_pharmacy_staff_pharmacy_id ON pharmacy_staff(pharmacy_id);
-```
-
-### 2. RLS Policies for `pharmacy_staff`
-
-```sql
--- Admin full access
-CREATE POLICY "admin_all_pharmacy_staff"
-  ON pharmacy_staff FOR ALL
-  USING (has_role(auth.uid(), 'admin'::app_role));
-
--- Pharmacy owner can manage their staff
-CREATE POLICY "pharmacy_owner_manage_staff"
-  ON pharmacy_staff FOR ALL
-  USING (
-    pharmacy_id IN (
-      SELECT id FROM pharmacies WHERE user_id = auth.uid()
-    )
+-- Pattern for updated policy check:
+(
+  -- Original owner check
+  pharmacies.user_id = auth.uid() 
+  OR 
+  -- New: Staff check
+  pharmacies.id IN (
+    SELECT pharmacy_id FROM pharmacy_staff 
+    WHERE user_id = auth.uid() AND active = true
   )
-  WITH CHECK (
-    pharmacy_id IN (
-      SELECT id FROM pharmacies WHERE user_id = auth.uid()
-    )
-  );
-
--- Staff can view their own record
-CREATE POLICY "pharmacy_staff_view_own"
-  ON pharmacy_staff FOR SELECT
-  USING (user_id = auth.uid());
-```
-
-### 3. Update `pharmacies` RLS to Include Staff
-
-```sql
--- Drop and recreate pharmacy_manage_own_record to include staff
-DROP POLICY IF EXISTS "pharmacy_manage_own_record" ON pharmacies;
-
-CREATE POLICY "pharmacy_manage_own_record"
-  ON pharmacies FOR ALL
-  USING (
-    user_id = auth.uid() 
-    OR id IN (
-      SELECT pharmacy_id FROM pharmacy_staff 
-      WHERE user_id = auth.uid() AND active = true
-    )
-  )
-  WITH CHECK (
-    user_id = auth.uid() 
-    OR id IN (
-      SELECT pharmacy_id FROM pharmacy_staff 
-      WHERE user_id = auth.uid() AND active = true
-    )
-  );
+)
 ```
 
 ---
 
-## Edge Function Updates
+### CRITICAL: PharmacyProfileForm Only Shows for Owner
 
-### 1. Update `idValidator.ts`
-
-Add pharmacy staff lookup in `getUserPracticeId` pattern:
-
+**Problem**: The `PharmacyProfileForm` component queries pharmacy data using:
 ```typescript
-// New helper function
-async function getUserPharmacyId(supabase: any, userId: string): Promise<string | null> {
-  // Check if user is pharmacy owner
-  const { data: pharmacyOwner } = await supabase
-    .from('pharmacies')
-    .select('id')
-    .eq('user_id', userId)
-    .maybeSingle();
-  
-  if (pharmacyOwner) return pharmacyOwner.id;
-  
-  // Check if user is pharmacy staff
-  const { data: staffRecord } = await supabase
-    .from('pharmacy_staff')
-    .select('pharmacy_id')
-    .eq('user_id', userId)
-    .eq('active', true)
-    .maybeSingle();
-  
-  return staffRecord?.pharmacy_id || null;
+.eq("user_id", effectiveUserId)
+```
+
+This will return no results for pharmacy staff members.
+
+**File**: `src/components/profile/PharmacyProfileForm.tsx` (lines 82-86)
+
+**Required Fix**: Update to also check `pharmacy_staff`:
+```typescript
+// First check if user is pharmacy owner
+const { data: owned } = await supabase
+  .from("pharmacies")
+  .select("*")
+  .eq("user_id", effectiveUserId)
+  .maybeSingle();
+
+if (owned) return owned;
+
+// Check if user is pharmacy staff
+const { data: staffRecord } = await supabase
+  .from("pharmacy_staff")
+  .select("pharmacy_id")
+  .eq("user_id", effectiveUserId)
+  .eq("active", true)
+  .maybeSingle();
+
+if (staffRecord?.pharmacy_id) {
+  const { data: pharmacy } = await supabase
+    .from("pharmacies")
+    .select("*")
+    .eq("id", staffRecord.pharmacy_id)
+    .single();
+  return pharmacy;
 }
 ```
 
-### 2. Update `get-orders-page/index.ts`
+---
 
-Modify the pharmacy section to check both owner and staff:
+### MODERATE: `pharmacy_staff` Table Has User-Level Unique Constraint
 
+**Observation**: The `pharmacy_staff` table has a unique constraint on `(user_id, pharmacy_id)`, but the upsert in `assign-user-role/index.ts` uses:
 ```typescript
-// Current code checks: .eq('user_id', practiceId)
-// New code should also check pharmacy_staff table
+{ onConflict: 'user_id,pharmacy_id' }
 ```
 
-### 3. Update `assign-user-role/index.ts`
+This is correct, but the issue is that if a user is already staff at one pharmacy and gets added to another, it will work. However, a single user can only be staff at one pharmacy at a time based on how the system is designed (edge functions only return the first match with `.maybeSingle()`).
 
-Add handling for `pharmacy_staff` role creation similar to `staff` role.
-
----
-
-## Frontend Changes
-
-### 1. Create `AddPharmacyStaffDialog.tsx`
-
-New component similar to `AddStaffDialog.tsx`:
-- Email input
-- Name input  
-- Phone input
-- Permission toggles (orders, shipping, API config)
-- Creates user via `assign-user-role` edge function
-
-### 2. Create `PharmacyStaffTable.tsx`
-
-Display pharmacy staff members with:
-- Name, email, status
-- Active/inactive toggle
-- Delete functionality
-
-### 3. Update Pharmacy Profile/Dashboard
-
-Add a "Team" section for pharmacy users to manage their staff.
+**Status**: This is acceptable behavior but should be documented.
 
 ---
 
-## Files to Create
+### LOW: Missing Role Check for Staff in Profile Routes
 
-| File | Purpose |
-|------|---------|
-| `src/components/pharmacies/AddPharmacyStaffDialog.tsx` | Dialog for adding staff |
-| `src/components/pharmacies/PharmacyStaffTable.tsx` | Table listing staff |
-| `src/types/pharmacyStaff.ts` | TypeScript types |
+**Observation**: The AuthContext correctly tracks `isStaffAccount` for practice staff, but there's no equivalent `isPharmacyStaffAccount` flag for pharmacy staff.
+
+**Impact**: Not critical since the `pharmacy` role is assigned, but may cause confusion in UI/logic that differentiates owners from staff.
 
 ---
 
-## Files to Modify
+## What's Working Correctly
 
-| File | Changes |
-|------|---------|
-| `supabase/functions/_shared/idValidator.ts` | Add `getUserPharmacyId()` helper |
-| `supabase/functions/get-orders-page/index.ts` | Include pharmacy staff in access check |
-| `supabase/functions/pharmacy-order-action/index.ts` | Include pharmacy staff |
-| `supabase/functions/assign-user-role/index.ts` | Handle `pharmacy_staff` role |
-| `src/pages/Profile.tsx` | Add staff management section for pharmacy role |
-| All edge functions that check `pharmacies.user_id` | Also check `pharmacy_staff` |
-
----
-
-## Security Considerations
-
-1. **Pharmacy staff get the `pharmacy` role** - This ensures existing RLS policies work
-2. **Granular permissions via `pharmacy_staff` columns** - Control what each staff member can do
-3. **Only pharmacy owner can add/remove staff** - Enforced via RLS policies
-4. **Staff cannot elevate their own permissions** - Can only update non-permission fields
+| Component | Status |
+|-----------|--------|
+| Database Migration | Table created with correct schema and indexes |
+| `pharmacy_staff` RLS Policies | Admin, owner, and self-view policies are correct |
+| `pharmacies` RLS Policy | Updated to include staff access |
+| `idValidator.ts` | `getUserPharmacyId()` correctly checks both owner and staff |
+| `get-orders-page/index.ts` | Correctly checks both pharmacy owner and staff |
+| `pharmacy-order-action/index.ts` | Correctly checks both pharmacy owner and staff |
+| `assign-user-role/index.ts` | Creates `pharmacy_staff` record with correct permissions |
+| `AddPharmacyStaffDialog` | Correctly sends `pharmacy_staff` role with permissions |
+| `PharmacyStaffTable` | Correctly displays staff with permissions |
+| `PharmacyTeamSection` | Correctly identifies owner vs staff for UI |
 
 ---
 
-## Technical Notes
+## Required Migration to Fix RLS Policies
 
-### Option A: Reuse `pharmacy` Role (Recommended)
-- Pharmacy staff get `pharmacy` role in `user_roles`
-- `pharmacy_staff` table tracks which pharmacy they belong to
-- Simpler - no enum changes needed
+A new database migration is needed to update all affected RLS policies:
 
-### Option B: Add `pharmacy_staff` to Enum
-- Requires database migration to add to `app_role` enum
-- More complex - all role checks need updating
-- Not recommended due to scope
+```sql
+-- Create helper function for pharmacy staff access check
+CREATE OR REPLACE FUNCTION public.pharmacy_staff_access(pharmacy_uuid uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM pharmacy_staff
+    WHERE pharmacy_id = pharmacy_uuid
+      AND user_id = auth.uid()
+      AND active = true
+  )
+$$;
+
+-- Update orders policies
+DROP POLICY IF EXISTS "pharmacy_view_orders" ON orders;
+CREATE POLICY "pharmacy_view_orders" ON orders FOR SELECT
+USING (
+  has_role(auth.uid(), 'pharmacy'::app_role) AND (
+    EXISTS (
+      SELECT 1 FROM order_lines ol
+      JOIN pharmacies ph ON ph.id = ol.assigned_pharmacy_id
+      WHERE ol.order_id = orders.id 
+      AND (ph.user_id = auth.uid() OR pharmacy_staff_access(ph.id))
+    )
+  )
+);
+
+-- Similar updates needed for all other affected policies...
+```
 
 ---
 
-## Implementation Order
+## Implementation Plan
 
-1. Database migration (create table, policies)
-2. Update `idValidator.ts` 
-3. Update `get-orders-page` and other edge functions
-4. Update `assign-user-role` edge function
-5. Create frontend components
-6. Add to pharmacy profile page
-7. Testing
+### Phase 1: Database Migration (Critical)
+1. Create `pharmacy_staff_access()` helper function
+2. Update all 13+ affected RLS policies to use the helper function
+3. Test that pharmacy staff can view/update orders
+
+### Phase 2: Frontend Fixes
+1. Update `PharmacyProfileForm` to handle staff users
+2. Consider adding `isPharmacyStaffAccount` flag to AuthContext
+
+### Phase 3: Testing
+1. Create test pharmacy staff member
+2. Verify staff can:
+   - View pharmacy profile page
+   - View orders assigned to their pharmacy
+   - Update order statuses (hold/decline)
+   - Access team management section (read-only)
+3. Verify staff CANNOT:
+   - Add other staff members
+   - Delete staff members
+   - Modify pharmacy settings
 
 ---
 
-## Estimated Scope
+## Files Requiring Changes
 
-- **Database**: 1 migration with table + policies
-- **Edge Functions**: 4-5 functions to update
-- **Frontend**: 3 new components + 1 page update
-- **Testing**: End-to-end flow verification
+| File | Change Type | Priority |
+|------|-------------|----------|
+| New SQL Migration | Create helper function + update 13 policies | CRITICAL |
+| `src/components/profile/PharmacyProfileForm.tsx` | Update query logic for staff | HIGH |
+| `src/contexts/AuthContext.tsx` (optional) | Add `isPharmacyStaffAccount` flag | LOW |
 
-This approach mirrors the proven `practice_staff` pattern, ensuring consistency and reliability.
