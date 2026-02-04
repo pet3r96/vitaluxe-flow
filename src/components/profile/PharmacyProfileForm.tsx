@@ -26,6 +26,7 @@ import { phoneSchema } from "@/lib/validators";
 import { Loader2, Bell } from "lucide-react";
 import { SignedAgreementSection } from "./SignedAgreementSection";
 import { NotificationPreferencesDialog } from "@/components/notifications/NotificationPreferencesDialog";
+import { PharmacyTeamSection } from "@/components/pharmacies/PharmacyTeamSection";
 
 const US_STATES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
