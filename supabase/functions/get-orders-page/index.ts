@@ -292,24 +292,45 @@ serve(async (req) => {
       query = query.in('id', uniqueOrderIds);
       
     } else if (roleNorm === 'pharmacy') {
-      // Get pharmacy ID for this user
-      const { data: pharmacyRecord, error: pharmacyError } = await supabase
+      // Get pharmacy ID for this user - check both owner and staff
+      let pharmacyId: string | null = null;
+      
+      // First check if user is pharmacy owner
+      const { data: pharmacyOwner, error: ownerError } = await supabase
         .from('pharmacies')
         .select('id')
         .eq('user_id', practiceId)
         .eq('active', true)
         .maybeSingle();
       
-      if (pharmacyError) {
-        edgeLogger.error('[get-orders-page] Error fetching pharmacy', pharmacyError);
-        return new Response(
-          JSON.stringify({ error: `Failed to fetch pharmacy record: ${parseErr(pharmacyError)}` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (ownerError) {
+        edgeLogger.error('[get-orders-page] Error fetching pharmacy owner', ownerError);
       }
       
-      if (!pharmacyRecord) {
-        edgeLogger.warn('[get-orders-page] No active pharmacy found for user');
+      if (pharmacyOwner) {
+        pharmacyId = pharmacyOwner.id;
+        edgeLogger.info('[get-orders-page] User is pharmacy owner', { pharmacyId });
+      } else {
+        // Check if user is pharmacy staff
+        const { data: pharmacyStaff, error: staffError } = await supabase
+          .from('pharmacy_staff')
+          .select('pharmacy_id')
+          .eq('user_id', practiceId)
+          .eq('active', true)
+          .maybeSingle();
+        
+        if (staffError) {
+          edgeLogger.error('[get-orders-page] Error fetching pharmacy staff', staffError);
+        }
+        
+        if (pharmacyStaff) {
+          pharmacyId = pharmacyStaff.pharmacy_id;
+          edgeLogger.info('[get-orders-page] User is pharmacy staff', { pharmacyId });
+        }
+      }
+      
+      if (!pharmacyId) {
+        edgeLogger.warn('[get-orders-page] No active pharmacy found for user (neither owner nor staff)');
         return new Response(
           JSON.stringify({
             orders: [],
@@ -323,12 +344,12 @@ serve(async (req) => {
         );
       }
         
-        edgeLogger.info(`[get-orders-page] Pharmacy filter applied`, { assignedPharmacyId: pharmacyRecord.id });
+      edgeLogger.info(`[get-orders-page] Pharmacy filter applied`, { assignedPharmacyId: pharmacyId });
       
       // Fetch order IDs using security definer function (bypasses expensive RLS)
       const { data: orderIds, error: orderIdsError } = await supabase
         .rpc('get_order_lines_by_pharmacy', {
-          pharmacy_uuid: pharmacyRecord.id,
+          pharmacy_uuid: pharmacyId,
           from_date: dateFrom,
           limit_count: 2000
         });
@@ -358,7 +379,7 @@ serve(async (req) => {
         );
       }
         
-        edgeLogger.info(`[get-orders-page] Found orders for pharmacy`, { count: uniqueOrderIds.length });
+      edgeLogger.info(`[get-orders-page] Found orders for pharmacy`, { count: uniqueOrderIds.length });
       query = query.in('id', uniqueOrderIds);
       
     } else if (roleNorm === 'downline') {
