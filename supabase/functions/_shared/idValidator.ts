@@ -23,6 +23,7 @@ async function getUserPracticeId(supabase: any, userId: string): Promise<string 
   edgeLogger.info('[ID_VALIDATOR] User roles found', { userId, roles });
   
   // ✅ PHARMACY FIX: If user is a pharmacy, they don't have a practice_id
+  // (pharmacy users have their own getUserPharmacyId helper)
   if (roles.includes('pharmacy')) {
     edgeLogger.info('[ID_VALIDATOR] User is pharmacy, no practice_id', { userId });
     return null;
