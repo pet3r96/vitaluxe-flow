@@ -1,11 +1,11 @@
 
 # Add Multiple Users to a Pharmacy Account
 
+## Status: ✅ IMPLEMENTED
+
 ## Overview
 
-Currently, each pharmacy has a single master user (`user_id` column in the `pharmacies` table). The request is to allow the main pharmacy user to add additional users who have **full access** to everything the main user can do.
-
-This follows the same pattern already implemented for **practices with staff** (`practice_staff` table).
+Pharmacy accounts now support multiple users. The main pharmacy user (owner) can add additional staff members who have full access to the pharmacy dashboard, orders, and shipping.
 
 ---
 

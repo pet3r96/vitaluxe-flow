@@ -125,15 +125,45 @@ serve(async (req) => {
 
     edgeLogger.info('Pharmacy user action', { pharmacyUserId, action, orderId: order_id });
 
-    // Get pharmacy ID using resolved user ID
-    const { data: pharmacy, error: pharmacyError } = await supabaseAdmin
+    // Get pharmacy ID using resolved user ID - check both owner and staff
+    let pharmacy: { id: string; name: string } | null = null;
+    
+    // First check if user is pharmacy owner
+    const { data: pharmacyOwner, error: ownerError } = await supabaseAdmin
       .from('pharmacies')
       .select('id, name')
       .eq('user_id', pharmacyUserId)
-      .single();
+      .maybeSingle();
+    
+    if (pharmacyOwner) {
+      pharmacy = pharmacyOwner;
+      edgeLogger.info('User is pharmacy owner', { pharmacyId: pharmacy.id });
+    } else {
+      // Check if user is pharmacy staff
+      const { data: staffRecord, error: staffError } = await supabaseAdmin
+        .from('pharmacy_staff')
+        .select('pharmacy_id, active')
+        .eq('user_id', pharmacyUserId)
+        .eq('active', true)
+        .maybeSingle();
+      
+      if (staffRecord?.pharmacy_id) {
+        // Get the pharmacy details
+        const { data: staffPharmacy, error: pharmacyError } = await supabaseAdmin
+          .from('pharmacies')
+          .select('id, name')
+          .eq('id', staffRecord.pharmacy_id)
+          .single();
+        
+        if (staffPharmacy) {
+          pharmacy = staffPharmacy;
+          edgeLogger.info('User is pharmacy staff', { pharmacyId: pharmacy.id });
+        }
+      }
+    }
 
-    if (pharmacyError) {
-      edgeLogger.error('Error fetching pharmacy', pharmacyError);
+    if (!pharmacy) {
+      edgeLogger.error('No pharmacy found for user (neither owner nor staff)');
       throw new Error('Pharmacy not found');
     }
 

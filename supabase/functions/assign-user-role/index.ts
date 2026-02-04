@@ -401,6 +401,23 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+    } else if (signupData.role === 'pharmacy_staff' as any) {
+      // Pharmacy staff validation - must be linked to a pharmacy
+      if (!signupData.roleData.pharmacyId) {
+        return new Response(
+          JSON.stringify({ error: 'Pharmacy staff members must be linked to a pharmacy' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!signupData.roleData.roleType) {
+        return new Response(
+          JSON.stringify({ error: 'Pharmacy staff members must have a role type' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      // Pharmacy staff get the 'pharmacy' role in user_roles (not a new enum value)
+      // This ensures existing RLS policies work automatically
+      signupData.role = 'pharmacy' as any;
     }
 
     // PHASE 2: Normalize email before any processing
@@ -864,6 +881,50 @@ serve(async (req) => {
         generatedToken = null; // Clear token on error
       } else {
         edgeLogger.info('✅ Activation token generated for staff member');
+      }
+    }
+
+    // Handle pharmacy staff record creation
+    if (signupData.roleData.pharmacyId) {
+      edgeLogger.info('✅ Creating pharmacy_staff record for pharmacy staff user', { userId, pharmacyId: signupData.roleData.pharmacyId });
+      const { error: pharmStaffError } = await supabaseAdmin
+        .from('pharmacy_staff')
+        .upsert({
+          user_id: userId,
+          pharmacy_id: signupData.roleData.pharmacyId,
+          role_type: signupData.roleData.roleType || 'staff',
+          active: true,
+          can_manage_orders: signupData.roleData.canManageOrders !== false,
+          can_manage_shipping: signupData.roleData.canManageShipping !== false,
+          can_view_api_config: signupData.roleData.canViewApiConfig === true,
+        }, { onConflict: 'user_id,pharmacy_id' });
+      
+      if (pharmStaffError) {
+        edgeLogger.error('❌ Failed to create pharmacy_staff record', pharmStaffError);
+        // Don't fail the whole operation, but log it prominently
+        edgeLogger.error('⚠️ CRITICAL: Pharmacy staff user created but pharmacy membership failed! User may not have proper access.');
+      } else {
+        edgeLogger.info('✅ pharmacy_staff record created successfully');
+      }
+      
+      // Generate activation token for pharmacy staff
+      generatedToken = crypto.randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 day expiration
+      
+      const { error: tokenError } = await supabaseAdmin
+        .from('temp_password_tokens')
+        .insert({
+          user_id: userId,
+          token: generatedToken,
+          expires_at: expiresAt.toISOString()
+        });
+      
+      if (tokenError) {
+        edgeLogger.error('Error creating password token for pharmacy staff', tokenError);
+        generatedToken = null;
+      } else {
+        edgeLogger.info('✅ Activation token generated for pharmacy staff member');
       }
     }
 

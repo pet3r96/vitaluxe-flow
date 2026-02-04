@@ -4351,6 +4351,53 @@ export type Database = {
           },
         ]
       }
+      pharmacy_staff: {
+        Row: {
+          active: boolean
+          can_manage_orders: boolean
+          can_manage_shipping: boolean
+          can_view_api_config: boolean
+          created_at: string
+          id: string
+          pharmacy_id: string
+          role_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          can_manage_orders?: boolean
+          can_manage_shipping?: boolean
+          can_view_api_config?: boolean
+          created_at?: string
+          id?: string
+          pharmacy_id: string
+          role_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          can_manage_orders?: boolean
+          can_manage_shipping?: boolean
+          can_view_api_config?: boolean
+          created_at?: string
+          id?: string
+          pharmacy_id?: string
+          role_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_staff_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pharmacy_tracking_updates: {
         Row: {
           actual_delivery_date: string | null
