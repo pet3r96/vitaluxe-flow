@@ -75,18 +75,42 @@ export function PharmacyProfileForm() {
     },
   });
 
-  // Query pharmacy data
+  // Query pharmacy data - check both owner and staff
   const { data: pharmacy, isLoading } = useQuery({
     queryKey: ["pharmacy-profile", effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First check if user is pharmacy owner
+      const { data: owned, error: ownedError } = await supabase
         .from("pharmacies")
         .select("*")
         .eq("user_id", effectiveUserId)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      return data;
+      if (ownedError) throw ownedError;
+      if (owned) return owned;
+
+      // Check if user is pharmacy staff
+      const { data: staffRecord, error: staffError } = await supabase
+        .from("pharmacy_staff")
+        .select("pharmacy_id")
+        .eq("user_id", effectiveUserId)
+        .eq("active", true)
+        .maybeSingle();
+
+      if (staffError) throw staffError;
+      
+      if (staffRecord?.pharmacy_id) {
+        const { data: pharmacy, error: pharmacyError } = await supabase
+          .from("pharmacies")
+          .select("*")
+          .eq("id", staffRecord.pharmacy_id)
+          .single();
+        
+        if (pharmacyError) throw pharmacyError;
+        return pharmacy;
+      }
+
+      return null;
     },
     enabled: !!effectiveUserId,
   });
