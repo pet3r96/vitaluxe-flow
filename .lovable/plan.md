@@ -1,39 +1,74 @@
 
-# Fix Batch Image Generation - Process 10 at a Time with Proper Pacing
+# Beautiful Product Catalog PDF
 
-## Problem
-The current setup sends batches of 5 to the edge function, but calls the next batch immediately after the previous one finishes. This can cause:
-- Edge function timeouts (each image takes 3-5 seconds to generate via AI)
-- Rate limiting from the AI gateway
-- The function failing silently after ~10 images
+## Overview
 
-## Solution
+Build a downloadable product catalog PDF featuring the Vitaluxe branding, company info, product images, and complete variant pricing -- organized by category for a polished, professional look.
 
-### 1. Reduce batch size to 3 per edge function call
-Each edge function invocation will process only **3 images** (with 2-second delays between each = ~10 seconds per call). This keeps well within the edge function timeout limit.
+## PDF Layout
 
-### 2. Add a 5-second pause between batch calls on the frontend
-After each batch completes, wait 5 seconds before calling the next batch. This prevents rate limiting and gives the AI gateway breathing room.
+### Cover Page
+- Large Vitaluxe logo (centered, fetched from `branding-assets` storage bucket)
+- "PRODUCT CATALOG" title in gold
+- Company info block:
+  - Vitaluxe Services
+  - 16192 Coastal Highway, Lewes, Delaware 19958
+  - Phone: (844) 252-5233
+  - Website: https://vitaluxeservices.com
+- Date generated
 
-### 3. Better error handling - continue on failure
-If one batch fails, log it and continue to the next batch instead of stopping everything.
+### Table of Contents (Page 2)
+- Lists all 8 categories with page numbers:
+  - Anti-Aging (6 products)
+  - GLP-1 (6 products)
+  - Hair Care (3 products)
+  - Hormone Therapy (25 products)
+  - Peptides (1 product)
+  - Sexual Health (8 products)
+  - Thyroid (4 products)
+  - Vitamins (5 products)
 
-## Changes
+### Product Pages (grouped by category)
+Each category gets a section header, then each product is displayed as a card-style block:
+- **Product image** (loaded from public URL) on the left
+- **Product name** and dosage form on the right
+- **Variants table** below with columns: Dosage/Size, Practice Price
+- Alternating row shading for readability
+- Page breaks between categories
 
-### `src/components/admin/ProductImageGenerator.tsx`
-- Change `batchSize` from 5 to 3
-- Add a 5-second delay (`await new Promise(resolve => setTimeout(resolve, 5000))`) between each batch call
-- Wrap individual batch calls in try/catch so one failure doesn't stop the whole process
-- Show clearer progress messaging ("Generating batch X of Y...")
+### Footer (every page)
+- "Vitaluxe Services" centered
+- Page number
+- "Confidential - For Authorized Partners Only"
 
-### `supabase/functions/batch-generate-product-images/index.ts`
-- Increase the delay between individual images from 2 seconds to 3 seconds for safety
-- Add better timeout handling
+## Implementation
 
-## Expected Behavior
-- ~58 products missing images
-- 3 per batch = ~20 batches
-- Each batch takes ~12 seconds (3 images x 3s delay + generation time)
-- 5-second pause between batches
-- Total time: ~6-8 minutes for all products
-- Progress bar updates after each batch of 3
+### New Files
+1. **`src/lib/productCatalogPdfGenerator.ts`** - Core PDF generation logic using jsPDF + autoTable (same libraries already in use)
+2. **`src/components/admin/ProductCatalogDownload.tsx`** - Button component to trigger generation and download
+
+### Changes
+- **`src/pages/AdminSettings.tsx`** - Add a "Download Product Catalog" button (in the existing Products/AI Images area or a new spot)
+
+### How It Works
+1. Fetches all active products with variants from the database
+2. Fetches all product images as base64 (from their public URLs)
+3. Fetches the Vitaluxe logo from the `branding-assets` storage bucket
+4. Groups products by category (product_type)
+5. Renders each product with its image and variant pricing table
+6. Outputs as a downloadable PDF blob
+
+### Pricing Display
+- Shows **Practice Price** (retail_price) only -- this is the price practices pay
+- Base price is internal and will NOT be shown in the catalog
+- Formatted as currency with 2 decimal places
+
+### Image Handling
+- Product images fetched from their public storage URLs and converted to base64 for PDF embedding
+- Logo fetched from `branding-assets` bucket (same pattern as order receipt)
+- Fallback placeholder if any image fails to load
+
+### Color Scheme
+- Dark grey header bars (#374151) matching existing PDF branding
+- Gold accents (#DAA520) for titles and dividers
+- Clean white background with light grey alternating rows
