@@ -74,10 +74,21 @@ export const PendingProductsApproval = () => {
             .eq("id", request.created_by_user_id)
             .single();
 
+          let practice_name: string | null = null;
+          if (request.practice_id) {
+            const { data: practiceData } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", request.practice_id)
+              .single();
+            practice_name = practiceData?.full_name || "Unknown";
+          }
+
           return {
             ...request,
             pharmacy_name: pharmacy?.name || "Unknown",
             user_name: userData?.full_name || userData?.email || "Unknown",
+            practice_name,
           };
         })
       );
@@ -167,10 +178,12 @@ export const PendingProductsApproval = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Pharmacy</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Pharmacy / Practice</TableHead>
                   <TableHead>Requested By</TableHead>
                   <TableHead>Product Name</TableHead>
                   <TableHead>Dosage</TableHead>
+                  <TableHead>Ingredients</TableHead>
                   <TableHead>VitaLuxe Price</TableHead>
                   <TableHead>Product Type</TableHead>
                   <TableHead>Rx</TableHead>
@@ -182,20 +195,30 @@ export const PendingProductsApproval = () => {
               <TableBody>
                 {requests?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center">
+                    <TableCell colSpan={12} className="text-center">
                       No product requests found
                     </TableCell>
                   </TableRow>
                 ) : (
                   requests?.map((request) => (
                     <TableRow key={request.id}>
+                      <TableCell>
+                        <Badge variant={request.request_source === "practice" ? "default" : "outline"}>
+                          {request.request_source === "practice" ? "Practice" : "Pharmacy"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="font-medium">
-                        {request.pharmacy_name}
+                        {request.request_source === "practice"
+                          ? request.practice_name || "-"
+                          : request.pharmacy_name}
                       </TableCell>
                       <TableCell>{request.user_name}</TableCell>
                       <TableCell>{request.name}</TableCell>
                       <TableCell>{request.dosage || "-"}</TableCell>
-                      <TableCell>${request.vitaluxe_price}</TableCell>
+                      <TableCell className="max-w-[200px] truncate" title={request.ingredients || ""}>
+                        {request.ingredients || "-"}
+                      </TableCell>
+                      <TableCell>{request.vitaluxe_price ? `$${request.vitaluxe_price}` : "-"}</TableCell>
                       <TableCell>
                         {request.product_type_name ? (
                           <Badge variant="outline">

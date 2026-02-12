@@ -17,8 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ShoppingCart, Plus } from "lucide-react";
+import { Search, ShoppingCart, Plus, HelpCircle } from "lucide-react";
 import { ProductDialog } from "./ProductDialog";
+import { RequestMedicationDialog } from "./RequestMedicationDialog";
 import { PatientSelectionDialog } from "./PatientSelectionDialog";
 import { ProductCard } from "./ProductCard";
 import { ProductCardSkeleton } from "./ProductCardSkeleton";
@@ -61,6 +62,7 @@ export const ProductsGrid = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<any>(null);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
+  const [requestMedDialogOpen, setRequestMedDialogOpen] = useState(false);
 
   const isAdmin = effectiveRole === "admin";
   const isProvider = effectiveRole === "provider" || effectiveRole === "doctor";
@@ -946,6 +948,19 @@ export const ProductsGrid = () => {
           )}
           
           {(isProvider || isRep) && <Badge variant="secondary">Read Only</Badge>}
+
+          {(isProvider || (isStaffAccount && staffCanOrder)) && (
+            <Button
+              variant="outline"
+              size="default"
+              className="h-10 px-3 sm:px-4"
+              onClick={() => setRequestMedDialogOpen(true)}
+            >
+              <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+              <span className="hidden sm:inline">Don't see a product?</span>
+              <span className="sm:hidden">Request</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1088,6 +1103,9 @@ export const ProductsGrid = () => {
 
       {/* Cart Sheet */}
       <CartSheet open={cartSheetOpen} onOpenChange={setCartSheetOpen} />
+
+      {/* Request Medication Dialog */}
+      <RequestMedicationDialog open={requestMedDialogOpen} onOpenChange={setRequestMedDialogOpen} />
     </div>
   );
 };

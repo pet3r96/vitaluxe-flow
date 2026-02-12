@@ -3598,12 +3598,15 @@ export type Database = {
           description: string | null
           dosage: string | null
           id: string
+          ingredients: string | null
           name: string
           ndc: string | null
           pharmacy_id: string | null
+          practice_id: string | null
           product_type_id: string | null
           product_type_name: string | null
           rejection_reason: string | null
+          request_source: string
           requires_prescription: boolean | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -3620,12 +3623,15 @@ export type Database = {
           description?: string | null
           dosage?: string | null
           id?: string
+          ingredients?: string | null
           name: string
           ndc?: string | null
           pharmacy_id?: string | null
+          practice_id?: string | null
           product_type_id?: string | null
           product_type_name?: string | null
           rejection_reason?: string | null
+          request_source?: string
           requires_prescription?: boolean | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -3642,12 +3648,15 @@ export type Database = {
           description?: string | null
           dosage?: string | null
           id?: string
+          ingredients?: string | null
           name?: string
           ndc?: string | null
           pharmacy_id?: string | null
+          practice_id?: string | null
           product_type_id?: string | null
           product_type_name?: string | null
           rejection_reason?: string | null
+          request_source?: string
           requires_prescription?: boolean | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -3663,6 +3672,20 @@ export type Database = {
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_product_requests_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_product_requests_practice_id_fkey"
+            columns: ["practice_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_masked_for_reps"
             referencedColumns: ["id"]
           },
           {

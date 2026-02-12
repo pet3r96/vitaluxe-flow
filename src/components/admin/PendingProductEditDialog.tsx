@@ -294,14 +294,27 @@ export const PendingProductEditDialog = ({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Pharmacy</Label>
-              <Input value={request?.pharmacy_name || ""} disabled />
+              <Label>Source</Label>
+              <Input value={request?.request_source === "practice" ? "Practice" : "Pharmacy"} disabled />
             </div>
+            <div className="space-y-2">
+              <Label>{request?.request_source === "practice" ? "Practice" : "Pharmacy"}</Label>
+              <Input value={request?.request_source === "practice" ? (request?.practice_name || "-") : (request?.pharmacy_name || "")} disabled />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Requested By</Label>
               <Input value={request?.user_name || ""} disabled />
             </div>
           </div>
+
+          {request?.ingredients && (
+            <div className="space-y-2">
+              <Label>Ingredients Requested</Label>
+              <Textarea value={request.ingredients} disabled rows={3} />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="name">Product Name *</Label>
