@@ -1677,7 +1677,7 @@ export type Database = {
           price: number
           price_before_discount: number | null
           processing_at: string | null
-          product_id: string
+          product_id: string | null
           provider_id: string | null
           quantity: number | null
           refill_number: number | null
@@ -1729,7 +1729,7 @@ export type Database = {
           price: number
           price_before_discount?: number | null
           processing_at?: string | null
-          product_id: string
+          product_id?: string | null
           provider_id?: string | null
           quantity?: number | null
           refill_number?: number | null
@@ -1781,7 +1781,7 @@ export type Database = {
           price?: number
           price_before_discount?: number | null
           processing_at?: string | null
-          product_id?: string
+          product_id?: string | null
           provider_id?: string | null
           quantity?: number | null
           refill_number?: number | null
