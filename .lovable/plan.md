@@ -1,78 +1,69 @@
 
+# Import Full VIOS Product Catalog (305 Items)
 
-# Fix: Pharmacy RLS Infinite Recursion + System-Wide Audit
+## Summary
 
-## Problem
+Import all 305 products from your spreadsheet into the database as ~57 product families with multiple variants each. Every product will be:
+- Marked as requires prescription
+- Assigned to Vios Compounding pharmacy
+- Visible to all reps
+- Priced with base price and practice price (no rep pricing)
+- Linked to the correct VIOS Product ID for API ordering
 
-The pharmacy page is STILL blank because the previous fix (making `has_role()` SECURITY DEFINER) only fixed part of the problem. There is a **second recursion loop** between two tables:
+## How Products Will Be Grouped
 
-```text
-pharmacies (policy: pharmacy_manage_own_record)
-    --> subquery on pharmacy_staff
-        --> pharmacy_staff (policy: pharmacy_owner_manage_staff)
-            --> subquery on pharmacies
-                --> INFINITE LOOP
-```
+Products with the same name and dosage form become one product with multiple variants. Different sizes (30g vs 90g, 30ct vs 90ct) are variants under the same product.
 
-Your pharmacy data (Vios Compounding, API config, credentials, 50 states) is all still there -- it just can't be read due to this policy loop.
+Examples:
+- **Semaglutide ODT** (Tab Disintegrating) = 1 product with 12 variants (250 MCG through 12 MG)
+- **BIEST (20:80)** Cream = 1 product with 8 variants (4 strengths x 2 sizes: 30g and 90g)
+- **PROGESTERONE IR** Capsule = 1 product with 12 variants (6 strengths x 2 sizes: 30ct and 90ct)
+- **TESTOSTERONE** Cream = 1 product with 12 variants (6 strengths x 2 sizes)
 
-## Fix
+## Product Type Assignments
 
-### Step 1: Break the pharmacies-pharmacy_staff circular dependency
+| Category | Products |
+|----------|----------|
+| GLP 1 | Semaglutide/Methylcobalamin/Glycine, Semaglutide/L-Carnitine, Semaglutide ODT, Tirzepatide/Glycine/Methylcobalamin, Tirzepatide/L-Carnitine, Tirzepatide ODT |
+| Hormone Therapy | BIEST (20:80), BIEST (50:50), DHEA, ESTRADIOL, ESTRIOL, PROGESTERONE (all forms), TESTOSTERONE (all forms), PREGNENOLONE, OXYTOCIN, NANDROLONE DECANOATE, Testosterone Cypionate GSO, Testosterone Enanthate |
+| Thyroid | LIOTHYRONINE (T3) IR, LIOTHYRONINE (T3) SR, LEVOTHYROXINE, T4/T3 (BIOTHYROID) |
+| Sexual Health | TADALAFIL, SILDENAFIL CITRATE, ENCLOMIPHENE CITRATE, CLOMIPHENE CITRATE, GONADORELIN |
+| Hair Care | Finasteride, MINOXIDIL, FINASTERIDE/MINOXIDIL |
+| Anti-Aging | GHK-CU, HYDROQUINONE, TRETINOIN, Methylene Blue, NAD+ |
+| Peptides | SERMORELIN |
+| Vitamins | Glutathione, Methylcobalamin, MIC-B12, ASCORBIC ACID combo |
 
-Create a SECURITY DEFINER function that checks pharmacy staff membership without triggering RLS:
+## Variant Labeling
 
-```sql
-CREATE OR REPLACE FUNCTION public.is_pharmacy_member(_user_id uuid, _pharmacy_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.pharmacy_staff
-    WHERE user_id = _user_id AND pharmacy_id = _pharmacy_id AND active = true
-  )
-$$;
+Each variant's dosage label will include both strength and size for clarity:
+- `"1mg/1mg/10mg/ml - 1mL"` (injection)
+- `"1 MG/ML - 30g"` (cream)
+- `"250 MCG - 30ct"` (tablet/capsule)
 
-CREATE OR REPLACE FUNCTION public.is_pharmacy_owner(_user_id uuid, _pharmacy_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.pharmacies
-    WHERE id = _pharmacy_id AND user_id = _user_id
-  )
-$$;
-```
+## Implementation Approach
 
-### Step 2: Replace the recursive policies
+### Step 1: Create Edge Function for Bulk Import
 
-Drop and recreate the problematic policies on both tables:
+Build a backend function (`import-product-catalog`) that:
+1. Accepts the full structured product data
+2. Inserts each product family into the `products` table
+3. Inserts all variants into `product_variants` with correct VIOS Product IDs
+4. Creates `product_pharmacies` entries linking each product to Vios Compounding
+5. Returns a summary of what was created
 
-- **pharmacies.pharmacy_manage_own_record**: Replace subquery on `pharmacy_staff` with call to `is_pharmacy_member()`
-- **pharmacy_staff.pharmacy_owner_manage_staff**: Replace subquery on `pharmacies` with call to `is_pharmacy_owner()`
+### Step 2: Trigger the Import
 
-### Step 3: Fix admin_alerts duplicate/broken policy
+Call the edge function with all 305 rows pre-grouped into ~57 product families. The function handles everything in a single operation.
 
-The `admin_alerts` table has a policy that directly queries `user_roles` instead of using `has_role()`. While not currently causing recursion, it should be cleaned up for consistency.
+### Step 3: Verify
 
-## System-Wide Audit Findings
-
-| Issue | Severity | Status |
-|-------|----------|--------|
-| pharmacies <-> pharmacy_staff RLS recursion | CRITICAL | Will fix |
-| admin_alerts direct user_roles query | LOW | Will fix |
-| Many tables use direct `EXISTS(SELECT FROM user_roles)` | LOW | Safe (user_roles has `user_id = auth.uid()` policy that resolves without recursion) |
-| `has_role()` now SECURITY DEFINER | DONE | Fixed in previous migration |
-| Pharmacy data intact | OK | Confirmed: Vios Compounding with all config |
-
-## What Will Change
-
-- Two new SECURITY DEFINER helper functions (`is_pharmacy_member`, `is_pharmacy_owner`)
-- Two policies replaced (no data access changes, same logic, just no recursion)
-- One duplicate admin_alerts policy cleaned up
-- No data modifications whatsoever
+Confirm all products appear on the Products page with correct pricing, variants, and pharmacy assignments.
 
 ## Technical Details
 
-The `SECURITY DEFINER` functions execute as the function owner (postgres), bypassing RLS on the target table. This is the standard PostgreSQL pattern for breaking circular RLS dependencies. The `SET search_path = public` prevents search-path-based privilege escalation.
-
+- **Products table**: name, dosage_form, requires_prescription=true, is_glp1 (true for semaglutide/tirzepatide), product_type_id, base_price (from first variant), retail_price (from first variant)
+- **Product variants**: dosage_label, base_price, retail_price, product_code (VIOS Product ID), active=true
+- **Product pharmacies**: links each product to Vios Compounding (id: d5e75179-e66c-450f-8cae-1f4df93b097c)
+- **No topline_price or downline_price** per your instructions
+- **Duplicate VIOS IDs** kept as-is (same code for different quantities)
+- **Deduplication**: The spreadsheet has some duplicate rows (e.g., DHEA SR appears twice, NAD+ Troche appears twice, one ESTRADIOL Cream duplicate) - these will be deduplicated during import
