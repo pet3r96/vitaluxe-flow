@@ -16,7 +16,7 @@ Add three new columns to `pending_product_requests`:
 ALTER TABLE pending_product_requests
   ADD COLUMN IF NOT EXISTS ingredients text,
   ADD COLUMN IF NOT EXISTS request_source text NOT NULL DEFAULT 'pharmacy',
-  ADD COLUMN IF NOT EXISTS practice_id uuid REFERENCES practices(id);
+  ADD COLUMN IF NOT EXISTS practice_id uuid REFERENCES profiles(id);
 ```
 
 - `ingredients` -- free-text field for requested ingredients
