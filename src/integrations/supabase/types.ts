@@ -9106,6 +9106,14 @@ export type Database = {
         Returns: boolean
       }
       is_downline_rep: { Args: { _user_id: string }; Returns: boolean }
+      is_pharmacy_member: {
+        Args: { _pharmacy_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_pharmacy_owner: {
+        Args: { _pharmacy_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_super_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_thread_participant: {
         Args: { _thread_id: string; _user_id: string }
