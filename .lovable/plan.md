@@ -1,66 +1,50 @@
 
 
-# Print-Ready Product Catalog PDF -- Complete Redesign
+# Bigger Cards, Bigger Images, 6 Per Page + More Visual Polish
 
-## Problem
-The current PDF looks basic and unpolished -- inconsistent card sizes, small images, grey color scheme, and a linear list layout instead of a professional grid. It needs to look like something you would print and hand to a practice.
+## What Changes
 
-## New Design: Black / White / Gold Theme
+### Layout: 6 products per page (3 rows x 2 columns)
+Currently the cards are 85x95mm which only fits 2 rows (4 per page). The new layout adjusts dimensions to fit 3 rows while making images noticeably larger:
 
-### Cover Page (Page 1)
-- **Solid black** background (not dark grey)
-- Large Vitaluxe logo centered
-- Gold horizontal rules above and below title
-- "PRODUCT CATALOG" in large gold lettering
-- Company details in clean white text:
-  - Vitaluxe Services
-  - 16192 Coastal Highway, Lewes, Delaware 19958
-  - (844) 252-5233
-  - https://vitaluxeservices.com
-- Date generated at bottom in muted text
-- "Confidential" footer
+- Card width: 85mm -> **90mm** (wider, uses more page width)
+- Card height: 95mm -> **82mm** (slightly shorter to fit 3 rows)
+- Image size: 38mm -> **48mm** (significantly larger product photos)
+- Column gap: 6mm -> **6mm** (stays the same)
+- Row gap: 4mm -> **3mm** (tighter spacing)
 
-### Table of Contents (Page 2)
-- Black header bar with gold "TABLE OF CONTENTS" text
-- Clean listing with dotted leaders and page numbers
-- Gold accent line under each category
+### Visual "Wow" Enhancements
+- Add a subtle **gold border** on hover-style effect (double-line border: thin black outer + gold inner accent line)
+- Add a **soft gold gradient bar** behind the "Practice Price" label instead of just text
+- Use a **rounded rectangle** for the image placeholder area instead of a sharp box
+- Add a thin **gold corner accent** marks on each card (small L-shaped lines in corners)
+- Make the category header bar taller with a subtle gold underline accent
+- Increase product name font size from 9pt to **10pt**
+- Make single-variant prices larger: 12pt -> **14pt** for more impact
 
-### Product Pages -- Grid Layout (2 products per row)
-This is the biggest change. Instead of a vertical list, products will be rendered in a **2-column grid** with uniform card sizes:
+### File Changed
+Only `src/lib/productCatalogPdfGenerator.ts` -- layout constants and the `drawCard` function get updated.
 
-- Each card is exactly **85mm wide x 95mm tall**
-- **Top half**: Product image centered in a light grey box (consistent 40x40mm)
-- **Product name** in bold black, 10pt
-- **Dosage form** in smaller grey text underneath
-- **Gold divider line**
-- **"Practice Price"** label in gold
-- If single variant: price displayed prominently (e.g., "$68.99")
-- If multiple variants: each variant listed line-by-line as "dosage_label .... $price" in a compact format
-- Thin black border around each card for a clean, print-ready look
+## Technical Details
 
-### Category Section Headers
-- Full-width black bar with category name in gold, uppercase
-- Spans both columns
+### Updated Constants
+```
+CARD_W = 90      (was 85)
+CARD_H = 82      (was 95)
+IMG_SIZE = 48     (was 38)
+ROW_GAP = 3      (was 4)
+```
 
-### Footer (every page except cover)
-- Thin gold line at bottom
-- "Vitaluxe Services" centered
-- Page X of Y right-aligned
-- "Confidential -- For Authorized Partners Only" left-aligned
+### drawCard enhancements
+1. Gold accent lines in card corners (4mm L-shapes)
+2. Gold-filled rectangle behind "Practice Price" text
+3. Larger image rendering area
+4. Bigger product name (10pt bold)
+5. Bigger single-variant price (14pt bold)
+6. Variant text bumped to 7pt from 6.5pt
+7. Max variant lines reduced from 7 to 5 (shorter card)
 
-## Technical Changes
-
-### File: `src/lib/productCatalogPdfGenerator.ts` (full rewrite)
-
-Key changes:
-1. **Color palette**: Replace `DARK_GREY [55,65,81]` with `BLACK [0,0,0]`; keep gold and white
-2. **Grid layout engine**: Calculate 2 columns per page with fixed card dimensions. Track column position (left/right) and advance row when both filled
-3. **Uniform card rendering**: Every card gets the same height regardless of content. Variants with many options use smaller font (7pt) to fit within the fixed card height. If a product has too many variants (8+), the card will overflow to use additional vertical space and be treated as a full-width card
-4. **Image rendering**: Product images rendered inside a consistent light-grey square placeholder area at the top of each card
-5. **Price display**: Show only "Practice Price" (retail_price) -- no base/topline/downline. For single-variant products, show the price large. For multi-variant, list each variant as a row
-6. **Page breaks**: When 2-column grid fills the page, auto-break and re-render category header
-7. **Print margins**: Use 12mm margins on all sides for proper print bleed
-
-### No other files change
-The download button component and AdminSettings integration remain the same.
+### Page break math
+- Usable height: 297mm - 26mm (header) - 14mm (footer) = 257mm
+- 3 rows x 82mm + 2 gaps x 3mm = 252mm -- fits perfectly
 
