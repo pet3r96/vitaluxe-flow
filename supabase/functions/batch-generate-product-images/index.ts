@@ -236,9 +236,9 @@ serve(async (req) => {
       const result = await generateImageForProduct(product, supabase, LOVABLE_API_KEY);
       results.push(result);
       
-      // Wait 2 seconds between requests to avoid rate limiting
+      // Wait 3 seconds between requests to avoid rate limiting
       if (productsMissingImages.indexOf(product) < productsMissingImages.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
 

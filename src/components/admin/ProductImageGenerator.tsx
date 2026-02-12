@@ -73,24 +73,46 @@ export function ProductImageGenerator() {
     let totalGenerated = 0;
     let totalFailed = 0;
     let hasMore = true;
+    let batchNum = 0;
+    const totalBatches = Math.ceil(missingCount / 3);
 
     try {
       while (hasMore) {
-        const { data, error } = await supabase.functions.invoke("batch-generate-product-images", {
-          body: { batchSize: 5, startFrom },
-        });
+        batchNum++;
+        setBatchProgress({ generated: totalGenerated, failed: totalFailed, total: missingCount });
 
-        if (error) throw error;
+        try {
+          const { data, error } = await supabase.functions.invoke("batch-generate-product-images", {
+            body: { batchSize: 3, startFrom },
+          });
 
-        totalGenerated += data.imagesGenerated || 0;
-        totalFailed += data.imagesFailed || 0;
-        hasMore = data.hasMore || false;
-        startFrom = data.nextStartFrom || 0;
+          if (error) {
+            console.error(`Batch ${batchNum} error:`, error.message);
+            totalFailed += 3;
+            startFrom += 3;
+            hasMore = startFrom < missingCount;
+          } else {
+            totalGenerated += data.imagesGenerated || 0;
+            totalFailed += data.imagesFailed || 0;
+            hasMore = data.hasMore || false;
+            startFrom = data.nextStartFrom || 0;
+
+            if (data.errors?.length) {
+              console.warn(`Batch ${batchNum} errors:`, data.errors);
+            }
+          }
+        } catch (batchErr: any) {
+          console.error(`Batch ${batchNum} exception:`, batchErr.message);
+          totalFailed += 3;
+          startFrom += 3;
+          hasMore = startFrom < missingCount;
+        }
 
         setBatchProgress({ generated: totalGenerated, failed: totalFailed, total: missingCount });
 
-        if (data.errors?.length) {
-          console.warn("Batch errors:", data.errors);
+        // 5-second pause between batches to avoid rate limiting
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 5000));
         }
       }
 
