@@ -1,42 +1,39 @@
 
-# Restore AI Product Image Generator in Admin Settings
+# Fix Batch Image Generation - Process 10 at a Time with Proper Pacing
 
-## What Happened
+## Problem
+The current setup sends batches of 5 to the edge function, but calls the next batch immediately after the previous one finishes. This can cause:
+- Edge function timeouts (each image takes 3-5 seconds to generate via AI)
+- Rate limiting from the AI gateway
+- The function failing silently after ~10 images
 
-The backend functions for AI image generation are still deployed and functional:
-- `generate-product-image` - generates a single product image using Gemini 3 Pro
-- `batch-generate-product-images` - generates images for all products missing them
+## Solution
 
-However, the **UI component** that let you trigger these from Admin Settings was removed. There is no button or panel anywhere in the app to generate images.
+### 1. Reduce batch size to 3 per edge function call
+Each edge function invocation will process only **3 images** (with 2-second delays between each = ~10 seconds per call). This keeps well within the edge function timeout limit.
 
-## What Will Be Built
+### 2. Add a 5-second pause between batch calls on the frontend
+After each batch completes, wait 5 seconds before calling the next batch. This prevents rate limiting and gives the AI gateway breathing room.
 
-A new **"AI Images"** tab in Admin Settings with:
+### 3. Better error handling - continue on failure
+If one batch fails, log it and continue to the next batch instead of stopping everything.
 
-1. **Batch Generate Missing Images** button - scans all products, finds ones without images, and generates AI images for each using the existing edge function
-2. **Progress tracker** - shows how many images have been generated, how many remain, and any failures
-3. **Single Product Regenerate** - ability to pick a specific product and regenerate its image
-4. **Preview grid** - shows products with/without images so you can see what needs generation
+## Changes
 
-## UI Layout
+### `src/components/admin/ProductImageGenerator.tsx`
+- Change `batchSize` from 5 to 3
+- Add a 5-second delay (`await new Promise(resolve => setTimeout(resolve, 5000))`) between each batch call
+- Wrap individual batch calls in try/catch so one failure doesn't stop the whole process
+- Show clearer progress messaging ("Generating batch X of Y...")
 
-The tab will show:
-- A summary card: "X products missing images out of Y total"
-- A "Generate All Missing Images" button with progress bar
-- A grid of product cards showing current image (or placeholder), with individual "Regenerate" buttons
-- Status indicators (generating, success, failed) per product
+### `supabase/functions/batch-generate-product-images/index.ts`
+- Increase the delay between individual images from 2 seconds to 3 seconds for safety
+- Add better timeout handling
 
-## Technical Details
-
-### New File
-- `src/components/admin/ProductImageGenerator.tsx` - the main component
-
-### Changes
-- `src/pages/AdminSettings.tsx` - add new "AI Images" tab with ImageIcon
-
-### How It Works
-- Calls `batch-generate-product-images` edge function for bulk generation
-- Calls `generate-product-image` for individual regeneration
-- Both functions already handle: AI prompt generation, image creation via Gemini 3 Pro, upload to storage bucket, and returning the public URL
-- The component will poll/track progress and update the UI in real-time
-- 2-second delay between images is already built into the batch function to respect rate limits
+## Expected Behavior
+- ~58 products missing images
+- 3 per batch = ~20 batches
+- Each batch takes ~12 seconds (3 images x 3s delay + generation time)
+- 5-second pause between batches
+- Total time: ~6-8 minutes for all products
+- Progress bar updates after each batch of 3
