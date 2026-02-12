@@ -12,7 +12,7 @@ import { MerchantFeeSettings } from "@/components/admin/MerchantFeeSettings";
 import { OrderStatusManager } from "@/components/admin/OrderStatusManager";
 import { TestPasswordManager } from "@/components/admin/TestPasswordManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope, Webhook, FileSpreadsheet } from "lucide-react";
+import { Building2, Users, Wrench, Package, Settings, ListOrdered, DollarSign, AlertTriangle, Truck, PackagePlus, Clock, Stethoscope, Webhook, FileSpreadsheet, ImageIcon } from "lucide-react";
 import { PriceOverrideManager } from "@/components/admin/PriceOverrideManager";
 import { AdminPasswordChange } from "@/components/admin/AdminPasswordChange";
 import { TwoFactorToggle } from "@/components/admin/TwoFactorToggle";
@@ -20,6 +20,7 @@ import { UsageBillingDashboard } from "@/components/admin/UsageBillingDashboard"
 import { SubscriptionDiagnostics } from "@/components/admin/SubscriptionDiagnostics";
 
 import { ViosWebhookMonitor } from "@/components/admin/ViosWebhookMonitor";
+import { ProductImageGenerator } from "@/components/admin/ProductImageGenerator";
 import { ViosMedIdManager } from "@/components/admin/ViosMedIdManager";
 import { lazy, Suspense } from "react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -103,6 +104,10 @@ const AdminSettings = () => {
           <TabsTrigger value="vios-mapping" className="gap-2">
             <FileSpreadsheet className="h-4 w-4" />
             VIOS Mapping
+          </TabsTrigger>
+          <TabsTrigger value="ai-images" className="gap-2">
+            <ImageIcon className="h-4 w-4" />
+            AI Images
           </TabsTrigger>
           <TabsTrigger value="danger-zone" className="gap-2 text-destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -286,6 +291,10 @@ const AdminSettings = () => {
               <ViosMedIdManager />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="ai-images" className="space-y-4">
+          <ProductImageGenerator />
         </TabsContent>
 
         <TabsContent value="danger-zone" className="space-y-4">
