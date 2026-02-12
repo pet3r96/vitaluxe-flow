@@ -21,6 +21,7 @@ import { SubscriptionDiagnostics } from "@/components/admin/SubscriptionDiagnost
 
 import { ViosWebhookMonitor } from "@/components/admin/ViosWebhookMonitor";
 import { ProductImageGenerator } from "@/components/admin/ProductImageGenerator";
+import { ProductCatalogDownload } from "@/components/admin/ProductCatalogDownload";
 import { ViosMedIdManager } from "@/components/admin/ViosMedIdManager";
 import { lazy, Suspense } from "react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -294,6 +295,7 @@ const AdminSettings = () => {
         </TabsContent>
 
         <TabsContent value="ai-images" className="space-y-4">
+          <ProductCatalogDownload />
           <ProductImageGenerator />
         </TabsContent>
 
