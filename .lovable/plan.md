@@ -1,69 +1,42 @@
 
-# Import Full VIOS Product Catalog (305 Items)
+# Restore AI Product Image Generator in Admin Settings
 
-## Summary
+## What Happened
 
-Import all 305 products from your spreadsheet into the database as ~57 product families with multiple variants each. Every product will be:
-- Marked as requires prescription
-- Assigned to Vios Compounding pharmacy
-- Visible to all reps
-- Priced with base price and practice price (no rep pricing)
-- Linked to the correct VIOS Product ID for API ordering
+The backend functions for AI image generation are still deployed and functional:
+- `generate-product-image` - generates a single product image using Gemini 3 Pro
+- `batch-generate-product-images` - generates images for all products missing them
 
-## How Products Will Be Grouped
+However, the **UI component** that let you trigger these from Admin Settings was removed. There is no button or panel anywhere in the app to generate images.
 
-Products with the same name and dosage form become one product with multiple variants. Different sizes (30g vs 90g, 30ct vs 90ct) are variants under the same product.
+## What Will Be Built
 
-Examples:
-- **Semaglutide ODT** (Tab Disintegrating) = 1 product with 12 variants (250 MCG through 12 MG)
-- **BIEST (20:80)** Cream = 1 product with 8 variants (4 strengths x 2 sizes: 30g and 90g)
-- **PROGESTERONE IR** Capsule = 1 product with 12 variants (6 strengths x 2 sizes: 30ct and 90ct)
-- **TESTOSTERONE** Cream = 1 product with 12 variants (6 strengths x 2 sizes)
+A new **"AI Images"** tab in Admin Settings with:
 
-## Product Type Assignments
+1. **Batch Generate Missing Images** button - scans all products, finds ones without images, and generates AI images for each using the existing edge function
+2. **Progress tracker** - shows how many images have been generated, how many remain, and any failures
+3. **Single Product Regenerate** - ability to pick a specific product and regenerate its image
+4. **Preview grid** - shows products with/without images so you can see what needs generation
 
-| Category | Products |
-|----------|----------|
-| GLP 1 | Semaglutide/Methylcobalamin/Glycine, Semaglutide/L-Carnitine, Semaglutide ODT, Tirzepatide/Glycine/Methylcobalamin, Tirzepatide/L-Carnitine, Tirzepatide ODT |
-| Hormone Therapy | BIEST (20:80), BIEST (50:50), DHEA, ESTRADIOL, ESTRIOL, PROGESTERONE (all forms), TESTOSTERONE (all forms), PREGNENOLONE, OXYTOCIN, NANDROLONE DECANOATE, Testosterone Cypionate GSO, Testosterone Enanthate |
-| Thyroid | LIOTHYRONINE (T3) IR, LIOTHYRONINE (T3) SR, LEVOTHYROXINE, T4/T3 (BIOTHYROID) |
-| Sexual Health | TADALAFIL, SILDENAFIL CITRATE, ENCLOMIPHENE CITRATE, CLOMIPHENE CITRATE, GONADORELIN |
-| Hair Care | Finasteride, MINOXIDIL, FINASTERIDE/MINOXIDIL |
-| Anti-Aging | GHK-CU, HYDROQUINONE, TRETINOIN, Methylene Blue, NAD+ |
-| Peptides | SERMORELIN |
-| Vitamins | Glutathione, Methylcobalamin, MIC-B12, ASCORBIC ACID combo |
+## UI Layout
 
-## Variant Labeling
-
-Each variant's dosage label will include both strength and size for clarity:
-- `"1mg/1mg/10mg/ml - 1mL"` (injection)
-- `"1 MG/ML - 30g"` (cream)
-- `"250 MCG - 30ct"` (tablet/capsule)
-
-## Implementation Approach
-
-### Step 1: Create Edge Function for Bulk Import
-
-Build a backend function (`import-product-catalog`) that:
-1. Accepts the full structured product data
-2. Inserts each product family into the `products` table
-3. Inserts all variants into `product_variants` with correct VIOS Product IDs
-4. Creates `product_pharmacies` entries linking each product to Vios Compounding
-5. Returns a summary of what was created
-
-### Step 2: Trigger the Import
-
-Call the edge function with all 305 rows pre-grouped into ~57 product families. The function handles everything in a single operation.
-
-### Step 3: Verify
-
-Confirm all products appear on the Products page with correct pricing, variants, and pharmacy assignments.
+The tab will show:
+- A summary card: "X products missing images out of Y total"
+- A "Generate All Missing Images" button with progress bar
+- A grid of product cards showing current image (or placeholder), with individual "Regenerate" buttons
+- Status indicators (generating, success, failed) per product
 
 ## Technical Details
 
-- **Products table**: name, dosage_form, requires_prescription=true, is_glp1 (true for semaglutide/tirzepatide), product_type_id, base_price (from first variant), retail_price (from first variant)
-- **Product variants**: dosage_label, base_price, retail_price, product_code (VIOS Product ID), active=true
-- **Product pharmacies**: links each product to Vios Compounding (id: d5e75179-e66c-450f-8cae-1f4df93b097c)
-- **No topline_price or downline_price** per your instructions
-- **Duplicate VIOS IDs** kept as-is (same code for different quantities)
-- **Deduplication**: The spreadsheet has some duplicate rows (e.g., DHEA SR appears twice, NAD+ Troche appears twice, one ESTRADIOL Cream duplicate) - these will be deduplicated during import
+### New File
+- `src/components/admin/ProductImageGenerator.tsx` - the main component
+
+### Changes
+- `src/pages/AdminSettings.tsx` - add new "AI Images" tab with ImageIcon
+
+### How It Works
+- Calls `batch-generate-product-images` edge function for bulk generation
+- Calls `generate-product-image` for individual regeneration
+- Both functions already handle: AI prompt generation, image creation via Gemini 3 Pro, upload to storage bucket, and returning the public URL
+- The component will poll/track progress and update the UI in real-time
+- 2-second delay between images is already built into the batch function to respect rate limits
