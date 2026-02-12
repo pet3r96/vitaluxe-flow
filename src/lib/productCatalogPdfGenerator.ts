@@ -190,7 +190,7 @@ function drawCard(
   }
   if (displayName !== product.name) displayName += '…';
   doc.text(displayName, x + CARD_W / 2, textY, { align: 'center' });
-  textY += 3.5;
+  textY += 5;
 
   // Dosage form
   if (product.dosage_form) {
@@ -198,8 +198,10 @@ function drawCard(
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.text(product.dosage_form, x + CARD_W / 2, textY, { align: 'center' });
+    textY += 4;
+  } else {
+    textY += 2;
   }
-  textY += 3;
 
   // Gold gradient bar behind "Practice Price"
   const barH = 4.5;
@@ -209,7 +211,7 @@ function drawCard(
   doc.setFontSize(6.5);
   doc.setFont('helvetica', 'bold');
   doc.text('PRACTICE PRICE', x + CARD_W / 2, textY - 0.2, { align: 'center' });
-  textY += 4;
+  textY += 5.5;
 
   if (product.variants.length === 0) {
     doc.setTextColor(...BLACK);
@@ -240,7 +242,7 @@ function drawCard(
 
       doc.text(label, x + 6, textY);
       doc.text(priceStr, x + CARD_W - 6, textY, { align: 'right' });
-      textY += 3.2;
+      textY += 4;
     }
     if (product.variants.length > maxLines) {
       doc.setTextColor(...MID_GREY);
