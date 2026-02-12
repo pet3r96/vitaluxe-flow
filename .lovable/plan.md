@@ -1,22 +1,61 @@
 
 
-# Fix: Variant Text Overflowing Card Boundaries
+# Sleek Modern Product Catalog -- No Index, Type Inside Cards
 
-## Problem
-The card is 82mm tall, the image is 48mm (starting 3mm from top = bottom at 51mm), leaving only 31mm for text content. With the recent spacing increases, multi-variant products overflow past the card border, getting cut off or bleeding into the next row.
+## Overview
+Remove the Table of Contents page entirely. Embed the product category/type as a subtle tag inside each card. Redesign cards with a cleaner, more modern aesthetic -- less "computer-generated" borders, more whitespace and typography-driven design. 6 products per page (3 rows x 2 columns), sorted alphabetically by product name across the entire catalog.
 
-## Solution
-Reduce image size slightly and tighten the top-of-card spacing to reclaim vertical room for text content. The image will still be much larger than the original 38mm.
+## Layout Math
+- A4 page: 210 x 297mm
+- Margins: 12mm all sides
+- No category header bars -- type lives inside the card now
+- Usable area: 186mm wide x 271mm tall (after footer)
+- Card dimensions: **90mm wide x 88mm tall**
+- Column gap: 6mm, Row gap: 3mm
+- 3 rows x 88 + 2 gaps x 3 = 270mm -- fits perfectly
+- Image size: **46mm** (large, prominent)
 
-### Changes to `src/lib/productCatalogPdfGenerator.ts`
+## Design Changes
 
-1. **Reduce IMG_SIZE from 48 to 42mm** -- still large and prominent, but frees up 6mm for text
-2. **Reduce image top padding from 3mm to 2.5mm** -- small savings
-3. **Reduce gap after image from 5mm to 4mm** -- tighter transition to text
-4. **Reduce gap after product name from 5mm to 3.5mm**
-5. **Reduce gap after dosage form from 4mm to 3mm**
-6. **Reduce gold bar follow-up from 5.5mm to 4.5mm**
-7. **Keep variant line height at 4mm** -- this was a good readability improvement
+### Remove
+- Table of Contents page (page 2) -- gone entirely
+- Category header bars on product pages -- no longer needed
+- Heavy double borders (black outer + gold inner)
+- Gold corner accent L-shapes
+- Gold "Practice Price" bar
 
-Net effect: ~10mm reclaimed for text area, preventing overflow while keeping images noticeably larger than the original 38mm and maintaining readable spacing between price lines.
+### Add / Replace
+- **Category pill**: Small rounded pill at top-left of card with category name in gold text on a dark background
+- **Shadow effect**: Subtle light-grey offset rectangle behind each card for depth
+- **Clean single border**: Thin 0.3pt grey border instead of heavy double borders
+- **Modern pricing layout**: Price in bold black below a thin gold hairline, no colored bar
+- **Larger image**: 46mm in a borderless/clean container (no grey box, just the image)
+- **Better typography hierarchy**: Product name 11pt, category 6pt, dosage form 7pt, price 13pt
+
+### Product Sorting
+- All products sorted alphabetically by name across the entire catalog (no category grouping on pages)
+- Category is shown per-card via the pill tag, so no information is lost
+
+### Cover Page
+- Stays the same (black/gold/white branded cover)
+
+### Card Layout (top to bottom within 88mm)
+1. Category pill (top-left corner, 2mm from edges) -- 5mm
+2. Product image centered -- 46mm
+3. Product name (11pt bold) -- 5mm
+4. Dosage form (7pt grey) -- 3mm
+5. Thin gold line -- 2mm
+6. Price/variants area -- remaining ~20mm (plenty of room)
+
+## Technical Details
+
+### File: `src/lib/productCatalogPdfGenerator.ts`
+- Remove `drawCategoryHeader` function
+- Remove `drawCornerAccents` function
+- Remove TOC page generation block
+- Remove TOC update block at end
+- Update constants: `CARD_H = 88`, `IMG_SIZE = 46`
+- Rewrite `drawCard` for modern minimal style with category pill
+- Change product loop: flatten all products, sort by name, render 6 per page with simple pagination
+- Keep cover page and footer as-is
 
