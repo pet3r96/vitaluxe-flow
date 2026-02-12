@@ -35,12 +35,14 @@ const MID_GREY: [number, number, number] = [150, 150, 150];
 
 // ── Layout constants (mm) ──
 const MARGIN = 12;
-const CARD_W = 85;    // card width
-const CARD_H = 95;    // card height
+const CARD_W = 90;    // card width
+const CARD_H = 82;    // card height
 const COL_GAP = 6;    // gap between columns
-const IMG_SIZE = 38;  // image box size
-const HEADER_H = 18;  // category header bar height
+const ROW_GAP = 3;    // gap between rows
+const IMG_SIZE = 48;  // image box size
+const HEADER_H = 22;  // category header bar height (taller)
 const FOOTER_H = 14;  // footer area height
+const CORNER_LEN = 4; // gold corner accent length
 
 async function imageToBase64(url: string): Promise<string | null> {
   try {
@@ -117,9 +119,30 @@ function drawCategoryHeader(doc: jsPDF, name: string, pageWidth: number) {
   doc.setFillColor(...BLACK);
   doc.rect(0, 0, pageWidth, HEADER_H + 4, 'F');
   doc.setTextColor(...GOLD);
-  doc.setFontSize(14);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text(name.toUpperCase(), pageWidth / 2, HEADER_H - 2, { align: 'center' });
+  // Gold underline accent
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.8);
+  doc.line(pageWidth * 0.2, HEADER_H + 2, pageWidth * 0.8, HEADER_H + 2);
+}
+
+function drawCornerAccents(doc: jsPDF, x: number, y: number, w: number, h: number) {
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.6);
+  // Top-left
+  doc.line(x, y, x + CORNER_LEN, y);
+  doc.line(x, y, x, y + CORNER_LEN);
+  // Top-right
+  doc.line(x + w, y, x + w - CORNER_LEN, y);
+  doc.line(x + w, y, x + w, y + CORNER_LEN);
+  // Bottom-left
+  doc.line(x, y + h, x + CORNER_LEN, y + h);
+  doc.line(x, y + h, x, y + h - CORNER_LEN);
+  // Bottom-right
+  doc.line(x + w, y + h, x + w - CORNER_LEN, y + h);
+  doc.line(x + w, y + h, x + w, y + h - CORNER_LEN);
 }
 
 function drawCard(
@@ -129,16 +152,24 @@ function drawCard(
   x: number,
   y: number
 ) {
-  // Card border
+  // Outer black border
   doc.setDrawColor(...BLACK);
-  doc.setLineWidth(0.4);
+  doc.setLineWidth(0.5);
   doc.rect(x, y, CARD_W, CARD_H);
 
-  // Image area background
+  // Inner gold accent border
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.3);
+  doc.rect(x + 1.5, y + 1.5, CARD_W - 3, CARD_H - 3);
+
+  // Gold corner accents
+  drawCornerAccents(doc, x, y, CARD_W, CARD_H);
+
+  // Image area — rounded rect background
   const imgBoxX = x + (CARD_W - IMG_SIZE) / 2;
-  const imgBoxY = y + 4;
+  const imgBoxY = y + 3;
   doc.setFillColor(...LIGHT_GREY);
-  doc.rect(imgBoxX, imgBoxY, IMG_SIZE, IMG_SIZE, 'F');
+  doc.roundedRect(imgBoxX, imgBoxY, IMG_SIZE, IMG_SIZE, 2, 2, 'F');
 
   if (imgBase64) {
     try {
@@ -146,20 +177,20 @@ function drawCard(
     } catch { /* skip */ }
   }
 
-  let textY = imgBoxY + IMG_SIZE + 6;
+  let textY = imgBoxY + IMG_SIZE + 5;
 
-  // Product name (truncate if needed)
+  // Product name
   doc.setTextColor(...BLACK);
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   let displayName = product.name;
-  const maxNameWidth = CARD_W - 8;
+  const maxNameWidth = CARD_W - 10;
   while (doc.getTextWidth(displayName) > maxNameWidth && displayName.length > 10) {
     displayName = displayName.slice(0, -1);
   }
   if (displayName !== product.name) displayName += '…';
   doc.text(displayName, x + CARD_W / 2, textY, { align: 'center' });
-  textY += 4;
+  textY += 3.5;
 
   // Dosage form
   if (product.dosage_form) {
@@ -168,19 +199,16 @@ function drawCard(
     doc.setFont('helvetica', 'normal');
     doc.text(product.dosage_form, x + CARD_W / 2, textY, { align: 'center' });
   }
-  textY += 4;
+  textY += 3;
 
-  // Gold divider
-  doc.setDrawColor(...GOLD);
-  doc.setLineWidth(0.6);
-  doc.line(x + 8, textY, x + CARD_W - 8, textY);
-  textY += 4;
-
-  // "Practice Price" label
-  doc.setTextColor(...GOLD);
-  doc.setFontSize(7);
+  // Gold gradient bar behind "Practice Price"
+  const barH = 4.5;
+  doc.setFillColor(218, 165, 32);
+  doc.roundedRect(x + 10, textY - 3, CARD_W - 20, barH, 1, 1, 'F');
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(6.5);
   doc.setFont('helvetica', 'bold');
-  doc.text('Practice Price', x + CARD_W / 2, textY, { align: 'center' });
+  doc.text('PRACTICE PRICE', x + CARD_W / 2, textY - 0.2, { align: 'center' });
   textY += 4;
 
   if (product.variants.length === 0) {
@@ -189,20 +217,17 @@ function drawCard(
     doc.setFont('helvetica', 'normal');
     doc.text('Contact for pricing', x + CARD_W / 2, textY, { align: 'center' });
   } else if (product.variants.length === 1) {
-    // Single variant — show price prominently
     doc.setTextColor(...BLACK);
-    doc.setFontSize(12);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text(fmt(product.variants[0].retail_price), x + CARD_W / 2, textY + 2, { align: 'center' });
   } else {
-    // Multiple variants — list each one
-    doc.setFontSize(6.5);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    const maxLines = 7;
+    const maxLines = 5;
     const variants = product.variants.slice(0, maxLines);
     for (const v of variants) {
       doc.setTextColor(60, 60, 60);
-      // Truncate label if needed
       let label = v.dosage_label;
       const priceStr = fmt(v.retail_price);
       const availableW = CARD_W - 16;
@@ -215,10 +240,11 @@ function drawCard(
 
       doc.text(label, x + 6, textY);
       doc.text(priceStr, x + CARD_W - 6, textY, { align: 'right' });
-      textY += 3.5;
+      textY += 3.2;
     }
     if (product.variants.length > maxLines) {
       doc.setTextColor(...MID_GREY);
+      doc.setFontSize(6);
       doc.text(`+${product.variants.length - maxLines} more`, x + CARD_W / 2, textY, { align: 'center' });
     }
   }
@@ -367,20 +393,18 @@ export async function generateProductCatalogPDF(
   const col1X = MARGIN;
   const col2X = MARGIN + CARD_W + COL_GAP;
   const gridTopY = HEADER_H + 8;
-  const maxRowsPerPage = Math.floor((pageHeight - gridTopY - FOOTER_H - 4) / (CARD_H + 4));
 
   for (const cat of categories) {
     doc.addPage();
     cat.startPage = doc.getNumberOfPages();
     drawCategoryHeader(doc, cat.name, pageWidth);
 
-    let col = 0; // 0 = left, 1 = right
+    let col = 0;
     let row = 0;
 
     for (let pIdx = 0; pIdx < cat.products.length; pIdx++) {
-      const product = cat.products[pIdx];
       const cardX = col === 0 ? col1X : col2X;
-      const cardY = gridTopY + row * (CARD_H + 4);
+      const cardY = gridTopY + row * (CARD_H + ROW_GAP);
 
       // Check page break
       if (cardY + CARD_H > pageHeight - FOOTER_H - 2) {
@@ -391,11 +415,10 @@ export async function generateProductCatalogPDF(
       }
 
       const finalX = col === 0 ? col1X : col2X;
-      const finalY = gridTopY + row * (CARD_H + 4);
+      const finalY = gridTopY + row * (CARD_H + ROW_GAP);
 
-      drawCard(doc, product, imageMap.get(product.id) || null, finalX, finalY);
+      drawCard(doc, cat.products[pIdx], imageMap.get(cat.products[pIdx].id) || null, finalX, finalY);
 
-      // Advance grid position
       if (col === 0) {
         col = 1;
       } else {
