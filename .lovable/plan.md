@@ -1,74 +1,66 @@
 
-# Beautiful Product Catalog PDF
 
-## Overview
+# Print-Ready Product Catalog PDF -- Complete Redesign
 
-Build a downloadable product catalog PDF featuring the Vitaluxe branding, company info, product images, and complete variant pricing -- organized by category for a polished, professional look.
+## Problem
+The current PDF looks basic and unpolished -- inconsistent card sizes, small images, grey color scheme, and a linear list layout instead of a professional grid. It needs to look like something you would print and hand to a practice.
 
-## PDF Layout
+## New Design: Black / White / Gold Theme
 
-### Cover Page
-- Large Vitaluxe logo (centered, fetched from `branding-assets` storage bucket)
-- "PRODUCT CATALOG" title in gold
-- Company info block:
+### Cover Page (Page 1)
+- **Solid black** background (not dark grey)
+- Large Vitaluxe logo centered
+- Gold horizontal rules above and below title
+- "PRODUCT CATALOG" in large gold lettering
+- Company details in clean white text:
   - Vitaluxe Services
   - 16192 Coastal Highway, Lewes, Delaware 19958
-  - Phone: (844) 252-5233
-  - Website: https://vitaluxeservices.com
-- Date generated
+  - (844) 252-5233
+  - https://vitaluxeservices.com
+- Date generated at bottom in muted text
+- "Confidential" footer
 
 ### Table of Contents (Page 2)
-- Lists all 8 categories with page numbers:
-  - Anti-Aging (6 products)
-  - GLP-1 (6 products)
-  - Hair Care (3 products)
-  - Hormone Therapy (25 products)
-  - Peptides (1 product)
-  - Sexual Health (8 products)
-  - Thyroid (4 products)
-  - Vitamins (5 products)
+- Black header bar with gold "TABLE OF CONTENTS" text
+- Clean listing with dotted leaders and page numbers
+- Gold accent line under each category
 
-### Product Pages (grouped by category)
-Each category gets a section header, then each product is displayed as a card-style block:
-- **Product image** (loaded from public URL) on the left
-- **Product name** and dosage form on the right
-- **Variants table** below with columns: Dosage/Size, Practice Price
-- Alternating row shading for readability
-- Page breaks between categories
+### Product Pages -- Grid Layout (2 products per row)
+This is the biggest change. Instead of a vertical list, products will be rendered in a **2-column grid** with uniform card sizes:
 
-### Footer (every page)
+- Each card is exactly **85mm wide x 95mm tall**
+- **Top half**: Product image centered in a light grey box (consistent 40x40mm)
+- **Product name** in bold black, 10pt
+- **Dosage form** in smaller grey text underneath
+- **Gold divider line**
+- **"Practice Price"** label in gold
+- If single variant: price displayed prominently (e.g., "$68.99")
+- If multiple variants: each variant listed line-by-line as "dosage_label .... $price" in a compact format
+- Thin black border around each card for a clean, print-ready look
+
+### Category Section Headers
+- Full-width black bar with category name in gold, uppercase
+- Spans both columns
+
+### Footer (every page except cover)
+- Thin gold line at bottom
 - "Vitaluxe Services" centered
-- Page number
-- "Confidential - For Authorized Partners Only"
+- Page X of Y right-aligned
+- "Confidential -- For Authorized Partners Only" left-aligned
 
-## Implementation
+## Technical Changes
 
-### New Files
-1. **`src/lib/productCatalogPdfGenerator.ts`** - Core PDF generation logic using jsPDF + autoTable (same libraries already in use)
-2. **`src/components/admin/ProductCatalogDownload.tsx`** - Button component to trigger generation and download
+### File: `src/lib/productCatalogPdfGenerator.ts` (full rewrite)
 
-### Changes
-- **`src/pages/AdminSettings.tsx`** - Add a "Download Product Catalog" button (in the existing Products/AI Images area or a new spot)
+Key changes:
+1. **Color palette**: Replace `DARK_GREY [55,65,81]` with `BLACK [0,0,0]`; keep gold and white
+2. **Grid layout engine**: Calculate 2 columns per page with fixed card dimensions. Track column position (left/right) and advance row when both filled
+3. **Uniform card rendering**: Every card gets the same height regardless of content. Variants with many options use smaller font (7pt) to fit within the fixed card height. If a product has too many variants (8+), the card will overflow to use additional vertical space and be treated as a full-width card
+4. **Image rendering**: Product images rendered inside a consistent light-grey square placeholder area at the top of each card
+5. **Price display**: Show only "Practice Price" (retail_price) -- no base/topline/downline. For single-variant products, show the price large. For multi-variant, list each variant as a row
+6. **Page breaks**: When 2-column grid fills the page, auto-break and re-render category header
+7. **Print margins**: Use 12mm margins on all sides for proper print bleed
 
-### How It Works
-1. Fetches all active products with variants from the database
-2. Fetches all product images as base64 (from their public URLs)
-3. Fetches the Vitaluxe logo from the `branding-assets` storage bucket
-4. Groups products by category (product_type)
-5. Renders each product with its image and variant pricing table
-6. Outputs as a downloadable PDF blob
+### No other files change
+The download button component and AdminSettings integration remain the same.
 
-### Pricing Display
-- Shows **Practice Price** (retail_price) only -- this is the price practices pay
-- Base price is internal and will NOT be shown in the catalog
-- Formatted as currency with 2 decimal places
-
-### Image Handling
-- Product images fetched from their public storage URLs and converted to base64 for PDF embedding
-- Logo fetched from `branding-assets` bucket (same pattern as order receipt)
-- Fallback placeholder if any image fails to load
-
-### Color Scheme
-- Dark grey header bars (#374151) matching existing PDF branding
-- Gold accents (#DAA520) for titles and dividers
-- Clean white background with light grey alternating rows
