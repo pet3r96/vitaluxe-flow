@@ -39,7 +39,7 @@ const CARD_W = 90;    // card width
 const CARD_H = 82;    // card height
 const COL_GAP = 6;    // gap between columns
 const ROW_GAP = 3;    // gap between rows
-const IMG_SIZE = 48;  // image box size
+const IMG_SIZE = 42;  // image box size
 const HEADER_H = 22;  // category header bar height (taller)
 const FOOTER_H = 14;  // footer area height
 const CORNER_LEN = 4; // gold corner accent length
@@ -167,7 +167,7 @@ function drawCard(
 
   // Image area — rounded rect background
   const imgBoxX = x + (CARD_W - IMG_SIZE) / 2;
-  const imgBoxY = y + 3;
+  const imgBoxY = y + 2.5;
   doc.setFillColor(...LIGHT_GREY);
   doc.roundedRect(imgBoxX, imgBoxY, IMG_SIZE, IMG_SIZE, 2, 2, 'F');
 
@@ -177,7 +177,7 @@ function drawCard(
     } catch { /* skip */ }
   }
 
-  let textY = imgBoxY + IMG_SIZE + 5;
+  let textY = imgBoxY + IMG_SIZE + 4;
 
   // Product name
   doc.setTextColor(...BLACK);
@@ -190,7 +190,7 @@ function drawCard(
   }
   if (displayName !== product.name) displayName += '…';
   doc.text(displayName, x + CARD_W / 2, textY, { align: 'center' });
-  textY += 5;
+  textY += 3.5;
 
   // Dosage form
   if (product.dosage_form) {
@@ -198,7 +198,7 @@ function drawCard(
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.text(product.dosage_form, x + CARD_W / 2, textY, { align: 'center' });
-    textY += 4;
+    textY += 3;
   } else {
     textY += 2;
   }
@@ -211,7 +211,7 @@ function drawCard(
   doc.setFontSize(6.5);
   doc.setFont('helvetica', 'bold');
   doc.text('PRACTICE PRICE', x + CARD_W / 2, textY - 0.2, { align: 'center' });
-  textY += 5.5;
+  textY += 4.5;
 
   if (product.variants.length === 0) {
     doc.setTextColor(...BLACK);
