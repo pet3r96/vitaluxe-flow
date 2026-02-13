@@ -1,23 +1,22 @@
 
 
-# Fix PDF Cover Page: Dark Grey Background + Logo
+## Fix: Use the Correct White-Text Logo for PDF Cover
 
-## Problems Identified
-1. **Logo not appearing**: The `fetchLogo()` function fetches from storage but likely fails silently (CORS or fetch issue). Need to add better error handling and logging, and also ensure the logo image format is handled correctly (try JPEG format fallback in `addImage`).
-2. **Background is pure black**: The cover uses `BLACK [0,0,0]` but user wants the darker greyish-black. Will use `DARK_BG [35,35,35]` instead for a softer, more premium look.
+The sidebar logo (white text, visible on dark backgrounds) already exists locally at `src/assets/vitaluxe-logo-dark-bg.png`. The PDF generator is currently fetching a different file from remote storage (`Vitaluxe Services.png`) which has grey text -- that's why it looks wrong on the dark cover.
 
-## Changes in `src/lib/productCatalogPdfGenerator.ts`
+### Changes in `src/lib/productCatalogPdfGenerator.ts`
 
-### 1. Cover page background color (line 278)
-- Change `doc.setFillColor(...BLACK)` to `doc.setFillColor(...DARK_BG)` so the cover is a charcoal grey (#232323) rather than pure black
+**1. Import the local logo asset at the top of the file**
+- Add: `import logoDarkBg from '@/assets/vitaluxe-logo-dark-bg.png';`
 
-### 2. Fix logo loading (lines 282-286)
-- Change `addImage` format from `'PNG'` to `'AUTO'` so jsPDF auto-detects the image format (in case the file isn't strictly PNG)
-- Add a fallback: if the storage URL fetch fails, try a direct URL construction as backup
-- Keep the large size (130x50mm) and Y=25mm positioning
+**2. Replace the `fetchLogo()` function**
+- Instead of fetching from remote storage, convert the local imported asset to base64
+- The imported asset gives us a URL we can fetch and convert
 
-### 3. Ensure "PRODUCT CATALOG" text and company info contrast
-- The gold text and white text will still look great on the dark grey background -- no changes needed there
+**3. No other changes needed**
+- Logo dimensions (60x42mm) and spacing stay the same
+- Cover background color stays as dark grey
 
-## Summary
-Two small targeted edits: swap `BLACK` to `DARK_BG` on line 278, and change `'PNG'` to `'AUTO'` on line 284 to fix the logo rendering.
+### Technical Details
+
+The Vite bundler resolves `import logoDarkBg from '@/assets/vitaluxe-logo-dark-bg.png'` to a URL string at build time. The existing `imageToBase64()` helper can convert that URL to a base64 data URI for jsPDF. This approach is simpler and more reliable than fetching from remote storage.
