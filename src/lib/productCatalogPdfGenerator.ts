@@ -7,6 +7,7 @@
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 import { getTotalPages } from '@/types/pdf';
+import logoDarkBg from '@/assets/vitaluxe-logo-dark-bg.png';
 
 interface CatalogProduct {
   id: string;
@@ -56,9 +57,7 @@ async function imageToBase64(url: string): Promise<string | null> {
 
 async function fetchLogo(): Promise<string | null> {
   try {
-    const { data } = supabase.storage.from('branding-assets').getPublicUrl('Vitaluxe Services.png');
-    if (!data?.publicUrl) return null;
-    return imageToBase64(data.publicUrl);
+    return imageToBase64(logoDarkBg);
   } catch {
     return null;
   }
