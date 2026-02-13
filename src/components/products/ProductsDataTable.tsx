@@ -223,7 +223,8 @@ export const ProductsDataTable = () => {
     customDosage: string | null = null,
     orderNotes: string | null = null,
     prescriptionMethod: string | null = null,
-    variantId: string | null = null
+    variantId: string | null = null,
+    daysSupply: number | null = null
   ) => {
     if (!effectiveUserId || !productForCart) return;
 
@@ -445,6 +446,7 @@ export const ProductsDataTable = () => {
             orderNotes: orderNotes,
             prescriptionMethod: prescriptionMethod,
             variantId: variantId,
+            daysSupply: daysSupply,
           }
         });
 
@@ -553,6 +555,7 @@ export const ProductsDataTable = () => {
             prescriptionMethod: prescriptionMethod,
             genderAtBirth: patientRecord.gender_at_birth,
             variantId: variantId,
+            daysSupply: daysSupply,
           }
         });
 

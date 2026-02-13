@@ -411,7 +411,8 @@ export const ProductsGrid = () => {
     customDosage: string | null = null,
     orderNotes: string | null = null,
     prescriptionMethod: string | null = null,
-    variantId: string | null = null
+    variantId: string | null = null,
+    daysSupply: number | null = null
   ) => {
     if (!effectiveUserId || !productForCart) return;
 
@@ -663,6 +664,7 @@ export const ProductsGrid = () => {
             orderNotes: orderNotes,
             prescriptionMethod: prescriptionMethod,
             variantId: variantId,
+            daysSupply: daysSupply,
           }
         }).then(({ error }) => {
           if (error) {
@@ -819,6 +821,7 @@ export const ProductsGrid = () => {
             orderNotes: orderNotes,
             prescriptionMethod: prescriptionMethod,
             variantId: variantId,
+            daysSupply: daysSupply,
           }
         }).then(({ error }) => {
           if (error) {

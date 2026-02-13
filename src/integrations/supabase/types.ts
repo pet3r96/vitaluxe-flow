@@ -443,6 +443,7 @@ export type Database = {
           custom_dosage_encrypted: string | null
           custom_sig: string | null
           custom_sig_encrypted: string | null
+          days_supply: number | null
           destination_state: string
           expires_at: string | null
           gender_at_birth: string | null
@@ -484,6 +485,7 @@ export type Database = {
           custom_dosage_encrypted?: string | null
           custom_sig?: string | null
           custom_sig_encrypted?: string | null
+          days_supply?: number | null
           destination_state: string
           expires_at?: string | null
           gender_at_birth?: string | null
@@ -525,6 +527,7 @@ export type Database = {
           custom_dosage_encrypted?: string | null
           custom_sig?: string | null
           custom_sig_encrypted?: string | null
+          days_supply?: number | null
           destination_state?: string
           expires_at?: string | null
           gender_at_birth?: string | null
@@ -1650,6 +1653,7 @@ export type Database = {
           custom_dosage_encrypted: string | null
           custom_sig: string | null
           custom_sig_encrypted: string | null
+          days_supply: number | null
           delivered_at: string | null
           destination_state: string | null
           discount_amount: number | null
@@ -1702,6 +1706,7 @@ export type Database = {
           custom_dosage_encrypted?: string | null
           custom_sig?: string | null
           custom_sig_encrypted?: string | null
+          days_supply?: number | null
           delivered_at?: string | null
           destination_state?: string | null
           discount_amount?: number | null
@@ -1754,6 +1759,7 @@ export type Database = {
           custom_dosage_encrypted?: string | null
           custom_sig?: string | null
           custom_sig_encrypted?: string | null
+          days_supply?: number | null
           delivered_at?: string | null
           destination_state?: string | null
           discount_amount?: number | null

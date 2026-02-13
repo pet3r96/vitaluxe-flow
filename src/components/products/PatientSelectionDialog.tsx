@@ -47,7 +47,8 @@ interface PatientSelectionDialogProps {
     customDosage?: string | null,
     orderNotes?: string | null,
     prescriptionMethod?: string | null,
-    variantId?: string | null
+    variantId?: string | null,
+    daysSupply?: number | null
   ) => void;
 }
 
@@ -92,6 +93,7 @@ export const PatientSelectionDialog = ({
   const [customSig, setCustomSig] = useState("");
   const [customDosage, setCustomDosage] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
+  const [daysSupply, setDaysSupply] = useState("");
   const [providerSignature, setProviderSignature] = useState("");
   
   // Auto-select single variant or set initial step for multiple variants
@@ -296,6 +298,7 @@ export const PatientSelectionDialog = ({
       setPrescriptionMethod(null);
       setCustomSig("");
       setCustomDosage("");
+      setDaysSupply("");
       setOrderNotes("");
       setProviderSignature("");
       setShowPrescriptionWriter(false);
@@ -378,6 +381,13 @@ export const PatientSelectionDialog = ({
     // Validate SIG is filled in
     if (!customSig?.trim()) {
       toast.error("SIG - Directions for Use is required");
+      return;
+    }
+
+    // Validate Days Supply
+    const daysSupplyNum = parseInt(daysSupply);
+    if (!daysSupply?.trim() || isNaN(daysSupplyNum) || daysSupplyNum < 1 || daysSupplyNum > 365) {
+      toast.error("Days Supply is required (1-365)");
       return;
     }
 
@@ -468,7 +478,8 @@ export const PatientSelectionDialog = ({
       customDosage || null,
       orderNotes || null,
       prescriptionMethod || null,
-      selectedVariantId || null
+      selectedVariantId || null,
+      parseInt(daysSupply) || null
     );
     onOpenChange(false);
   };
@@ -872,6 +883,23 @@ export const PatientSelectionDialog = ({
                       />
                       <p className="text-xs text-muted-foreground">
                         Default from product: {product.sig || 'Not specified'}
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="days-supply">Days Supply <span className="text-destructive">*</span></Label>
+                      <Input
+                        id="days-supply"
+                        type="number"
+                        min="1"
+                        max="365"
+                        placeholder="e.g., 30"
+                        value={daysSupply}
+                        onChange={(e) => setDaysSupply(e.target.value)}
+                        className="w-[120px]"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Number of days the medication will last (1-365)
                       </p>
                     </div>
                   </div>
