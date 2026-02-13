@@ -1,48 +1,29 @@
 
 
-## Add Testosterone Injectable Products (Lines 311-316)
+## Fix Critical Dependency Vulnerabilities
 
-Lines 306-310 (T4/T3 BIOTHYROID SR) are already in the database -- all those variants and product codes are present. No action needed for those.
+### Problem
+The security scanner flags **jspdf** (version ^2.5.2) with **CVE-2025-68428** -- a critical path traversal vulnerability (CVSS 9.2). While this primarily affects Node.js builds (not browser usage), the scanner still flags it and it should be updated.
 
-Lines 311-316 are 6 new injectable items that need to be added:
+### Solution
+Update `jspdf` from `^2.5.2` to `^4.0.0` and `jspdf-autotable` to its latest compatible version in `package.json`.
 
----
-
-### What Will Be Added
-
-**1. Two new variants on EXISTING product "Testosterone Cypionate GSO" (lines 314-315)**
-| Variant | Strength | Size | VIOS ID | Base Price | Practice Price |
-|---------|----------|------|---------|------------|----------------|
-| 200mg/mL - 4mL | 200 MG/ML | 4mL | 305511458 | $24.64 | $34.50 |
-| 200mg/mL - 6mL | 200 MG/ML | 6mL | 305511457 | $30.80 | $43.12 |
-
-**2. NEW product: "TESTOSTERONE CYPIONATE MCT (Injectable)" (line 316)**
-| Variant | Strength | Size | VIOS ID | Base Price | Practice Price |
-|---------|----------|------|---------|------------|----------------|
-| 200mg/mL - 10mL | 200 MG/ML | 10mL | 305518452 | $30.80 | $43.12 |
-
-**3. NEW product: "TESTOSTERONE CYPIONATE (Injectable)" (lines 312-313)**
-| Variant | Strength | Size | VIOS ID | Base Price | Practice Price |
-|---------|----------|------|---------|------------|----------------|
-| 100mg/mL - 5mL | 100 MG/ML | 5mL | 302384076 | $24.64 | $34.50 |
-| 200mg/mL - 5mL | 200 MG/ML | 5mL | 302384074 | $24.64 | $34.50 |
-
-**4. NEW product: "TESTOSTERONE (Injectable)" (line 311)**
-| Variant | Strength | Size | VIOS ID | Base Price | Practice Price |
-|---------|----------|------|---------|------------|----------------|
-| 200mg/mL - 10mL | 200 MG/ML | 10mL | 302409115 | $30.80 | $43.12 |
-
----
+After updating, mark the dependency vulnerability findings as resolved in the security scan.
 
 ### Technical Details
 
-A single SQL migration will:
+**Files to modify:**
 
-1. Insert 2 new variants into the existing "Testosterone Cypionate GSO" product (ID: `e736eb74-c787-461f-85eb-4c6575da2641`), with sort_order continuing after existing 3 variants
-2. Insert 3 new products into `products` table (Hormone Therapy type `c5aee9fc-012f-4155-b356-8e26ffb22ea5`, dosage_form "Injectable", active, not GLP-1, not controlled)
-3. Insert variants for each new product with correct `product_code` (VIOS Med ID), `base_price`, and `retail_price`
-4. Assign all 3 new products to the VIOS pharmacy (`d5e75179-e66c-450f-8cae-1f4df93b097c`) in `product_pharmacies`
-5. Upsert all 6 VIOS Med IDs into `vios_product_catalog`
+1. **`package.json`** -- Update dependency versions:
+   - `jspdf`: `^2.5.2` to `^4.0.0`
+   - `jspdf-autotable`: `^5.0.2` to latest compatible version
 
-All fields will match the existing catalog pattern (name with form appended, variant labels as "strength - size", product_code for VIOS routing).
+2. **`src/types/pdf.ts`** -- Verify type helpers still work with jspdf 4.0 API (the `jsPDF` type import and `lastAutoTable`/`internal` access patterns). Update if needed.
+
+3. **6 files using jspdf** -- Verify import patterns still work (jsPDF default import, autoTable import). The core API (`new jsPDF()`, `doc.text()`, `doc.save()`, `autoTable()`) is expected to remain compatible. Any breaking changes will be addressed.
+
+4. **Security findings** -- Delete the dependency vulnerability findings from the scan results after the fix is applied.
+
+### Risk
+Low -- jspdf 4.0 maintains backward compatibility for browser-based PDF generation. The breaking changes in 4.0 are primarily around Node.js permission model requirements, which don't apply to this browser-only usage.
 
