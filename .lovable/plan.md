@@ -1,29 +1,43 @@
 
 
-## Fix Critical Dependency Vulnerabilities
+## Make SIG (Directions for Use) Mandatory and Fix Dosage Display
 
 ### Problem
-The security scanner flags **jspdf** (version ^2.5.2) with **CVE-2025-68428** -- a critical path traversal vulnerability (CVSS 9.2). While this primarily affects Node.js builds (not browser usage), the scanner still flags it and it should be updated.
+1. The "Dosage Instructions" field shows "Not specified" because it pulls from `product.dosage` (which is often empty) instead of the **selected variant's dosage_label** (e.g., "1 MG - 30ct").
+2. The "SIG - Directions for Use" field is not enforced as mandatory in the patient selection flow -- the prescriber/signer must fill this in (e.g., "Take 1 tablet 1x a day at night with food").
 
-### Solution
-Update `jspdf` from `^2.5.2` to `^4.0.0` and `jspdf-autotable` to its latest compatible version in `package.json`.
+### Changes
 
-After updating, mark the dependency vulnerability findings as resolved in the security scan.
+**1. PatientSelectionDialog.tsx** -- Fix dosage display and make SIG required
+
+- When transitioning to the prescription step, populate `customDosage` from the **selected variant's `dosage_label`** instead of the product-level `dosage` field.
+- Add a computed `selectedVariant` derived from `selectedVariantId` and `variants`.
+- Update the dosage display to show: `{product.name} - {selectedVariant.dosage_label}` (e.g., "BIEST (50:50) (RDT) - 1 MG - 30ct").
+- Change the helper text from "This value is from the product configuration" to "Selected dosage variant".
+- Make the SIG field **mandatory**: add validation that blocks the "Add to Cart" / "Continue" action if SIG is empty, with an error toast.
+- Add a red asterisk (*) to the SIG label to indicate it's required.
+
+**2. PrescriptionWriterDialog.tsx** -- Keep dosage read-only, ensure SIG validation
+
+- The dosage field already shows correctly from `initialDosage` (which will now be the variant label).
+- SIG is already marked with * and `required` -- no changes needed here.
 
 ### Technical Details
 
-**Files to modify:**
-
-1. **`package.json`** -- Update dependency versions:
-   - `jspdf`: `^2.5.2` to `^4.0.0`
-   - `jspdf-autotable`: `^5.0.2` to latest compatible version
-
-2. **`src/types/pdf.ts`** -- Verify type helpers still work with jspdf 4.0 API (the `jsPDF` type import and `lastAutoTable`/`internal` access patterns). Update if needed.
-
-3. **6 files using jspdf** -- Verify import patterns still work (jsPDF default import, autoTable import). The core API (`new jsPDF()`, `doc.text()`, `doc.save()`, `autoTable()`) is expected to remain compatible. Any breaking changes will be addressed.
-
-4. **Security findings** -- Delete the dependency vulnerability findings from the scan results after the fix is applied.
-
-### Risk
-Low -- jspdf 4.0 maintains backward compatibility for browser-based PDF generation. The breaking changes in 4.0 are primarily around Node.js permission model requirements, which don't apply to this browser-only usage.
+- Derive `selectedVariant` with: `const selectedVariant = variants?.find(v => v.id === selectedVariantId);`
+- In the `handleProceedToPrescription` function (~line 360-366), change the dosage initialization:
+  ```
+  // Before: setCustomDosage(product.dosage)
+  // After: use variant dosage_label
+  const variantLabel = selectedVariant?.dosage_label;
+  setCustomDosage(variantLabel || product?.dosage || '');
+  ```
+- In `handleAddToCart` validation (~line 371+), add:
+  ```
+  if (!customSig?.trim()) {
+    toast.error("SIG - Directions for Use is required");
+    return;
+  }
+  ```
+- Update the SIG label from `"SIG - Directions for Use"` to `"SIG - Directions for Use *"` to match PrescriptionWriterDialog.
 
