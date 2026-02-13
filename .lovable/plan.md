@@ -1,22 +1,43 @@
 
 
-## Fix: Use the Correct White-Text Logo for PDF Cover
+## Fix: Pass the correct VIOS product ID (Med ID) when submitting orders
 
-The sidebar logo (white text, visible on dark backgrounds) already exists locally at `src/assets/vitaluxe-logo-dark-bg.png`. The PDF generator is currently fetching a different file from remote storage (`Vitaluxe Services.png`) which has grey text -- that's why it looks wrong on the dark cover.
+### Problem
+The order submission to VIOS always uses the product-level `vios_lf_product_id`, ignoring the variant-level `product_code`. Since the catalog was rebuilt with each variant storing its own specific Med ID, orders may be sent with the wrong (or missing) product identifier.
 
-### Changes in `src/lib/productCatalogPdfGenerator.ts`
+### Change: `supabase/functions/_shared/vios/viosOrders.ts`
 
-**1. Import the local logo asset at the top of the file**
-- Add: `import logoDarkBg from '@/assets/vitaluxe-logo-dark-bg.png';`
+Update the `lfProductId` resolution (around line 151) to prioritize the variant's `product_code`, falling back to the product's `vios_lf_product_id`:
 
-**2. Replace the `fetchLogo()` function**
-- Instead of fetching from remote storage, convert the local imported asset to base64
-- The imported asset gives us a URL we can fetch and convert
+```
+Before:
+  const viosProductId = orderLine.products?.vios_lf_product_id;
 
-**3. No other changes needed**
-- Logo dimensions (60x42mm) and spacing stay the same
-- Cover background color stays as dark grey
+After:
+  const viosProductId = orderLine.product_variants?.product_code
+    || orderLine.products?.vios_lf_product_id;
+```
 
-### Technical Details
+This ensures:
+1. If a variant has a `product_code` (Med ID), that is used (most common case with new catalog)
+2. If not, falls back to the product-level `vios_lf_product_id`
+3. The existing validation in `viosValidation.ts` (line 343) should also be updated to check both fields so it does not falsely flag orders as missing a VIOS ID
 
-The Vite bundler resolves `import logoDarkBg from '@/assets/vitaluxe-logo-dark-bg.png'` to a URL string at build time. The existing `imageToBase64()` helper can convert that URL to a base64 data URI for jsPDF. This approach is simpler and more reliable than fetching from remote storage.
+### Change: `supabase/functions/_shared/vios/viosValidation.ts`
+
+Update the product ID validation (around line 343) to also check the variant's `product_code`:
+
+```
+Before:
+  const viosProductId = orderLine.products?.vios_lf_product_id;
+
+After:
+  const viosProductId = orderLine.product_variants?.product_code
+    || orderLine.products?.vios_lf_product_id;
+```
+
+### No other changes needed
+- The `send-vios-order` edge function already queries `product_variants` with `product_code` in its select statement
+- The `OrderLineData` type already includes `product_variants?.product_code`
+- The logging in `submitViosOrder` already logs `hasLfProductId` which will still work correctly
+
