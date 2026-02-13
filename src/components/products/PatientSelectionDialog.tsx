@@ -1089,12 +1089,14 @@ export const PatientSelectionDialog = ({
             initialDosage={customDosage}
             initialNotes={orderNotes}
             initialSignature={providerSignature}
-            onPrescriptionGenerated={(url, sig, dosage, notes, signature, dispensingOpt) => {
+            initialDaysSupply={daysSupply}
+            onPrescriptionGenerated={(url, sig, dosage, notes, signature, dispensingOpt, returnedDaysSupply) => {
               setPrescriptionPreview(url);
               setCustomSig(sig);
               setCustomDosage(dosage);
               if (notes) setOrderNotes(notes);
               setProviderSignature(signature);
+              if (returnedDaysSupply) setDaysSupply(returnedDaysSupply);
               setShowPrescriptionWriter(false);
               toast.success("Prescription generated successfully");
             }}
