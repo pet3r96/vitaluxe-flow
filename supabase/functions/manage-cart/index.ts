@@ -71,7 +71,7 @@ serve(async (req) => {
           patientAddressState, patientAddressZip, patientAddressValidated,
           patientAddressValidationSource, priceSnapshot, assignedPharmacyId,
           prescriptionUrl, customSig, customDosage, orderNotes,
-          prescriptionMethod, genderAtBirth, variantId // NEW: variant support
+          prescriptionMethod, genderAtBirth, variantId, daysSupply
         } = body;
 
         if (!cartOwnerId || !productId || !patientName || !destinationState) {
@@ -181,7 +181,8 @@ serve(async (req) => {
         if (orderNotes !== undefined) insertData.order_notes = orderNotes;
         if (prescriptionMethod !== undefined) insertData.prescription_method = prescriptionMethod;
         if (genderAtBirth !== undefined) insertData.gender_at_birth = genderAtBirth;
-        if (variantId !== undefined) insertData.variant_id = variantId; // NEW: Store variant ID
+        if (variantId !== undefined) insertData.variant_id = variantId;
+        if (daysSupply !== undefined) insertData.days_supply = daysSupply;
 
         const { data: newLine, error: insertError } = await supabase
           .from("cart_lines")
