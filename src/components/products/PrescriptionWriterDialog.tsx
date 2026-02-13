@@ -26,13 +26,15 @@ interface PrescriptionWriterDialogProps {
   initialNotes?: string;
   initialSignature?: string;
   initialDispensingOption?: "dispense_as_written" | "may_substitute";
+  initialDaysSupply?: string;
   onPrescriptionGenerated: (
     prescriptionUrl: string, 
     customSig: string, 
     customDosage: string, 
     notes: string, 
     signature: string,
-    dispensingOption: "dispense_as_written" | "may_substitute"
+    dispensingOption: "dispense_as_written" | "may_substitute",
+    daysSupply: string
   ) => void;
 }
 
@@ -49,6 +51,7 @@ export function PrescriptionWriterDialog({
   initialNotes,
   initialSignature,
   initialDispensingOption,
+  initialDaysSupply,
   onPrescriptionGenerated,
 }: PrescriptionWriterDialogProps) {
   const { effectiveRole } = useAuth();
@@ -59,6 +62,7 @@ export function PrescriptionWriterDialog({
   const [dispensingOption, setDispensingOption] = useState<"dispense_as_written" | "may_substitute">(
     initialDispensingOption || "dispense_as_written"
   );
+  const [daysSupply, setDaysSupply] = useState(initialDaysSupply || "");
   const [isGenerating, setIsGenerating] = useState(false);
   const [decryptedAllergies, setDecryptedAllergies] = useState<string | null>(null);
   const [isLoadingAllergies, setIsLoadingAllergies] = useState(false);
@@ -169,6 +173,10 @@ export function PrescriptionWriterDialog({
     setDispensingOption(initialDispensingOption || "dispense_as_written");
   }, [initialDispensingOption]);
 
+  useEffect(() => {
+    setDaysSupply(initialDaysSupply || "");
+  }, [initialDaysSupply]);
+
   // Show loading state if data is not ready (patient is optional for office dispensing)
   if (!provider || !practice) {
     return (
@@ -201,6 +209,12 @@ export function PrescriptionWriterDialog({
 
     if (!signature.trim()) {
       toast.error("Please provide your signature to complete the prescription");
+      return;
+    }
+
+    const daysSupplyNum = parseInt(daysSupply);
+    if (!daysSupply.trim() || isNaN(daysSupplyNum) || daysSupplyNum < 1 || daysSupplyNum > 365) {
+      toast.error("Days Supply is required (1-365)");
       return;
     }
 
@@ -245,7 +259,8 @@ export function PrescriptionWriterDialog({
           notes: notes,
           quantity: quantity,
           signature: signature,
-          dispensing_option: dispensingOption
+          dispensing_option: dispensingOption,
+          days_supply: parseInt(daysSupply)
         }
       });
 
@@ -253,7 +268,7 @@ export function PrescriptionWriterDialog({
 
       if (data?.success) {
         toast.success("Prescription generated successfully");
-        onPrescriptionGenerated(data.prescription_url, customSig, customDosage, notes, signature, dispensingOption);
+        onPrescriptionGenerated(data.prescription_url, customSig, customDosage, notes, signature, dispensingOption, daysSupply);
         onOpenChange(false);
       } else {
         throw new Error(data?.error || "Failed to generate prescription");
@@ -425,6 +440,34 @@ export function PrescriptionWriterDialog({
             <p className="text-xs text-muted-foreground">
               These are the patient instructions for how to use this medication
             </p>
+          </div>
+
+          {/* Days Supply */}
+          <div className="grid gap-2">
+            <Label htmlFor="days-supply">Days Supply *</Label>
+            <div className="flex gap-2">
+              {[30, 60, 90].map((days) => (
+                <Button
+                  key={days}
+                  type="button"
+                  variant={daysSupply === String(days) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDaysSupply(String(days))}
+                >
+                  {days}
+                </Button>
+              ))}
+            </div>
+            <Input
+              id="days-supply"
+              type="number"
+              min="1"
+              max="365"
+              placeholder="Enter days supply (1-365)"
+              value={daysSupply}
+              onChange={(e) => setDaysSupply(e.target.value)}
+              required
+            />
           </div>
 
           {/* Additional Notes */}
