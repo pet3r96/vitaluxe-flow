@@ -275,13 +275,13 @@ export async function generateProductCatalogPDF(
   const pageHeight = doc.internal.pageSize.getHeight();
 
   // ── COVER PAGE ──
-  doc.setFillColor(...BLACK);
+  doc.setFillColor(...DARK_BG);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
   let coverY = 25;
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', (pageWidth - 130) / 2, coverY, 130, 50);
+      doc.addImage(logoBase64, 'AUTO', (pageWidth - 130) / 2, coverY, 130, 50);
       coverY += 60;
     } catch { coverY += 10; }
   }
