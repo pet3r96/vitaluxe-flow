@@ -148,7 +148,8 @@ export function buildViosOrderPayload(
   const shippingZip = patient?.address_zip || parsedShipping.zip;
   
   // Get VIOS product ID
-  const viosProductId = orderLine.products?.vios_lf_product_id;
+  const viosProductId = orderLine.product_variants?.product_code
+    || orderLine.products?.vios_lf_product_id;
   const productName = orderLine.products?.name || 'Unknown Product';
   
   // Build clinical statement for GLP-1

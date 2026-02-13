@@ -340,7 +340,8 @@ export function validateOrderLineForVios(
   const warnings: string[] = [];
   
   // 1. Validate product has VIOS ID (INVARIANT - must be enforced at product management)
-  const viosProductId = orderLine.products?.vios_lf_product_id;
+  const viosProductId = orderLine.product_variants?.product_code
+    || orderLine.products?.vios_lf_product_id;
   if (!viosProductId) {
     errors.push(
       `Invariant violation: Product "${orderLine.products?.name || 'Unknown'}" ` +
