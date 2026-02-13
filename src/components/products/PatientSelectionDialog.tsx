@@ -361,8 +361,11 @@ export const PatientSelectionDialog = ({
     if (product?.sig && !customSig) {
       setCustomSig(product.sig);
     }
-    if (product?.dosage && !customDosage) {
-      setCustomDosage(product.dosage);
+    // Use selected variant's dosage_label instead of product.dosage
+    const selectedVariant = variants?.find(v => v.id === selectedVariantId);
+    const variantLabel = selectedVariant?.dosage_label;
+    if (!customDosage) {
+      setCustomDosage(variantLabel || product?.dosage || '');
     }
     
     setCurrentStep('prescription');
@@ -372,6 +375,12 @@ export const PatientSelectionDialog = ({
     // Capture prescription URL before any state changes or dialog closing
     const capturedPrescriptionPreview = prescriptionPreview;
     
+    // Validate SIG is filled in
+    if (!customSig?.trim()) {
+      toast.error("SIG - Directions for Use is required");
+      return;
+    }
+
     // Validate prescription requirements on Page 2
     if (product?.requires_prescription && prescriptionMethod === null) {
       toast.error("Please select a prescription method");
@@ -845,15 +854,15 @@ export const PatientSelectionDialog = ({
               <div className="grid gap-2">
                 <Label>Dosage Instructions</Label>
                 <div className="px-3 py-2 bg-muted/50 border rounded-md text-sm">
-                  {customDosage || product.dosage || 'Not specified'}
+                  {customDosage || 'Not specified'}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  This value is from the product configuration
+                  Selected dosage variant
                 </p>
               </div>
 
                     <div className="grid gap-2">
-                      <Label htmlFor="sig-input">SIG - Directions for Use</Label>
+                      <Label htmlFor="sig-input">SIG - Directions for Use <span className="text-destructive">*</span></Label>
                       <Textarea
                         id="sig-input"
                         placeholder="e.g., Take 1 tablet by mouth daily..."
