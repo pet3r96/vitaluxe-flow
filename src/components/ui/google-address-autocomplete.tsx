@@ -39,7 +39,7 @@ export const GoogleAddressAutocomplete = ({
   disabled = false,
 }: GoogleAddressAutocompleteProps) => {
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: 'AIzaSyCiUhfxvWq5kp1eRuqntSBJ7fdUHRHTe9I',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
     libraries,
   });
 

@@ -22,6 +22,19 @@ serve(async (req) => {
   }
 
   try {
+    // Validate webhook secret
+    const webhookSecret = Deno.env.get("ALERT_WEBHOOK_SECRET");
+    if (webhookSecret) {
+      const requestSecret = req.headers.get("x-webhook-secret");
+      if (requestSecret !== webhookSecret) {
+        edgeLogger.warn("Unauthorized alert webhook attempt");
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const supabaseAdmin = createAdminClient();
 
     const payload: AlertPayload = await req.json();
