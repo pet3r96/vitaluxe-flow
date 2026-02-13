@@ -26,7 +26,7 @@ export const LoginForm = memo(({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="login-email">Email</Label>
+        <Label htmlFor="login-email" className="text-gray-200">Email</Label>
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -42,7 +42,7 @@ export const LoginForm = memo(({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="login-password">Password</Label>
+        <Label htmlFor="login-password" className="text-gray-200">Password</Label>
         <Input
           id="login-password"
           type="password"

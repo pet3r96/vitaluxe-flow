@@ -278,11 +278,11 @@ export async function generateProductCatalogPDF(
   doc.setFillColor(...BLACK);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
-  let coverY = 45;
+  let coverY = 25;
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', (pageWidth - 90) / 2, coverY, 90, 34);
-      coverY += 48;
+      doc.addImage(logoBase64, 'PNG', (pageWidth - 130) / 2, coverY, 130, 50);
+      coverY += 60;
     } catch { coverY += 10; }
   }
 

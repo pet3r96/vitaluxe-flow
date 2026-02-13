@@ -60,7 +60,7 @@ const Auth = () => {
   const { toast } = useToast();
   const { theme } = useTheme();
   const { errorDialog, showError, closeError } = useErrorDialog();
-  const currentLogo = theme === "light" ? logoLight : logoDark;
+  const currentLogo = logoDark;
 
   // Doctor-specific fields
   const [providerFullName, setProviderFullName] = useState("");
@@ -369,13 +369,8 @@ const Auth = () => {
         </div>
       </div>;
   }
-  return <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background via-background to-muted/20">
-      <Card className={cn(
-        "w-full max-w-md sm:max-w-lg p-4 sm:p-6 lg:p-8 border-border shadow-gold",
-        theme === "light" 
-          ? "bg-gradient-to-b from-[#FDFBF7] to-[#FAF6F0]"
-          : "bg-card"
-      )}>
+  return <div className="min-h-screen flex items-center justify-center p-4 bg-[#1a1a1a]">
+      <Card className="w-full max-w-md sm:max-w-lg p-4 sm:p-6 lg:p-8 bg-[#222222] border-[hsl(43,56%,49%,0.2)] shadow-gold">
         <div className="flex flex-center justify-center mb-8">
           <img src={currentLogo} alt="Vitaluxe Services" className="h-24 sm:h-28 md:h-32 w-auto object-contain max-w-full" />
         </div>
@@ -386,7 +381,7 @@ const Auth = () => {
             </AlertDescription>
           </Alert>}
         
-        <p className="text-center text-muted-foreground mb-4">
+        <p className="text-center text-gray-400 mb-4">
           {isLogin ? "Sign in to your account" : "Create your account"}
         </p>
 
