@@ -281,7 +281,7 @@ export async function generateProductCatalogPDF(
   let coverY = 25;
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'AUTO', (pageWidth - 55) / 2, coverY, 55, 17.5);
+      doc.addImage(logoBase64, 'AUTO', (pageWidth - 60) / 2, coverY, 60, 42);
       coverY += 55;
     } catch { coverY += 10; }
   }
