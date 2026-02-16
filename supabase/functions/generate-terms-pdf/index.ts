@@ -589,22 +589,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update user_password_status (for target user) - using UPSERT to handle missing rows
-    const { error: statusError } = await supabase
-      .from('user_password_status')
-      .upsert({
-        user_id: targetUserId,
-        terms_accepted: true,
-        must_change_password: false  // Default to false for new rows
-      }, {
-        onConflict: 'user_id',
-        ignoreDuplicates: false  // Update if exists
-      });
-
-    if (statusError) {
-      edgeLogger.error('Error updating user_password_status', statusError);
-      // Don't throw - acceptance was recorded, this is just status sync
-    }
+    // terms_accepted is derived from user_terms_acceptances table - no need to update user_password_status
 
     // Get signed URL for download
     if (uploadMethod === 's3' || uploadMethod === 'supabase') {

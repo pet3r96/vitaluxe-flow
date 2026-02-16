@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
       impersonationResult,
       passwordResult,
       twoFAResult,
-      twoFAPhoneResult
+      twoFAPhoneResult,
+      termsResult
     ] = await Promise.allSettled([
       // User role
       supabase
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
       // Password status
       supabase
         .from('user_password_status')
-        .select('must_change_password, terms_accepted')
+        .select('must_change_password')
         .eq('user_id', userId)
         .maybeSingle(),
       
@@ -79,6 +80,14 @@ Deno.serve(async (req) => {
         .from('user_2fa_settings')
         .select('phone_number, is_enrolled, twilio_enabled')
         .eq('user_id', userId)
+        .maybeSingle(),
+      
+      // Terms acceptance status
+      supabase
+        .from('user_terms_acceptances')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1)
         .maybeSingle()
     ]);
 
@@ -125,12 +134,13 @@ Deno.serve(async (req) => {
     const passwordStatus = passwordResult.status === 'fulfilled' && passwordResult.value.data
       ? {
           mustChangePassword: passwordResult.value.data.must_change_password || false,
-          termsAccepted: passwordResult.value.data.terms_accepted || false
         }
       : {
           mustChangePassword: false,
-          termsAccepted: false
         };
+
+    // Derive termsAccepted from user_terms_acceptances table
+    const termsAccepted = termsResult.status === 'fulfilled' && termsResult.value.data !== null;
 
     const twoFAStatus = twoFAResult.status === 'fulfilled' && twoFAResult.value.data
       ? {
@@ -160,7 +170,10 @@ Deno.serve(async (req) => {
         role,
         practiceId,
         canImpersonate,
-        passwordStatus,
+        passwordStatus: {
+          ...passwordStatus,
+          termsAccepted,
+        },
         twoFAStatus,
         twoFAPhone,
         timestamp: new Date().toISOString()
