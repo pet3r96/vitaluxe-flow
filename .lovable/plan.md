@@ -1,33 +1,33 @@
 
 
-## Add Days Supply to Prescription Writer Dialog
+## Fix: Days Supply Not Sent to VIOS Pharmacy API
 
-### Problem
-The "Days Supply" field was added to the patient selection step but is missing from the Prescription Writer Dialog (the form shown in your screenshot). It needs to appear there too so:
-1. The prescriber can see/edit it while writing the prescription
-2. It gets included on the generated prescription PDF
-3. The value flows back to the parent dialog
+### Root Cause
+The `days_supply` field is missing from the `OrderLineData` TypeScript interface in `supabase/functions/_shared/vios/viosValidation.ts`. While the database column exists and contains the correct value (verified: `14` on the most recent order), and the VIOS payload builder references `orderLine.days_supply`, the TypeScript type doesn't declare the field. This means the property access may be silently dropped during compilation.
 
-### Changes
+The mapping code in `viosOrders.ts` line 213 is correct:
+```
+...(orderLine.days_supply && { daysSupply: Number(orderLine.days_supply) })
+```
 
-**1. PrescriptionWriterDialog.tsx** -- Add Days Supply input field
+But the type it reads from doesn't include `days_supply`.
 
-- Add `initialDaysSupply` prop (string) and `daysSupply` state
-- Add a required numeric input field labeled "Days Supply *" between the SIG field and Additional Notes
-- Include preset buttons for 30, 60, 90 days (matching the patient selection step)
-- Allow custom entry (e.g., 14) with validation (1-365)
-- Pass `daysSupply` back through the `onPrescriptionGenerated` callback (add it as a 7th parameter)
-- Include `days_supply` in the data sent to the `generate-prescription-pdf` edge function so it appears on the PDF
+### Fix
 
-**2. PatientSelectionDialog.tsx** -- Wire up the new prop
+**File: `supabase/functions/_shared/vios/viosValidation.ts`**
 
-- Pass current `daysSupply` value as `initialDaysSupply` to PrescriptionWriterDialog
-- Update the `onPrescriptionGenerated` callback to accept the returned `daysSupply` value and sync it back to state
+Add `days_supply?: number | null;` to the `OrderLineData` interface (around line 30, alongside the other order line fields like `quantity`, `custom_sig`, etc.).
 
-### Technical Details
+That's it -- one line. Everything else (database column, cart flow, place-order flow, VIOS payload builder) is already correctly wired.
 
-- The field will appear after "SIG - Directions for Use" and before "Additional Notes"
-- Same validation as PatientSelectionDialog: positive integer, 1-365
-- The `onPrescriptionGenerated` callback signature changes from 6 to 7 parameters (adding `daysSupply: string`)
-- The `generate-prescription-pdf` edge function receives `days_supply` in its body payload for inclusion on the PDF
+### Verification
+After the fix, the VIOS order payload will include:
+```json
+{
+  "rxs": [{
+    "daysSupply": 14,
+    ...
+  }]
+}
+```
 
