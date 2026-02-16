@@ -1,47 +1,31 @@
 
 
-## Add Profile and Team Management to Pharmacy Sidebar
+## Fix: Pharmacy Owner Blocked from Adding Staff by IP Filter
 
 ### Problem
-The pharmacy sidebar menu only has 4 items: Dashboard, Orders, Shipping Management, and Messages. There is no link to the Profile page where the "Team Management" section lives. This means pharmacy owners can't access the "Add Staff Member" feature from the dashboard.
-
-The good news: the backend is fully wired up. The `pharmacy_staff_access()` RLS function is applied to 13+ tables (orders, order_lines, shipping rates, tracking updates, etc.), so staff users **can** see and modify data once added. The `assign-user-role` edge function correctly creates staff users with the `pharmacy` role and links them via the `pharmacy_staff` table.
-
-The only gap is **navigation** -- the pharmacy menu needs a Settings/Profile section so owners can reach the Team Management UI.
+The `assign-user-role` edge function has an IP allowlist check (line 94) that runs **before** the request body is even parsed. This means when a pharmacy owner tries to add a staff member from their browser, the request is rejected with "Admin function access denied - IP not in allowlist" because their IP isn't on the admin allowlist. The IP filter is designed for admin-only operations but currently blocks **all** callers, including pharmacy owners performing legitimate actions.
 
 ### Fix
 
-**File: `src/config/menus.ts`**
+**File: `supabase/functions/assign-user-role/index.ts`**
 
-Add a "Settings" section to the `pharmacy` menu config (matching the pattern used by other roles like `topline`):
+Restructure the function so the IP check happens **after** parsing the request body. If the role being created is `pharmacy_staff`, skip the admin IP check entirely (but still verify the caller is actually a pharmacy owner for that pharmacy). For all other roles, keep the existing admin IP check.
 
-```typescript
-pharmacy: [
-  {
-    title: "Main Menu",
-    items: [
-      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { label: "Orders", href: "/orders", icon: ShoppingCart },
-      { label: "Shipping Management", href: "/shipping", icon: Truck },
-      { label: "Messages", href: "/messages", icon: MessageSquare },
-    ],
-  },
-  {
-    title: "Settings",
-    isParent: true,
-    icon: Settings,
-    items: [
-      { label: "My Profile", href: "/profile", icon: UserSquare2 },
-    ],
-  },
-],
+The logic change:
+
+1. Move request body parsing (lines 124-140) to happen **before** the IP check
+2. After parsing, check: if `role === 'pharmacy_staff'`, skip `enforceAdminIP` -- the caller just needs to be an authenticated pharmacy owner (already verified later in the function)
+3. For all other roles, keep the existing `enforceAdminIP` call
+
+### Technical Details
+
+```
+Current flow:
+  Request -> IP Check (BLOCKS pharmacy owners) -> Parse body -> Process
+
+Fixed flow:
+  Request -> Parse body -> If pharmacy_staff: skip IP check -> Process
+                        -> If other role: IP Check -> Process
 ```
 
-This adds a collapsible "Settings" section with a "My Profile" link, which loads the `PharmacyProfileForm` that contains the Team Management section (where pharmacy owners can add/manage staff).
-
-### What Already Works (No Changes Needed)
-- **Adding staff**: `AddPharmacyStaffDialog` calls `assign-user-role` with `role: 'pharmacy_staff'`, which gets mapped to the `pharmacy` role and creates a `pharmacy_staff` record
-- **RLS access**: `pharmacy_staff_access()` function grants staff access to orders, order lines, shipping rates, tracking updates, support tickets, and more
-- **Staff dashboard**: Staff users get the same `pharmacy` role menus and can view/manage orders for their pharmacy
-- **Team visibility**: `PharmacyTeamSection` checks both owner and staff associations to show the team management card
-
+This is a minimal, targeted change. The pharmacy owner's authorization (verifying they own the pharmacy they're adding staff to) is already handled downstream in the function. We're only removing the blanket IP gate for this specific use case.
