@@ -1,33 +1,47 @@
 
 
-## Fix: Days Supply Not Sent to VIOS Pharmacy API
+## Add Profile and Team Management to Pharmacy Sidebar
 
-### Root Cause
-The `days_supply` field is missing from the `OrderLineData` TypeScript interface in `supabase/functions/_shared/vios/viosValidation.ts`. While the database column exists and contains the correct value (verified: `14` on the most recent order), and the VIOS payload builder references `orderLine.days_supply`, the TypeScript type doesn't declare the field. This means the property access may be silently dropped during compilation.
+### Problem
+The pharmacy sidebar menu only has 4 items: Dashboard, Orders, Shipping Management, and Messages. There is no link to the Profile page where the "Team Management" section lives. This means pharmacy owners can't access the "Add Staff Member" feature from the dashboard.
 
-The mapping code in `viosOrders.ts` line 213 is correct:
-```
-...(orderLine.days_supply && { daysSupply: Number(orderLine.days_supply) })
-```
+The good news: the backend is fully wired up. The `pharmacy_staff_access()` RLS function is applied to 13+ tables (orders, order_lines, shipping rates, tracking updates, etc.), so staff users **can** see and modify data once added. The `assign-user-role` edge function correctly creates staff users with the `pharmacy` role and links them via the `pharmacy_staff` table.
 
-But the type it reads from doesn't include `days_supply`.
+The only gap is **navigation** -- the pharmacy menu needs a Settings/Profile section so owners can reach the Team Management UI.
 
 ### Fix
 
-**File: `supabase/functions/_shared/vios/viosValidation.ts`**
+**File: `src/config/menus.ts`**
 
-Add `days_supply?: number | null;` to the `OrderLineData` interface (around line 30, alongside the other order line fields like `quantity`, `custom_sig`, etc.).
+Add a "Settings" section to the `pharmacy` menu config (matching the pattern used by other roles like `topline`):
 
-That's it -- one line. Everything else (database column, cart flow, place-order flow, VIOS payload builder) is already correctly wired.
-
-### Verification
-After the fix, the VIOS order payload will include:
-```json
-{
-  "rxs": [{
-    "daysSupply": 14,
-    ...
-  }]
-}
+```typescript
+pharmacy: [
+  {
+    title: "Main Menu",
+    items: [
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Orders", href: "/orders", icon: ShoppingCart },
+      { label: "Shipping Management", href: "/shipping", icon: Truck },
+      { label: "Messages", href: "/messages", icon: MessageSquare },
+    ],
+  },
+  {
+    title: "Settings",
+    isParent: true,
+    icon: Settings,
+    items: [
+      { label: "My Profile", href: "/profile", icon: UserSquare2 },
+    ],
+  },
+],
 ```
+
+This adds a collapsible "Settings" section with a "My Profile" link, which loads the `PharmacyProfileForm` that contains the Team Management section (where pharmacy owners can add/manage staff).
+
+### What Already Works (No Changes Needed)
+- **Adding staff**: `AddPharmacyStaffDialog` calls `assign-user-role` with `role: 'pharmacy_staff'`, which gets mapped to the `pharmacy` role and creates a `pharmacy_staff` record
+- **RLS access**: `pharmacy_staff_access()` function grants staff access to orders, order lines, shipping rates, tracking updates, support tickets, and more
+- **Staff dashboard**: Staff users get the same `pharmacy` role menus and can view/manage orders for their pharmacy
+- **Team visibility**: `PharmacyTeamSection` checks both owner and staff associations to show the team management card
 
