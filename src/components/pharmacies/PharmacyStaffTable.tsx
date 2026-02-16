@@ -63,16 +63,16 @@ export const PharmacyStaffTable = ({ pharmacyId, isOwner }: PharmacyStaffTablePr
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ staffId, active }: { staffId: string; active: boolean }) => {
-      const { error } = await supabase
-        .from("pharmacy_staff")
-        .update({ active, updated_at: new Date().toISOString() })
-        .eq("id", staffId);
+      const { data, error } = await supabase.functions.invoke('manage-entity-status', {
+        body: { action: 'pharmacy-staff-status', staffId, active }
+      });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["pharmacy-staff", pharmacyId] });
-      toast.success("Staff status updated");
+      toast.success(variables.active ? "Staff account activated" : "Staff account deactivated");
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update staff status");
@@ -164,16 +164,21 @@ export const PharmacyStaffTable = ({ pharmacyId, isOwner }: PharmacyStaffTablePr
                   </TableCell>
                   <TableCell>
                     {isOwner ? (
-                      <Switch
-                        checked={staff.active}
-                        onCheckedChange={(checked) =>
-                          toggleActiveMutation.mutate({ staffId: staff.id, active: checked })
-                        }
-                        disabled={toggleActiveMutation.isPending}
-                      />
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={staff.active}
+                          onCheckedChange={(checked) =>
+                            toggleActiveMutation.mutate({ staffId: staff.id, active: checked })
+                          }
+                          disabled={toggleActiveMutation.isPending}
+                        />
+                        <span className={`text-sm ${staff.active ? "text-foreground" : "text-muted-foreground"}`}>
+                          {staff.active ? "Active" : "Disabled"}
+                        </span>
+                      </div>
                     ) : (
                       <Badge variant={staff.active ? "default" : "outline"}>
-                        {staff.active ? "Active" : "Inactive"}
+                        {staff.active ? "Active" : "Disabled"}
                       </Badge>
                     )}
                   </TableCell>

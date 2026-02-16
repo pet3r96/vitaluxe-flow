@@ -442,6 +442,75 @@ Deno.serve(async (req) => {
         );
       }
 
+      case 'pharmacy-staff-status': {
+        const { staffId, active: staffActive } = body;
+
+        if (!staffId || staffActive === undefined) {
+          return new Response(
+            JSON.stringify({ error: 'staffId and active are required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Verify the staff member exists and get their pharmacy_id and user_id
+        const { data: staffData, error: staffFetchError } = await supabaseAdmin
+          .from('pharmacy_staff')
+          .select('id, pharmacy_id, user_id')
+          .eq('id', staffId)
+          .single();
+
+        if (staffFetchError || !staffData) {
+          return new Response(
+            JSON.stringify({ error: 'Staff member not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Verify the caller is the pharmacy owner
+        const { data: pharmacyData, error: pharmacyError } = await supabaseAdmin
+          .from('pharmacies')
+          .select('user_id')
+          .eq('id', staffData.pharmacy_id)
+          .single();
+
+        if (pharmacyError || !pharmacyData || pharmacyData.user_id !== user.id) {
+          return new Response(
+            JSON.stringify({ error: 'Only the pharmacy owner can manage staff status' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Update pharmacy_staff.active
+        const { error: staffUpdateError } = await supabaseAdmin
+          .from('pharmacy_staff')
+          .update({ active: staffActive, updated_at: new Date().toISOString() })
+          .eq('id', staffId);
+
+        if (staffUpdateError) throw staffUpdateError;
+
+        // Update profiles.active (controls login ability)
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .update({ active: staffActive, updated_at: new Date().toISOString() })
+          .eq('id', staffData.user_id);
+
+        if (profileError) throw profileError;
+
+        edgeLogger.logOperation({
+          user_id: user.id,
+          ip_address: ipAddress,
+          operation: 'manage-entity-status:pharmacy-staff-status',
+          success: true,
+          duration_ms: Date.now() - startTime,
+          metadata: { staff_id: staffId, active: staffActive }
+        });
+
+        return new Response(
+          JSON.stringify({ success: true, message: staffActive ? 'Staff account activated' : 'Staff account deactivated' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: `Invalid action: ${action}` }),
