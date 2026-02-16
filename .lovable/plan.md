@@ -1,35 +1,57 @@
 
 
-## Add Disable/Enable Account for Pharmacy Staff
+## Fix: Terms Agreement Blocking User Login
 
 ### Problem
-The pharmacy staff table has a toggle switch that only updates the `pharmacy_staff.active` field (controlling data access via RLS). It does NOT disable the user's actual login account (`profiles.active`), so a "disabled" staff member can still log in. There is no way for a pharmacy owner to fully disable or enable a staff account.
+User "bob" (and potentially all non-admin users) cannot proceed past the terms agreement screen because of database column mismatches causing the edge function to fail.
 
-### Solution
+### Root Causes
 
-Add a `pharmacy-staff-status` action to the existing `manage-entity-status` backend function, and update the frontend toggle to call it. This will update both:
-- `pharmacy_staff.active` (controls data access)
-- `profiles.active` (controls login ability)
+**1. Edge function `generate-terms-pdf` inserts non-existent columns (CRITICAL)**
 
-### Changes
+At line 555-576, the upsert into `user_terms_acceptances` includes `signature_name` and `status` -- neither column exists in the table. The actual columns are: `id, user_id, terms_id, role, version, accepted_at, ip_address, user_agent, pdf_url, created_at`.
 
-**1. Backend: `supabase/functions/manage-entity-status/index.ts`**
+**2. Frontend `SignedAgreementSection` queries wrong column name**
 
-Add a new `pharmacy-staff-status` case that:
-- Verifies the caller is the pharmacy owner (checks `pharmacies.user_id` matches caller)
-- Validates the target staff member belongs to that pharmacy
-- Updates `pharmacy_staff.active` using admin client
-- Updates `profiles.active` using admin client
-- Skips the admin IP check (pharmacy owners aren't admins)
+The component queries `terms_version` (lines 30 and 39) but the actual column is `version`. This causes the profile page signed agreement section to error.
 
-**2. Frontend: `src/components/pharmacies/PharmacyStaffTable.tsx`**
+### Fix
 
-Update `toggleActiveMutation` to call the edge function instead of directly updating the database:
-- Call `supabase.functions.invoke('manage-entity-status', { body: { action: 'pharmacy-staff-status', staffId, active } })`
-- This ensures both the staff record and the user account are toggled together
-- Add a clearer label next to the switch showing "Active" / "Disabled"
+**File 1: `supabase/functions/generate-terms-pdf/index.ts` (lines 555-576)**
 
-### What This Enables
-- Pharmacy owners can fully disable a staff member's account (prevents login)
-- Pharmacy owners can re-enable a disabled staff member
-- The toggle in the Team Management table will now control actual account access, not just data visibility
+Remove `signature_name` and `status` from the upsert object:
+
+```typescript
+const { data: acceptance, error: acceptanceError } = await supabase
+  .from('user_terms_acceptances')
+  .upsert(
+    {
+      user_id: targetUserId,
+      terms_id: terms.id,
+      role: userRole,
+      version: terms.version,
+      pdf_url: fileName,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      accepted_at: new Date().toISOString(),
+    },
+    {
+      onConflict: 'user_id,terms_id',
+      ignoreDuplicates: false,
+    },
+  )
+  .select()
+  .single();
+```
+
+**File 2: `src/components/profile/SignedAgreementSection.tsx`**
+
+Change `terms_version` to `version` in both queries (lines 30 and 39), and update the reference at line 128 from `termsData.terms_version` to `termsData.version`.
+
+**Deployment:** Redeploy `generate-terms-pdf` edge function.
+
+### Impact
+- Fixes all users being blocked at terms acceptance (not just "bob")
+- Fixes the Signed Agreement section on every user's profile page
+- No database migration needed -- the table schema is correct, only the code references are wrong
+
