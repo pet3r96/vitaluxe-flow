@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Download, Info } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PatientTermsAccept, UserTermsAccept } from "@/integrations/supabase/table-helpers";
+import { UserTermsAccept } from "@/integrations/supabase/table-helpers";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSignedUrl } from "@/lib/storageStrategy";
 import { format } from "date-fns";
@@ -19,31 +19,19 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
   const { effectiveRole } = useAuth();
   const isPatient = effectiveRole === 'patient';
 
-  // Fetch terms acceptance based on role
+  // Fetch terms acceptance - all roles use user_terms_acceptances
   const { data: termsData, isLoading } = useQuery({
     queryKey: ['signed-agreement', userId, effectiveRole],
     queryFn: async () => {
-      if (isPatient) {
-        const { data, error } = await PatientTermsAccept()
-          .select('id, accepted_at, pdf_url, version')
-          .eq('user_id', userId)
-          .order('accepted_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (error && error.code !== 'PGRST116') throw error;
-        return data;
-      } else {
       const { data, error } = await UserTermsAccept()
-          .select('id, accepted_at, pdf_url, version, role')
-          .eq('user_id', userId)
-          .order('accepted_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (error && error.code !== 'PGRST116') throw error;
-        return data;
-      }
+        .select('id, accepted_at, pdf_url, version, role')
+        .eq('user_id', userId)
+        .order('accepted_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
     },
   });
 
