@@ -22,6 +22,7 @@ export interface OrderLineData {
   patient_name?: string;
   patient_id?: string;
   quantity?: number;
+  days_supply?: number | null;
   shipping_speed?: string;
   destination_state?: string;
   custom_sig?: string;
