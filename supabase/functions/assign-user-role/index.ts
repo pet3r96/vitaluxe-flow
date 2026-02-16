@@ -90,13 +90,39 @@ serve(async (req) => {
     const supabaseAdmin = createAdminClient();
     edgeLogger.info('[assign-user-role] Admin client created successfully');
 
-    // PHASE 3: IP filtering for admin function
-    const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'assign-user-role');
-    if (ipCheckResponse) return ipCheckResponse;
-
     // PHASE 3: Request size validation
     const sizeCheckResponse = validateRequestSize(req, 'assign-user-role', corsHeaders);
     if (sizeCheckResponse) return sizeCheckResponse;
+
+    // Parse and validate JSON BEFORE IP check so we can check the role
+    edgeLogger.info('[assign-user-role] Parsing request body');
+    let signupData: SignupRequest;
+    try {
+      signupData = await req.json();
+      edgeLogger.info('[assign-user-role] Request parsed', {
+        email: signupData.email,
+        role: signupData.role,
+        isSelfSignup: signupData.isSelfSignup,
+        isAdminCreated: signupData.isAdminCreated
+      });
+    } catch (error) {
+      edgeLogger.error('[assign-user-role] JSON parsing error', error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // PHASE 3: IP filtering for admin function
+    // Skip IP check for pharmacy_staff — pharmacy owners add staff from their browser
+    // Their authorization is verified downstream (ownership of the pharmacy)
+    const isPharmacyStaffCreation = (signupData.role as string) === 'pharmacy_staff';
+    if (!isPharmacyStaffCreation) {
+      const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'assign-user-role');
+      if (ipCheckResponse) return ipCheckResponse;
+    } else {
+      edgeLogger.info('[assign-user-role] Skipping IP check for pharmacy_staff creation');
+    }
 
     // Rate limiting to prevent abuse
     edgeLogger.info('[assign-user-role] Checking rate limit');
@@ -119,25 +145,6 @@ serve(async (req) => {
       );
     }
     edgeLogger.info('[assign-user-role] Rate limit check passed');
-
-    // Parse and validate JSON
-    edgeLogger.info('[assign-user-role] Parsing request body');
-    let signupData: SignupRequest;
-    try {
-      signupData = await req.json();
-      edgeLogger.info('[assign-user-role] Request parsed', {
-        email: signupData.email,
-        role: signupData.role,
-        isSelfSignup: signupData.isSelfSignup,
-        isAdminCreated: signupData.isAdminCreated
-      });
-    } catch (error) {
-      edgeLogger.error('[assign-user-role] JSON parsing error', error);
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Basic validation for required signup fields
     const basicValidation = validateCreateAccountRequest({
