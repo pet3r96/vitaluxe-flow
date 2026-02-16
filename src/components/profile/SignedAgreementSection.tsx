@@ -25,7 +25,7 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
     queryFn: async () => {
       if (isPatient) {
         const { data, error } = await PatientTermsAccept()
-          .select('id, accepted_at, pdf_url, terms_version') // ✅ FIX: Use 'pdf_url' not 'signed_pdf_url', remove 'signature_name'
+          .select('id, accepted_at, pdf_url, version')
           .eq('user_id', userId)
           .order('accepted_at', { ascending: false })
           .limit(1)
@@ -35,7 +35,7 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
         return data;
       } else {
       const { data, error } = await UserTermsAccept()
-          .select('id, accepted_at, pdf_url, terms_version, role') // ✅ FIX: Use 'pdf_url' not 'signed_pdf_url', remove 'signature_name'
+          .select('id, accepted_at, pdf_url, version, role')
           .eq('user_id', userId)
           .order('accepted_at', { ascending: false })
           .limit(1)
@@ -151,7 +151,7 @@ export function SignedAgreementSection({ userId }: SignedAgreementSectionProps) 
           
           <div className="space-y-1">
             <p className="text-sm font-medium">Version</p>
-            <p className="text-sm text-muted-foreground">Version {termsData.terms_version}</p>
+            <p className="text-sm text-muted-foreground">Version {termsData.version}</p>
           </div>
         </div>
       </CardContent>

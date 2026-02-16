@@ -560,12 +560,10 @@ Deno.serve(async (req) => {
           terms_id: terms.id,
           role: userRole,
           version: terms.version,
-          signature_name,
           pdf_url: fileName,
           ip_address: ipAddress,
           user_agent: userAgent,
           accepted_at: new Date().toISOString(),
-          status: 'completed'
         },
         {
           onConflict: 'user_id,terms_id',
