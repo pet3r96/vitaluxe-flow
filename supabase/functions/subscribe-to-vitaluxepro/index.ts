@@ -246,9 +246,9 @@ serve(async (req) => {
     if (subscriptionTerms) {
       await supabaseAdmin.from('user_terms_acceptances').insert({
         user_id: practiceId,
+        terms_id: subscriptionTerms.id,
         role: 'subscription',
-        terms_version: subscriptionTerms.version,
-        signature_name: actorEmail,
+        version: subscriptionTerms.version,
         accepted_at: new Date().toISOString(),
       });
     }

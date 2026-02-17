@@ -197,10 +197,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Bootstrap timeout failsafe - reduced from 15s to 8s
-  useEffect(() => {
-    const bootstrapTimeout = window.setTimeout(async () => {
-      logger.warn('Auth bootstrap timeout (8s): attempting retry');
+   // Bootstrap timeout failsafe - 2s
+   useEffect(() => {
+     const bootstrapTimeout = window.setTimeout(async () => {
+       logger.warn('Auth bootstrap timeout (2s): attempting retry');
       
       // Try ONE more time to fetch role
       const { data: { session } } = await supabase.auth.getSession();

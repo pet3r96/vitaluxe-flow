@@ -20,7 +20,7 @@ import type {
   PendingPracticeRequest,
   InternalMessageReply,
   UserTermsAcceptance,
-  PatientTermsAcceptance,
+  
   PatientDocument,
   ProviderDocumentPatient,
   SecurityAlertRule,
@@ -58,7 +58,7 @@ export const PendingRepReq = () => table<PendingRepRequest>('pending_rep_request
 export const PendingPracticeReq = () => table<PendingPracticeRequest>('pending_practice_requests');
 export const InternalMsgReplies = () => table<InternalMessageReply>('internal_message_replies');
 export const UserTermsAccept = () => table<UserTermsAcceptance>('user_terms_acceptances');
-export const PatientTermsAccept = () => table<PatientTermsAcceptance>('patient_terms_acceptances');
+
 export const PatientDocs = () => table<PatientDocument>('patient_documents');
 export const ProviderDocPatients = () => table<ProviderDocumentPatient>('provider_document_patients');
 export const SecurityAlertRules = () => table<SecurityAlertRule>('security_alert_rules');
