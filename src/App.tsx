@@ -130,7 +130,7 @@ const PatientMessages = lazy(() => import("./pages/patient/PatientMessages"));
 const PatientMedicalVault = lazy(() => import("./pages/patient/PatientMedicalVault"));
 const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
 const PatientProfile = lazy(() => import("./pages/patient/PatientProfile"));
-const PatientOnboarding = lazy(() => import("./pages/patient/PatientOnboarding"));
+
 const PatientIntakeForm = lazy(() => import("./pages/patient/PatientIntakeForm"));
 const PatientMobileHeader = lazy(() =>
   import("./components/patient/PatientMobileHeader").then((m) => ({ default: m.PatientMobileHeader })),
@@ -211,14 +211,6 @@ const App = () => {
                         element={
                           <ProtectedRoute>
                             <AcceptTerms />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/patient-onboarding"
-                        element={
-                          <ProtectedRoute>
-                            <PatientOnboarding />
                           </ProtectedRoute>
                         }
                       />

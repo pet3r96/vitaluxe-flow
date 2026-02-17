@@ -498,6 +498,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           const { error: heightError } = await supabase.from('patient_medical_vault').insert({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
+            practice_id: patientAccount.practice_id,
             record_type: 'vital_sign',
             title: 'Height',
             record_data: {
@@ -522,6 +523,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           const { error: weightError } = await supabase.from('patient_medical_vault').insert({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
+            practice_id: patientAccount.practice_id,
             record_type: 'vital_sign',
             title: 'Weight',
             record_data: {
@@ -562,8 +564,12 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           await supabase
             .from('patient_medical_vault')
             .insert({
+              patient_account_id: patientAccount.id,
               patient_id: patientAccount.id,
-              blood_type: data.blood_type,
+              practice_id: patientAccount.practice_id,
+              record_type: 'vital_sign',
+              title: 'Blood Type',
+              record_data: { blood_type: data.blood_type },
             } as any);
         }
       }
@@ -597,6 +603,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           const vaultEntries = medEntries.map(med => ({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
+            practice_id: patientAccount.practice_id,
             record_type: 'medication',
             title: med.medication_name,
             record_data: med
@@ -637,6 +644,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           .insert({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
+            practice_id: patientAccount.practice_id,
             record_type: 'allergy',
             title: 'No Known Allergies (NKA)',
             record_data: {
@@ -694,6 +702,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           const vaultEntries = allergyEntries.map(allergy => ({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
+            practice_id: patientAccount.practice_id,
             record_type: 'allergy',
             title: allergy.allergen_name,
             record_data: allergy
@@ -757,6 +766,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           const vaultEntries = conditionEntries.map(condition => ({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
+            practice_id: patientAccount.practice_id,
             record_type: 'condition',
             title: condition.condition_name,
             record_data: condition
@@ -815,6 +825,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           const vaultEntries = surgeryEntries.map(surgery => ({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
+            practice_id: patientAccount.practice_id,
             record_type: 'procedure',
             title: surgery.surgery_type,
             record_data: surgery
@@ -868,6 +879,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           const vaultEntries = immEntries.map(imm => ({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
+            practice_id: patientAccount.practice_id,
             record_type: 'immunization',
             title: imm.vaccine_name,
             record_data: imm
@@ -933,6 +945,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           await supabase.from('patient_medical_vault').insert({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
+            practice_id: patientAccount.practice_id,
             record_type: 'pharmacy',
             title: data.pharmacy_name,
             record_data: pharmacyData
@@ -985,6 +998,7 @@ export default function PatientIntakeForm({ targetPatientAccountId }: PatientInt
           await supabase.from('patient_medical_vault').insert({
             patient_account_id: patientAccount.id,
             patient_id: patientAccount.id,
+            practice_id: patientAccount.practice_id,
             record_type: 'emergency_contact',
             title: data.emergency_contact_name,
             record_data: contactData
