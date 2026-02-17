@@ -618,7 +618,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }, 30000);
           }
         } else {
-          // No expiration found (shouldn't happen) - set fresh 30 minute timer
+          // No expiration found (shouldn't happen) - set fresh 60 minute timer
           logger.warn('No session expiration found - creating fresh timer');
           const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
           localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
@@ -984,20 +984,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setCanImpersonateDb(canImpersonate);
 
       // Restore impersonation from server if authorized admin
+      let impersonationSessionData: any = null;
       if (role === 'admin' && canImpersonate) {
         try {
           const { data: { session: authSession } } = await supabase.auth.getSession();
           const token = authSession?.access_token;
-          let sessionData: any;
           if (token) {
-            ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
+            ({ data: impersonationSessionData } = await supabase.functions.invoke('get-active-impersonation', {
               headers: { Authorization: `Bearer ${token}` }
             }));
           } else {
-            ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation'));
+            ({ data: impersonationSessionData } = await supabase.functions.invoke('get-active-impersonation'));
           }
-          if (sessionData?.session) {
-            const session = sessionData.session as ImpersonationSessionResponse;
+          if (impersonationSessionData?.session) {
+            const session = impersonationSessionData.session as ImpersonationSessionResponse;
             setImpersonatedRole(session.impersonated_role);
             setImpersonatedUserId(session.impersonated_user_id || null);
             setImpersonatedUserName(session.impersonated_user_name || null);
@@ -1009,34 +1009,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Determine effective user ID for terms check
+      // Reuse impersonation data from the call above instead of calling get-active-impersonation again
       let effectiveUserIdForTerms = userId;
       let isCurrentlyImpersonating = false;
       
-      // Check if we loaded impersonation data
-      if (role === 'admin' && canImpersonate) {
-        try {
-          const { data: { session: authSession } } = await supabase.auth.getSession();
-          const token = authSession?.access_token;
-          let sessionData: any;
-          if (token) {
-            ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation', {
-              headers: { Authorization: `Bearer ${token}` }
-            }));
-          } else {
-            ({ data: sessionData } = await supabase.functions.invoke('get-active-impersonation'));
-          }
-          
-          if (sessionData?.session?.impersonated_user_id) {
-            effectiveUserIdForTerms = sessionData.session.impersonated_user_id;
-            isCurrentlyImpersonating = true;
-            logger.info('Impersonation active, will check terms for impersonated user', {
-              realUserId: userId,
-              impersonatedUserId: effectiveUserIdForTerms
-            });
-          }
-        } catch (e) {
-          logger.error('Error checking impersonation for terms', e);
-        }
+      if (role === 'admin' && canImpersonate && impersonationSessionData?.session?.impersonated_user_id) {
+        effectiveUserIdForTerms = impersonationSessionData.session.impersonated_user_id;
+        isCurrentlyImpersonating = true;
+        logger.info('Impersonation active, will check terms for impersonated user', {
+          realUserId: userId,
+          impersonatedUserId: effectiveUserIdForTerms
+        });
       }
 
       // Get terms check result for effective user
