@@ -70,8 +70,8 @@ Deno.serve(async (req) => {
       
       // 2FA status
       supabase
-        .from('user_2fa')
-        .select('setup_complete, verified')
+        .from('user_2fa_settings_decrypted')
+        .select('is_enrolled, twilio_enabled, ghl_enabled, phone_verified')
         .eq('user_id', userId)
         .maybeSingle(),
       
@@ -144,12 +144,16 @@ Deno.serve(async (req) => {
 
     const twoFAStatus = twoFAResult.status === 'fulfilled' && twoFAResult.value.data
       ? {
-          setupComplete: twoFAResult.value.data.setup_complete || false,
-          verified: twoFAResult.value.data.verified || false
+          setupComplete: twoFAResult.value.data.is_enrolled || false,
+          verified: twoFAResult.value.data.phone_verified || false,
+          twilioEnabled: twoFAResult.value.data.twilio_enabled || false,
+          ghlEnabled: twoFAResult.value.data.ghl_enabled || false
         }
       : {
           setupComplete: false,
-          verified: false
+          verified: false,
+          twilioEnabled: false,
+          ghlEnabled: false
         };
 
     // Process 2FA phone
