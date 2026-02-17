@@ -1,8 +1,8 @@
 
-# Patient Portal End-to-End Audit: Practice Grants Portal Access through Full Usage
+# Complete Pre-Launch Audit: All User Roles, All Functions, All Pages
 
 ## Audit Scope
-Complete patient ("borrower") flow: practice grants portal access, patient logs in, accepts terms, completes intake, medical vault, appointments, document uploads, and all patient pages.
+Every flow from signup through re-login for all roles (practice, pharmacy, provider, staff, patient, admin, topline, downline). Every page, every function, every edge function, every security boundary.
 
 ---
 
@@ -10,134 +10,237 @@ Complete patient ("borrower") flow: practice grants portal access, patient logs 
 
 | # | Severity | Area | Issue |
 |---|----------|------|-------|
-| 1 | **CRITICAL** | Patient Intake Form | ALL `patient_medical_vault` inserts in `PatientIntakeForm.tsx` are missing the required `practice_id` column (NOT NULL constraint). Every intake submission will fail with a database error. |
-| 2 | **CRITICAL** | Patient Onboarding Page | `PatientOnboarding.tsx` inserts into `patient_medical_vault` using non-existent columns (`allergies`, `current_medications`, `medical_conditions`) and missing ALL required columns (`patient_id`, `record_type`, `title`, `practice_id`). This page is completely broken. |
-| 3 | **MEDIUM** | Patient Onboarding Page | `PatientOnboarding.tsx` inserts into `patient_accounts` without `practice_id` (NOT NULL) or `user_id`, so the patient account creation will also fail. |
-| 4 | **LOW** | Blood Type Insert | `PatientIntakeForm.tsx` line 564-567 inserts a record with only `patient_id` and `blood_type`, missing `record_type`, `title`, and `practice_id` (all NOT NULL). |
+| 1 | **CRITICAL** | `get-user-context` Edge Function | Queries non-existent `user_2fa` table (line 73). Only `user_2fa_settings` and `user_2fa_settings_decrypted` exist in the database. This causes a silent failure in the 2FA status check within this edge function. |
+| 2 | **HIGH** | Terms XSS Risk | `AcceptTerms.tsx` imports `rehypeSanitize` (line 17) but never applies it to `ReactMarkdown` (line 336). Terms content rendered without HTML sanitization. If an admin inserts malicious markdown/HTML in terms content, it executes in every user's browser. |
+| 3 | **MEDIUM** | Session Timer Logs | `AuthContext.tsx` line 382 comment says "30 minutes from now" and line 414 logs `minutesRemaining: 30`, but `HARD_SESSION_TIMEOUT_MS` is 60 minutes (line 90). Misleading for debugging. |
+| 4 | **LOW** | Duplicate Activity Listeners | `AuthContext.tsx` registers activity event listeners twice: once in the main `useEffect` (lines 321-330) and again in a separate `useEffect` (lines 668-727). Both listen on `mousedown`, `keydown`, `scroll`, `touchstart` -- doubling event processing. |
 
 ---
 
 ## Detailed Findings
 
-### 1. CRITICAL: PatientIntakeForm - Missing `practice_id` on All Vault Inserts
+### 1. CRITICAL: `get-user-context` Queries Non-Existent `user_2fa` Table
 
-**File:** `src/pages/patient/PatientIntakeForm.tsx`
-
-Every `patient_medical_vault` insert in this file (vitals at lines 498-511, 522-535; medications at lines 597-603; NKA at lines 636-649; allergies at lines 694-700; conditions at lines 757-763; surgeries at lines 815-821; immunizations at lines 868-874; pharmacy at lines 933-939; emergency contact at lines 985-991) is missing the required `practice_id` column.
-
-The `patientAccount` object already has `practice_id` available (it's selected at lines 163 and 174), so the fix is straightforward: add `practice_id: patientAccount.practice_id` to every insert object.
-
-**Impact:** Intake form submission fails completely. No medical data is saved. Patients see an error after filling out the entire form.
-
-**Fix:** Add `practice_id: patientAccount.practice_id` to all vault insert objects alongside `patient_account_id` and `patient_id`.
-
-### 2. CRITICAL: PatientOnboarding - Completely Broken Medical Vault Insert
-
-**File:** `src/pages/patient/PatientOnboarding.tsx` (lines 54-58)
+**File:** `supabase/functions/get-user-context/index.ts` (lines 71-76)
 
 ```text
-await supabase.from("patient_medical_vault").insert([{
-  allergies: allergies,           // Column doesn't exist
-  current_medications: medications, // Column doesn't exist  
-  medical_conditions: conditions,   // Column doesn't exist
-} as any]);
+supabase
+  .from('user_2fa')
+  .select('setup_complete, verified')
+  .eq('user_id', userId)
 ```
 
-The `patient_medical_vault` table requires: `patient_id` (NOT NULL), `record_type` (NOT NULL), `title` (NOT NULL), `practice_id` (NOT NULL). None are provided. The columns `allergies`, `current_medications`, `medical_conditions` are JSONB columns that exist but are legacy -- the modern approach uses `record_type` + `record_data`.
+The table `user_2fa` does not exist in the database. Only `user_2fa_settings` and `user_2fa_settings_decrypted` exist. The columns `setup_complete` and `verified` also don't match the actual schema which uses `is_enrolled`, `twilio_enabled`, `ghl_enabled`, `phone_verified`.
 
-**Impact:** Onboarding medical data insert always fails. The error is swallowed because it's in a try/catch that navigates to dashboard regardless.
+**Impact:** This query always fails silently (via `Promise.allSettled`), causing the 2FA status to always return `{ setupComplete: false, verified: false }` from this endpoint. However, the main AuthContext doesn't use this endpoint for 2FA -- it directly queries `user_2fa_settings_decrypted` (line 129). So the impact is limited to any future code that relies on `get-user-context` for 2FA status.
 
-**Fix:** This page appears to be a legacy/dead page that is not part of the main patient flow (the main flow uses `PatientIntakeForm.tsx`). It should either be removed or rewritten to use the correct schema. Since patients are created by the practice via `create-patient-portal-account`, this self-service onboarding path is likely unused.
+**Fix:** Update the query to use `user_2fa_settings_decrypted` with correct column names:
+- Replace `from('user_2fa')` with `from('user_2fa_settings_decrypted')`
+- Replace `select('setup_complete, verified')` with `select('is_enrolled, twilio_enabled, ghl_enabled, phone_verified')`
+- Update the response processing logic accordingly
 
-### 3. MEDIUM: PatientOnboarding - Patient Account Insert Missing Required Fields
+### 2. HIGH: Unsanitized Markdown in AcceptTerms
 
-**File:** `src/pages/patient/PatientOnboarding.tsx` (lines 31-45)
+**File:** `src/pages/AcceptTerms.tsx`
 
-The insert into `patient_accounts` is missing `practice_id` (NOT NULL required column). Since patients are created by practices (not self-service), this page cannot work as designed.
-
-### 4. LOW: Blood Type Insert Missing Required Fields
-
-**File:** `src/pages/patient/PatientIntakeForm.tsx` (lines 562-568)
-
+Line 17 imports `rehypeSanitize` but line 336 renders:
 ```text
-await supabase.from('patient_medical_vault').insert({
-  patient_id: patientAccount.id,
-  blood_type: data.blood_type,
-} as any);
+<ReactMarkdown>{terms.content}</ReactMarkdown>
 ```
 
-Missing `record_type`, `title`, and `practice_id` (all NOT NULL). This fallback path (when no existing vault record is found) will fail.
+Without `rehypePlugins={[rehypeSanitize]}`. This means any HTML in the terms markdown content will be rendered unsanitized.
+
+**Risk:** While terms content is admin-controlled (stored in `terms_and_conditions` table), a compromised admin account could inject `<script>` tags or other XSS vectors that would execute in every user's browser when they view the terms page.
+
+**Fix:** Add the sanitization plugin:
+```tsx
+<ReactMarkdown rehypePlugins={[rehypeSanitize]}>{terms.content}</ReactMarkdown>
+```
+
+### 3. MEDIUM: Misleading Session Timer Log Messages
+
+**File:** `src/contexts/AuthContext.tsx`
+
+- Line 90: `HARD_SESSION_TIMEOUT_MS = 60 * 60 * 1000` (60 minutes)
+- Line 382: Comment says `// Set hard session expiration (30 minutes from now)` -- should say 60 minutes
+- Line 414: Log says `minutesRemaining: 30` -- should be `minutesRemaining: 60`
+
+**Fix:** Update both the comment and the log value to 60.
+
+### 4. LOW: Duplicate Activity Event Listeners
+
+**File:** `src/contexts/AuthContext.tsx`
+
+Two separate `useEffect` hooks register identical event listeners:
+- Lines 321-330: Registers `mousedown`, `keydown`, `scroll`, `touchstart` with `handleActivity` for session extension
+- Lines 668-727: Registers the same events with a different `handleActivity` that calls `supabase.auth.refreshSession()`
+
+Both fire on every user interaction. The first extends the localStorage-based session timer. The second refreshes the actual Supabase auth token. While both are needed functionally, having two sets of listeners for the same events is inefficient and confusing.
+
+**Fix:** Consolidate into a single set of listeners that handles both session extension and token refresh logic.
 
 ---
 
-## Flows Verified as Correct
+## Flows Verified as Correct (No Issues Found)
 
-### Portal Account Creation (Practice Side)
-- `create-patient-portal-account` edge function correctly creates auth user, assigns patient role, links `user_id` to `patient_accounts`, creates temp password token, handles re-invites
-- Proper subscription check, practice ownership validation, rate limiting, CSRF protection
-- Audit logging for both new accounts and re-invites
+### Practice (Doctor) Signup Flow
+- `Auth.tsx` collects Provider Full Name, Prescriber Name, License Number, NPI, DEA, company, phone, address
+- Password strength validation (client + server)
+- `authService.signupUser()` -> `assign-user-role` edge function with `isSelfSignup: true`
+- Email normalization, duplicate check, NPI NPPES verification
+- `create_user_with_role` RPC creates profile + role atomically
+- Status set to `pending_verification`, verification email sent
+- Full-screen verification message shown
 
-### Patient Login Flow
-- Temp password redirects to `/change-password`
-- Terms acceptance check via `user_terms_acceptances` (unified table)
-- 2FA enforcement check
-- Session management with activity-based timeout
+### Pharmacy Signup Flow
+- Collects Contact Email and States Serviced
+- Same secure path through `assign-user-role`
+- Proper validation for required pharmacy fields
 
-### Patient Terms Acceptance
-- Uses unified `user_terms_acceptances` table (same as all roles)
-- `ProtectedRoute` correctly redirects to `/accept-terms` when `termsAccepted === false`
-- Grace period prevents redirect loops
+### Email Verification
+- `/verify-email?token=xxx` -> `authService.verifyEmail()` -> `verify-email` edge function
+- Token validated, status updated to `active`
+- Success/error states handled with clear UI
 
-### Patient Medical Vault (View)
-- `PatientMedicalVault.tsx` correctly queries `patient_medical_vault` by `patient_account_id` and `record_type`
-- All sections (medications, conditions, allergies, vitals, immunizations, surgeries, pharmacies, emergency contacts) use correct column names
-- PDF generation, audit logs, print functionality all work
+### Login Flow (All Roles)
+- `authService.loginUser()`: email/password sign-in -> profile status check -> patient disabled check -> pending verification check -> temp password check
+- Failed login tracking via `track-failed-login`
+- Unverified email shows full-screen reminder with resend option
+- Temp password redirects to `/change-password?email=...`
+- Disabled accounts show appropriate error
+- Account lockout system in place
 
-### Patient Appointments
-- `PatientAppointments.tsx` correctly uses RPC with fallback to direct query
-- Appointment booking dialog, cancellation, reschedule, calendar export all present
-- Subscription check gates booking when practice subscription lapses
+### Terms Acceptance (First Login Only)
+- `ProtectedRoute` checks `termsAccepted` from `user_terms_acceptances` table
+- Redirects to `/accept-terms` only if no record exists (first login)
+- 5-minute session grace period prevents redirect loops after accepting
+- `AcceptTerms.tsx`: scroll-to-bottom enforcement, checkbox, signature, admin impersonation support
+- `generate-terms-pdf`: creates PDF, uploads to storage, upserts with `onConflict: 'user_id,terms_id'`
+- After acceptance, `checkPasswordStatus` is re-invoked to update state
+- Subsequent logins: record exists in `user_terms_acceptances` -> `termsAccepted = true` -> no redirect
+- Admin bypass: admins skip terms entirely (unless impersonating)
+
+### Password Change (Temp Password)
+- Token-based flow: `validate-password-token` -> token verified -> password changed via `reset-password-with-token`
+- Authenticated flow: current password required -> Supabase `updateUser` called
+- `temp_password` flag cleared after change
+- Impersonation support for admin-initiated resets
+
+### 2FA Flow (SMS via Twilio)
+- System-wide enforcement check via `system_settings`
+- Enrollment check via `user_2fa_settings_decrypted`
+- Session-scoped verification stored in localStorage tied to session expiry
+- `Global2FADialogs` renders setup/verify dialog at app root
+- `ProtectedRoute` blocks content while 2FA pending
+- 2FA re-required on every new login (localStorage key cleared on sign-out)
+
+### Session Management
+- 60-minute hard timeout with activity refresh
+- 30-minute inactivity timeout
+- 2-hour maximum session cap
+- Cross-tab session detection via `storage` event
+- Tab visibility/focus checks
+- Pre-login cleanup of stale session data
+
+### Admin Creates User (Provider, Staff, Rep, Practice)
+- `authService.createUserByAdmin()` -> `assign-user-role` with `isAdminCreated: true`
+- Auto-confirms email, generates temp password
+- Welcome email with password reset link sent
+- CSRF validation, rate limiting, IP filtering all active
+- Atomic user creation via `create_user_with_role` RPC
+
+### Adding Providers (Practice)
+- `/providers` accessible to doctors and staff
+- NPI/DEA validation, NPPES registry check
+- Provider record linked to practice via `practice_id`
+- Address synced from practice to provider
+
+### Adding Staff (Practice)
+- `/staff` behind `SubscriptionProtectedRoute` + `ProGate`
+- Only practice owners can manage staff
+- Staff linked to practice via `practice_staff` table
+
+### Patient Portal Account Creation
+- `create-patient-portal-account`: validates auth, CSRF, rate limiting, subscription check
+- Creates auth user, assigns patient role, links to `patient_accounts`
+- Temp password token generated, welcome email sent
+- Handles re-invites for existing patients
+
+### Patient Intake Form
+- All 11 `patient_medical_vault` insert locations now include `practice_id` (fixed in previous commit)
+- Blood type insert fixed with proper `record_type`, `title`, `practice_id`
+- Demographics saved to `patient_accounts`
+- `intake_completed_at` timestamp set on completion
+- `GlobalIntakeDialog` prompts patients who haven't completed intake
+
+### Patient Medical Vault
+- Queries by `patient_account_id` and `record_type`
+- All sections (medications, conditions, allergies, vitals, immunizations, surgeries, pharmacies, emergency contacts) work correctly
+- PDF generation, audit logs, print functionality all present
 
 ### Patient Documents
-- `PatientDocuments.tsx` correctly uses unified RPC `get_patient_unified_documents`
-- Upload to `patient-documents` bucket with correct `patient_medical_vault` insert (record_type: 'document')
+- Upload to `patient-documents` bucket
+- Correct `patient_medical_vault` insert with `record_type: 'document'`
 - Download via `manage-documents` edge function with signed URLs
-- Realtime subscriptions for both patient uploads and provider-assigned documents
+- Realtime subscriptions for new documents
+- Document visibility (share_with_practice toggle)
 
-### Patient Dashboard
-- Batched data loading via `usePatientDashboard` hook
-- Intake prompt shown when `intake_completed_at` is null
-- Medical vault onboarding banner shown after intake when no vault data exists
+### Patient Appointments
+- Booking via `book-appointment` edge function
+- Availability check, cancellation, reschedule all present
+- Subscription gating when practice subscription lapses
+- Calendar export via `export-calendar-ics`
 
-### Practice-Side Patient Detail
-- `PatientDetail.tsx` correctly resolves patient IDs, loads medical data in parallel
-- Tabs for overview, medical vault, appointments, documents, notes, treatment plans
-- PDF chart generation and download
+### Ordering Flow
+- Cart management via `manage-cart` edge function
+- Checkout with payment via Authorize.net
+- Order placement via `place-order`
+- Order confirmation, delivery confirmation pages
+- Pharmacy routing via `route-order-to-pharmacy`
+
+### Messaging
+- Role-based routing: reps to support-tickets, patients to patient-messages, others to support-tickets
+- Internal chat for practices (subscription-protected)
+- Patient messaging via `send-patient-message`
+
+### VitaLuxePro Subscription
+- Auto-enrollment in 14-day trial on first practice login
+- Subscription terms insert now uses correct columns (fixed in previous commit)
+- `SubscriptionProtectedRoute` redirects unsubscribed doctors
+- Trial expiry dialog with upgrade/decline
+- Payment processing via `process-subscription-payment`
+- Cancellation via `cancel-subscription` with audit logging
+
+### Subscription Context
+- Auto-grants access for patient/pharmacy/provider roles
+- Realtime subscription change detection
+- Edge function fallback for impersonation
+
+### Profile / Signed Agreement
+- `SignedAgreementSection` correctly queries `user_terms_acceptances` for all roles (fixed previously)
+
+### Impersonation
+- Server-side session management via `active_impersonation_sessions`
+- CSRF validation, admin authorization check
+- Session restored on page reload
+- Proper cleanup on end/timeout/sign-out
+
+### Security Pages
+- Admin security dashboard with practice status, audit logs
+- Penetration test edge functions for RLS, JWT, storage, edge functions
 
 ---
 
 ## Implementation Plan
 
-### Fix 1: Add `practice_id` to all PatientIntakeForm vault inserts
-Add `practice_id: patientAccount.practice_id` to every `patient_medical_vault` insert in `PatientIntakeForm.tsx`. This affects approximately 10 insert locations:
-- Height vital (line ~498)
-- Weight vital (line ~522)
-- Blood type new record (line ~564)
-- Medications batch (line ~597)
-- NKA record (line ~636)
-- Allergies batch (line ~694)
-- Conditions batch (line ~757)
-- Surgeries batch (line ~815)
-- Immunizations batch (line ~868)
-- Pharmacy (line ~933)
-- Emergency contact (line ~985)
+### Fix 1: Update `get-user-context` edge function (CRITICAL)
+Update the 2FA query from non-existent `user_2fa` table to `user_2fa_settings_decrypted` with correct column names. Update response processing to match the actual schema.
 
-### Fix 2: Fix blood type insert missing required fields
-Update the blood type insert (lines 562-568) to include `record_type: 'vital_sign'`, `title: 'Blood Type'`, and `practice_id: patientAccount.practice_id`.
+### Fix 2: Add `rehypeSanitize` to AcceptTerms ReactMarkdown (HIGH)
+Add `rehypePlugins={[rehypeSanitize]}` to the `<ReactMarkdown>` component in `AcceptTerms.tsx` to prevent XSS via admin-controlled terms content.
 
-### Fix 3: Remove or deprecate PatientOnboarding page
-Since patients are created by practices via `create-patient-portal-account` and go through `PatientIntakeForm` for data entry, the `PatientOnboarding.tsx` page is dead code with broken inserts. Options:
-- Remove the page and its route from `App.tsx`
-- Or rewrite it to use the correct schema (not recommended since the intake form already handles this)
+### Fix 3: Fix misleading session timer logs (MEDIUM)
+Update the comment on line 382 and log on line 414 to say 60 minutes instead of 30.
 
-The recommended approach is to remove the route and page to prevent any accidental usage.
+### Fix 4: Consolidate duplicate activity listeners (LOW)
+Remove the duplicate event listener registration in the second `useEffect` (lines 668-727) and merge its token refresh logic into the first listener.
