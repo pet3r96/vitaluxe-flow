@@ -1,47 +1,180 @@
 
-## CRITICAL FIX: Terms Agreement Blocking All Users
 
-### Root Causes Found (3 issues)
+# Complete Application Audit: Signup through Subscription Lifecycle
 
-**Issue 1 (BLOCKER): No unique constraint on `(user_id, terms_id)` in `user_terms_acceptances`**
+## Audit Scope
+Full end-to-end audit covering: Practice signup, email verification, login, terms acceptance, adding staff/providers, ordering, messaging, patient account creation, VitaLuxePro trial signup, subscription management, cancellation, and all pages/tabs.
 
-The upsert at line 555 uses `onConflict: 'user_id,terms_id'`, but there is NO unique index on those columns. PostgreSQL requires a unique constraint to match `onConflict`. This causes every single terms acceptance to fail with an error. This is why bob (and every other user) cannot proceed.
+---
 
-**Issue 2: `terms_accepted` column does not exist on `user_password_status`**
+## Findings Summary
 
-The code at line 595-602 of `generate-terms-pdf` tries to upsert `terms_accepted: true` into `user_password_status`, but that column does not exist. The table only has: `id, user_id, must_change_password, password_changed_at, created_at, updated_at`. This causes a secondary error even if Issue 1 were fixed.
+| # | Severity | Area | Issue |
+|---|----------|------|-------|
+| 1 | **CRITICAL** | Subscription Edge Function | `subscribe-to-vitaluxepro` uses wrong column name `terms_version` (should be `version`) when inserting into `user_terms_acceptances`, and missing `terms_id` field |
+| 2 | **LOW** | Dead Code | `PatientTermsAccept()` helper in `table-helpers.ts` references non-existent `patient_terms_acceptances` table - unused but creates confusion |
+| 3 | **LOW** | Dead Code | `PatientTermsAcceptance` type in `manual-schema.ts` is orphaned |
+| 4 | **INFO** | Auth Performance | Bootstrap timeout reduced to 2000ms (line 243) but warning message still says "8s" |
 
-Note: `admin-get-password-status` correctly derives `terms_accepted` from the `user_terms_acceptances` table (not from a column), so removing this write is safe.
+---
 
-**Issue 3: `get-user-context` queries non-existent `terms_accepted` column**
+## Detailed Findings
 
-At line 66, `get-user-context` selects `must_change_password, terms_accepted` from `user_password_status`. Since `terms_accepted` doesn't exist as a column, this silently returns `null` for it, causing all users to appear as "terms not accepted". It should derive terms status from `user_terms_acceptances` like `admin-get-password-status` does.
+### 1. CRITICAL: `subscribe-to-vitaluxepro` Edge Function - Wrong Column Name
 
-### Fixes
+**File:** `supabase/functions/subscribe-to-vitaluxepro/index.ts` (lines 247-253)
 
-**Fix 1: Database migration -- Add unique constraint**
+The subscription terms acceptance insert uses `terms_version` as the column name:
 
-```sql
-CREATE UNIQUE INDEX IF NOT EXISTS idx_user_terms_unique 
-ON user_terms_acceptances (user_id, terms_id);
+```text
+await supabaseAdmin.from('user_terms_acceptances').insert({
+  user_id: practiceId,
+  role: 'subscription',
+  terms_version: subscriptionTerms.version,  // WRONG column name
+  signature_name: actorEmail,                // WRONG column - doesn't exist
+  accepted_at: new Date().toISOString(),
+  // MISSING: terms_id (needed for unique index)
+});
 ```
 
-**Fix 2: `supabase/functions/generate-terms-pdf/index.ts` (lines 592-607)**
+**Actual columns:** `id, user_id, terms_id, role, version, accepted_at, ip_address, user_agent, pdf_url, created_at`
 
-Remove the `user_password_status` upsert block that writes `terms_accepted`. It's not needed -- terms acceptance is tracked by the existence of rows in `user_terms_acceptances`.
+**Problems:**
+- `terms_version` should be `version`
+- `signature_name` column does not exist in the table
+- `terms_id` is missing (nullable but needed for the unique index `(user_id, terms_id)`)
 
-**Fix 3: `supabase/functions/get-user-context/index.ts` (lines 63-68 and 125-133)**
+**Impact:** This insert silently fails or inserts with wrong data when a practice starts a trial. The subscription terms acceptance record may not be properly created.
 
-- Change the `user_password_status` select to only query `must_change_password` (remove `terms_accepted`)
-- Add a parallel query to `user_terms_acceptances` to check if user has accepted terms (same pattern as `admin-get-password-status`)
-- Derive `termsAccepted` from the existence of a record in `user_terms_acceptances`
+**Fix:** Update the insert to use correct column names:
 
-### Deployment
+```typescript
+await supabaseAdmin.from('user_terms_acceptances').insert({
+  user_id: practiceId,
+  terms_id: subscriptionTerms.id,
+  role: 'subscription',
+  version: subscriptionTerms.version,
+  accepted_at: new Date().toISOString(),
+});
+```
 
-Redeploy both `generate-terms-pdf` and `get-user-context` edge functions after the database migration.
+### 2. LOW: Dead Code - `PatientTermsAccept()` Helper
 
-### Impact
+**File:** `src/integrations/supabase/table-helpers.ts` (line 61)
 
-- Fixes ALL users being blocked at terms acceptance (not just bob)
-- Fixes the silent "terms not accepted" bug that forces users to re-accept terms they already signed
-- No data loss -- the table schema is correct, only code references and a missing index are wrong
+The `PatientTermsAccept()` function references `patient_terms_acceptances` table which does not exist in the database. No code currently calls this function (the last reference in `SignedAgreementSection.tsx` was removed in the previous fix), but it should be cleaned up to prevent future confusion.
+
+**Fix:** Remove line 61 and the corresponding import of `PatientTermsAcceptance` from `manual-schema.ts`.
+
+### 3. LOW: Dead Code - `PatientTermsAcceptance` Type
+
+**File:** `src/types/manual-schema.ts` (line 188)
+
+The `PatientTermsAcceptance` interface is orphaned after the `PatientTermsAccept()` cleanup.
+
+**Fix:** Remove the interface definition.
+
+### 4. INFO: Misleading Log Message
+
+**File:** `src/contexts/AuthContext.tsx` (line 203)
+
+The log message says "Auth bootstrap timeout (8s)" but the actual timeout is 2000ms (line 243).
+
+**Fix:** Update log message to match actual timeout value.
+
+---
+
+## Flows Verified as Correct
+
+### Signup Flow (Practice + Pharmacy)
+- SignupForm correctly collects role-specific fields (provider name, NPI, DEA for practices; states serviced for pharmacies)
+- `authService.signupUser()` calls `assign-user-role` edge function with `isSelfSignup: true`
+- Password strength validation via `validatePasswordStrength()` before submission
+- Email uniqueness check before signup attempt
+- Verification email sent via `send-verification-email` edge function
+- Full-screen verification message shown after successful signup
+
+### Email Verification
+- `/verify-email?token=xxx` route correctly calls `authService.verifyEmail()`
+- Handles success and error states with appropriate UI
+- Redirects to login after successful verification
+
+### Login Flow
+- `authService.loginUser()` checks: email/password -> account active status -> patient account status -> pending verification -> temp password flag
+- Failed login tracking via `track-failed-login` edge function
+- Unverified email shows full-screen reminder with resend option
+- Temp password redirects to `/change-password`
+- Disabled accounts show appropriate error
+
+### Terms Acceptance
+- `ProtectedRoute` correctly redirects to `/accept-terms` if `termsAccepted === false` and role is not admin
+- 5-minute session grace period prevents redirect loops after accepting
+- `AcceptTerms` page: scroll-to-bottom enforcement, checkbox, signature name, admin impersonation support
+- `generate-terms-pdf`: creates PDF, uploads to storage, upserts into `user_terms_acceptances` with correct `onConflict: 'user_id,terms_id'`
+- All roles (including patients) use unified `user_terms_acceptances` table
+- `admin-get-password-status` correctly derives `terms_accepted` from `user_terms_acceptances` existence
+
+### 2FA Flow
+- System-wide enforcement check via `system_settings`
+- Enrollment check via `user_2fa_settings_decrypted`
+- Session-scoped verification via localStorage with hard session expiry tie-in
+- `Global2FADialogs` renders setup/verify dialogs
+- `ProtectedRoute` blocks access while 2FA is pending
+
+### Auth Context / Session Management
+- 60-minute hard session timeout with 15-minute refresh threshold
+- 2-hour maximum session cap
+- 30-minute inactivity timeout
+- Activity-based extension (mousedown, keydown, scroll, touchstart)
+- Cross-tab session expiry detection via `storage` event
+- Tab visibility/focus checks
+- Aggressive pre-login cleanup of old session data
+
+### Adding Staff
+- `/staff` route wrapped in `SubscriptionProtectedRoute` + `ProGate` (requires VitaLuxePro subscription)
+- Access restricted to practice owners (`effectiveRole === 'doctor'` and not provider/staff accounts)
+- `StaffDataTable` component handles CRUD
+
+### Adding Providers
+- `/providers` accessible to doctors and staff (not provider accounts)
+- `ProvidersDataTable` handles CRUD
+- RX privilege alerts (no providers, no NPI, success states)
+
+### Ordering
+- `/orders` renders `OrdersDataTable` + `OrderStatistics`
+- Success banner from checkout redirect
+- Cart -> Checkout -> Order confirmation flow
+
+### Messaging
+- `/messages` redirects based on role: reps to support-tickets, patients to patient-messages, others to support-tickets
+- Internal chat for practices (subscription-protected)
+
+### Patient Account Creation
+- `create-patient-portal-account` edge function invoked from `PatientsDataTable`, `PracticePatients`, and `CreatePatientMessageDialog`
+
+### VitaLuxePro Subscription
+- Auto-enrollment in 14-day trial on first practice login (in AuthContext SIGNED_IN handler)
+- `/subscribe-to-vitaluxepro` page: role-based redirects (pharmacy, staff, provider blocked)
+- Trial expired dialog with upgrade/decline options
+- `SubscriptionProtectedRoute` redirects unsubscribed doctors to subscribe page
+- `ProGate` shows upgrade UI inline for unsubscribed doctors
+
+### Subscription Cancellation
+- `cancel-subscription` edge function: validates auth, checks existing subscription, updates status to 'cancelled', logs to `subscription_cancellations` and `audit_logs`
+
+### Subscription Context
+- Auto-grants access for patient/pharmacy/provider roles
+- Realtime subscription change detection
+- Edge function fallback for impersonation scenarios
+
+### Profile / Signed Agreement
+- `SignedAgreementSection` now correctly queries `user_terms_acceptances` for all roles (fixed in previous edit)
+
+---
+
+## Implementation Plan
+
+1. **Fix `subscribe-to-vitaluxepro` edge function** - correct the column names and add `terms_id` to the subscription terms insert
+2. **Remove dead code** - clean up `PatientTermsAccept()` from table-helpers and `PatientTermsAcceptance` type from manual-schema
+3. **Fix misleading log message** - update bootstrap timeout warning to reflect actual 2s timeout
+
