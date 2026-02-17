@@ -185,14 +185,7 @@ export interface UserTermsAcceptance {
   ip_address?: string | null;
 }
 
-export interface PatientTermsAcceptance {
-  id: string;
-  user_id: string;
-  patient_account_id?: string | null;
-  version: string;
-  accepted_at: string;
-  ip_address?: string | null;
-}
+// (removed PatientTermsAcceptance - dead code referencing non-existent table)
 
 // Document tables
 export interface PatientDocument {
