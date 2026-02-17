@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, Sparkles, CreditCard, ArrowLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import { useTheme } from "next-themes";
 import logoLight from "@/assets/vitaluxe-logo-light.png";
 import logoDark from "@/assets/vitaluxe-logo-dark-bg.png";
@@ -480,7 +481,7 @@ export default function SubscribeToVitaLuxePro() {
               </div>
             ) : (
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown>{termsContent}</ReactMarkdown>
+                <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{termsContent}</ReactMarkdown>
               </div>
             )}
           </ScrollArea>
