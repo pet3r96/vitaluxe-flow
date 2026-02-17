@@ -293,16 +293,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           void doHardSignOut();
         }, timeUntilExpiry);
         
+        // Also refresh the auth token to keep it in sync
+        supabase.auth.refreshSession().catch((err) => {
+          logger.error('Failed to refresh auth token on activity:', err);
+        });
+        
         const minutesAdded = Math.round((cappedExpireAt - sessionExp) / 60000);
         logger.info('Session extended due to activity', {
           newExpiresAt: new Date(cappedExpireAt).toISOString(),
           minutesAdded,
           newTimeRemaining: Math.round((cappedExpireAt - now) / 60000) + 'm'
-        });
-        
-        logger.info('Session extended due to activity', {
-          newExpiresAt: new Date(cappedExpireAt).toISOString(),
-          minutesAdded
         });
       } else {
         // Log why extension didn't happen
@@ -379,7 +379,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             checkIntervalRef.current = null;
           }
           
-          // Set hard session expiration (30 minutes from now)
+          // Set hard session expiration (60 minutes from now)
           const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
           const sessionStart = Date.now();
           localStorage.setItem(getSessionExpKey(session.user.id), String(expireAt));
@@ -411,7 +411,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           logger.info('Session timer started', { 
             expiresAt: new Date(expireAt).toISOString(),
-            minutesRemaining: 30
+            minutesRemaining: 60
           });
           
             // DEFER ALL SUPABASE CALLS TO PREVENT DEADLOCK
@@ -664,67 +664,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Activity-based session refresh
-  useEffect(() => {
-    if (!session || !user) return;
-
-    const refreshSession = async () => {
-      try {
-        const { data, error } = await supabase.auth.refreshSession();
-        if (error) {
-          logger.error('Failed to refresh session:', error);
-          return;
-        }
-        
-        // Extend session expiration
-        const expireAt = Date.now() + HARD_SESSION_TIMEOUT_MS;
-        localStorage.setItem(getSessionExpKey(user.id), String(expireAt));
-        
-        // Reset timer
-        if (hardTimerRef.current) {
-          clearTimeout(hardTimerRef.current);
-        }
-        hardTimerRef.current = window.setTimeout(() => {
-          void doHardSignOut();
-        }, HARD_SESSION_TIMEOUT_MS);
-        
-        logger.info('Session refreshed due to activity', {
-          expiresAt: new Date(expireAt).toISOString()
-        });
-      } catch (error) {
-        logger.error('Error refreshing session:', error);
-      }
-    };
-
-    const handleActivity = () => {
-      const now = Date.now();
-      const timeSinceLastActivity = now - lastActivityRef.current;
-      
-      // Only refresh once every 5 minutes and if session is close to expiring
-      if (timeSinceLastActivity > REFRESH_THRESHOLD_MS) {
-        const expireAt = localStorage.getItem(getSessionExpKey(user.id));
-        if (expireAt) {
-          const timeRemaining = parseInt(expireAt) - now;
-          // Refresh if less than 5 minutes remaining
-          if (timeRemaining < REFRESH_THRESHOLD_MS && timeRemaining > 0) {
-            lastActivityRef.current = now;
-            void refreshSession();
-          }
-        }
-      }
-    };
-
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-    events.forEach(event => {
-      window.addEventListener(event, handleActivity);
-    });
-
-    return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, handleActivity);
-      });
-    };
-  }, [session, user]);
+  // Activity-based session refresh (consolidated with main activity listeners above)
+  // Token refresh is now handled within the main handleActivity function.
+  // This separate useEffect has been removed to eliminate duplicate event listeners.
 
   // Impersonation permission now checked in parallel during fetchUserRole - removed redundant useEffect
 

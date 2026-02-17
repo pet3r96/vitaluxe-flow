@@ -333,7 +333,7 @@ export default function AcceptTerms() {
             className="h-[400px] w-full border rounded-md p-4"
           >
             <div className="prose prose-sm dark:prose-invert max-w-none terms-content">
-              <ReactMarkdown>{terms.content}</ReactMarkdown>
+              <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{terms.content}</ReactMarkdown>
             </div>
           </ScrollArea>
 
