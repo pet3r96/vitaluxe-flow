@@ -12,7 +12,7 @@ const corsHeaders = {
 
 interface CalculateShippingRequest {
   pharmacy_id: string;
-  shipping_speed: 'ground' | '2day' | 'overnight';
+  shipping_speed: 'overnight' | '2day' | 'priority' | 'first_class' | 'ground';
 }
 
 serve(async (req) => {
