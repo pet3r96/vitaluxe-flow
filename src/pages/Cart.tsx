@@ -202,7 +202,7 @@ const Cart = React.memo(function Cart() {
   // All callbacks
   const getEnabledSpeeds = useCallback((pharmacyId: string) => {
     const rates = pharmacyRatesMap?.[pharmacyId];
-    return rates ? Object.keys(rates) as ('ground' | '2day' | 'overnight')[] : [];
+    return rates ? Object.keys(rates) as ('overnight' | '2day' | 'priority' | 'first_class')[] : [];
   }, [pharmacyRatesMap]);
 
   const handleDiscountApplied = useCallback((code: string, percentage: number) => {
