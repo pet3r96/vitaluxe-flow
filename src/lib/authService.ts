@@ -75,13 +75,13 @@ export const authService = {
       });
 
       if (error) {
-        logger.error('Self-signup error', error);
         const msg = await getEdgeFunctionErrorAsync(data, error);
+        logger.warn('Self-signup rejected', { message: msg });
         return { error: { message: msg } };
       }
 
       if (data?.error) {
-        logger.error('Self-signup validation error', new Error(data.error));
+        logger.warn('Self-signup validation rejected', { message: data.error });
         return { error: { message: data.error } };
       }
 
