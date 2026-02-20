@@ -384,12 +384,14 @@ export default function DeliveryConfirmation() {
     }, {} as Record<string, any[]>);
 
   const getShippingSpeedLabel = (speed: string) => {
-    const labels = {
-      ground: "Ground Shipping (5-7 business days)",
-      priority: "Priority Shipping (3-5 business days)",
-      express: "Express Shipping (2 business days)",
+    const labels: Record<string, string> = {
+      overnight: "Overnight Shipping (Next business day)",
+      '2day': "2-Day Shipping (2 business days)",
+      priority: "Priority Shipping (2-3 business days)",
+      first_class: "First Class (3-5 business days)",
+      ground: "Ground Shipping (5-7 business days)", // historical
     };
-    return labels[speed as keyof typeof labels] || speed;
+    return labels[speed] || speed;
   };
 
   const hasAllAddresses = () => {
