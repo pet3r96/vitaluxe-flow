@@ -459,7 +459,7 @@ serve(async (req) => {
     }
 
     // Determine user status and email confirmation based on flow
-    // isSelfSignup already declared above (line 120)
+    const isSelfSignup = signupData.isSelfSignup === true;
     const isAdminCreated = signupData.isAdminCreated === true || isAdminCaller;
     const userStatus = isSelfSignup ? 'pending_verification' : 'active';
     const requiresTempPassword = isAdminCreated && !isSelfSignup;
