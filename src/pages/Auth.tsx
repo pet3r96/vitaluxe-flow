@@ -44,6 +44,7 @@ const Auth = () => {
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const [showVerificationReminder, setShowVerificationReminder] = useState(false);
   const [reminderEmail, setReminderEmail] = useState("");
+  const [reminderUserId, setReminderUserId] = useState("");
   const [emergencyResetStatus, setEmergencyResetStatus] = useState<{
     triggered: boolean;
     loading: boolean;
@@ -214,6 +215,7 @@ const Auth = () => {
           // Check if this is an email verification error
           if (hasAuthErrorCode(error, 'email_not_verified')) {
             setReminderEmail(error.email || email);
+            setReminderUserId((error as any).userId || '');
             setShowVerificationReminder(true);
             setLoading(false);
             return;
@@ -350,7 +352,9 @@ const Auth = () => {
                 error
               } = await supabase.functions.invoke('send-verification-email', {
                 body: {
-                  email: reminderEmail
+                  userId: reminderUserId || undefined,
+                  email: reminderEmail,
+                  name: ''
                 }
               });
               if (error) throw error;
