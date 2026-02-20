@@ -441,6 +441,7 @@ export const PatientDialog = ({
 
         if (error) throw error;
         queryClient.invalidateQueries({ queryKey: ["practice-patients"] });
+        queryClient.invalidateQueries({ queryKey: ["patients"] });
         queryClient.invalidateQueries({ queryKey: ["patient-portal-status"] });
         toast.success("✅ Patient added successfully");
       }
