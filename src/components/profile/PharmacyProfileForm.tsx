@@ -339,6 +339,7 @@ export function PharmacyProfileForm() {
                         onChange={(address: AddressValue) => {
                           field.onChange({
                             street: address.street,
+                            suite: address.suite,
                             city: address.city,
                             state: address.state,
                             zip: address.zip,
