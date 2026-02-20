@@ -78,11 +78,7 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Enforce IP check for non-practice owners
-        if (!isDoctor) {
-          const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status:provider-status');
-          if (ipCheckResponse) return ipCheckResponse;
-        }
+
 
         let providerQuery = supabaseClient
           .from('providers')
