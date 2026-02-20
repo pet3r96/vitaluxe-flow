@@ -2383,7 +2383,7 @@ export type Database = {
           date_of_birth: string | null
           driver_license_number: string | null
           driver_license_state: string | null
-          email: string
+          email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           first_name: string
@@ -2425,7 +2425,7 @@ export type Database = {
           date_of_birth?: string | null
           driver_license_number?: string | null
           driver_license_state?: string | null
-          email?: string
+          email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name: string
@@ -2467,7 +2467,7 @@ export type Database = {
           date_of_birth?: string | null
           driver_license_number?: string | null
           driver_license_state?: string | null
-          email?: string
+          email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name?: string

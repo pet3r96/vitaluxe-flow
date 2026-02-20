@@ -1,0 +1,1 @@
+ALTER TABLE public.patient_accounts ALTER COLUMN email DROP NOT NULL;
