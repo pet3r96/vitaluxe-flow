@@ -270,7 +270,7 @@ export const authService = {
 
       if (error) {
         logger.error('Email verification error', error);
-        return { error: { message: getEdgeFunctionError(data, error) } };
+        return { error: { message: await getEdgeFunctionErrorAsync(data, error) } };
       }
 
       if (data?.error) {
