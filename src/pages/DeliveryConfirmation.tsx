@@ -623,7 +623,7 @@ export default function DeliveryConfirmation() {
 
               <div className="flex items-center gap-2 pl-7">
                 <Truck className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{getShippingSpeedLabel(lines[0]?.shipping_speed || 'ground')}</span>
+                <span className="text-sm">{getShippingSpeedLabel(lines[0]?.shipping_speed || 'first_class')}</span>
               </div>
 
               <div className="pl-7 space-y-2">

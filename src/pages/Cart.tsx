@@ -332,7 +332,7 @@ const Cart = React.memo(function Cart() {
         groups.set(key, {
           patient_id: line.patient_id,
           pharmacy_id: line.assigned_pharmacy_id,
-          shipping_speed: line.shipping_speed || 'overnight',
+          shipping_speed: line.shipping_speed === 'ground' ? 'first_class' : (line.shipping_speed || 'overnight'),
           lines: []
         });
       }
