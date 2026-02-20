@@ -1,92 +1,56 @@
 
 
-# Fix: Suite/Apt Database Persistence + Allergy & Address Error Audit
+# Fix: Suite/Apt Persistence Gaps Across System
 
-## Problem
-The suite/apt/unit field was added to the UI and edge function, but **no database columns exist** to store it. The suite value is captured in the frontend but silently dropped on every save across all address entry points: profiles, patient accounts, pharmacies, and orders.
+## Problems Found
 
-## Root Cause
-Three database tables store structured addresses but lack a `suite` column:
-- `profiles` -- has `address_street`, `address_city`, etc. but NO `address_suite` or `shipping_address_suite`
-- `patient_accounts` -- has `address_street`, `address_city`, etc. but NO `address_suite`
-- `pharmacies` -- has `address_street`, `address_city`, etc. but NO `address_suite`
+The database columns exist (`address_suite` on profiles, patient_accounts, pharmacies; `shipping_address_suite` on profiles), and the frontend `AddressValue` type includes `suite`. However, **5 gaps** prevent suite from flowing end-to-end:
 
-## Allergy Audit
-The allergy system (`AllergyDialog`, `AllergiesSection`, `insertVaultRecord`) is **working correctly**. Allergy data does not involve addresses at all -- it writes to `patient_medical_vault` with JSONB `record_data`. The `practice_id` is auto-fetched from `patient_accounts`. No errors found in the allergy add/edit/delete flow for providers, practices, or patients.
+### Gap 1: PracticeProfileForm Zod schema strips suite
+The Zod validation schema for `address` and `shipping_address` objects does not include `suite`, so Zod silently drops it before the mutation runs. The form also does not load `suite` from the profile when populating fields.
+
+### Gap 2: PharmacyProfileForm drops suite on load
+The `GoogleAddressAutocomplete` value prop does not pass `suite` when rendering, so even though it loads suite at line 128, the autocomplete component never receives it.
+
+### Gap 3: assign-user-role edge function drops suite
+The `getAddressFields` helper at line 670 only maps `address_street`, `address_city`, `address_state`, `address_zip` -- it does NOT include `address_suite`. So suite is silently dropped during signup for doctors, pharmacies, reps.
+
+### Gap 4: send-order-to-pharmacy drops suite
+The patient data query at line 222 does not select `address_suite`, so when orders are transmitted to pharmacy APIs (including VIOS), the suite/apt number is missing from the patient address.
+
+### Gap 5: DeliveryAddressEditor currentAddress interface missing suite
+The `currentAddress` prop type only has `street`, `city`, `state`, `zip` -- no `suite`. So callers cannot pass existing suite data to the editor.
 
 ## Solution
 
-### Step 1: Add suite columns to all address tables (Database Migration)
+### File 1: `src/components/profile/PracticeProfileForm.tsx`
+- Add `suite: z.string().optional()` to the `address`, `shipping_address`, and `billing_address` objects in `profileFormSchema`
+- Add `suite: profile.address_suite || ""` when populating form values (line 100-105)
+- Add `suite: profile.shipping_address_suite || ""` when populating shipping values (line 109-114)
 
-Add the following columns:
-```sql
--- profiles table (practice address + shipping address)
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS address_suite TEXT;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS shipping_address_suite TEXT;
+### File 2: `src/components/profile/PharmacyProfileForm.tsx`
+- Add `suite: field.value.suite || ""` to the `GoogleAddressAutocomplete` value prop (line 334-339)
 
--- patient_accounts table
-ALTER TABLE public.patient_accounts ADD COLUMN IF NOT EXISTS address_suite TEXT;
+### File 3: `supabase/functions/assign-user-role/index.ts`
+- Add `address_suite: roleData.address_suite || null` to the structured format return in `getAddressFields` (line 674)
 
--- pharmacies table
-ALTER TABLE public.pharmacies ADD COLUMN IF NOT EXISTS address_suite TEXT;
-```
+### File 4: `supabase/functions/send-order-to-pharmacy/index.ts`
+- Add `address_suite` to the patient_accounts select query (line 224)
+- Include suite in the address when building the pharmacy API payload
 
-All columns are nullable TEXT -- suite is never required.
+### File 5: `src/components/orders/DeliveryAddressEditor.tsx`
+- Add `suite?: string` to the `currentAddress` interface
+- Include `suite` in the initial `AddressValue` state
 
-### Step 2: Update all save points to persist suite
+## Suite Remains Optional
+- All Zod fields use `z.string().optional()`
+- All database columns are nullable TEXT
+- No validation checks require suite
+- The "Save" button logic only checks street, city, state, zip
 
-**Files to update (6 total):**
-
-1. **`src/components/profile/PracticeProfileForm.tsx`** (lines 136-154)
-   - Add `address_suite: values.address?.suite` to the profile update mutation
-   - Add `shipping_address_suite: values.shipping_address?.suite` to the shipping address save
-
-2. **`src/components/profile/PharmacyProfileForm.tsx`** (line 145-151)
-   - Add `address_suite: values.address.suite` to the pharmacy update mutation
-
-3. **`src/components/patients/PatientDialog.tsx`** (lines 323-330)
-   - Add `address_suite: formData.address_suite || null` to patient create/update
-   - Add `address_suite` to formData state and load from existing patient data
-
-4. **`src/pages/Auth.tsx`** (signup flow)
-   - Include `suite` from `AddressValue` when passing address data to `assign-user-role` for practice/pharmacy signup
-
-5. **`src/components/orders/DeliveryAddressEditor.tsx`**
-   - Pass `suite` through the `AddressValue` on save
-
-6. **`src/pages/Checkout.tsx`** (lines 144-150)
-   - Fetch and use `shipping_address_suite` when loading practice shipping address
-
-### Step 3: Suite is always optional
-
-- The `AddressValue.suite` field is already typed as `suite?: string` (optional)
-- No validation requires suite -- the "Save" button logic only checks street, city, state, zip
-- The database columns are nullable TEXT -- no NOT NULL constraint
-- The suite field placeholder already says "(optional)"
-
-### Step 4: Verify edge function suite handling
-
-The `google-validate-address` edge function already handles suite correctly (from previous implementation). It:
-- Accepts `suite` in the request body
-- Combines `street + suite` for Google API validation
-- Preserves `suite` in all response paths
-- No changes needed here
-
-## Summary of Changes
-
-| File | Change |
-|------|--------|
-| Database migration | Add `address_suite` to `profiles`, `patient_accounts`, `pharmacies`; add `shipping_address_suite` to `profiles` |
-| `PracticeProfileForm.tsx` | Save `address_suite` and `shipping_address_suite` |
-| `PharmacyProfileForm.tsx` | Save `address_suite` |
-| `PatientDialog.tsx` | Save and load `address_suite` |
-| `Auth.tsx` | Include suite in signup address data |
-| `DeliveryAddressEditor.tsx` | Pass suite through on save |
-| `Checkout.tsx` | Fetch and use `shipping_address_suite` |
-
-## What is NOT changing
-- Allergy system -- working correctly, no address involvement
-- Suite field remains optional everywhere
-- Edge function -- already handles suite
-- `GoogleAddressAutocomplete` component -- already captures suite
+## No Other Errors Found
+- Allergy system: no address involvement, working correctly
+- Patient dialog: already handles `address_suite` correctly
+- Checkout: already fetches `shipping_address_suite`
+- GoogleAddressAutocomplete component: already captures and displays suite
 
