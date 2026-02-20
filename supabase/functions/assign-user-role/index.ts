@@ -8,7 +8,7 @@ import { RateLimiter, RATE_LIMITS, getClientIP } from '../_shared/rateLimiter.ts
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { hasRole, isAdmin as checkIsAdmin } from '../_shared/roleChecker.ts';
-import { enforceAdminIP } from '../_shared/ipFilter.ts';
+
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 import { validatePasswordStrength } from '../_shared/passwordValidator.ts';
 
