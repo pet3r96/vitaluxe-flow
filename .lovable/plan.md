@@ -1,65 +1,46 @@
 
 
-# Fix: Create VIOS Pharmacy and Assign All Products
+# Fix: Add Shipping Rates + Fix "No Account" Display
 
-## Problem
+## Two Issues
 
-The `pharmacies` table is completely empty. The VIOS Compounding pharmacy record that the entire system references (ID: `d5e75179-e66c-450f-8cae-1f4df93b097c`) does not exist in the database. This causes two issues:
+### 1. Missing Shipping Rates
+The `pharmacy_shipping_rates` table has zero rows for VIOS. The cart and shipping selector rely on this table, so no shipping options appear. We need to insert the 4 standard rates.
 
-1. **No pharmacy options in the dropdown** -- When editing a product, the "Assigned Pharmacies" section shows nothing to select because there are no pharmacy records.
-2. **No products assigned** -- The `product_pharmacies` junction table has 0 rows, so no product is linked to any pharmacy.
+### 2. "No Account" Badge Is Misleading
+The Pharmacy Management table shows a red "No Account" badge because VIOS has no `user_id`. This is expected -- VIOS is an API-integrated pharmacy and doesn't need a user account. The display logic should recognize API-enabled pharmacies and show "API Integrated" instead of "No Account".
 
-## Fix (Single Database Migration)
+---
 
-Run a SQL migration that:
+## Changes
 
-1. **Inserts the VIOS Compounding pharmacy** with the exact UUID the system already references everywhere (`d5e75179-e66c-450f-8cae-1f4df93b097c`), with all US states serviced and API configuration pointing to VIOS.
+### Database: Insert 4 shipping rates for VIOS
 
-2. **Assigns all 61 active products** to that pharmacy by inserting rows into `product_pharmacies`.
+Insert rows into `pharmacy_shipping_rates`:
 
-No code changes are needed -- the ProductDialog already fetches from the `pharmacies` table and renders checkboxes. Once the pharmacy record exists, it will appear in the dropdown automatically.
+| Speed | Rate | VIOS Service Code |
+|-------|------|-------------------|
+| overnight | $45.00 | 7618 (FedEx Standard Overnight) |
+| 2day | $25.00 | 7608 (FedEx 2 Day) |
+| priority | $15.00 | 7615 (USPS Priority) |
+| first_class | $8.00 | 7615 (USPS Priority) |
 
-## Technical Details
+These are placeholder prices you can adjust later via the "Configure Rates" button.
 
-### SQL Migration
+### Code: Fix Account Status display
 
-```sql
--- 1. Insert VIOS Compounding pharmacy with the canonical UUID
-INSERT INTO pharmacies (
-  id, name, contact_email, active,
-  api_enabled, api_handler_type,
-  api_endpoint_url, api_environment,
-  states_serviced
-) VALUES (
-  'd5e75179-e66c-450f-8cae-1f4df93b097c',
-  'VIOS Compounding',
-  'support@vioscompounding.com',
-  true,
-  true,
-  'vios',
-  'https://integrations.vioscompounding.com',
-  'production',
-  ARRAY['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
-        'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
-        'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
-        'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
-        'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC']
-)
-ON CONFLICT (id) DO NOTHING;
+**File: `src/components/pharmacies/PharmaciesDataTable.tsx`**
 
--- 2. Assign ALL active products to VIOS
-INSERT INTO product_pharmacies (product_id, pharmacy_id)
-SELECT id, 'd5e75179-e66c-450f-8cae-1f4df93b097c'
-FROM products
-WHERE active = true
-ON CONFLICT DO NOTHING;
-```
+Update the Account Status column logic:
+- If `api_enabled` is true, show a blue "API Integrated" badge (not an error)
+- If `user_id` exists, show green "Active"
+- Otherwise show red "No Account"
 
-### Expected Result
+This same fix applies in two places: the table row and the mobile card view.
 
-- The "Assigned Pharmacies" dropdown in the Product Dialog will show "VIOS Compounding" with a checkbox
-- All 61 active products will already be checked/assigned to VIOS
-- Opening any product will show "Selected: 1 pharmacy(s)"
-- The VIOS catalog linkage section will appear for products assigned to VIOS
-- No code changes required
+## Expected Result
+
+- VIOS shows "API Integrated" instead of the alarming red "No Account"
+- Cart displays all 4 shipping options with prices
+- "Configure Rates" button on the Pharmacies page lets you adjust rates anytime
 
