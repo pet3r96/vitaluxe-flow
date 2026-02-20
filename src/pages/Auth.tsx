@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import { hasAuthErrorCode } from "@/types/errors";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 
 const Auth = () => {
   usePagePerformance('Auth');
@@ -73,6 +74,8 @@ const Auth = () => {
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState<AddressValue>({});
+  const [npiVerificationStatus, setNpiVerificationStatus] = useState<null | "verifying" | "verified" | "failed">(null);
+  const currentNpiRef = useRef(npi);
 
   // Pharmacy-specific fields
   const [contactEmail, setContactEmail] = useState("");
@@ -134,6 +137,47 @@ const Auth = () => {
           toast({
             title: "Error",
             description: "Please provide Provider Full Name, Prescriber Name, License Number and NPI",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Validate Provider NPI format
+        if (!/^\d{10}$/.test(npi)) {
+          toast({
+            title: "Error",
+            description: "Provider NPI must be exactly 10 digits",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Block submit if NPI not verified
+        if (npiVerificationStatus !== "verified") {
+          if (npiVerificationStatus === "verifying") {
+            toast({
+              title: "Please Wait",
+              description: "NPI verification is in progress. Please wait.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Error",
+              description: "Provider NPI must be verified before signing up",
+              variant: "destructive"
+            });
+          }
+          setLoading(false);
+          return;
+        }
+
+        // Validate Practice NPI format if provided
+        if (practiceNpi && !/^\d{10}$/.test(practiceNpi)) {
+          toast({
+            title: "Error",
+            description: "Practice NPI must be exactly 10 digits",
             variant: "destructive"
           });
           setLoading(false);
@@ -421,7 +465,8 @@ const Auth = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="practiceNpi">Practice NPI</Label>
-                    <Input id="practiceNpi" type="text" value={practiceNpi} onChange={e => setPracticeNpi(e.target.value)} placeholder="Your practice or organization's NPI" className="bg-input border-border text-foreground" />
+                    <Input id="practiceNpi" type="text" value={practiceNpi} onChange={e => setPracticeNpi(e.target.value.replace(/\D/g, ''))} placeholder="Your practice or organization's NPI" className={`bg-input border-border text-foreground ${practiceNpi && practiceNpi.length > 0 && practiceNpi.length !== 10 ? 'border-destructive' : ''}`} maxLength={10} />
+                    {practiceNpi && practiceNpi.length > 0 && practiceNpi.length !== 10 && <p className="text-xs text-destructive">Practice NPI must be exactly 10 digits</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -460,7 +505,46 @@ const Auth = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="npi">Provider NPI # *</Label>
-                    <Input id="npi" type="text" value={npi} onChange={e => setNpi(e.target.value)} placeholder="10-digit NPI number" className={`bg-input border-border text-foreground ${npi && npi.length !== 10 && npi.length > 0 ? 'border-destructive' : ''}`} maxLength={10} required />
+                    <Input id="npi" type="text" value={npi} onChange={e => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setNpi(value);
+                      currentNpiRef.current = value;
+                      
+                      // Reset verification status when NPI changes
+                      if (value.length !== 10) {
+                        setNpiVerificationStatus(null);
+                      } else {
+                        setNpiVerificationStatus("verifying");
+                      }
+                      
+                      // Real-time NPI verification when 10 digits
+                      if (value.length === 10) {
+                        const expectedNpi = value;
+                        verifyNPIDebounced(value, (result) => {
+                          if (currentNpiRef.current === expectedNpi) {
+                            if (result.valid && !result.error) {
+                              setNpiVerificationStatus("verified");
+                              toast({
+                                title: "NPI Verified",
+                                description: result.providerName 
+                                  ? `${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`
+                                  : `NPI ${result.npi} verified successfully`,
+                              });
+                            } else {
+                              setNpiVerificationStatus("failed");
+                              toast({
+                                title: "Invalid NPI",
+                                description: result.error || "NPI not found in registry",
+                                variant: "destructive",
+                              });
+                            }
+                          }
+                        });
+                      }
+                    }} placeholder="10-digit NPI number" className={`bg-input border-border text-foreground ${npi && npi.length > 0 && npi.length !== 10 ? 'border-destructive' : ''} ${npiVerificationStatus === 'verified' ? 'border-green-500' : ''} ${npiVerificationStatus === 'failed' ? 'border-destructive' : ''}`} maxLength={10} required />
+                    {npiVerificationStatus === "verifying" && <p className="text-xs text-muted-foreground">🔄 Verifying NPI...</p>}
+                    {npiVerificationStatus === "verified" && <p className="text-xs text-green-600">✓ NPI Verified</p>}
+                    {npiVerificationStatus === "failed" && <p className="text-xs text-destructive">✗ Invalid NPI</p>}
                     {npi && npi.length > 0 && npi.length !== 10 && <p className="text-xs text-destructive">NPI must be exactly 10 digits</p>}
                     {(!npi || npi.length === 0) && <p className="text-xs text-muted-foreground">Enter your 10-digit National Provider Identifier</p>}
                   </div>
