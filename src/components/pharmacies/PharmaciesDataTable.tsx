@@ -262,7 +262,11 @@ export const PharmaciesDataTable = () => {
                   <TableCell className="font-medium">{pharmacy.name}</TableCell>
                   <TableCell>{pharmacy.contact_email}</TableCell>
                   <TableCell>
-                    {!pharmacy.user_id ? (
+                    {pharmacy.api_enabled ? (
+                      <Badge variant="secondary" className="gap-1">
+                        API Integrated
+                      </Badge>
+                    ) : !pharmacy.user_id ? (
                       <Badge variant="destructive" className="gap-1">
                         <AlertCircle className="h-3 w-3" />
                         No Account
