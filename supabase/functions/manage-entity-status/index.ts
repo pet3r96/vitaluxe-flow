@@ -1,7 +1,7 @@
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
-import { enforceAdminIP } from '../_shared/ipFilter.ts';
+
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 import { isAdmin as checkAdmin } from '../_shared/roleChecker.ts';
 
