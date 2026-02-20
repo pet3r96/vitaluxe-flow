@@ -1,46 +1,65 @@
 
 
-# Fix: Instant Patient Visibility Across All Flows
+# Fix: Create VIOS Pharmacy and Assign All Products
 
 ## Problem
 
-Even though the PatientDialog now clears caches after adding a patient, two issues remain:
+The `pharmacies` table is completely empty. The VIOS Compounding pharmacy record that the entire system references (ID: `d5e75179-e66c-450f-8cae-1f4df93b097c`) does not exist in the database. This causes two issues:
 
-1. The global React Query config sets `refetchOnMount: false`, which means if you navigate to Products and open "Add to Cart" within 30 seconds of a previous fetch, the dialog shows stale cached data instead of refetching.
-2. The PatientSelectionDialog (the "select a patient" dialog on the Products page) does not force a refetch when it opens, so it can serve stale data from a prior session.
+1. **No pharmacy options in the dropdown** -- When editing a product, the "Assigned Pharmacies" section shows nothing to select because there are no pharmacy records.
+2. **No products assigned** -- The `product_pharmacies` junction table has 0 rows, so no product is linked to any pharmacy.
 
-## Changes
+## Fix (Single Database Migration)
 
-### 1. PatientSelectionDialog: Always refetch when dialog opens
+Run a SQL migration that:
 
-**File: `src/components/products/PatientSelectionDialog.tsx`**
+1. **Inserts the VIOS Compounding pharmacy** with the exact UUID the system already references everywhere (`d5e75179-e66c-450f-8cae-1f4df93b097c`), with all US states serviced and API configuration pointing to VIOS.
 
-Add `refetchOnMount: "always"` and `staleTime: 0` to the patient query so that every time the dialog opens, it fetches the latest patients from the database -- no stale cache.
+2. **Assigns all 61 active products** to that pharmacy by inserting rows into `product_pharmacies`.
 
-### 2. Global config: Enable refetchOnMount
+No code changes are needed -- the ProductDialog already fetches from the `pharmacies` table and renders checkboxes. Once the pharmacy record exists, it will appear in the dropdown automatically.
 
-**File: `src/lib/queryClient.ts`**
+## Technical Details
 
-Change `refetchOnMount: false` to `refetchOnMount: true`. The current `false` setting is too aggressive and causes stale data bugs across the app. With `staleTime: 30s` still in place, this only triggers refetches when data is stale (older than 30s), so there's minimal performance impact.
+### SQL Migration
 
-### 3. PatientDialog: Also clear query for the specific practice ID
+```sql
+-- 1. Insert VIOS Compounding pharmacy with the canonical UUID
+INSERT INTO pharmacies (
+  id, name, contact_email, active,
+  api_enabled, api_handler_type,
+  api_endpoint_url, api_environment,
+  states_serviced
+) VALUES (
+  'd5e75179-e66c-450f-8cae-1f4df93b097c',
+  'VIOS Compounding',
+  'support@vioscompounding.com',
+  true,
+  true,
+  'vios',
+  'https://integrations.vioscompounding.com',
+  'production',
+  ARRAY['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
+        'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
+        'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+        'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
+        'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC']
+)
+ON CONFLICT (id) DO NOTHING;
 
-**File: `src/components/patients/PatientDialog.tsx`**
+-- 2. Assign ALL active products to VIOS
+INSERT INTO product_pharmacies (product_id, pharmacy_id)
+SELECT id, 'd5e75179-e66c-450f-8cae-1f4df93b097c'
+FROM products
+WHERE active = true
+ON CONFLICT DO NOTHING;
+```
 
-The current `removeQueries({ queryKey: ["practice-patients"] })` already handles prefix matching, but we should also explicitly remove the patients query used by the main patients page (`["patients", effectiveRole, effectivePracticeId]`) to cover that flow too.
+### Expected Result
 
-## Technical Summary
-
-| File | Change |
-|------|--------|
-| `src/components/products/PatientSelectionDialog.tsx` | Add `refetchOnMount: "always"` and `staleTime: 0` to patient query |
-| `src/lib/queryClient.ts` | Change `refetchOnMount: false` to `refetchOnMount: true` |
-| `src/components/patients/PatientDialog.tsx` | Ensure all patient query keys are cleared on add |
-
-## Expected Result
-
-- Add a patient on the Patients page -- it appears instantly in the list
-- Navigate to Products, open "Add to Cart" -- the new patient is there immediately
-- Go to Cart and create an order -- the patient is available for selection
-- No stale data anywhere in the app
+- The "Assigned Pharmacies" dropdown in the Product Dialog will show "VIOS Compounding" with a checkbox
+- All 61 active products will already be checked/assigned to VIOS
+- Opening any product will show "Selected: 1 pharmacy(s)"
+- The VIOS catalog linkage section will appear for products assigned to VIOS
+- No code changes required
 
