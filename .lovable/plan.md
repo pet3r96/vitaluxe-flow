@@ -1,33 +1,22 @@
 
+# Fix: "Email not confirmed" After Successful Verification
 
-# Fix: Patient Add Says "Already Exists" + Success But Not Showing
+## Root Cause
 
-## Three Bugs Found
+The `verify-email` edge function only updates the `profiles` table (`status = 'active'`). It never confirms the email in the authentication system itself. The auth system checks `email_confirmed_at` on the auth user record -- since that remains NULL, login is blocked with "Email not confirmed" even though the custom verification flow completed successfully.
 
-### Bug 1: "Patient already exists" for cross-practice patients
-The database has a **global** unique index on `lower(email)`:
+## Fix
+
+**File: `supabase/functions/verify-email/index.ts`**
+
+Add one line after the profile update succeeds -- use the admin API to confirm the email in the auth system:
+
+```typescript
+await supabaseAdmin.auth.admin.updateUserById(tokenData.user_id, {
+  email_confirm: true,
+});
 ```
-patient_accounts_email_lower_unique ON (lower(email)) WHERE email IS NOT NULL
-```
-This prevents the same email from existing in **any** two practices. Since a patient can belong to multiple clinics, this needs to be scoped per-practice.
 
-**Fix**: Drop the global unique index and create a new one scoped to `(practice_id, lower(email))`.
+This sets `email_confirmed_at` on the auth user record, which is what the auth system checks during login.
 
-### Bug 2: Patient added successfully but doesn't appear in the list
-After creating a patient, `PatientDialog` invalidates the query key `["practice-patients"]`. But the `PatientsDataTable` component fetches patients using `usePatients()`, which uses the query key `["patients", effectiveRole, effectivePracticeId]`. These don't match, so the list never refreshes after adding.
-
-**Fix**: Update `PatientDialog` to also invalidate `["patients"]` query keys so the data table refreshes.
-
-### Bug 3: Search input lag (same issue fixed on Accounts page)
-The search input on this Patients page has the same debounce bug -- typing feels frozen because the input value only updates after the 300ms debounce.
-
-**Fix**: Split into `inputValue` (instant) and debounced `searchQuery` (for filtering), same pattern applied to the Accounts and Staff pages.
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| New database migration | Drop `patient_accounts_email_lower_unique`, create `patient_accounts_practice_email_unique` on `(practice_id, lower(email))` |
-| `src/components/patients/PatientDialog.tsx` | Also invalidate `["patients"]` query key after create/update |
-| `src/components/patients/PatientsDataTable.tsx` | Fix search input lag with `useDebounce` pattern |
-
+No other files need changes. The self-signup flow in `assign-user-role` already correctly sets `email_confirm: false` for self-signup users, expecting the verify-email function to confirm it later -- that confirmation step was just missing.
