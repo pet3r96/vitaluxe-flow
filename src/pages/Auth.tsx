@@ -38,7 +38,7 @@ const Auth = () => {
   const [urlMessage, setUrlMessage] = useState(searchParams.get("message") || "");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"doctor" | "pharmacy">("doctor"); // "doctor" = Practice in the database
+  const [role, setRole] = useState<"doctor" | "pharmacy" | "topline">("doctor"); // "doctor" = Practice in the database
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
