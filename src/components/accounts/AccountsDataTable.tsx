@@ -50,6 +50,11 @@ export const AccountsDataTable = () => {
   const [inputValue, setInputValue] = useState("");
   const searchQuery = useDebounce(inputValue, 300);
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [selectedAccount, setSelectedAccount] = useState<any>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: accounts, isLoading, refetch } = useQuery({
     queryKey: ["accounts", roleFilter],
