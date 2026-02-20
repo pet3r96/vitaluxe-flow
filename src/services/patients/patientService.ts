@@ -50,13 +50,5 @@ export async function fetchPatients(params: PatientQueryParams) {
     patientsData = data || [];
   }
 
-  // Store in cache before returning
-  patientListCache.set(cacheKey, {
-    data: patientsData,
-    timestamp: Date.now()
-  });
-  
-  logger.info('Patient list cached', { cacheKey, count: patientsData.length });
-
   return patientsData;
 }
