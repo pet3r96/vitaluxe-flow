@@ -252,7 +252,7 @@ const Cart = React.memo(function Cart() {
   });
 
   const updateShippingSpeedMutation = useMutation({
-    mutationFn: async ({ lineIds, shipping_speed }: { lineIds: string[]; shipping_speed: 'ground' | '2day' | 'overnight' }) => {
+    mutationFn: async ({ lineIds, shipping_speed }: { lineIds: string[]; shipping_speed: 'overnight' | '2day' | 'priority' | 'first_class' }) => {
       const { data, error } = await supabase.functions.invoke('update-shipping-speed', {
         body: { lineIds, shipping_speed }
       });
