@@ -911,13 +911,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('user_id', userId)
           .maybeSingle(),
         
-        // 5. Check user terms acceptance
-        UserTermsAccept()
-          .select('id, terms_id, accepted_at')
-          .eq('user_id', userId)
-          .order('accepted_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        // 5. Terms acceptance - placeholder, will be re-queried with role filter after role is resolved
+        Promise.resolve({ data: null, error: null })
       ]);
 
       // Process role with priority order
