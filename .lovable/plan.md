@@ -1,35 +1,52 @@
 
+# Fix: Pharmacy Staff Creation Creates Phantom Pharmacy Record
 
-# Fix: Move Bob Fasano from Erroneous Pharmacy to VIOS Staff
+## Root Cause
 
-## Problem
-Bob Fasano (`bob@completemedicareplan.com`) was added as a **new pharmacy** instead of being added as **staff at VIOS Compounding**. This created a phantom pharmacy record that shows up in the Pharmacy Management table.
+When a pharmacy owner adds a staff member via the "Add Staff Member" dialog:
 
-## Current State (incorrect)
-- `pharmacies` table has a record for "Bob Fasano" (id: `bf041787-8b58-470b-8375-e3b03c647fb9`)
-- `user_roles` has `role: pharmacy` for his user ID -- this is actually correct for pharmacy staff
-- No `pharmacy_staff` record links him to VIOS
+1. The `AddPharmacyStaffDialog` sends `role: 'pharmacy_staff'` to the `assign-user-role` edge function
+2. The edge function normalizes this to `role: 'pharmacy'` (line 418) so RLS policies work
+3. The `create_user_with_role` RPC sees `role = 'pharmacy'` and creates a **new record in the `pharmacies` table** -- this is the bug
+4. The edge function then also correctly creates a `pharmacy_staff` record
 
-## Fix (data-only, no code changes needed)
+Result: the new staff member appears as a standalone pharmacy in the Pharmacy Management table AND as staff -- exactly the Bob Fasano issue.
 
-### Step 1: Add Bob Fasano as VIOS pharmacy staff
-Insert into `pharmacy_staff`:
-- `user_id`: `96791095-086b-4d9b-b040-92420fb8cdcb` (Bob Fasano)
-- `pharmacy_id`: `d5e75179-e66c-450f-8cae-1f4df93b097c` (VIOS Compounding)
-- `role_type`: `staff`
-- `active`: true
-- Default permissions: can_manage_orders=true, can_manage_shipping=true, can_view_api_config=false
+## Fix
 
-### Step 2: Delete the erroneous pharmacy record
-Delete from `pharmacies` where `id = 'bf041787-8b58-470b-8375-e3b03c647fb9'`
+**File: `supabase/functions/assign-user-role/index.ts`**
 
-### Step 3: Keep user_roles as-is
-His role stays `pharmacy` -- this is correct. The `pharmacy_staff_access()` function and RLS policies use this role combined with the `pharmacy_staff` table to grant access to VIOS data.
+Track the original role before normalization, then pass a flag in the roleData so the RPC can skip creating a `pharmacies` record.
 
-## Result
-- Bob Fasano will no longer appear as a separate pharmacy
-- He will have staff-level access to the VIOS Compounding dashboard
-- Only VIOS Compounding will show in the Pharmacy Management table
+- Before line 418 (where `signupData.role` is set to `'pharmacy'`), store a flag: `signupData.roleData.isPharmacyStaff = true`
+- After the RPC call completes but before pharmacy-specific logic runs (line 818-831 where priority_map is updated), add a guard to skip that section for pharmacy staff
 
-## No code changes required
-This is purely a data correction. The existing pharmacy staff system already handles multi-user access correctly.
+**Database: Update `create_user_with_role` RPC**
+
+Modify the `IF p_role = 'pharmacy'` block to check for the `isPharmacyStaff` flag in `p_role_data` and skip the `pharmacies` INSERT when it's true:
+
+```sql
+IF p_role = 'pharmacy' AND NOT COALESCE((p_role_data->>'isPharmacyStaff')::boolean, false) THEN
+  -- existing pharmacies INSERT logic
+END IF;
+```
+
+This ensures:
+- Actual pharmacy accounts still get a `pharmacies` record created
+- Pharmacy staff accounts only get a `pharmacy_staff` record (handled later in the edge function)
+- The `user_roles` entry is still set to `pharmacy` for RLS compatibility
+
+## Changes Summary
+
+| File | Change |
+|------|--------|
+| `supabase/functions/assign-user-role/index.ts` | Add `isPharmacyStaff = true` flag to roleData before role normalization; guard priority_map update |
+| `create_user_with_role` RPC (migration) | Add `isPharmacyStaff` check to skip `pharmacies` INSERT for staff users |
+
+## Verification
+
+After the fix:
+- Adding a pharmacy staff member will only create entries in `profiles`, `user_roles` (as `pharmacy`), and `pharmacy_staff`
+- No phantom record will appear in the `pharmacies` table
+- The Pharmacy Management table will only show actual pharmacies
+- Existing pharmacy creation flow remains unchanged
