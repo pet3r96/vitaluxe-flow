@@ -66,7 +66,7 @@ serve(async (req) => {
     const { error: insertError } = await supabaseAdmin
       .from("email_verification_tokens")
       .insert({
-        user_id: userId,
+        user_id: resolvedUserId,
         token,
         expires_at: expiresAt.toISOString(),
       });
