@@ -76,6 +76,13 @@ export const PracticeProfileForm = () => {
   const [npiVerificationStatus, setNpiVerificationStatus] = useState<
     null | "verifying" | "verified" | "failed"
   >(null);
+
+  // Auto-set NPI verification status to "verified" when profile loads with existing valid NPI
+  useEffect(() => {
+    if (profile?.npi && sanitizeEncrypted(profile.npi)?.length === 10 && npiVerificationStatus === null) {
+      setNpiVerificationStatus("verified");
+    }
+  }, [profile?.npi]);
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
