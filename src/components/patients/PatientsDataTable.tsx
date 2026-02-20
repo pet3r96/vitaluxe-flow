@@ -19,7 +19,7 @@ import { Plus, Search, Edit, UserPlus, CheckCircle, Lock, Eye, Trash2, Ban } fro
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable, MobileTableRowProps, MobileTableAction } from "@/components/responsive/MobileDataTable";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { debounce } from "@/lib/performance";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,13 +49,12 @@ export const PatientsDataTable = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { isMobile } = useResponsive();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const searchQuery = useDebounce(inputValue, 300);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [disableDialogOpen, setDisableDialogOpen] = useState(false);
   const [patientToToggle, setPatientToToggle] = useState<any>(null);
-
-  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   // Use service layer hook for fetching patients
   const { data: patients, isLoading, refetch } = usePatients();
@@ -355,8 +354,8 @@ export const PatientsDataTable = () => {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search patients..."
-            value={searchQuery}
-            onChange={(e) => debouncedSetSearch(e.target.value)}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
             className="pl-9"
           />
         </div>
