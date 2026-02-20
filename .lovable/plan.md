@@ -1,85 +1,50 @@
 
 
-# Complete Audit: Admin IP Filter Blocking Browser-Based Operations
+# Fix: Verification Email Failing -- Missing Database Table
 
 ## Problem
-The `enforceAdminIP` middleware blocks any request originating from an IP not in the admin allowlist. Since admin users access the application from their browser (with varying IPs), this blocks legitimate admin operations performed through the UI.
+The new practice that signed up (user ID `4a6ca268-c18e-44bb-9213-80183fdd1726`) **did NOT receive a verification email**. The `send-verification-email` function failed 3 times because it tries to insert into a table called `email_verification_tokens` which does not exist in the database.
 
-This is the same class of bug that broke self-signup. It affects **5 edge functions** with **7 IP check points**.
+Log evidence:
+```
+[send-verification-email] Failed to insert token  error: [object Object]
+```
 
-## Affected Functions and Impact
+## Fix (2 steps)
 
-### 1. `manage-entity-status` (3 IP check points)
+### Step 1: Create the missing `email_verification_tokens` table
 
-| Action | Who calls it from browser | IP check applied to | Impact |
-|--------|--------------------------|---------------------|--------|
-| `provider-status` | Admin users (non-doctors) via ProvidersDataTable | Admins only (doctors bypass) | Admin cannot toggle provider active/inactive from browser |
-| `staff-status` | Admin users (non-doctors) via StaffDataTable, StaffDetailsDialog | Admins only (doctors bypass) | Admin cannot toggle staff active/canOrder from browser |
-| `status-configs` | Admin users via OrderStatusManager | All requests | Admin cannot create/update/delete order status configs from browser |
+Create the table with the same structure as the existing token tables (`temp_password_tokens`, `password_reset_tokens`):
 
-**Doctor users are NOT affected** -- they already bypass the IP check. Only admin-role users are blocked.
+```sql
+CREATE TABLE public.email_verification_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  token TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used BOOLEAN DEFAULT FALSE,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-### 2. `cleanup-test-data` (1 IP check point)
-- Called from: AccountsDataTable, PatientsDataTable, PendingPracticesApproval, FactoryResetManager
-- Impact: Admin cannot clean up test accounts from the browser UI
+-- Index for fast token lookups
+CREATE INDEX idx_email_verification_tokens_token ON public.email_verification_tokens(token);
+CREATE INDEX idx_email_verification_tokens_user_id ON public.email_verification_tokens(user_id);
 
-### 3. `factory-reset` (1 IP check point)
-- Called from: FactoryResetManager component
-- Impact: Admin cannot run factory reset from browser UI
+-- Enable RLS
+ALTER TABLE public.email_verification_tokens ENABLE ROW LEVEL SECURITY;
 
-### 4. `delete-all-orders` (1 IP check point)
-- Called from: FactoryResetManager component
-- Impact: Admin cannot delete all orders from browser UI
+-- Only service role (edge functions) should access this table
+-- No public policies needed since all access goes through admin client in edge functions
+```
 
-### 5. `assign-user-role` (already fixed)
-- Self-signup and pharmacy-staff creation now correctly bypass the IP check
+### Step 2: Re-send the verification email to the practice that just signed up
 
-## Root Cause
-The IP filter was designed for server-to-server admin operations but was applied to functions that admins invoke from the browser UI. Browser requests come from the user's ISP-assigned IP, which will almost never be in the allowlist.
+After the table is created, manually trigger the verification email for user `4a6ca268-c18e-44bb-9213-80183fdd1726` by calling the `send-verification-email` edge function directly, so the new practice gets their verification link without having to sign up again.
 
-## Proposed Fix
+## Why this happened
+The `send-verification-email` edge function was written to use an `email_verification_tokens` table, but the corresponding database migration to create that table was never run. The other token tables (`temp_password_tokens` for welcome emails, `password_reset_tokens` for password resets) exist and work fine -- this one was simply missed.
 
-**Remove `enforceAdminIP` from all browser-invoked functions.** These functions already have proper security:
-
-- **Authentication**: All require a valid JWT (logged-in user)
-- **Role checks**: All verify the caller has admin/doctor role before proceeding
-- **RLS policies**: Database-level access controls are enforced
-
-The IP filter should only be used for truly server-side automation (cron jobs, webhooks) -- not for browser-based admin dashboards.
-
-### Changes by file:
-
-#### A. `supabase/functions/manage-entity-status/index.ts`
-- **Lines 81-85**: Remove the `enforceAdminIP` block for `provider-status` action
-- **Lines 166-170**: Remove the `enforceAdminIP` block for `staff-status` action
-- **Lines 388-390**: Remove the `enforceAdminIP` block for `status-configs` action
-- Remove the `enforceAdminIP` import (line 4)
-
-#### B. `supabase/functions/cleanup-test-data/index.ts`
-- **Lines 50-52**: Remove the `enforceAdminIP` block
-- Remove the `enforceAdminIP` import (line 6)
-
-#### C. `supabase/functions/factory-reset/index.ts`
-- **Lines 46-48**: Remove the `enforceAdminIP` block
-- Remove the `enforceAdminIP` import (line 5)
-
-#### D. `supabase/functions/delete-all-orders/index.ts`
-- **Lines 24-26**: Remove the `enforceAdminIP` block
-- Remove the `enforceAdminIP` import (line 5)
-
-#### E. `supabase/functions/assign-user-role/index.ts`
-- **Lines 121-123**: Remove the remaining `enforceAdminIP` block entirely (admin-created users are also done from the browser by admins)
-- Remove the `enforceAdminIP` import (line 11)
-
-### Security remains intact because:
-1. All functions require authenticated JWT tokens
-2. All functions verify admin/doctor role before executing
-3. Database RLS policies provide an additional layer of protection
-4. Rate limiting is in place where applicable
-5. CSRF validation is enforced on sensitive operations
-
-### What `enforceAdminIP` should be reserved for:
-- Cron-triggered functions (already use `x-cron-secret` instead)
-- External webhook endpoints (if any are added in the future)
-- NOT browser-invoked admin operations
+## No code changes needed
+The edge function code is correct. Only the database table needs to be created, then the email re-sent.
 
