@@ -587,6 +587,24 @@ const Auth = () => {
                     </div>
                   </div>
                 </>}
+
+              {role === "topline" && <>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <PhoneInput
+                      id="phone"
+                      value={phone}
+                      onChange={setPhone}
+                      placeholder="5551234567"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Company Name *</Label>
+                    <Input id="company" type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="Enter company name" className="bg-input border-border text-foreground" required />
+                  </div>
+                </>}
             </>}
 
           <div className="space-y-2">
