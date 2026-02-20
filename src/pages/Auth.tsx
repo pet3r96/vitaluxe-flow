@@ -38,7 +38,7 @@ const Auth = () => {
   const [urlMessage, setUrlMessage] = useState(searchParams.get("message") || "");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"doctor" | "pharmacy">("doctor"); // "doctor" = Practice in the database
+  const [role, setRole] = useState<"doctor" | "pharmacy" | "topline">("doctor"); // "doctor" = Practice in the database
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
@@ -193,6 +193,16 @@ const Auth = () => {
           setLoading(false);
           return;
         }
+      } else if (role === "topline") {
+        if (!phone || !company) {
+          toast({
+            title: "Error",
+            description: "Please provide Phone Number and Company Name",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
       }
     }
     try {
@@ -264,6 +274,9 @@ const Auth = () => {
           address_verification_status: address.status,
           address_verification_source: address.source,
           address_verified_at: address.verified_at
+        } : role === "topline" ? {
+          phone,
+          company
         } : {
           contactEmail,
           address: pharmacyAddress.formatted || `${pharmacyAddress.street}, ${pharmacyAddress.city}, ${pharmacyAddress.state} ${pharmacyAddress.zip}`,
@@ -433,13 +446,13 @@ const Auth = () => {
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {!isLogin && <>
               <div className="space-y-2">
-                <Label htmlFor="name">Practice Name</Label>
+                <Label htmlFor="name">{role === "doctor" ? "Practice Name" : role === "pharmacy" ? "Pharmacy Name" : "Contact Name"}</Label>
                 <Input id="name" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Acme Medical Spa" className="bg-input border-border text-foreground" required />
               </div>
 
               <div className="space-y-3">
                 <Label>I am a:</Label>
-                <RadioGroup value={role} onValueChange={value => setRole(value as "doctor" | "pharmacy")}>
+                <RadioGroup value={role} onValueChange={value => setRole(value as "doctor" | "pharmacy" | "topline")}>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="doctor" id="doctor" />
                     <Label htmlFor="doctor" className="font-normal cursor-pointer">
@@ -450,6 +463,12 @@ const Auth = () => {
                     <RadioGroupItem value="pharmacy" id="pharmacy" />
                     <Label htmlFor="pharmacy" className="font-normal cursor-pointer">
                       Pharmacy
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="topline" id="topline" />
+                    <Label htmlFor="topline" className="font-normal cursor-pointer">
+                      Representative
                     </Label>
                   </div>
                 </RadioGroup>
@@ -579,6 +598,24 @@ const Auth = () => {
                           </Label>
                         </div>)}
                     </div>
+                  </div>
+                </>}
+
+              {role === "topline" && <>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <PhoneInput
+                      id="phone"
+                      value={phone}
+                      onChange={setPhone}
+                      placeholder="5551234567"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Company Name *</Label>
+                    <Input id="company" type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="Enter company name" className="bg-input border-border text-foreground" required />
                   </div>
                 </>}
             </>}
