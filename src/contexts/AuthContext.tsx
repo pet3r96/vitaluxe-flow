@@ -1017,22 +1017,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // Get terms check result for effective user
-      let termsCheckResult;
-      if (isCurrentlyImpersonating && effectiveUserIdForTerms !== userId) {
-        // Impersonating: make fresh query for impersonated user's terms
-        termsCheckResult = await UserTermsAccept()
-          .select('id, terms_id, accepted_at')
-          .eq('user_id', effectiveUserIdForTerms)
-          .order('accepted_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-      } else {
-        // Not impersonating: use existing query result
-        termsCheckResult = patientTermsResult.status === 'fulfilled' 
-          ? patientTermsResult.value 
-          : { data: null, error: null };
-      }
+      // Get terms check result for effective user - now role-specific
+      const effectiveRoleForTerms = isCurrentlyImpersonating 
+        ? (impersonationSessionData?.session?.impersonated_role || role)
+        : role;
+      const termsCheckResult = await UserTermsAccept()
+        .select('id, terms_id, accepted_at')
+        .eq('user_id', effectiveUserIdForTerms)
+        .eq('role', effectiveRoleForTerms)
+        .order('accepted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       // Process password status and terms - ADMIN BYPASS for resilience
       if (role === 'admin' && !isCurrentlyImpersonating) {
