@@ -1,73 +1,78 @@
 
+# Fix NPI Validation and Google Maps on Signup Page
 
-# Fix Google Maps, Practice NPI, and Provider NPI Validation on Signup
-
-## Three Problems
-
-1. **Google Maps Address Autocomplete** shows "This page can't load Google Maps correctly" because the client-side environment variable `VITE_GOOGLE_MAPS_API_KEY` is not set. A `GOOGLE_API_KEY` exists for backend functions but is not accessible to the browser.
-2. **Practice NPI field** has zero validation -- it accepts any number of characters, letters, and symbols.
-3. **Provider NPI field** has `maxLength={10}` but still accepts letters and does not verify against the national registry (NPPES) before allowing signup.
+## Overview
+Copy the working NPI verification pattern from the admin code (AddPracticeRequestDialog) into Auth.tsx, and fix Google Maps by loading the API key at runtime from the backend.
 
 ---
 
-## Fix 1: Google Maps API Key
+## 1. NPI Validation (copy from admin pattern)
 
-The `VITE_GOOGLE_MAPS_API_KEY` environment variable needs to be configured. This is a client-side key that must be added to the project's environment. You will be prompted to enter your Google Maps API key (it may be the same key as `GOOGLE_API_KEY` if that key has the Maps JavaScript API and Places API enabled).
+### Practice NPI Field (line 424 of Auth.tsx)
+- Restrict to digits only: `e.target.value.replace(/\D/g, '')`
+- Add `maxLength={10}`
+- Add red border when invalid (non-empty and not 10 digits)
+- Add helper text below
 
----
-
-## Fix 2: Practice NPI Input Validation
-
-**File:** `src/pages/Auth.tsx` (line 424)
-
-- Add `maxLength={10}` to the Practice NPI input
-- Restrict input to digits only (strip non-numeric characters on change)
-- Show validation message when length is not 0 and not 10
-- Add red border when invalid
-
----
-
-## Fix 3: Provider NPI Input Validation
-
-**File:** `src/pages/Auth.tsx` (line 463)
-
-- Restrict input to digits only (strip non-numeric characters on change)
+### Provider NPI Field (line 463 of Auth.tsx)
+- Restrict to digits only: `e.target.value.replace(/\D/g, '')`
 - Keep existing `maxLength={10}` and visual feedback
 
+### Real-time NPI Registry Verification (Provider NPI)
+Replicate the exact pattern from `AddPracticeRequestDialog.tsx`:
+- Add `npiVerificationStatus` state (`null | "verifying" | "verified" | "failed"`)
+- Add `useRef` for `currentNpiRef` to guard against stale callbacks
+- Import and use `verifyNPIDebounced` from `@/lib/npiVerification`
+- When Provider NPI reaches 10 digits, automatically verify against the national registry
+- Show status indicators below the field:
+  - "Verifying NPI..." while checking
+  - "NPI Verified" (green) on success
+  - "Invalid NPI" (red) on failure
+- Block form submission if NPI is not verified (same as admin flow)
+
+### Submit Validation (lines 130-153 of Auth.tsx)
+- Add check: if Provider NPI verification status is not "verified", block submission with clear error
+- Add regex check for Practice NPI if non-empty
+
 ---
 
-## Fix 4: NPI Format Validation on Submit
+## 2. Google Maps Fix
 
-**File:** `src/pages/Auth.tsx` (lines 131-153)
+The `VITE_GOOGLE_MAPS_API_KEY` is a client-side environment variable that is not currently set. The backend already has `GOOGLE_API_KEY` configured.
 
-Add to the doctor validation block:
-- Check that Provider NPI is exactly 10 digits (digits only)
-- Check that Practice NPI, if provided, is also exactly 10 digits
-- Call the existing `verify-npi` edge function to validate Provider NPI against the NPPES registry before allowing signup
-- Show clear error messages for each case
+### Solution: Create a small edge function `get-google-maps-key`
+- Returns the `GOOGLE_API_KEY` value for client-side use
+- The google-address-autocomplete component will fetch this key at runtime instead of relying on `import.meta.env.VITE_GOOGLE_MAPS_API_KEY`
+
+### Changes to `google-address-autocomplete.tsx`
+- Add a `useEffect` to fetch the API key from the edge function on mount
+- Use the fetched key in `useLoadScript` instead of `import.meta.env`
+- Show loading state while the key is being fetched
+
+### New edge function: `supabase/functions/get-google-maps-key/index.ts`
+- Returns `{ key: GOOGLE_API_KEY }` from the server-side secret
+- Requires authentication (only logged-in or signing-up users can access)
+- Actually, since this is used on the signup page before auth, it should be accessible without auth but rate-limited
 
 ---
 
 ## Technical Details
 
-### Input Sanitization (both NPI fields)
+### Files Modified
+1. **`src/pages/Auth.tsx`** -- Add NPI verification state, import `verifyNPIDebounced`, sanitize NPI inputs, block submit on unverified NPI
+2. **`src/components/ui/google-address-autocomplete.tsx`** -- Fetch API key at runtime from edge function instead of env var
+3. **New: `supabase/functions/get-google-maps-key/index.ts`** -- Expose Google Maps API key for client-side use
+
+### NPI Verification Flow (copied from admin)
 ```text
-onChange handler: strip all non-digit chars
-  e.target.value.replace(/\D/g, '')
+User types NPI -> strip non-digits -> update state
+  if length < 10: status = null (no feedback)
+  if length = 10: status = "verifying"
+    -> verifyNPIDebounced(npi, callback)
+      -> callback checks currentNpiRef matches
+        -> valid: status = "verified", toast success
+        -> invalid: status = "failed", toast error
+
+On submit:
+  if npiVerificationStatus !== "verified" -> block with error
 ```
-
-### Practice NPI Input (line 424)
-- Add `maxLength={10}`
-- Add conditional border class like Provider NPI already has
-- Add helper text below
-
-### Submit Validation (lines 131-153)
-- Regex check: `/^\d{10}$/` for Provider NPI (required)
-- Regex check: `/^\d{10}$/` for Practice NPI (only if non-empty)
-- Call `verify-npi` edge function for Provider NPI
-- If NPI not found in registry, show error and block submission
-- If registry unavailable, allow submission with a warning toast
-
-### Google Maps
-- Prompt for `VITE_GOOGLE_MAPS_API_KEY` to be added as a project environment variable
-
