@@ -19,7 +19,7 @@ import { Plus, Search, Edit, UserPlus, CheckCircle, Lock, Eye, Trash2, Ban } fro
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable, MobileTableRowProps, MobileTableAction } from "@/components/responsive/MobileDataTable";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { debounce } from "@/lib/performance";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   AlertDialog,
   AlertDialogAction,
