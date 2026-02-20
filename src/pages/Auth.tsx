@@ -274,6 +274,9 @@ const Auth = () => {
           address_verification_status: address.status,
           address_verification_source: address.source,
           address_verified_at: address.verified_at
+        } : role === "topline" ? {
+          phone,
+          company
         } : {
           contactEmail,
           address: pharmacyAddress.formatted || `${pharmacyAddress.street}, ${pharmacyAddress.city}, ${pharmacyAddress.state} ${pharmacyAddress.zip}`,
