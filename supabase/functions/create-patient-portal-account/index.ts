@@ -490,8 +490,11 @@ Deno.serve(async (req) => {
 
     // Check if auth user exists (case-insensitive email lookup)
     let authUserId: string;
-    const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
-    const foundUser = existingAuthUser?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+    const { data: { users: allUsers }, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (listError) {
+      edgeLogger.error('[create-patient-portal-account] Failed to list auth users', listError);
+    }
+    const foundUser = allUsers?.find(u => u.email?.toLowerCase() === normalizedEmail);
 
     if (foundUser) {
       edgeLogger.info('[create-patient-portal-account] Found existing auth user', { authUserId: foundUser.id });

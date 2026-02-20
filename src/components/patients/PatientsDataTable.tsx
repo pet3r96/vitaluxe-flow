@@ -118,10 +118,18 @@ export const PatientsDataTable = () => {
         throw new Error('VitaLuxePro subscription required');
       }
 
-      // Create portal account
+      // Create portal account with CSRF protection
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Security token missing. Please refresh the page.");
+      }
+
       const { data: portalData, error: portalError } = await supabase.functions.invoke(
         'create-patient-portal-account',
-        { body: { patientId } }
+        { 
+          body: { patientId },
+          headers: { 'x-csrf-token': csrfToken }
+        }
       );
 
       if (portalError) {
