@@ -123,6 +123,7 @@ const GoogleAddressAutocompleteInner = ({
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<any>(null);
   const [inputValue, setInputValue] = useState('');
+  const [suiteValue, setSuiteValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Ensure Google autocomplete dropdown stays visible and clickable
