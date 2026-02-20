@@ -49,13 +49,12 @@ export const PatientsDataTable = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { isMobile } = useResponsive();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const searchQuery = useDebounce(inputValue, 300);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [disableDialogOpen, setDisableDialogOpen] = useState(false);
   const [patientToToggle, setPatientToToggle] = useState<any>(null);
-
-  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   // Use service layer hook for fetching patients
   const { data: patients, isLoading, refetch } = usePatients();
