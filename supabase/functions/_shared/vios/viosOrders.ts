@@ -143,6 +143,7 @@ export function buildViosOrderPayload(
   
   // Use structured patient address if available
   const shippingLine1 = patient?.address_street || parsedShipping.line1;
+  const shippingSuite = (patient as any)?.address_suite || parsedShipping.line2 || '';
   const shippingCity = patient?.address_city || parsedShipping.city;
   const shippingState = patient?.address_state || parsedShipping.state;
   const shippingZip = patient?.address_zip || parsedShipping.zip;
@@ -185,6 +186,7 @@ export function buildViosOrderPayload(
       dateOfBirth: dob,
       gender: mapGender(patient?.gender_at_birth),
       address1: shippingLine1,
+      ...(shippingSuite && { address2: shippingSuite }),
       city: shippingCity,
       state: shippingState,
       zip: shippingZip,

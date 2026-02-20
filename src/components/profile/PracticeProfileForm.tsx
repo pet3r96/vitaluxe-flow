@@ -42,6 +42,7 @@ const profileFormSchema = z.object({
   phone: phoneSchema,
   address: z.object({
     street: z.string().optional(),
+    suite: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     zip: z.string().optional(),
@@ -51,12 +52,14 @@ const profileFormSchema = z.object({
   license_number: z.string().optional(),
   shipping_address: z.object({
     street: z.string().optional(),
+    suite: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     zip: z.string().optional(),
   }).optional(),
   billing_address: z.object({
     street: z.string().optional(),
+    suite: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     zip: z.string().optional(),
@@ -99,6 +102,7 @@ export const PracticeProfileForm = () => {
       phone: sanitizeEncrypted(profile.phone) || "",
       address: {
         street: profile.address_street || "",
+        suite: profile.address_suite || "",
         city: profile.address_city || "",
         state: profile.address_state || "",
         zip: profile.address_zip || "",
@@ -108,6 +112,7 @@ export const PracticeProfileForm = () => {
       license_number: sanitizeEncrypted(profile.license_number) || "",
       shipping_address: {
         street: profile.shipping_address_street || "",
+        suite: profile.shipping_address_suite || "",
         city: profile.shipping_address_city || "",
         state: profile.shipping_address_state || "",
         zip: profile.shipping_address_zip || "",

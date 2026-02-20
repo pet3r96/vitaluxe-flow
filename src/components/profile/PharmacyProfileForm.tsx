@@ -332,6 +332,7 @@ export function PharmacyProfileForm() {
                       <GoogleAddressAutocomplete
                         value={{
                           street: field.value.street || "",
+                          suite: field.value.suite || "",
                           city: field.value.city || "",
                           state: field.value.state || "",
                           zip: field.value.zip || "",

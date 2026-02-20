@@ -9,6 +9,7 @@ interface DeliveryAddressEditorProps {
   addressType: 'practice' | 'patient';
   currentAddress?: {
     street: string;
+    suite?: string;
     city: string;
     state: string;
     zip: string;
@@ -28,6 +29,7 @@ const parseOldAddress = (oldAddress: string) => {
       return {
         street,
         city,
+        suite: '',
         state: stateZipMatch[1],
         zip: stateZipMatch[2].split('-')[0],
         formatted: oldAddress,
@@ -54,6 +56,7 @@ export function DeliveryAddressEditor({
 
   const [address, setAddress] = useState<AddressValue>({
     street: initialAddress?.street || "",
+    suite: initialAddress?.suite || "",
     city: initialAddress?.city || "",
     state: initialAddress?.state || "",
     zip: initialAddress?.zip || "",
