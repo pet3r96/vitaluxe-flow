@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { validatePhone } from "@/lib/validators";
 import { getCurrentCSRFToken } from "@/lib/csrf";
-import { useSubscription } from "@/contexts/SubscriptionContext";
 
 interface AddStaffDialogProps {
   open: boolean;
@@ -37,7 +36,6 @@ const STAFF_ROLE_TYPES = [
 export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: AddStaffDialogProps) => {
   const { effectiveUserId, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
-  const { isSubscribed } = useSubscription();
   const [loading, setLoading] = useState(false);
   const [selectedPractice, setSelectedPractice] = useState(practiceId || "");
   const [validationErrors, setValidationErrors] = useState({
@@ -89,12 +87,6 @@ export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: Ad
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Check Pro subscription requirement (use context's isSubscribed which handles all status logic)
-    if (!isSubscribed) {
-      toast.error("VitaLuxePro subscription required to add staff members. Please upgrade your practice subscription.");
-      return;
-    }
     
     // Validate phone if provided
     if (formData.phone) {
