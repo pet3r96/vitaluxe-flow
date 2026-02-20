@@ -131,6 +131,7 @@ export const PatientDialog = ({
                 fullPatient.gender_at_birth?.toLowerCase() === 'u' ? 'u' :
                 fullPatient.gender_at_birth || "",
         address_street: fullPatient.address_street || "",
+        address_suite: (fullPatient as any).address_suite || "",
         address_city: fullPatient.address_city || "",
         address_state: fullPatient.address_state || "",
         address_zip: fullPatient.address_zip || "",
