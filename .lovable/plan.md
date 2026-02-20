@@ -1,52 +1,62 @@
 
-# Fix: Pharmacy Staff Creation Creates Phantom Pharmacy Record
 
-## Root Cause
+# Fix: Grant Portal Access - CSRF Token Missing + User Lookup Scalability
 
-When a pharmacy owner adds a staff member via the "Add Staff Member" dialog:
+## Issues Found
 
-1. The `AddPharmacyStaffDialog` sends `role: 'pharmacy_staff'` to the `assign-user-role` edge function
-2. The edge function normalizes this to `role: 'pharmacy'` (line 418) so RLS policies work
-3. The `create_user_with_role` RPC sees `role = 'pharmacy'` and creates a **new record in the `pharmacies` table** -- this is the bug
-4. The edge function then also correctly creates a `pharmacy_staff` record
+### Issue 1: CSRF Token Not Sent (Critical - Blocks Functionality)
+The `create-patient-portal-account` edge function requires a CSRF token (validated on line 98-106), but the client-side call in `PatientsDataTable.tsx` (line 121-124) does **not** include the `x-csrf-token` header. This causes a **403 Forbidden** error every time a practice tries to grant portal access.
 
-Result: the new staff member appears as a standalone pharmacy in the Pharmacy Management table AND as staff -- exactly the Bob Fasano issue.
+Other edge function calls in the codebase (checkout, impersonation, cancel order) correctly include the CSRF token -- this one was missed.
+
+### Issue 2: `listUsers()` Without Pagination (Low Risk Now, Will Break Later)
+The edge function calls `supabaseAdmin.auth.admin.listUsers()` on line 493 without specifying `perPage`. The default page size is typically 50-100. With 26 users currently, this works fine, but as the platform grows it will fail to find existing users, causing duplicate auth user errors or unnecessary password resets.
 
 ## Fix
 
-**File: `supabase/functions/assign-user-role/index.ts`**
+### File: `src/components/patients/PatientsDataTable.tsx`
+Add the CSRF token header to the `create-patient-portal-account` invocation:
 
-Track the original role before normalization, then pass a flag in the roleData so the RPC can skip creating a `pharmacies` record.
+```typescript
+import { getCSRFToken } from "@/lib/csrf";
 
-- Before line 418 (where `signupData.role` is set to `'pharmacy'`), store a flag: `signupData.roleData.isPharmacyStaff = true`
-- After the RPC call completes but before pharmacy-specific logic runs (line 818-831 where priority_map is updated), add a guard to skip that section for pharmacy staff
+// In the mutation:
+const csrfToken = getCSRFToken();
+if (!csrfToken) {
+  throw new Error("Security token missing. Please refresh the page.");
+}
 
-**Database: Update `create_user_with_role` RPC**
-
-Modify the `IF p_role = 'pharmacy'` block to check for the `isPharmacyStaff` flag in `p_role_data` and skip the `pharmacies` INSERT when it's true:
-
-```sql
-IF p_role = 'pharmacy' AND NOT COALESCE((p_role_data->>'isPharmacyStaff')::boolean, false) THEN
-  -- existing pharmacies INSERT logic
-END IF;
+const { data: portalData, error: portalError } = await supabase.functions.invoke(
+  'create-patient-portal-account',
+  { 
+    body: { patientId },
+    headers: { 'x-csrf-token': csrfToken }
+  }
+);
 ```
 
-This ensures:
-- Actual pharmacy accounts still get a `pharmacies` record created
-- Pharmacy staff accounts only get a `pharmacy_staff` record (handled later in the edge function)
-- The `user_roles` entry is still set to `pharmacy` for RLS compatibility
+### File: `supabase/functions/create-patient-portal-account/index.ts`
+Replace the unscalable `listUsers()` call with a targeted email lookup:
 
-## Changes Summary
+```typescript
+// Instead of listing ALL users and filtering client-side:
+const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
+const foundUser = existingAuthUser?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+
+// Use a paginated lookup or direct query approach:
+const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+  page: 1,
+  perPage: 1000
+});
+const foundUser = users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+```
+
+This ensures the lookup covers all users. At larger scale (1000+ users), this should be migrated to a direct auth schema query, but for now 1000 perPage is sufficient.
+
+## Summary
 
 | File | Change |
 |------|--------|
-| `supabase/functions/assign-user-role/index.ts` | Add `isPharmacyStaff = true` flag to roleData before role normalization; guard priority_map update |
-| `create_user_with_role` RPC (migration) | Add `isPharmacyStaff` check to skip `pharmacies` INSERT for staff users |
+| `src/components/patients/PatientsDataTable.tsx` | Add CSRF token header to edge function call |
+| `supabase/functions/create-patient-portal-account/index.ts` | Add `perPage: 1000` to `listUsers()` call |
 
-## Verification
-
-After the fix:
-- Adding a pharmacy staff member will only create entries in `profiles`, `user_roles` (as `pharmacy`), and `pharmacy_staff`
-- No phantom record will appear in the `pharmacies` table
-- The Pharmacy Management table will only show actual pharmacies
-- Existing pharmacy creation flow remains unchanged
