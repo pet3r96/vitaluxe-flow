@@ -55,6 +55,7 @@ export function DeliveryAddressEditor({
 
   const [address, setAddress] = useState<AddressValue>({
     street: initialAddress?.street || "",
+    suite: initialAddress?.suite || "",
     city: initialAddress?.city || "",
     state: initialAddress?.state || "",
     zip: initialAddress?.zip || "",

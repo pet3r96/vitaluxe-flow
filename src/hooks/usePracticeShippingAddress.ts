@@ -10,7 +10,7 @@ export const usePracticeShippingAddress = (practiceId: string | null) => {
       // Query from profiles table (not providers)
       const { data, error } = await supabase
         .from('profiles')
-        .select('shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip')
+        .select('shipping_address_street, shipping_address_suite, shipping_address_city, shipping_address_state, shipping_address_zip')
         .eq('id', practiceId)
         .maybeSingle();
       

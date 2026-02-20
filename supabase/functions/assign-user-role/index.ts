@@ -672,6 +672,7 @@ serve(async (req) => {
         // New structured format (preferred)
         return {
           address_street: roleData.address_street,
+          address_suite: roleData.address_suite || null,
           address_city: roleData.address_city,
           address_state: roleData.address_state,
           address_zip: roleData.address_zip,

@@ -186,6 +186,7 @@ export function buildViosOrderPayload(
       dateOfBirth: dob,
       gender: mapGender(patient?.gender_at_birth),
       address1: shippingLine1,
+      ...(shippingSuite && { address2: shippingSuite }),
       city: shippingCity,
       state: shippingState,
       zip: shippingZip,
