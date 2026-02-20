@@ -104,6 +104,7 @@ export const AddRepresentativeDialog = ({ open, onOpenChange, onSuccess }: AddRe
           email: formData.email,
           name: formData.name,
           role: formData.repType,
+          csrfToken,
           roleData: {
             ...(formData.repType === "downline" && { 
               linkedToplineId: formData.assignedToplineId 
