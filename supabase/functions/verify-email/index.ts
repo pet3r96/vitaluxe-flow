@@ -70,15 +70,23 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .eq('id', tokenData.user_id);
 
-    // Confirm email in the auth system
-    await supabaseAdmin.auth.admin.updateUserById(tokenData.user_id, {
-      email_confirm: true,
-    });
-
     if (profileError) {
       edgeLogger.error('Profile update error', profileError);
       return new Response(
         JSON.stringify({ error: 'Failed to verify account. Please try again.' }),
+        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Confirm email in the auth system - check result!
+    const { error: authConfirmError } = await supabaseAdmin.auth.admin.updateUserById(tokenData.user_id, {
+      email_confirm: true,
+    });
+
+    if (authConfirmError) {
+      edgeLogger.error('Auth email confirm error', authConfirmError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to confirm email in auth system. Please try again.' }),
         { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
