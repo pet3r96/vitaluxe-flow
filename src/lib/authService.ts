@@ -50,7 +50,7 @@ export const authService = {
       if (existingProfile) {
         return { 
           error: { 
-            message: 'This email address is already registered. Please use a different email or try logging in.' 
+            message: 'This email already exists in the system. No duplicate users allowed -- please use another email or log in with your existing account.' 
           } 
         };
       }
@@ -75,13 +75,13 @@ export const authService = {
       });
 
       if (error) {
-        logger.error('Self-signup error', error);
         const msg = await getEdgeFunctionErrorAsync(data, error);
+        logger.warn('Self-signup rejected', { message: msg });
         return { error: { message: msg } };
       }
 
       if (data?.error) {
-        logger.error('Self-signup validation error', new Error(data.error));
+        logger.warn('Self-signup validation rejected', { message: data.error });
         return { error: { message: data.error } };
       }
 
@@ -115,7 +115,7 @@ export const authService = {
       if (existingProfile) {
         return { 
           error: { 
-            message: 'This email address is already registered in the system.' 
+            message: 'This email already exists in the system. No duplicate users allowed -- please use another email or log in with the existing account.' 
           } 
         };
       }
@@ -140,13 +140,13 @@ export const authService = {
       });
 
       if (error) {
-        logger.error('Admin user creation error', error);
         const msg = await getEdgeFunctionErrorAsync(data, error);
+        logger.warn('Admin user creation rejected', { message: msg });
         return { error: { message: msg } };
       }
 
       if (data?.error) {
-        logger.error('Admin user creation validation error', new Error(data.error));
+        logger.warn('Admin user creation rejected', { message: data.error });
         return { error: { message: data.error } };
       }
 
