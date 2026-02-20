@@ -354,6 +354,19 @@ const GoogleAddressAutocompleteInner = ({
           name="address-autocomplete"
         />
       </Autocomplete>
+
+      <Input
+        placeholder="Suite / Apt / Unit (optional)"
+        type="text"
+        value={suiteValue}
+        onChange={(e) => {
+          const newSuite = e.target.value;
+          setSuiteValue(newSuite);
+          onChange({ ...value, suite: newSuite });
+        }}
+        disabled={disabled}
+        className="max-w-[200px]"
+      />
       
       {validating && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
