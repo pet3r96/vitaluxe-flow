@@ -29,6 +29,7 @@ const parseOldAddress = (oldAddress: string) => {
       return {
         street,
         city,
+        suite: '',
         state: stateZipMatch[1],
         zip: stateZipMatch[2].split('-')[0],
         formatted: oldAddress,
