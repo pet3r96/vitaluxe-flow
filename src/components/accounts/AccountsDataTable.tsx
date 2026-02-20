@@ -361,10 +361,10 @@ export const AccountsDataTable = () => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
           <div className="relative flex-1 max-w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
+           <Input
             placeholder="Search accounts..."
-            value={searchQuery}
-            onChange={(e) => debouncedSetSearch(e.target.value)}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
             className="pl-9 w-full"
           />
           </div>
