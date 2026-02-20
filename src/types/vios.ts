@@ -358,10 +358,10 @@ export function getViosRxNumber(response: ViosOrderResponse): string | undefined
  * Get VIOS shipping service code from shipping speed string
  */
 export function getViosShippingCode(shippingSpeed: string | null | undefined): ViosShippingCode {
-  if (!shippingSpeed) return VIOS_SHIPPING_CODES.FEDEX_GROUND;
+  if (!shippingSpeed) return VIOS_SHIPPING_CODES.USPS_PRIORITY;
   
   const normalizedSpeed = shippingSpeed.toLowerCase().replace(/[-\s]/g, '_');
-  return SHIPPING_SPEED_TO_VIOS[normalizedSpeed] || VIOS_SHIPPING_CODES.FEDEX_GROUND;
+  return SHIPPING_SPEED_TO_VIOS[normalizedSpeed] || VIOS_SHIPPING_CODES.USPS_PRIORITY;
 }
 
 /**

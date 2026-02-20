@@ -84,9 +84,9 @@ export function isViosPharmacy(pharmacyId: string, pharmacyName?: string, apiEnd
  * Get VIOS shipping code from internal shipping speed
  */
 export function getViosShippingCode(shippingSpeed: string | null | undefined): ViosShippingCode {
-  if (!shippingSpeed) return VIOS_SHIPPING_CODES.FEDEX_GROUND;
+  if (!shippingSpeed) return VIOS_SHIPPING_CODES.USPS_PRIORITY;
   const normalized = shippingSpeed.toLowerCase().replace(/[-\s]/g, '_');
-  return SHIPPING_SPEED_TO_VIOS[normalized] || VIOS_SHIPPING_CODES.FEDEX_GROUND;
+  return SHIPPING_SPEED_TO_VIOS[normalized] || VIOS_SHIPPING_CODES.USPS_PRIORITY;
 }
 
 /**

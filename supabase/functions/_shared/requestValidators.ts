@@ -350,7 +350,7 @@ export function validateApprovePendingProductRequest(data: any) {
 export function validateCalculateShippingRequest(data: any) {
   const validations = [
     validateUUID(data.pharmacy_id, 'pharmacy_id'),
-    validateEnum(data.shipping_speed, 'shipping_speed', ['ground', '2day', 'overnight'], true)
+    validateEnum(data.shipping_speed, 'shipping_speed', ['overnight', '2day', 'priority', 'first_class', 'ground'], true)
   ];
   
   return validateInput(validations);

@@ -446,7 +446,7 @@ serve(async (req) => {
         price_before_discount: line.price_snapshot,
         discount_percentage: discount_percentage || 0,
         discount_amount: ((line.price_snapshot - discountedPrice) * (line.quantity || 1)) || 0,
-        shipping_speed: line.shipping_speed || 'ground', // Default to 'ground' if not specified
+        shipping_speed: line.shipping_speed || 'first_class',
         shipping_cost: lineShippingCost,
         patient_id: line.patient_id,
         patient_name: line.patient_name,
