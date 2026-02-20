@@ -215,6 +215,7 @@ const Auth = () => {
           // Check if this is an email verification error
           if (hasAuthErrorCode(error, 'email_not_verified')) {
             setReminderEmail(error.email || email);
+            setReminderUserId(error.userId || '');
             setShowVerificationReminder(true);
             setLoading(false);
             return;
