@@ -204,6 +204,7 @@ const App = () => {
                     <Routes>
                       {/* Public Routes */}
                       <Route path="/auth" element={<Auth />} />
+                      <Route path="/signup" element={<Auth />} />
                       <Route path="/verify-email" element={<VerifyEmail />} />
                       <Route path="/change-password" element={<ChangePassword />} />
                       <Route

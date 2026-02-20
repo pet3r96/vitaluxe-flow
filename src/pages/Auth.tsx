@@ -17,7 +17,7 @@ import { validatePasswordStrength } from "@/lib/passwordValidation";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Mail, CheckCircle2, AlertCircle } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { GoogleAddressAutocomplete, type AddressValue } from "@/components/ui/google-address-autocomplete";
 import { cn } from "@/lib/utils";
 import { useErrorDialog } from "@/hooks/use-error-dialog";
