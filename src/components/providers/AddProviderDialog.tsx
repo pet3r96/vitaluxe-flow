@@ -13,7 +13,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { validatePhone, validateNPI, validateDEA } from "@/lib/validators";
 import { verifyNPIDebounced } from "@/lib/npiVerification";
 import { getCurrentCSRFToken } from "@/lib/csrf";
-import { useSubscription } from "@/contexts/SubscriptionContext";
 import { logger } from "@/lib/logger";
 
 interface AddProviderDialogProps {
