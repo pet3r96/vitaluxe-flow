@@ -70,6 +70,11 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .eq('id', tokenData.user_id);
 
+    // Confirm email in the auth system
+    await supabaseAdmin.auth.admin.updateUserById(tokenData.user_id, {
+      email_confirm: true,
+    });
+
     if (profileError) {
       edgeLogger.error('Profile update error', profileError);
       return new Response(
