@@ -1,50 +1,74 @@
 
-
-# Fix: Verification Email Failing -- Missing Database Table
+# Fix: Subscription Check Blocking Provider/Staff Creation
 
 ## Problem
-The new practice that signed up (user ID `4a6ca268-c18e-44bb-9213-80183fdd1726`) **did NOT receive a verification email**. The `send-verification-email` function failed 3 times because it tries to insert into a table called `email_verification_tokens` which does not exist in the database.
+When you try to add a provider, you get "VitaLuxePro subscription required" even though the practice has an **active** subscription. The same issue affects adding staff members.
 
-Log evidence:
-```
-[send-verification-email] Failed to insert token  error: [object Object]
-```
+**Root cause:** The `AddProviderDialog` and `AddStaffDialog` components ignore the `isSubscribed` value that the SubscriptionContext already correctly computes. Instead, they re-implement their own subscription check that incorrectly requires `currentPeriodEnd > now()`. Your practice's billing period ended Jan 11, but the status is still `active` -- meaning you're subscribed. The inline check doesn't understand this.
 
-## Fix (2 steps)
+This was already fixed in the core subscription logic (`subscriptionCheck.ts`), which correctly says "active status = subscribed, period end is for billing only." But these two components bypassed that fix with their own broken logic.
 
-### Step 1: Create the missing `email_verification_tokens` table
+## Med Spa Verification Status
+Body Preserve Med Spa (info@bodypreserve.com) **did receive their verification email** -- the token was created and the email was delivered via Postmark. They have not yet clicked the verification link. The token is valid until Feb 21, so they still have time.
 
-Create the table with the same structure as the existing token tables (`temp_password_tokens`, `password_reset_tokens`):
+## Fix (2 files)
 
-```sql
-CREATE TABLE public.email_verification_tokens (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  token TEXT NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL,
-  used BOOLEAN DEFAULT FALSE,
-  used_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
+### A. `src/components/providers/AddProviderDialog.tsx` (lines 112-121)
+Replace the broken inline subscription check with the `isSubscribed` value that already comes from the SubscriptionContext:
 
--- Index for fast token lookups
-CREATE INDEX idx_email_verification_tokens_token ON public.email_verification_tokens(token);
-CREATE INDEX idx_email_verification_tokens_user_id ON public.email_verification_tokens(user_id);
+**Before:**
+```typescript
+// Check Pro subscription requirement
+const hasActivePro = 
+  (status === 'trial' && trialEndsAt && new Date(trialEndsAt) > new Date()) ||
+  (status === 'active' && currentPeriodEnd && new Date(currentPeriodEnd) > new Date());
 
--- Enable RLS
-ALTER TABLE public.email_verification_tokens ENABLE ROW LEVEL SECURITY;
-
--- Only service role (edge functions) should access this table
--- No public policies needed since all access goes through admin client in edge functions
+if (!hasActivePro) {
+  toast.error("VitaLuxePro subscription required...");
+  return;
+}
 ```
 
-### Step 2: Re-send the verification email to the practice that just signed up
+**After:**
+```typescript
+// Check Pro subscription requirement (use context's isSubscribed which handles all status logic)
+if (!isSubscribed) {
+  toast.error("VitaLuxePro subscription required to add providers. Please upgrade your practice subscription.");
+  return;
+}
+```
 
-After the table is created, manually trigger the verification email for user `4a6ca268-c18e-44bb-9213-80183fdd1726` by calling the `send-verification-email` edge function directly, so the new practice gets their verification link without having to sign up again.
+### B. `src/components/staff/AddStaffDialog.tsx` (lines 92-101)
+Same fix -- replace inline check with `isSubscribed`:
 
-## Why this happened
-The `send-verification-email` edge function was written to use an `email_verification_tokens` table, but the corresponding database migration to create that table was never run. The other token tables (`temp_password_tokens` for welcome emails, `password_reset_tokens` for password resets) exist and work fine -- this one was simply missed.
+**Before:**
+```typescript
+const hasActivePro = 
+  (status === 'trial' && trialEndsAt && new Date(trialEndsAt) > new Date()) ||
+  (status === 'active' && currentPeriodEnd && new Date(currentPeriodEnd) > new Date());
 
-## No code changes needed
-The edge function code is correct. Only the database table needs to be created, then the email re-sent.
+if (!hasActivePro) {
+  toast.error("VitaLuxePro subscription required...");
+  return;
+}
+```
 
+**After:**
+```typescript
+if (!isSubscribed) {
+  toast.error("VitaLuxePro subscription required to add staff members. Please upgrade your practice subscription.");
+  return;
+}
+```
+
+### C. Cleanup: Remove unused destructured variables
+Both files destructure `status`, `trialEndsAt`, and `currentPeriodEnd` from `useSubscription()` but after this fix, only `isSubscribed` is needed. Clean up the destructuring to remove unused variables.
+
+## Why this is safe
+The `isSubscribed` field from `SubscriptionContext` already handles all the logic correctly:
+- Trial: checks if trial hasn't expired
+- Active: always returns `true` (status itself means subscribed)
+- Suspended/cancelled/expired: returns `false`
+- Auto-extends billing period if needed
+
+No database changes needed. Two files, same one-line fix in each.
