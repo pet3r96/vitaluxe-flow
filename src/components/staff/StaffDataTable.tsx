@@ -20,7 +20,7 @@ import { Search, Eye, UserPlus } from "lucide-react";
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { debounce } from "@/lib/performance";
+import { AddStaffDialog } from "./AddStaffDialog";
 import { AddStaffDialog } from "./AddStaffDialog";
 import { StaffDetailsDialog } from "./StaffDetailsDialog";
 import { toast } from "sonner";
