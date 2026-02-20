@@ -1,61 +1,47 @@
 
 
-# Audit: Remove Subscription Gate from Staff Page
+# Fix: Add Provider Dialog Request Body Mismatch
 
-## Problem
-The `/staff` route is wrapped in BOTH `SubscriptionProtectedRoute` AND `ProGate`, which means practices without a subscription cannot even view or manage their staff. This contradicts the fix we just made to allow adding staff without a subscription.
+## Root Cause
+The "Add Provider" dialog sends a request body that doesn't match what the `assign-user-role` edge function expects. Specifically:
 
-## What should be Pro-only (correct as-is)
-These are premium features that make sense behind the subscription gate:
-- `/practice/patient-inbox` -- Patient messaging portal
-- `/practice-calendar` -- Appointment scheduling/calendar
-- `/document-center` -- Digital EMR/document management
-- `/practice-reporting` -- Practice analytics and reports
-- `/internal-chat` -- Internal team chat
-- "Grant Portal Access" button in PatientsDataTable -- Patient portal invitations
-
-## What should be FREE (needs fixing)
-- **`/staff` route** -- Staff management is a core operational need, not a premium feature. Practices must be able to add and manage staff regardless of subscription status.
+1. **Missing `name`** (top-level) -- The edge function validates `signupData.name` as required, but the dialog never sends it. This causes the "name is required" validation error.
+2. **Missing `prescriberName`** (top-level) -- The edge function reads `signupData.prescriberName` for the RPC call, but the dialog puts it inside `roleData.prescriber_name`.
+3. **`practiceId` wrong location** -- The dialog sends `practiceId` at the top level, but the edge function reads it from `signupData.roleData.practiceId`.
 
 ## Fix (1 file)
 
-### `src/App.tsx` (lines 270-277)
-Remove `SubscriptionProtectedRoute` and `ProGate` wrappers from the `/staff` route.
+### `src/components/providers/AddProviderDialog.tsx` (lines 170-182)
 
-**Before:**
-```tsx
-<Route
-  path="/staff"
-  element={
-    <SubscriptionProtectedRoute>
-      <ProGate>
-        <Staff />
-      </ProGate>
-    </SubscriptionProtectedRoute>
+Update the request body to match the edge function's expected structure:
+
+```typescript
+const requestBody = {
+  email: formData.email.trim(),
+  role: "provider",
+  name: formData.fullName.trim(),              // ADD: top-level name (required by validation)
+  fullName: formData.fullName.trim(),           // ADD: top-level fullName (used by RPC)
+  prescriberName: formData.prescriberName.trim(), // ADD: top-level prescriberName (used by RPC)
+  roleData: {
+    practiceId: targetPracticeId,               // MOVE: was at top level, edge function reads from roleData
+    prescriber_name: formData.prescriberName.trim(),
+    npi: formData.npi.trim(),
+    dea: formData.dea.trim(),
+    license_number: formData.licenseNumber.trim(),
+    phone: formData.phone.replace(/\D/g, ''),
+    full_name: formData.fullName.trim(),
   }
-/>
+};
 ```
 
-**After:**
-```tsx
-<Route path="/staff" element={<Staff />} />
-```
+## What changes
+- `name`, `fullName`, and `prescriberName` added as top-level fields
+- `practiceId` moved from top level into `roleData`
+- Everything inside `roleData` stays the same
 
-## Summary of subscription model after this fix
-
-| Feature | Subscription Required? |
-|---|---|
-| Providers (view, add) | No |
-| Staff (view, add) | No |
-| Patients (view, add) | No |
-| Products, Cart, Checkout, Orders | No |
-| Pharmacies | No |
-| Patient Inbox | Yes (Pro) |
-| Practice Calendar | Yes (Pro) |
-| Document Center | Yes (Pro) |
-| Practice Reporting | Yes (Pro) |
-| Internal Chat | Yes (Pro) |
-| Grant Patient Portal Access | Yes (Pro) |
-
-No other files need changes. The inline subscription checks in `AddProviderDialog` and `AddStaffDialog` were already removed in the previous fix.
+## What stays the same
+- All form validation logic (NPI verification, phone, DEA)
+- Edge function code -- no changes needed
+- CSRF token handling
+- Query invalidation after success
 
