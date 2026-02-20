@@ -169,9 +169,7 @@ export const PatientSelectionDialog = ({
       
       // Filter out patients with incomplete data that would cause cart errors
       const validPatients = ((data || []) as unknown as PatientAccount[]).filter((patient) => {
-        const hasEmail = !!patient.email;
-        const hasId = !!patient.id;
-        return hasEmail && hasId;
+        return !!patient.id;
       });
       
       return validPatients;
