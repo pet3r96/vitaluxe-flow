@@ -46,22 +46,24 @@ serve(async (req) => {
   }
 
   try {
-    const { street, city, state, zip, manual_override } = await req.json() as AddressInput & { manual_override?: boolean };
+    const { street, suite, city, state, zip, manual_override } = await req.json() as AddressInput & { manual_override?: boolean };
     const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
 
     if (!GOOGLE_API_KEY) {
       throw new Error('GOOGLE_API_KEY not configured');
     }
 
-    edgeLogger.info('Google Address Validation: Processing address', { street, city, state, zip });
+    edgeLogger.info('Google Address Validation: Processing address', { street, suite, city, state, zip });
 
     // If manual override, skip validation
     if (manual_override) {
+      const suiteStr = suite ? ` ${suite}` : '';
       return new Response(
         JSON.stringify({
           is_valid: true,
-          formatted_address: `${street}, ${city}, ${state} ${zip}`,
+          formatted_address: `${street}${suiteStr}, ${city}, ${state} ${zip}`,
           street,
+          suite: suite || '',
           city,
           state,
           zip,
