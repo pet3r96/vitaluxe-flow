@@ -41,6 +41,7 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { formatPhoneNumber } from "@/lib/validators";
 import { logger } from "@/lib/logger";
 import { formatPatientEmail } from "@/lib/email/emailValidation";
+import { getCSRFToken } from "@/lib/csrf";
 
 export const PatientsDataTable = () => {
   const { effectiveRole, effectivePracticeId, user } = useAuth();
@@ -117,10 +118,18 @@ export const PatientsDataTable = () => {
         throw new Error('VitaLuxePro subscription required');
       }
 
-      // Create portal account
+      // Create portal account with CSRF protection
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error("Security token missing. Please refresh the page.");
+      }
+
       const { data: portalData, error: portalError } = await supabase.functions.invoke(
         'create-patient-portal-account',
-        { body: { patientId } }
+        { 
+          body: { patientId },
+          headers: { 'x-csrf-token': csrfToken }
+        }
       );
 
       if (portalError) {
