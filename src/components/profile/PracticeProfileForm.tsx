@@ -93,6 +93,13 @@ export const PracticeProfileForm = () => {
     enabled: !!effectiveUserId,
   });
 
+  // Auto-set NPI verification status to "verified" when profile loads with existing valid NPI
+  useEffect(() => {
+    if (profile?.npi && sanitizeEncrypted(profile.npi)?.length === 10 && npiVerificationStatus === null) {
+      setNpiVerificationStatus("verified");
+    }
+  }, [profile?.npi]);
+
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
