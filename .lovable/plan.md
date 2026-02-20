@@ -1,41 +1,46 @@
 
 
-# Fix: "No Patients Found" When Patient Has No Email
+# Fix: Instant Patient Visibility Across All Flows
 
 ## Problem
 
-The "Add to Cart" dialog on the Products page filters out any patient that doesn't have an email address. Since the patient form allows adding patients without an email (which is correct -- not all patients have email), this creates a contradiction: a patient can be added successfully but then be invisible when ordering.
+Even though the PatientDialog now clears caches after adding a patient, two issues remain:
 
-The newly added patient "TEST SMITH" has no email, so the filter on line 171-174 of `PatientSelectionDialog.tsx` removes them entirely.
+1. The global React Query config sets `refetchOnMount: false`, which means if you navigate to Products and open "Add to Cart" within 30 seconds of a previous fetch, the dialog shows stale cached data instead of refetching.
+2. The PatientSelectionDialog (the "select a patient" dialog on the Products page) does not force a refetch when it opens, so it can serve stale data from a prior session.
 
-## Fix
+## Changes
 
-**File: `src/components/products/PatientSelectionDialog.tsx`** (lines 170-176)
+### 1. PatientSelectionDialog: Always refetch when dialog opens
 
-Remove the email requirement from the patient filter. Only require that the patient has an `id` (which every database row will have). The email filter was added as a "safety guard" but is incorrect -- patients without email are valid for ordering.
+**File: `src/components/products/PatientSelectionDialog.tsx`**
 
-Change:
-```typescript
-const validPatients = ((data || []) as unknown as PatientAccount[]).filter((patient) => {
-  const hasEmail = !!patient.email;
-  const hasId = !!patient.id;
-  return hasEmail && hasId;
-});
-```
+Add `refetchOnMount: "always"` and `staleTime: 0` to the patient query so that every time the dialog opens, it fetches the latest patients from the database -- no stale cache.
 
-To:
-```typescript
-const validPatients = ((data || []) as unknown as PatientAccount[]).filter((patient) => {
-  return !!patient.id;
-});
-```
+### 2. Global config: Enable refetchOnMount
 
-This is the only change needed. One file, one line of logic.
+**File: `src/lib/queryClient.ts`**
 
-## Why This Is Safe
+Change `refetchOnMount: false` to `refetchOnMount: true`. The current `false` setting is too aggressive and causes stale data bugs across the app. With `staleTime: 30s` still in place, this only triggers refetches when data is stale (older than 30s), so there's minimal performance impact.
 
-- The `id` field is a primary key and always exists
-- Email is already optional in the patient creation form
-- Shipping address and other order details are handled separately in the cart flow
-- If email is needed for order notifications, that should be checked at order submission time, not at patient selection time
+### 3. PatientDialog: Also clear query for the specific practice ID
+
+**File: `src/components/patients/PatientDialog.tsx`**
+
+The current `removeQueries({ queryKey: ["practice-patients"] })` already handles prefix matching, but we should also explicitly remove the patients query used by the main patients page (`["patients", effectiveRole, effectivePracticeId]`) to cover that flow too.
+
+## Technical Summary
+
+| File | Change |
+|------|--------|
+| `src/components/products/PatientSelectionDialog.tsx` | Add `refetchOnMount: "always"` and `staleTime: 0` to patient query |
+| `src/lib/queryClient.ts` | Change `refetchOnMount: false` to `refetchOnMount: true` |
+| `src/components/patients/PatientDialog.tsx` | Ensure all patient query keys are cleared on add |
+
+## Expected Result
+
+- Add a patient on the Patients page -- it appears instantly in the list
+- Navigate to Products, open "Add to Cart" -- the new patient is there immediately
+- Go to Cart and create an order -- the patient is available for selection
+- No stale data anywhere in the app
 
