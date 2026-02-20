@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,7 +20,6 @@ import { Search, Eye, UserPlus } from "lucide-react";
 import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { debounce } from "@/lib/performance";
 import { AddStaffDialog } from "./AddStaffDialog";
 import { StaffDetailsDialog } from "./StaffDetailsDialog";
 import { toast } from "sonner";
@@ -30,12 +30,11 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 export const StaffDataTable = () => {
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const { isMobile } = useResponsive();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const searchQuery = useDebounce(inputValue, 300);
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-
-  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   const { data: staff, isLoading, refetch } = useQuery({
     queryKey: ["staff", effectiveUserId, effectiveRole, effectivePracticeId],
@@ -134,8 +133,8 @@ export const StaffDataTable = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search staff..."
-            value={searchQuery}
-            onChange={(e) => debouncedSetSearch(e.target.value)}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
             className="pl-9"
           />
         </div>

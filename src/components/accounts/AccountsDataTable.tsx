@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useResponsive } from "@/hooks/use-mobile";
-import { debounce } from "@/lib/performance";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   Table,
   TableBody,
@@ -47,15 +47,14 @@ export const AccountsDataTable = () => {
   const { toast } = useToast();
   const { effectiveRole } = useAuth();
   const { isMobile } = useResponsive();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const searchQuery = useDebounce(inputValue, 300);
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   const { data: accounts, isLoading, refetch } = useQuery({
     queryKey: ["accounts", roleFilter],
@@ -367,10 +366,10 @@ export const AccountsDataTable = () => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
           <div className="relative flex-1 max-w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
+           <Input
             placeholder="Search accounts..."
-            value={searchQuery}
-            onChange={(e) => debouncedSetSearch(e.target.value)}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
             className="pl-9 w-full"
           />
           </div>
