@@ -415,6 +415,7 @@ serve(async (req) => {
       }
       // Pharmacy staff get the 'pharmacy' role in user_roles (not a new enum value)
       // This ensures existing RLS policies work automatically
+      signupData.roleData.isPharmacyStaff = true;
       signupData.role = 'pharmacy' as any;
     }
 
@@ -815,8 +816,8 @@ serve(async (req) => {
     }
 
 
-    // For pharmacy role, update priority_map if provided
-    if (signupData.role === 'pharmacy' && signupData.roleData.priorityMap) {
+    // For pharmacy role, update priority_map if provided (skip for pharmacy staff)
+    if (signupData.role === 'pharmacy' && signupData.roleData.priorityMap && !signupData.roleData.isPharmacyStaff) {
       const { error: priorityMapError } = await supabaseAdmin
         .from('pharmacies')
         .update({
