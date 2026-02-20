@@ -140,13 +140,13 @@ export const authService = {
       });
 
       if (error) {
-        logger.error('Admin user creation error', error);
         const msg = await getEdgeFunctionErrorAsync(data, error);
+        logger.warn('Admin user creation rejected', { message: msg });
         return { error: { message: msg } };
       }
 
       if (data?.error) {
-        logger.error('Admin user creation validation error', new Error(data.error));
+        logger.warn('Admin user creation rejected', { message: data.error });
         return { error: { message: data.error } };
       }
 
