@@ -367,12 +367,11 @@ serve(async (req) => {
       });
 
       // CRITICAL: Providers must have prescriber credentials
-      if (!signupData.roleData.npi || !signupData.roleData.dea) {
+      if (!signupData.roleData.npi) {
         edgeLogger.error('Missing provider credentials', {
-          hasNPI: !!signupData.roleData.npi,
-          hasDEA: !!signupData.roleData.dea
+          hasNPI: !!signupData.roleData.npi
         });
-        return errorResponse('Providers must have NPI and DEA numbers', 400);
+        return errorResponse('Providers must have a valid NPI number', 400);
       }
 
       // CRITICAL: Providers must have full name
