@@ -63,8 +63,8 @@ export const getPatientPracticeSubscription = async (
   // Check if subscription is active
   if (sub.status === 'trial' && sub.trial_ends_at) {
     isSubscribed = new Date(sub.trial_ends_at) > now;
-  } else if (sub.status === 'active' && sub.current_period_end) {
-    isSubscribed = new Date(sub.current_period_end) > now;
+  } else if (sub.status === 'active') {
+    isSubscribed = true;
   } else if (sub.status === 'suspended' && sub.grace_period_ends_at) {
     isSubscribed = new Date(sub.grace_period_ends_at) > now;
   }
