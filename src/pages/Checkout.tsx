@@ -898,7 +898,7 @@ export default function Checkout() {
                              line.shipping_speed === 'overnight' ? 'Overnight' : 
                              line.shipping_speed === 'priority' ? 'Priority' :
                              line.shipping_speed === 'first_class' ? 'First Class' :
-                             'Ground'} Shipping
+                             'Standard'} Shipping
                           </Badge>
                           <Badge variant="secondary">Practice Order</Badge>
                         </div>
@@ -975,7 +975,7 @@ export default function Checkout() {
                        line.shipping_speed === 'overnight' ? 'Overnight' : 
                        line.shipping_speed === 'priority' ? 'Priority' :
                        line.shipping_speed === 'first_class' ? 'First Class' :
-                       'Ground'} Shipping
+                       'Standard'} Shipping
                     </Badge>
                     <Badge>Patient: {line.patient_name}</Badge>
                   </div>
