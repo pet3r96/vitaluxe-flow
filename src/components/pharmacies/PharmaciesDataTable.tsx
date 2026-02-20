@@ -189,9 +189,9 @@ export const PharmaciesDataTable = () => {
             fields: [
               { 
                 label: 'Account Status', 
-                value: !pharmacy.user_id ? 'No Account' : 'Active',
+                value: pharmacy.api_enabled ? 'API Integrated' : (!pharmacy.user_id ? 'No Account' : 'Active'),
                 badge: true,
-                badgeVariant: !pharmacy.user_id ? 'destructive' : 'default'
+                badgeVariant: pharmacy.api_enabled ? 'secondary' : (!pharmacy.user_id ? 'destructive' : 'default')
               },
               { 
                 label: 'States Serviced', 
