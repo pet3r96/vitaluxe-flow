@@ -193,6 +193,16 @@ const Auth = () => {
           setLoading(false);
           return;
         }
+      } else if (role === "topline") {
+        if (!phone || !company) {
+          toast({
+            title: "Error",
+            description: "Please provide Phone Number and Company Name",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
       }
     }
     try {
