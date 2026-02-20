@@ -213,11 +213,14 @@ export const SHIPPING_SPEED_TO_VIOS: Record<string, ViosShippingCode> = {
   'standard_overnight': VIOS_SHIPPING_CODES.FEDEX_STANDARD_OVERNIGHT,
   'overnight_california': VIOS_SHIPPING_CODES.FEDEX_OVERNIGHT_CALIFORNIA,
   '2_day': VIOS_SHIPPING_CODES.FEDEX_2_DAY,
-  'ground': VIOS_SHIPPING_CODES.FEDEX_GROUND,
   'usps_priority': VIOS_SHIPPING_CODES.USPS_PRIORITY,
   'overnight': VIOS_SHIPPING_CODES.FEDEX_STANDARD_OVERNIGHT,
   'express': VIOS_SHIPPING_CODES.FEDEX_PRIORITY_OVERNIGHT,
-  'standard': VIOS_SHIPPING_CODES.FEDEX_GROUND,
+  '2day': VIOS_SHIPPING_CODES.FEDEX_2_DAY,
+  'priority': VIOS_SHIPPING_CODES.USPS_PRIORITY,
+  'first_class': VIOS_SHIPPING_CODES.USPS_PRIORITY,
+  'ground': VIOS_SHIPPING_CODES.FEDEX_GROUND, // historical
+  'standard': VIOS_SHIPPING_CODES.FEDEX_GROUND, // historical
 };
 
 // ============= Allergy Types (from /api/allergies - AllergyPagedResult) =============
