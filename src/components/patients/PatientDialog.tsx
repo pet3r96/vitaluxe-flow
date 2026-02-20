@@ -594,6 +594,7 @@ export const PatientDialog = ({
               label="Patient Address *"
               value={{
                 street: formData.address_street,
+                suite: formData.address_suite,
                 city: formData.address_city,
                 state: formData.address_state,
                 zip: formData.address_zip,
@@ -602,6 +603,7 @@ export const PatientDialog = ({
                 setFormData({
                   ...formData,
                   address_street: addressData.street || "",
+                  address_suite: addressData.suite || "",
                   address_city: addressData.city || "",
                   address_state: addressData.state || "",
                   address_zip: addressData.zip || "",
