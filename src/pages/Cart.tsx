@@ -342,7 +342,7 @@ const Cart = React.memo(function Cart() {
     mark('Cart:normalization-start', { cartId: cart.id, version: cartVersion, groupCount: groups.size });
 
     // Build normalization plan - SKIP groups already normalized
-    const normalizationPlan: Array<{ lineIds: string[]; targetSpeed: 'ground' | '2day' | 'overnight'; groupKey: string }> = [];
+    const normalizationPlan: Array<{ lineIds: string[]; targetSpeed: 'overnight' | '2day' | 'priority' | 'first_class'; groupKey: string }> = [];
     
     groups.forEach((group: any, key: string) => {
       // Skip if already normalized
@@ -357,18 +357,20 @@ const Cart = React.memo(function Cart() {
         return; // Skip this group
       }
 
-      const enabledSpeeds = Object.keys(rates) as ('ground' | '2day' | 'overnight')[];
+      const enabledSpeeds = Object.keys(rates) as ('overnight' | '2day' | 'priority' | 'first_class')[];
       
-      // Normalize if shipping_speed is missing, invalid ('standard'), or not in enabled list
+      // Normalize if shipping_speed is missing, invalid ('standard'/'ground'), or not in enabled list
       const needsNormalization = !group.shipping_speed || 
         group.shipping_speed === 'standard' || 
+        group.shipping_speed === 'ground' ||
         !enabledSpeeds.includes(group.shipping_speed);
 
       if (needsNormalization && enabledSpeeds.length > 0) {
-        // Pick default in priority order: fastest/most expensive first (overnight → 2day → ground)
+        // Pick default in priority order: fastest first (overnight → 2day → priority → first_class)
         const targetSpeed = enabledSpeeds.includes('overnight') ? 'overnight' :
                             enabledSpeeds.includes('2day') ? '2day' : 
-                            enabledSpeeds.includes('ground') ? 'ground' :
+                            enabledSpeeds.includes('priority') ? 'priority' :
+                            enabledSpeeds.includes('first_class') ? 'first_class' :
                             enabledSpeeds[0];
         const lineIds = group.lines.map((l: any) => l.id);
         normalizationPlan.push({ lineIds, targetSpeed, groupKey: key });
