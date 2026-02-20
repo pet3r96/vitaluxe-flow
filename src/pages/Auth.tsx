@@ -439,7 +439,7 @@ const Auth = () => {
 
               <div className="space-y-3">
                 <Label>I am a:</Label>
-                <RadioGroup value={role} onValueChange={value => setRole(value as "doctor" | "pharmacy")}>
+                <RadioGroup value={role} onValueChange={value => setRole(value as "doctor" | "pharmacy" | "topline")}>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="doctor" id="doctor" />
                     <Label htmlFor="doctor" className="font-normal cursor-pointer">
@@ -450,6 +450,12 @@ const Auth = () => {
                     <RadioGroupItem value="pharmacy" id="pharmacy" />
                     <Label htmlFor="pharmacy" className="font-normal cursor-pointer">
                       Pharmacy
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="topline" id="topline" />
+                    <Label htmlFor="topline" className="font-normal cursor-pointer">
+                      Representative
                     </Label>
                   </div>
                 </RadioGroup>
