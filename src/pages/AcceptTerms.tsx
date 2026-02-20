@@ -219,6 +219,32 @@ export default function AcceptTerms() {
         toast.success(isImpersonating 
           ? `Terms accepted for ${impersonatedUserName || 'impersonated user'}!`
           : "Terms accepted successfully!");
+
+        // Auto-enroll practice in trial after terms acceptance
+        if (effectiveRole === 'doctor' && !isImpersonating) {
+          try {
+            logger.info('[AcceptTerms] Auto-enrolling practice in trial after terms acceptance');
+            const { data: subData, error: subError } = await supabase.functions.invoke(
+              'subscribe-to-vitaluxepro',
+              { body: { autoEnroll: true } }
+            );
+            if (subError) {
+              logger.error('[AcceptTerms] Auto-enrollment failed', subError);
+            } else {
+              const isNewTrial = subData && 
+                !(subData as { alreadySubscribed?: boolean })?.alreadySubscribed;
+              if (isNewTrial) {
+                toast.success("Your 14-day free trial has started! 🎉", {
+                  description: "Full access to all features. Add a payment method before day 14 to continue.",
+                  duration: 8000,
+                });
+              }
+            }
+          } catch (e) {
+            logger.error('[AcceptTerms] Auto-enrollment error', e);
+            // Non-blocking - trial can be started later
+          }
+        }
         
         // Force a refresh of password status with explicit user context
         logger.info('[SECURITY] Re-checking password status after terms acceptance');

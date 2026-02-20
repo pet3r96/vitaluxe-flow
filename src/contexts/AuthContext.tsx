@@ -444,59 +444,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   });
                 }
                 
-                // Auto-enroll practice owners (doctors) in 14-day trial
-                // Wait a bit for userRole state to be set by fetchUserRole
-                setTimeout(async () => {
-                  // Query for user's role from user_roles table
-                  const { data: userRoles } = await supabase
-                    .from('user_roles')
-                    .select('role')
-                    .eq('user_id', session.user.id);
-
-                  if (userRoles?.some(r => r.role === 'doctor')) {
-                    // Check if subscription exists
-                    const { data: existingSub } = await supabase
-                      .from('practice_subscriptions')
-                      .select('id')
-                      .eq('practice_id', session.user.id)
-                      .maybeSingle();
-                    
-                    if (!existingSub) {
-                      // Auto-create trial subscription
-                      logger.info('Auto-enrolling new practice in trial');
-                      
-                      try {
-                        const { data: subData, error: subError } = await supabase.functions.invoke(
-                          'subscribe-to-vitaluxepro',
-                          { body: { autoEnroll: true } }
-                        );
-                        
-                        if (subError) {
-                          logger.error('Auto-enrollment failed', subError);
-                        } else {
-                          logger.info('Subscription result received', { hasData: !!subData });
-                          
-                          // Only show trial toast if a NEW trial was actually created
-                          const isNewTrial = subData && 
-                            !(subData as { alreadySubscribed?: boolean })?.alreadySubscribed && 
-                            (subData as { subscription_status?: string })?.subscription_status !== 'active';
-                          
-                          if (isNewTrial) {
-                            toast.success(
-                              "Welcome to VitaLuxePro! 🎉",
-                              {
-                                description: "You've been automatically enrolled in a 14-day free trial with full access to all features. Add a payment method before day 14 to continue.",
-                                duration: 10000,
-                              }
-                            );
-                          }
-                        }
-                      } catch (error) {
-                        logger.error('Auto-enrollment error', error);
-                      }
-                    }
-                  }
-                }, 500);
+                // Auto-enrollment moved to AcceptTerms page (post-terms-acceptance)
+                logger.info('Skipping auto-enrollment at sign-in; will trigger after terms acceptance');
               }).catch((error) => {
                 logger.error('Error loading user data after sign in', error);
               });
@@ -911,13 +860,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('user_id', userId)
           .maybeSingle(),
         
-        // 5. Check user terms acceptance
-        UserTermsAccept()
-          .select('id, terms_id, accepted_at')
-          .eq('user_id', userId)
-          .order('accepted_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        // 5. Terms acceptance - placeholder, will be re-queried with role filter after role is resolved
+        Promise.resolve({ data: null, error: null })
       ]);
 
       // Process role with priority order
@@ -1022,22 +966,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // Get terms check result for effective user
-      let termsCheckResult;
-      if (isCurrentlyImpersonating && effectiveUserIdForTerms !== userId) {
-        // Impersonating: make fresh query for impersonated user's terms
-        termsCheckResult = await UserTermsAccept()
-          .select('id, terms_id, accepted_at')
-          .eq('user_id', effectiveUserIdForTerms)
-          .order('accepted_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-      } else {
-        // Not impersonating: use existing query result
-        termsCheckResult = patientTermsResult.status === 'fulfilled' 
-          ? patientTermsResult.value 
-          : { data: null, error: null };
-      }
+      // Get terms check result for effective user - now role-specific
+      const effectiveRoleForTerms = isCurrentlyImpersonating 
+        ? (impersonationSessionData?.session?.impersonated_role || role)
+        : role;
+      const termsCheckResult = await UserTermsAccept()
+        .select('id, terms_id, accepted_at')
+        .eq('user_id', effectiveUserIdForTerms)
+        .eq('role', effectiveRoleForTerms)
+        .order('accepted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       // Process password status and terms - ADMIN BYPASS for resilience
       if (role === 'admin' && !isCurrentlyImpersonating) {
