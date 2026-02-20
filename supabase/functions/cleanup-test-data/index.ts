@@ -335,6 +335,9 @@ serve(async (req) => {
           .update({ linked_topline_id: null })
           .eq('linked_topline_id', userId);
 
+        // STEP 8.5: Delete performance_metrics (safety net before auth user deletion)
+        await supabaseAdmin.from('performance_metrics').delete().eq('user_id', userId);
+
         // STEP 9: Delete auth user (will cascade to profiles)
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
         if (deleteError) {
