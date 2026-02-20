@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useResponsive } from "@/hooks/use-mobile";
-import { debounce } from "@/lib/performance";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   Table,
   TableBody,
