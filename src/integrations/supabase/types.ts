@@ -8685,58 +8685,21 @@ export type Database = {
         Args: { p_practice_id: string; p_start_trial?: boolean }
         Returns: string
       }
-      create_user_with_role:
-        | {
-            Args: {
-              p_email: string
-              p_name: string
-              p_role: Database["public"]["Enums"]["app_role"]
-              p_role_data?: Json
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_created_by?: string
-              p_email: string
-              p_name: string
-              p_role: Database["public"]["Enums"]["app_role"]
-              p_role_data?: Json
-              p_status?: string
-              p_temp_password?: boolean
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_created_by?: string
-              p_email: string
-              p_full_name?: string
-              p_name: string
-              p_prescriber_name?: string
-              p_role: Database["public"]["Enums"]["app_role"]
-              p_role_data?: Json
-              p_status?: string
-              p_temp_password?: boolean
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_created_by?: string
-              p_email: string
-              p_name: string
-              p_role: string
-              p_role_data?: Json
-              p_status?: string
-              p_temp_password?: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
+      create_user_with_role: {
+        Args: {
+          p_created_by?: string
+          p_email: string
+          p_full_name?: string
+          p_name: string
+          p_prescriber_name?: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_role_data?: Json
+          p_status?: string
+          p_temp_password?: boolean
+          p_user_id: string
+        }
+        Returns: Json
+      }
       decrypt_2fa_phone: {
         Args: { p_encrypted_phone: string }
         Returns: string
