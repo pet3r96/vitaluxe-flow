@@ -835,7 +835,9 @@ export const OrderDetailsDialog = ({
                       <Badge variant="outline" className="capitalize w-fit">
                         {line.shipping_speed === '2day' ? '2-Day Shipping' :
                          line.shipping_speed === 'overnight' ? 'Overnight Shipping' :
-                         'Ground (5-7 days)'}
+                         line.shipping_speed === 'priority' ? 'Priority Shipping' :
+                         line.shipping_speed === 'first_class' ? 'First Class' :
+                         'Ground (historical)'}
                       </Badge>
                     </div>
                     <div>

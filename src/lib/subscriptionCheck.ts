@@ -59,8 +59,8 @@ export const hasActiveSubscription = async (practiceId: string): Promise<boolean
     return new Date(subscription.trial_ends_at) > now;
   }
   
-  if (subscription.status === 'active' && subscription.current_period_end) {
-    return new Date(subscription.current_period_end) > now;
+  if (subscription.status === 'active') {
+    return true;
   }
   
   return false;
