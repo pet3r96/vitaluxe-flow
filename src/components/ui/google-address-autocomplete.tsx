@@ -204,6 +204,7 @@ const GoogleAddressAutocompleteInner = ({
       let city = '';
       let state = '';
       let zip = '';
+      let suite = '';
       
       for (const component of components) {
         const types = component.types;
@@ -223,14 +224,20 @@ const GoogleAddressAutocompleteInner = ({
         if (types.includes('postal_code')) {
           zip = component.long_name;
         }
+        if (types.includes('subpremise')) {
+          suite = component.long_name;
+        }
       }
       
-      const formattedAddress = (place.formatted_address || `${street}, ${city}, ${state} ${zip}`).replace(/, USA$/i, '');
+      const baseAddress = `${street}, ${city}, ${state} ${zip}`;
+      const formattedAddress = (place.formatted_address || baseAddress).replace(/, USA$/i, '');
       
       setInputValue(formattedAddress);
+      setSuiteValue(suite);
       
       onChange({
         street,
+        suite,
         city,
         state,
         zip,
@@ -239,7 +246,7 @@ const GoogleAddressAutocompleteInner = ({
         source: 'google_places',
       });
       
-      await validateAddress({ street, city, state, zip }, formattedAddress);
+      await validateAddress({ street, suite, city, state, zip }, formattedAddress);
     }
   };
 
