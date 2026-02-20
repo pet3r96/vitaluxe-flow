@@ -11,6 +11,7 @@ const libraries: ("places")[] = ['places'];
 
 export interface AddressValue {
   street?: string;
+  suite?: string;
   city?: string;
   state?: string;
   zip?: string;
@@ -122,6 +123,7 @@ const GoogleAddressAutocompleteInner = ({
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<any>(null);
   const [inputValue, setInputValue] = useState('');
+  const [suiteValue, setSuiteValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Ensure Google autocomplete dropdown stays visible and clickable
@@ -157,6 +159,9 @@ const GoogleAddressAutocompleteInner = ({
       setInputValue(value.formatted);
     } else if (value.street) {
       setInputValue(`${value.street}${value.city ? ', ' + value.city : ''}${value.state ? ', ' + value.state : ''}${value.zip ? ' ' + value.zip : ''}`);
+    }
+    if (value.suite !== undefined) {
+      setSuiteValue(value.suite || '');
     }
   }, [value]);
 
@@ -199,6 +204,7 @@ const GoogleAddressAutocompleteInner = ({
       let city = '';
       let state = '';
       let zip = '';
+      let suite = '';
       
       for (const component of components) {
         const types = component.types;
@@ -218,14 +224,20 @@ const GoogleAddressAutocompleteInner = ({
         if (types.includes('postal_code')) {
           zip = component.long_name;
         }
+        if (types.includes('subpremise')) {
+          suite = component.long_name;
+        }
       }
       
-      const formattedAddress = (place.formatted_address || `${street}, ${city}, ${state} ${zip}`).replace(/, USA$/i, '');
+      const baseAddress = `${street}, ${city}, ${state} ${zip}`;
+      const formattedAddress = (place.formatted_address || baseAddress).replace(/, USA$/i, '');
       
       setInputValue(formattedAddress);
+      setSuiteValue(suite);
       
       onChange({
         street,
+        suite,
         city,
         state,
         zip,
@@ -234,7 +246,7 @@ const GoogleAddressAutocompleteInner = ({
         source: 'google_places',
       });
       
-      await validateAddress({ street, city, state, zip }, formattedAddress);
+      await validateAddress({ street, suite, city, state, zip }, formattedAddress);
     }
   };
 
@@ -251,6 +263,7 @@ const GoogleAddressAutocompleteInner = ({
       
       const validatedAddress: AddressValue = {
         street: data.suggested_street || address.street || '',
+        suite: address.suite || data.suite || '',
         city: data.suggested_city || address.city || '',
         state: data.suggested_state || address.state || '',
         zip: data.suggested_zip || address.zip || '',
@@ -263,6 +276,7 @@ const GoogleAddressAutocompleteInner = ({
       
       onChange(validatedAddress);
       setInputValue(validatedAddress.formatted);
+      setSuiteValue(validatedAddress.suite || '');
       
     } catch (error) {
       logger.error('Validation error', error);
@@ -340,6 +354,19 @@ const GoogleAddressAutocompleteInner = ({
           name="address-autocomplete"
         />
       </Autocomplete>
+
+      <Input
+        placeholder="Suite / Apt / Unit (optional)"
+        type="text"
+        value={suiteValue}
+        onChange={(e) => {
+          const newSuite = e.target.value;
+          setSuiteValue(newSuite);
+          onChange({ ...value, suite: newSuite });
+        }}
+        disabled={disabled}
+        className="max-w-[200px]"
+      />
       
       {validating && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

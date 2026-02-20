@@ -9,6 +9,7 @@ const corsHeaders = {
 
 interface AddressInput {
   street: string;
+  suite?: string;
   city: string;
   state: string;
   zip: string;
@@ -18,6 +19,7 @@ interface ValidationResponse {
   is_valid: boolean;
   formatted_address?: string;
   street?: string;
+  suite?: string;
   city?: string;
   state?: string;
   zip?: string;
@@ -27,6 +29,7 @@ interface ValidationResponse {
   error?: string;
   suggestions?: {
     street?: string;
+    suite?: string;
     city?: string;
     state?: string;
     zip?: string;
@@ -45,22 +48,24 @@ serve(async (req) => {
   }
 
   try {
-    const { street, city, state, zip, manual_override } = await req.json() as AddressInput & { manual_override?: boolean };
+    const { street, suite, city, state, zip, manual_override } = await req.json() as AddressInput & { manual_override?: boolean };
     const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
 
     if (!GOOGLE_API_KEY) {
       throw new Error('GOOGLE_API_KEY not configured');
     }
 
-    edgeLogger.info('Google Address Validation: Processing address', { street, city, state, zip });
+    edgeLogger.info('Google Address Validation: Processing address', { street, suite, city, state, zip });
 
     // If manual override, skip validation
     if (manual_override) {
+      const suiteStr = suite ? ` ${suite}` : '';
       return new Response(
         JSON.stringify({
           is_valid: true,
-          formatted_address: `${street}, ${city}, ${state} ${zip}`,
+          formatted_address: `${street}${suiteStr}, ${city}, ${state} ${zip}`,
           street,
+          suite: suite || '',
           city,
           state,
           zip,
@@ -71,7 +76,8 @@ serve(async (req) => {
     }
 
     // Build address for Google API
-    const addressLines = [street, `${city}, ${state} ${zip}`].filter(Boolean);
+    const streetWithSuite = suite ? `${street} ${suite}` : street;
+    const addressLines = [streetWithSuite, `${city}, ${state} ${zip}`].filter(Boolean);
 
     // Call Google Address Validation API
     const response = await fetch(
@@ -154,12 +160,12 @@ serve(async (req) => {
     const isValid = isHighQuality && !hasUnconfirmedComponents;
 
     if (isValid) {
-      // Address is valid
       return new Response(
         JSON.stringify({
           is_valid: true,
           formatted_address: formattedAddress,
           street: validatedStreet,
+          suite: suite || '',
           city: validatedCity,
           state: validatedState,
           zip: validatedZip,
@@ -174,14 +180,15 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else if (hasInferredComponents || hasUnconfirmedComponents) {
-      // Address has corrections/suggestions
       return new Response(
         JSON.stringify({
           is_valid: false,
           formatted_address: formattedAddress,
+          suite: suite || '',
           verification_source: 'google_places',
           suggestions: {
             street: validatedStreet,
+            suite: suite || '',
             city: validatedCity,
             state: validatedState,
             zip: validatedZip,
