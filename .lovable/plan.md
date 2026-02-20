@@ -1,52 +1,61 @@
 
 
-# Fix: Cleanup Failed + Suppress Handled Signup Errors
+# Fix: "duplicate key value violates unique constraint 'patient_accounts_user_id_key'" When Adding Patient
 
-## Two Issues Found
+## Root Cause
 
-### Issue 1: "Cleanup failed" when deleting accounts
-**Root cause:** The `performance_metrics` table has a foreign key `performance_metrics_user_id_fkey` referencing `auth.users` WITHOUT `ON DELETE CASCADE`. When the admin deletes a user account, Postgres blocks the auth user deletion because rows still exist in `performance_metrics`.
+The `patient_accounts` table has a **non-partial unique constraint** called `patient_accounts_user_id_key` on the `user_id` column. When adding a patient without portal access, `user_id` is not set (defaults to NULL). The constraint blocks inserting a second patient with NULL `user_id`.
 
-**Fix (two parts):**
+A previous migration attempted to drop this constraint and replace it with a partial unique index (`patient_accounts_user_id_unique`) that only enforces uniqueness when `user_id IS NOT NULL`. However, the old constraint `patient_accounts_user_id_key` still exists in the live database -- meaning the drop either failed silently or a subsequent migration re-created it.
 
-A. **Database migration** -- Delete `performance_metrics` rows for the user before deleting the auth user in the cleanup edge function. Also alter the foreign key to add `ON DELETE CASCADE` so this class of bug can't recur:
+**Current state (3 redundant indexes on user_id):**
+- `patient_accounts_user_id_key` -- full UNIQUE constraint (the problem)
+- `patient_accounts_user_id_unique` -- partial UNIQUE index WHERE user_id IS NOT NULL (the correct one)
+- `idx_patient_accounts_user_id` -- regular index (redundant given the above)
+
+## Fix
+
+### Database migration (1 file)
+
+Drop the problematic constraint and the redundant regular index, keeping only the correct partial unique index:
 
 ```sql
-ALTER TABLE performance_metrics
-  DROP CONSTRAINT performance_metrics_user_id_fkey,
-  ADD CONSTRAINT performance_metrics_user_id_fkey
-    FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+-- Drop the non-partial unique constraint that blocks NULL user_id inserts
+ALTER TABLE public.patient_accounts
+  DROP CONSTRAINT IF EXISTS patient_accounts_user_id_key;
+
+-- Drop redundant regular index (partial unique index already covers lookups)
+DROP INDEX IF EXISTS idx_patient_accounts_user_id;
 ```
 
-B. **Edge function update** -- Add a step in `cleanup-test-data/index.ts` (before Step 9) to delete `performance_metrics` rows for the target user, as a safety net:
+After this, only `patient_accounts_user_id_unique` remains, which correctly:
+- Prevents two patients from sharing the same portal user account
+- Allows unlimited patients with `user_id = NULL` (no portal access)
+
+### Improve error handling in PatientDialog (1 file)
+
+Update `src/components/patients/PatientDialog.tsx` (line 452-457) to detect unique constraint violations and show a friendlier message instead of the raw database error:
 
 ```typescript
-await supabaseAdmin.from('performance_metrics').delete().eq('user_id', userId);
+} catch (error: any) {
+  logger.warn("Error saving patient", error);
+  if (error.code === '23505') {
+    toast.error("A patient with this information already exists. Please check for duplicates.");
+  } else {
+    toast.error(error.message || "Failed to save patient");
+  }
+  perf.end();
+}
 ```
-
----
-
-### Issue 2: Preview error banner on handled signup errors
-**Root cause:** `authService.ts` calls `logger.error()` for expected business outcomes like duplicate emails (lines 78, 84, 142, 149). This triggers `console.error`, which the preview error boundary catches and shows the red banner.
-
-**Fix:** Downgrade these to `logger.warn()` since they are expected/handled errors, not crashes. Also improve the duplicate email message to be clearer:
-
-| Line | Current | Updated |
-|------|---------|---------|
-| 50-55 (signupUser) | "This email address is already registered..." | "This email already exists in the system. No duplicate users allowed -- please use another email or log in with your existing account." |
-| 78 | `logger.error('Self-signup error', error)` | `logger.warn('Self-signup rejected', { message: msg })` |
-| 84 | `logger.error('Self-signup validation error', ...)` | `logger.warn('Self-signup validation rejected', { message: data.error })` |
-| 115-119 (createUserByAdmin) | "This email address is already registered in the system." | "This email already exists in the system. No duplicate users allowed -- please use another email or log in with the existing account." |
-| 142 | `logger.error('Admin user creation error', error)` | `logger.warn('Admin user creation rejected', { message: msg })` |
-| 149 | `logger.error('Admin user creation validation error', ...)` | `logger.warn('Admin user creation rejected', { message: data.error })` |
-
----
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| New database migration | Add `ON DELETE CASCADE` to `performance_metrics_user_id_fkey` |
-| `supabase/functions/cleanup-test-data/index.ts` | Delete `performance_metrics` rows before auth user deletion |
-| `src/lib/authService.ts` | Downgrade handled errors to `logger.warn`, improve duplicate email messages |
+| New database migration | Drop `patient_accounts_user_id_key` constraint and redundant `idx_patient_accounts_user_id` index |
+| `src/components/patients/PatientDialog.tsx` | Friendlier error message for constraint violations, downgrade to `logger.warn` |
+
+## Impact
+
+This unblocks adding any patient without portal access (the standard flow for practice-created patients).
 
