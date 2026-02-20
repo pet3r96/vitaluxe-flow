@@ -505,7 +505,46 @@ const Auth = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="npi">Provider NPI # *</Label>
-                    <Input id="npi" type="text" value={npi} onChange={e => setNpi(e.target.value)} placeholder="10-digit NPI number" className={`bg-input border-border text-foreground ${npi && npi.length !== 10 && npi.length > 0 ? 'border-destructive' : ''}`} maxLength={10} required />
+                    <Input id="npi" type="text" value={npi} onChange={e => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setNpi(value);
+                      currentNpiRef.current = value;
+                      
+                      // Reset verification status when NPI changes
+                      if (value.length !== 10) {
+                        setNpiVerificationStatus(null);
+                      } else {
+                        setNpiVerificationStatus("verifying");
+                      }
+                      
+                      // Real-time NPI verification when 10 digits
+                      if (value.length === 10) {
+                        const expectedNpi = value;
+                        verifyNPIDebounced(value, (result) => {
+                          if (currentNpiRef.current === expectedNpi) {
+                            if (result.valid && !result.error) {
+                              setNpiVerificationStatus("verified");
+                              toast({
+                                title: "NPI Verified",
+                                description: result.providerName 
+                                  ? `${result.providerName}${result.specialty ? ` - ${result.specialty}` : ''}`
+                                  : `NPI ${result.npi} verified successfully`,
+                              });
+                            } else {
+                              setNpiVerificationStatus("failed");
+                              toast({
+                                title: "Invalid NPI",
+                                description: result.error || "NPI not found in registry",
+                                variant: "destructive",
+                              });
+                            }
+                          }
+                        });
+                      }
+                    }} placeholder="10-digit NPI number" className={`bg-input border-border text-foreground ${npi && npi.length > 0 && npi.length !== 10 ? 'border-destructive' : ''} ${npiVerificationStatus === 'verified' ? 'border-green-500' : ''} ${npiVerificationStatus === 'failed' ? 'border-destructive' : ''}`} maxLength={10} required />
+                    {npiVerificationStatus === "verifying" && <p className="text-xs text-muted-foreground">🔄 Verifying NPI...</p>}
+                    {npiVerificationStatus === "verified" && <p className="text-xs text-green-600">✓ NPI Verified</p>}
+                    {npiVerificationStatus === "failed" && <p className="text-xs text-destructive">✗ Invalid NPI</p>}
                     {npi && npi.length > 0 && npi.length !== 10 && <p className="text-xs text-destructive">NPI must be exactly 10 digits</p>}
                     {(!npi || npi.length === 0) && <p className="text-xs text-muted-foreground">Enter your 10-digit National Provider Identifier</p>}
                   </div>
