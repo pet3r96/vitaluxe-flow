@@ -121,7 +121,7 @@ serve(async (req) => {
     // Log success to audit_logs
     await supabaseAdmin.from('audit_logs').insert({
       action_type: 'email_verification',
-      user_id: userId,
+      user_id: resolvedUserId,
       user_email: email,
       entity_type: 'email',
       entity_id: postmarkData.messageId,
