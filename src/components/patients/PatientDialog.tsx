@@ -451,9 +451,13 @@ export const PatientDialog = ({
       perf.end();
     } catch (error: any) {
       import('@/lib/logger').then(({ logger }) => {
-        logger.error("Error saving patient", error);
+        logger.warn("Error saving patient", error);
       });
-      toast.error(error.message || "Failed to save patient");
+      if (error.code === '23505') {
+        toast.error("A patient with this information already exists. Please check for duplicates.");
+      } else {
+        toast.error(error.message || "Failed to save patient");
+      }
       perf.end();
     } finally {
       setLoading(false);
