@@ -141,7 +141,8 @@ export const authService = {
 
       if (error) {
         logger.error('Admin user creation error', error);
-        return { error: { message: getEdgeFunctionError(data, error) } };
+        const msg = await getEdgeFunctionErrorAsync(data, error);
+        return { error: { message: msg } };
       }
 
       if (data?.error) {
