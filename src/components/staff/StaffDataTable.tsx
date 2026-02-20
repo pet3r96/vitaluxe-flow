@@ -21,7 +21,6 @@ import { useResponsive } from "@/hooks/use-mobile";
 import { MobileDataTable, MobileTableRowProps } from "@/components/responsive/MobileDataTable";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { AddStaffDialog } from "./AddStaffDialog";
-import { AddStaffDialog } from "./AddStaffDialog";
 import { StaffDetailsDialog } from "./StaffDetailsDialog";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
