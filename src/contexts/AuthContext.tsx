@@ -444,59 +444,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   });
                 }
                 
-                // Auto-enroll practice owners (doctors) in 14-day trial
-                // Wait a bit for userRole state to be set by fetchUserRole
-                setTimeout(async () => {
-                  // Query for user's role from user_roles table
-                  const { data: userRoles } = await supabase
-                    .from('user_roles')
-                    .select('role')
-                    .eq('user_id', session.user.id);
-
-                  if (userRoles?.some(r => r.role === 'doctor')) {
-                    // Check if subscription exists
-                    const { data: existingSub } = await supabase
-                      .from('practice_subscriptions')
-                      .select('id')
-                      .eq('practice_id', session.user.id)
-                      .maybeSingle();
-                    
-                    if (!existingSub) {
-                      // Auto-create trial subscription
-                      logger.info('Auto-enrolling new practice in trial');
-                      
-                      try {
-                        const { data: subData, error: subError } = await supabase.functions.invoke(
-                          'subscribe-to-vitaluxepro',
-                          { body: { autoEnroll: true } }
-                        );
-                        
-                        if (subError) {
-                          logger.error('Auto-enrollment failed', subError);
-                        } else {
-                          logger.info('Subscription result received', { hasData: !!subData });
-                          
-                          // Only show trial toast if a NEW trial was actually created
-                          const isNewTrial = subData && 
-                            !(subData as { alreadySubscribed?: boolean })?.alreadySubscribed && 
-                            (subData as { subscription_status?: string })?.subscription_status !== 'active';
-                          
-                          if (isNewTrial) {
-                            toast.success(
-                              "Welcome to VitaLuxePro! 🎉",
-                              {
-                                description: "You've been automatically enrolled in a 14-day free trial with full access to all features. Add a payment method before day 14 to continue.",
-                                duration: 10000,
-                              }
-                            );
-                          }
-                        }
-                      } catch (error) {
-                        logger.error('Auto-enrollment error', error);
-                      }
-                    }
-                  }
-                }, 500);
+                // Auto-enrollment moved to AcceptTerms page (post-terms-acceptance)
+                logger.info('Skipping auto-enrollment at sign-in; will trigger after terms acceptance');
               }).catch((error) => {
                 logger.error('Error loading user data after sign in', error);
               });
