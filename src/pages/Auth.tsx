@@ -44,6 +44,7 @@ const Auth = () => {
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const [showVerificationReminder, setShowVerificationReminder] = useState(false);
   const [reminderEmail, setReminderEmail] = useState("");
+  const [reminderUserId, setReminderUserId] = useState("");
   const [emergencyResetStatus, setEmergencyResetStatus] = useState<{
     triggered: boolean;
     loading: boolean;

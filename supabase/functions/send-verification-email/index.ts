@@ -20,12 +20,36 @@ serve(async (req) => {
     const { userId, email, name } = await req.json();
     edgeLogger.info('[send-verification-email] Request params', { userId, hasEmail: !!email, hasName: !!name });
 
-    if (!userId || !email) {
-      edgeLogger.error('[send-verification-email] Missing required fields', undefined, { userId: !!userId, email: !!email });
+    if (!email) {
+      edgeLogger.error('[send-verification-email] Missing email', undefined, { userId: !!userId, email: !!email });
       return new Response(
-        JSON.stringify({ error: 'Missing userId or email' }), 
+        JSON.stringify({ error: 'Missing email' }), 
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    edgeLogger.info('[send-verification-email] Creating admin client');
+    const supabaseAdmin = createAdminClient();
+
+    // Resolve userId: use provided value or look up by email
+    let resolvedUserId = userId;
+    if (!resolvedUserId) {
+      edgeLogger.info('[send-verification-email] No userId provided, looking up by email');
+      const { data: profileData, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .ilike('email', email)
+        .single();
+      
+      if (profileError || !profileData) {
+        edgeLogger.error('[send-verification-email] Could not find user by email', profileError);
+        return new Response(
+          JSON.stringify({ error: 'User not found for this email' }), 
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      resolvedUserId = profileData.id;
+      edgeLogger.info('[send-verification-email] Resolved userId from email', { resolvedUserId });
     }
 
     edgeLogger.info('[send-verification-email] Creating admin client');

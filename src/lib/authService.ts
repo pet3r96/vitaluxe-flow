@@ -224,11 +224,13 @@ export const authService = {
 
     // Check if account is verified
     if (profile?.status === 'pending_verification') {
+      const pendingUserId = user.id;
       await supabase.auth.signOut();
       return {
         error: {
           code: 'email_not_verified',
           email: email,
+          userId: pendingUserId,
           message: "Email not verified",
         },
       };
