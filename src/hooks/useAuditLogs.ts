@@ -106,19 +106,17 @@ export const logMedicalVaultChange = async (params: {
       return;
     }
     
-    const { error } = await supabase
-      .from("medical_vault_audit_logs")
-      .insert({
-        patient_account_id: params.patientAccountId,
-        practice_id: practiceId,
-        action_type: params.actionType,
-        record_id: params.recordId || params.entityId,
-        changed_by: params.changedBy || params.changedByUserId,
-        performed_by_user_id: params.changedBy || params.changedByUserId,
-        change_summary: params.changeSummary,
-        previous_values: params.previousValues || params.oldData,
-        new_values: params.newValues || params.newData,
-      });
+    const { error } = await supabase.rpc('insert_medical_vault_audit_log', {
+      p_patient_account_id: params.patientAccountId,
+      p_practice_id: practiceId,
+      p_action_type: params.actionType,
+      p_record_id: params.recordId || params.entityId || null,
+      p_changed_by: params.changedBy || params.changedByUserId || null,
+      p_performed_by_user_id: params.changedBy || params.changedByUserId || null,
+      p_change_summary: params.changeSummary || null,
+      p_previous_values: params.previousValues || params.oldData || null,
+      p_new_values: params.newValues || params.newData || null,
+    });
 
     if (error) {
       logger.error("Error logging medical vault change", error);

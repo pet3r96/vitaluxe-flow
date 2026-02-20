@@ -9156,6 +9156,20 @@ export type Database = {
         Returns: boolean
       }
       increment_discount_usage: { Args: { p_code: string }; Returns: undefined }
+      insert_medical_vault_audit_log: {
+        Args: {
+          p_action_type: string
+          p_change_summary?: string
+          p_changed_by?: string
+          p_new_values?: Json
+          p_patient_account_id: string
+          p_performed_by_user_id?: string
+          p_practice_id: string
+          p_previous_values?: Json
+          p_record_id?: string
+        }
+        Returns: undefined
+      }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_admin_ip_banned: { Args: never; Returns: boolean }
       is_cart_owner: {
