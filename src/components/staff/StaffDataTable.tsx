@@ -31,12 +31,11 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 export const StaffDataTable = () => {
   const { effectiveUserId, effectiveRole, effectivePracticeId } = useAuth();
   const { isMobile } = useResponsive();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const searchQuery = useDebounce(inputValue, 300);
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-
-  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   const { data: staff, isLoading, refetch } = useQuery({
     queryKey: ["staff", effectiveUserId, effectiveRole, effectivePracticeId],
