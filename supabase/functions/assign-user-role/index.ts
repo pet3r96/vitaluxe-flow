@@ -415,6 +415,7 @@ serve(async (req) => {
       }
       // Pharmacy staff get the 'pharmacy' role in user_roles (not a new enum value)
       // This ensures existing RLS policies work automatically
+      signupData.roleData.isPharmacyStaff = true;
       signupData.role = 'pharmacy' as any;
     }
 
