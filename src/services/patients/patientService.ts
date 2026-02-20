@@ -7,30 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import type { PatientQueryParams } from "@/types/domain/patients";
 
-// In-memory cache for patient lists (NOT PHI-sensitive vault data)
-interface CacheEntry {
-  data: Array<Record<string, unknown>>;
-  timestamp: number;
-}
-
-const patientListCache = new Map<string, CacheEntry>();
-const CACHE_TTL = 120000; // 120 seconds = 2 minutes
-
 export async function fetchPatients(params: PatientQueryParams) {
   const { effectiveRole, effectivePracticeId } = params;
   
   logger.info('Patients query params', logger.sanitize({ effectiveRole, effectivePracticeId }));
-  
-  // Check in-memory cache first
-  const cacheKey = `practice-patients:${effectivePracticeId || 'all'}`;
-  const cached = patientListCache.get(cacheKey);
-  
-  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-    logger.info('Patient list cache HIT', { cacheKey });
-    return cached.data;
-  }
-  
-  logger.info('Patient list cache MISS', { cacheKey });
   
   const columns = "id, name, first_name, last_name, email, phone, gender_at_birth, address, address_street, address_city, address_state, address_zip, address_formatted, city, state, zip_code, birth_date, date_of_birth, allergies, notes, address_verification_status, address_verification_source, practice_id, provider_id, created_at, user_id, last_login_at, status, practice:practice_id(name, address_city, address_state)";
 
@@ -69,14 +49,6 @@ export async function fetchPatients(params: PatientQueryParams) {
     }
     patientsData = data || [];
   }
-
-  // Store in cache before returning
-  patientListCache.set(cacheKey, {
-    data: patientsData,
-    timestamp: Date.now()
-  });
-  
-  logger.info('Patient list cached', { cacheKey, count: patientsData.length });
 
   return patientsData;
 }

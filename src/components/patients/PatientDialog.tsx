@@ -440,8 +440,11 @@ export const PatientDialog = ({
           }]);
 
         if (error) throw error;
-        queryClient.invalidateQueries({ queryKey: ["practice-patients"] });
-        queryClient.invalidateQueries({ queryKey: ["patients"] });
+        // Force-clear all patient caches before invalidating to guarantee fresh fetch
+        queryClient.removeQueries({ queryKey: ["practice-patients"] });
+        queryClient.removeQueries({ queryKey: ["patients"] });
+        await queryClient.invalidateQueries({ queryKey: ["practice-patients"] });
+        await queryClient.invalidateQueries({ queryKey: ["patients"] });
         queryClient.invalidateQueries({ queryKey: ["patient-portal-status"] });
         toast.success("✅ Patient added successfully");
       }

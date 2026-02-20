@@ -13,6 +13,6 @@ export function usePatients() {
   return useQuery({
     queryKey: ["patients", effectiveRole, effectivePracticeId],
     queryFn: () => fetchPatients({ effectiveRole, effectivePracticeId }),
-    staleTime: 300000, // 5 minutes - patient data changes infrequently
+    staleTime: 30000, // 30 seconds - matches global default
   });
 }
