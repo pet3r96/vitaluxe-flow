@@ -52,8 +52,7 @@ serve(async (req) => {
       edgeLogger.info('[send-verification-email] Resolved userId from email', { resolvedUserId });
     }
 
-    edgeLogger.info('[send-verification-email] Creating admin client');
-    const supabaseAdmin = createAdminClient();
+    // Generate verification token
 
     // Generate verification token
     const token = crypto.randomUUID();
