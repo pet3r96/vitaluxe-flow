@@ -1,53 +1,41 @@
 
-# Fix: Newly Added Patient Not Showing in List
 
-## Root Cause
+# Fix: "No Patients Found" When Patient Has No Email
 
-There is a **double-caching problem** causing the patient list to serve stale data even after a successful insert:
+## Problem
 
-1. **In-memory cache** (`patientService.ts`): A custom `Map`-based cache with a 2-minute TTL sits in front of the database query. When React Query invalidates and re-runs the fetch, it hits this in-memory cache and gets the OLD data back -- the new patient is invisible.
+The "Add to Cart" dialog on the Products page filters out any patient that doesn't have an email address. Since the patient form allows adding patients without an email (which is correct -- not all patients have email), this creates a contradiction: a patient can be added successfully but then be invisible when ordering.
 
-2. **React Query over-caching** (`usePatients.ts`): `staleTime` is set to 5 minutes and the global config disables `refetchOnMount`, so even navigating away and back won't trigger a fresh fetch.
-
-These two caches fighting each other mean it can take up to 2-5 minutes for a new patient to appear.
+The newly added patient "TEST SMITH" has no email, so the filter on line 171-174 of `PatientSelectionDialog.tsx` removes them entirely.
 
 ## Fix
 
-### 1. Remove the in-memory cache from `patientService.ts`
+**File: `src/components/products/PatientSelectionDialog.tsx`** (lines 170-176)
 
-The in-memory cache is redundant -- React Query already caches the result. Having two caches creates exactly this kind of staleness bug. Remove the `patientListCache` Map entirely and let React Query be the single source of truth.
+Remove the email requirement from the patient filter. Only require that the patient has an `id` (which every database row will have). The email filter was added as a "safety guard" but is incorrect -- patients without email are valid for ordering.
 
-**File: `src/services/patients/patientService.ts`**
-- Delete the `CacheEntry` interface, `patientListCache` Map, and `CACHE_TTL` constant
-- Remove the cache-check and cache-store logic
-- Keep only the actual database fetch logic
+Change:
+```typescript
+const validPatients = ((data || []) as unknown as PatientAccount[]).filter((patient) => {
+  const hasEmail = !!patient.email;
+  const hasId = !!patient.id;
+  return hasEmail && hasId;
+});
+```
 
-### 2. Reduce staleTime in `usePatients.ts`
+To:
+```typescript
+const validPatients = ((data || []) as unknown as PatientAccount[]).filter((patient) => {
+  return !!patient.id;
+});
+```
 
-Change `staleTime` from 300000 (5 min) to 30000 (30 sec) to match the global default. This ensures that when the query is invalidated after adding a patient, it actually refetches.
+This is the only change needed. One file, one line of logic.
 
-**File: `src/hooks/usePatients.ts`**
-- Change `staleTime: 300000` to `staleTime: 30000`
+## Why This Is Safe
 
-### 3. Force cache clear on add in `PatientDialog.tsx`
+- The `id` field is a primary key and always exists
+- Email is already optional in the patient creation form
+- Shipping address and other order details are handled separately in the cart flow
+- If email is needed for order notifications, that should be checked at order submission time, not at patient selection time
 
-After a successful patient insert, use `removeQueries` before `invalidateQueries` to guarantee no stale cache is returned.
-
-**File: `src/components/patients/PatientDialog.tsx`**
-- After insert succeeds, call `queryClient.removeQueries({ queryKey: ["patients"] })` before the invalidation calls
-- This ensures React Query discards the cached result entirely and does a fresh fetch
-
-## Expected Result
-
-After these changes:
-- Adding a patient triggers an immediate fresh database query
-- No in-memory cache can serve stale data
-- The new patient appears in the list instantly
-
-## Technical Details
-
-| File | Change |
-|------|--------|
-| `src/services/patients/patientService.ts` | Remove in-memory cache (Map + TTL logic) |
-| `src/hooks/usePatients.ts` | Reduce `staleTime` from 5 min to 30 sec |
-| `src/components/patients/PatientDialog.tsx` | Add `removeQueries` before `invalidateQueries` after insert |
