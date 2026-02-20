@@ -30,8 +30,9 @@ import { usePagePerformance } from "@/hooks/usePagePerformance";
 const Auth = () => {
   usePagePerformance('Auth');
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(location.pathname === "/signup" || searchParams.get("mode") === "signup" ? false : true);
   const [email, setEmail] = useState(searchParams.get("email") || "");
   const [urlMessage, setUrlMessage] = useState(searchParams.get("message") || "");
   const [password, setPassword] = useState("");
