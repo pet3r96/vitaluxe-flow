@@ -170,8 +170,11 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
       const requestBody = {
         email: formData.email.trim(),
         role: "provider",
-        practiceId: targetPracticeId,
+        name: formData.fullName.trim(),
+        fullName: formData.fullName.trim(),
+        prescriberName: formData.prescriberName.trim(),
         roleData: {
+          practiceId: targetPracticeId,
           prescriber_name: formData.prescriberName.trim(),
           npi: formData.npi.trim(),
           dea: formData.dea.trim(),
