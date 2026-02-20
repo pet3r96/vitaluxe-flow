@@ -115,7 +115,7 @@ export const authService = {
       if (existingProfile) {
         return { 
           error: { 
-            message: 'This email address is already registered in the system.' 
+            message: 'This email already exists in the system. No duplicate users allowed -- please use another email or log in with the existing account.' 
           } 
         };
       }
