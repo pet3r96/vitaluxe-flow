@@ -47,15 +47,9 @@ export const AccountsDataTable = () => {
   const { toast } = useToast();
   const { effectiveRole } = useAuth();
   const { isMobile } = useResponsive();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const searchQuery = useDebounce(inputValue, 300);
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [selectedAccount, setSelectedAccount] = useState<any>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [accountToDelete, setAccountToDelete] = useState<any>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  const debouncedSetSearch = debounce((value: string) => setSearchQuery(value), 300);
 
   const { data: accounts, isLoading, refetch } = useQuery({
     queryKey: ["accounts", roleFilter],
