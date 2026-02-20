@@ -74,6 +74,8 @@ const Auth = () => {
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState<AddressValue>({});
+  const [npiVerificationStatus, setNpiVerificationStatus] = useState<null | "verifying" | "verified" | "failed">(null);
+  const currentNpiRef = useRef(npi);
 
   // Pharmacy-specific fields
   const [contactEmail, setContactEmail] = useState("");
