@@ -282,6 +282,7 @@ const Auth = () => {
           contactEmail,
           address: pharmacyAddress.formatted || `${pharmacyAddress.street}, ${pharmacyAddress.city}, ${pharmacyAddress.state} ${pharmacyAddress.zip}`,
           address_street: pharmacyAddress.street,
+          address_suite: pharmacyAddress.suite || null,
           address_city: pharmacyAddress.city,
           address_state: pharmacyAddress.state,
           address_zip: pharmacyAddress.zip,

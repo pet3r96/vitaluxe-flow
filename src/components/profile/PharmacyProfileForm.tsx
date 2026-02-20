@@ -42,6 +42,7 @@ const pharmacyFormSchema = z.object({
   phone: phoneSchema,
   address: z.object({
     street: z.string().optional(),
+    suite: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     zip: z.string().optional(),
