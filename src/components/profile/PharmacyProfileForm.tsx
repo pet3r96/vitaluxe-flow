@@ -145,6 +145,7 @@ export function PharmacyProfileForm() {
           name: values.name,
           phone: values.phone,
           address_street: values.address.street,
+          address_suite: (values.address as any).suite || null,
           address_city: values.address.city,
           address_state: values.address.state,
           address_zip: values.address.zip,
