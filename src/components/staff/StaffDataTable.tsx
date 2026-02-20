@@ -134,8 +134,8 @@ export const StaffDataTable = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search staff..."
-            value={searchQuery}
-            onChange={(e) => debouncedSetSearch(e.target.value)}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
             className="pl-9"
           />
         </div>
