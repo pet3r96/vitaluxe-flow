@@ -263,6 +263,7 @@ const GoogleAddressAutocompleteInner = ({
       
       const validatedAddress: AddressValue = {
         street: data.suggested_street || address.street || '',
+        suite: address.suite || data.suite || '',
         city: data.suggested_city || address.city || '',
         state: data.suggested_state || address.state || '',
         zip: data.suggested_zip || address.zip || '',
@@ -275,6 +276,7 @@ const GoogleAddressAutocompleteInner = ({
       
       onChange(validatedAddress);
       setInputValue(validatedAddress.formatted);
+      setSuiteValue(validatedAddress.suite || '');
       
     } catch (error) {
       logger.error('Validation error', error);
