@@ -42,6 +42,7 @@ const pharmacyFormSchema = z.object({
   phone: phoneSchema,
   address: z.object({
     street: z.string().optional(),
+    suite: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     zip: z.string().optional(),
@@ -124,6 +125,7 @@ export function PharmacyProfileForm() {
         phone: pharmacy.phone ? pharmacy.phone.replace(/\D/g, "") : "",
         address: {
           street: pharmacy.address_street || "",
+          suite: (pharmacy as any).address_suite || "",
           city: pharmacy.address_city || "",
           state: pharmacy.address_state || "",
           zip: pharmacy.address_zip || "",
@@ -145,6 +147,7 @@ export function PharmacyProfileForm() {
           name: values.name,
           phone: values.phone,
           address_street: values.address.street,
+          address_suite: (values.address as any).suite || null,
           address_city: values.address.city,
           address_state: values.address.state,
           address_zip: values.address.zip,
@@ -337,6 +340,7 @@ export function PharmacyProfileForm() {
                         onChange={(address: AddressValue) => {
                           field.onChange({
                             street: address.street,
+                            suite: address.suite,
                             city: address.city,
                             state: address.state,
                             zip: address.zip,

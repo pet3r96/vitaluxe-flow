@@ -2371,6 +2371,7 @@ export type Database = {
           address_formatted: string | null
           address_state: string | null
           address_street: string | null
+          address_suite: string | null
           address_verification_source: string | null
           address_verification_status: string | null
           address_verified_at: string | null
@@ -2412,6 +2413,7 @@ export type Database = {
           address_formatted?: string | null
           address_state?: string | null
           address_street?: string | null
+          address_suite?: string | null
           address_verification_source?: string | null
           address_verification_status?: string | null
           address_verified_at?: string | null
@@ -2453,6 +2455,7 @@ export type Database = {
           address_formatted?: string | null
           address_state?: string | null
           address_street?: string | null
+          address_suite?: string | null
           address_verification_source?: string | null
           address_verification_status?: string | null
           address_verified_at?: string | null
@@ -3909,6 +3912,7 @@ export type Database = {
           address_formatted: string | null
           address_state: string | null
           address_street: string | null
+          address_suite: string | null
           address_verification_source: string | null
           address_verification_status: string | null
           address_verified_at: string | null
@@ -3953,6 +3957,7 @@ export type Database = {
           address_formatted?: string | null
           address_state?: string | null
           address_street?: string | null
+          address_suite?: string | null
           address_verification_source?: string | null
           address_verification_status?: string | null
           address_verified_at?: string | null
@@ -3997,6 +4002,7 @@ export type Database = {
           address_formatted?: string | null
           address_state?: string | null
           address_street?: string | null
+          address_suite?: string | null
           address_verification_source?: string | null
           address_verification_status?: string | null
           address_verified_at?: string | null
@@ -5671,6 +5677,7 @@ export type Database = {
           address_formatted: string | null
           address_state: string | null
           address_street: string | null
+          address_suite: string | null
           address_verification_source: string | null
           address_verification_status: string | null
           address_verified_at: string | null
@@ -5707,6 +5714,7 @@ export type Database = {
           shipping_address_formatted: string | null
           shipping_address_state: string | null
           shipping_address_street: string | null
+          shipping_address_suite: string | null
           shipping_address_verification_source: string | null
           shipping_address_verification_status: string | null
           shipping_address_verified_at: string | null
@@ -5728,6 +5736,7 @@ export type Database = {
           address_formatted?: string | null
           address_state?: string | null
           address_street?: string | null
+          address_suite?: string | null
           address_verification_source?: string | null
           address_verification_status?: string | null
           address_verified_at?: string | null
@@ -5764,6 +5773,7 @@ export type Database = {
           shipping_address_formatted?: string | null
           shipping_address_state?: string | null
           shipping_address_street?: string | null
+          shipping_address_suite?: string | null
           shipping_address_verification_source?: string | null
           shipping_address_verification_status?: string | null
           shipping_address_verified_at?: string | null
@@ -5785,6 +5795,7 @@ export type Database = {
           address_formatted?: string | null
           address_state?: string | null
           address_street?: string | null
+          address_suite?: string | null
           address_verification_source?: string | null
           address_verification_status?: string | null
           address_verified_at?: string | null
@@ -5821,6 +5832,7 @@ export type Database = {
           shipping_address_formatted?: string | null
           shipping_address_state?: string | null
           shipping_address_street?: string | null
+          shipping_address_suite?: string | null
           shipping_address_verification_source?: string | null
           shipping_address_verification_status?: string | null
           shipping_address_verified_at?: string | null

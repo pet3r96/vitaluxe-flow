@@ -52,6 +52,7 @@ export const PatientDialog = ({
     allergies: "",
     notes: "",
     address_street: "",
+    address_suite: "",
     address_city: "",
     address_state: "",
     address_zip: "",
@@ -79,7 +80,7 @@ export const PatientDialog = ({
         try {
           const { data: fetchedPatient, error } = await supabase
             .from("patient_accounts")
-            .select("id, name, first_name, last_name, email, phone, birth_date, date_of_birth, gender_at_birth, allergies, notes, address_street, address_city, address_state, address_zip, address_formatted, address_verification_status, address_verification_source")
+            .select("id, name, first_name, last_name, email, phone, birth_date, date_of_birth, gender_at_birth, allergies, notes, address_street, address_suite, address_city, address_state, address_zip, address_formatted, address_verification_status, address_verification_source")
             .eq("id", patient.id)
             .maybeSingle();
 
@@ -130,6 +131,7 @@ export const PatientDialog = ({
                 fullPatient.gender_at_birth?.toLowerCase() === 'u' ? 'u' :
                 fullPatient.gender_at_birth || "",
         address_street: fullPatient.address_street || "",
+        address_suite: (fullPatient as any).address_suite || "",
         address_city: fullPatient.address_city || "",
         address_state: fullPatient.address_state || "",
         address_zip: fullPatient.address_zip || "",
@@ -236,6 +238,7 @@ export const PatientDialog = ({
       allergies: "",
       notes: "",
       address_street: "",
+      address_suite: "",
       address_city: "",
       address_state: "",
       address_zip: "",
@@ -321,6 +324,7 @@ export const PatientDialog = ({
         allergies: formData.allergies || null,
         notes: formData.notes || null,
         address_street: formData.address_street || null,
+        address_suite: formData.address_suite || null,
         address_city: formData.address_city || null,
         address_state: formData.address_state || null,
         address_zip: formData.address_zip || null,
@@ -590,6 +594,7 @@ export const PatientDialog = ({
               label="Patient Address *"
               value={{
                 street: formData.address_street,
+                suite: formData.address_suite,
                 city: formData.address_city,
                 state: formData.address_state,
                 zip: formData.address_zip,
@@ -598,6 +603,7 @@ export const PatientDialog = ({
                 setFormData({
                   ...formData,
                   address_street: addressData.street || "",
+                  address_suite: addressData.suite || "",
                   address_city: addressData.city || "",
                   address_state: addressData.state || "",
                   address_zip: addressData.zip || "",
