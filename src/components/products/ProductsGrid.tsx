@@ -690,12 +690,6 @@ export const ProductsGrid = () => {
           return;
         }
 
-        // Validate patient has required data
-        if (!patientRecord.email) {
-          toast.error("Patient email is required. Please update the patient record before adding to cart.");
-          return;
-        }
-
         // Use state from patients table
         const destinationState = patientRecord.address_state || '';
 
