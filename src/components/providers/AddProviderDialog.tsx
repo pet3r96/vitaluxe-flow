@@ -26,7 +26,7 @@ interface AddProviderDialogProps {
 export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }: AddProviderDialogProps) => {
   const { effectiveUserId, effectiveRole } = useAuth();
   const queryClient = useQueryClient();
-  const { isSubscribed, status, trialEndsAt, currentPeriodEnd } = useSubscription();
+  const { isSubscribed } = useSubscription();
   const [loading, setLoading] = useState(false);
   const [selectedPractice, setSelectedPractice] = useState(practiceId || "");
   const [validationErrors, setValidationErrors] = useState({
