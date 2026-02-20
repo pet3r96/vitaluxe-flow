@@ -1,20 +1,32 @@
 
-# Audit Complete ✅
 
-All issues from the shipping options, subscription module, and email edge function audit have been resolved.
+# Fix: patientSubscriptionCheck.ts -- Active Subscription Logic Bug
 
-## Changes Made
+## Problem
+`src/lib/patientSubscriptionCheck.ts` line 66-67 still checks `current_period_end > now` for active subscriptions. This contradicts the fix already applied to `subscriptionCheck.ts` where `status === 'active'` is always treated as subscribed. A patient whose practice has an active subscription but an expired `current_period_end` would incorrectly see their practice as unsubscribed, potentially blocking access to patient portal features.
 
-### Shipping Labels (3 fixes)
-- **OrderDetailsDialog.tsx**: Added `priority` and `first_class` labels, historical `ground` fallback
-- **Checkout.tsx**: Changed fallback from "Ground" to "Standard" (both instances)
-- **PharmacyShippingWorkflow.tsx**: Changed fallback from "Ground" to "Standard"
+## Fix
+Change line 66 from:
+```typescript
+} else if (sub.status === 'active' && sub.current_period_end) {
+    isSubscribed = new Date(sub.current_period_end) > now;
+```
+To:
+```typescript
+} else if (sub.status === 'active') {
+    isSubscribed = true;
+```
 
-### Subscription Logic (1 fix)
-- **subscriptionCheck.ts**: `hasActiveSubscription()` now treats `status === 'active'` as always subscribed, matching `getSubscriptionStatus()` logic
+This aligns patient-side subscription checking with the practice-side logic.
 
-### Verified Working (no changes needed)
-- ShippingSpeedSelector.tsx, PharmacyShippingRatesDialog.tsx, Cart.tsx, DeliveryConfirmation.tsx
-- calculate-shipping, place-order, requestValidators.ts, viosConfig.ts, viosOrders.ts
-- send-verification-email, verify-email edge functions
-- Body Preserve subscription ($0, active, 2099 expiry)
+## Files Changed
+- `src/lib/patientSubscriptionCheck.ts` (line 66-67) -- 1 line change
+
+## Verification
+After this fix, all 3 subscription check paths are aligned:
+1. `subscriptionCheck.ts` `hasActiveSubscription()` -- active = true
+2. `subscriptionCheck.ts` `getSubscriptionStatus()` -- active = true
+3. `patientSubscriptionCheck.ts` `getPatientPracticeSubscription()` -- active = true (after fix)
+4. `get-practice-subscription-status` edge function -- active = true (already correct)
+
+Everything else (shipping, email) passed the audit with no issues.
