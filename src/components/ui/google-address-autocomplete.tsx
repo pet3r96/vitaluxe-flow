@@ -160,6 +160,9 @@ const GoogleAddressAutocompleteInner = ({
     } else if (value.street) {
       setInputValue(`${value.street}${value.city ? ', ' + value.city : ''}${value.state ? ', ' + value.state : ''}${value.zip ? ' ' + value.zip : ''}`);
     }
+    if (value.suite !== undefined) {
+      setSuiteValue(value.suite || '');
+    }
   }, [value]);
 
   // Prevent input from clearing during selection and dialog close
