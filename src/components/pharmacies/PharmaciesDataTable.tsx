@@ -189,9 +189,9 @@ export const PharmaciesDataTable = () => {
             fields: [
               { 
                 label: 'Account Status', 
-                value: !pharmacy.user_id ? 'No Account' : 'Active',
+                value: pharmacy.api_enabled ? 'API Integrated' : (!pharmacy.user_id ? 'No Account' : 'Active'),
                 badge: true,
-                badgeVariant: !pharmacy.user_id ? 'destructive' : 'default'
+                badgeVariant: pharmacy.api_enabled ? 'secondary' : (!pharmacy.user_id ? 'destructive' : 'default')
               },
               { 
                 label: 'States Serviced', 
@@ -262,7 +262,11 @@ export const PharmaciesDataTable = () => {
                   <TableCell className="font-medium">{pharmacy.name}</TableCell>
                   <TableCell>{pharmacy.contact_email}</TableCell>
                   <TableCell>
-                    {!pharmacy.user_id ? (
+                    {pharmacy.api_enabled ? (
+                      <Badge variant="secondary" className="gap-1">
+                        API Integrated
+                      </Badge>
+                    ) : !pharmacy.user_id ? (
                       <Badge variant="destructive" className="gap-1">
                         <AlertCircle className="h-3 w-3" />
                         No Account
@@ -331,7 +335,7 @@ export const PharmaciesDataTable = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      {!pharmacy.user_id && (
+                      {!pharmacy.user_id && !pharmacy.api_enabled && (
                         <Button
                           variant="outline"
                           size="sm"
