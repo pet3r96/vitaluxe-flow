@@ -266,16 +266,7 @@ const App = () => {
                                               element={<PracticePatientMedicalVault />}
                                             />
                                             <Route path="/providers" element={<Providers />} />
-                                            <Route
-                                              path="/staff"
-                                              element={
-                                                <SubscriptionProtectedRoute>
-                                                  <ProGate>
-                                                    <Staff />
-                                                  </ProGate>
-                                                </SubscriptionProtectedRoute>
-                                              }
-                                            />
+                                            <Route path="/staff" element={<Staff />} />
                                             <Route path="/products" element={<Products />} />
                                             <Route path="/orders" element={<Orders />} />
                                             <Route path="/messages" element={<Messages />} />
