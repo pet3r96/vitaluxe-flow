@@ -1,76 +1,53 @@
 
-# Fix: Terms Acceptance and Trial Enrollment Bypass
+# Fix: Newly Added Patient Not Showing in List
 
-## Problem
+## Root Cause
 
-When a new practice (doctor) signs in for the first time, two things happen in a race:
+There is a **double-caching problem** causing the patient list to serve stale data even after a successful insert:
 
-1. `fetchUserRole` runs and checks `user_terms_acceptances` for ANY record -- this determines if terms were accepted
-2. Auto-enrollment calls `subscribe-to-vitaluxepro`, which creates a subscription AND inserts a `user_terms_acceptances` record with `role = 'subscription'`
+1. **In-memory cache** (`patientService.ts`): A custom `Map`-based cache with a 2-minute TTL sits in front of the database query. When React Query invalidates and re-runs the fetch, it hits this in-memory cache and gets the OLD data back -- the new patient is invisible.
 
-Because the terms check (step 1) looks for ANY acceptance record regardless of role, the subscription acceptance record satisfies it. The user is never shown the actual Practice Agreement terms.
+2. **React Query over-caching** (`usePatients.ts`): `staleTime` is set to 5 minutes and the global config disables `refetchOnMount`, so even navigating away and back won't trigger a fresh fetch.
 
-Additionally, auto-enrollment happens silently in the background without the user ever seeing the trial enrollment page or agreeing to anything.
+These two caches fighting each other mean it can take up to 2-5 minutes for a new patient to appear.
 
-## Fix (2 Parts)
+## Fix
 
-### Part 1: Make terms check role-specific
+### 1. Remove the in-memory cache from `patientService.ts`
 
-**File: `src/contexts/AuthContext.tsx`** (parallel query, ~line 914-920)
+The in-memory cache is redundant -- React Query already caches the result. Having two caches creates exactly this kind of staleness bug. Remove the `patientListCache` Map entirely and let React Query be the single source of truth.
 
-Change the terms acceptance query to filter by the user's actual role. Instead of:
+**File: `src/services/patients/patientService.ts`**
+- Delete the `CacheEntry` interface, `patientListCache` Map, and `CACHE_TTL` constant
+- Remove the cache-check and cache-store logic
+- Keep only the actual database fetch logic
 
-```
-.eq('user_id', userId)
-```
+### 2. Reduce staleTime in `usePatients.ts`
 
-Add a role filter:
+Change `staleTime` from 300000 (5 min) to 30000 (30 sec) to match the global default. This ensures that when the query is invalidated after adding a patient, it actually refetches.
 
-```
-.eq('user_id', userId)
-.eq('role', role)  // Only check terms for the user's actual role
-```
+**File: `src/hooks/usePatients.ts`**
+- Change `staleTime: 300000` to `staleTime: 30000`
 
-This applies to both the parallel query and the impersonation branch (~line 1029-1034). The role variable is already resolved by the time these queries run.
+### 3. Force cache clear on add in `PatientDialog.tsx`
 
-This ensures that a `subscription` terms record does not satisfy the `doctor` terms requirement.
+After a successful patient insert, use `removeQueries` before `invalidateQueries` to guarantee no stale cache is returned.
 
-### Part 2: Move auto-enrollment AFTER terms acceptance
+**File: `src/components/patients/PatientDialog.tsx`**
+- After insert succeeds, call `queryClient.removeQueries({ queryKey: ["patients"] })` before the invalidation calls
+- This ensures React Query discards the cached result entirely and does a fresh fetch
 
-**File: `src/contexts/AuthContext.tsx`** (~line 447-497)
+## Expected Result
 
-Remove the auto-enrollment block from the `SIGNED_IN` handler. Instead, trigger auto-enrollment from the `AcceptTerms` page after the user successfully accepts their role-specific terms.
+After these changes:
+- Adding a patient triggers an immediate fresh database query
+- No in-memory cache can serve stale data
+- The new patient appears in the list instantly
 
-**File: `src/pages/AcceptTerms.tsx`** (~line 203-227)
-
-After terms are accepted successfully (inside the `if (data.success)` block), check if the user is a `doctor` role and auto-enroll them in a trial if they don't already have a subscription:
-
-```typescript
-// Auto-enroll practice in trial after terms acceptance
-if (effectiveRole === 'doctor') {
-  try {
-    const { error: subError } = await supabase.functions.invoke('subscribe-to-vitaluxepro');
-    if (!subError) {
-      toast.success("Your 14-day free trial has started!");
-    }
-  } catch (e) {
-    // Non-blocking - trial can be started later
-  }
-}
-```
-
-## Summary of Changes
+## Technical Details
 
 | File | Change |
 |------|--------|
-| `src/contexts/AuthContext.tsx` | Add `.eq('role', role)` to terms query (2 places); Remove auto-enrollment from SIGNED_IN handler |
-| `src/pages/AcceptTerms.tsx` | Add auto-enrollment after successful terms acceptance for doctor role |
-
-## Expected Flow After Fix
-
-1. New doctor signs up and verifies email
-2. Doctor logs in
-3. Terms check finds no `doctor` terms acceptance record -- redirects to `/accept-terms`
-4. Doctor reads and signs the Practice Agreement
-5. After signing, trial auto-enrolls silently
-6. Doctor lands on dashboard with "Trial: 14 days remaining"
+| `src/services/patients/patientService.ts` | Remove in-memory cache (Map + TTL logic) |
+| `src/hooks/usePatients.ts` | Reduce `staleTime` from 5 min to 30 sec |
+| `src/components/patients/PatientDialog.tsx` | Add `removeQueries` before `invalidateQueries` after insert |
