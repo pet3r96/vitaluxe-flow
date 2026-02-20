@@ -9,6 +9,7 @@ const corsHeaders = {
 
 interface AddressInput {
   street: string;
+  suite?: string;
   city: string;
   state: string;
   zip: string;

@@ -11,6 +11,7 @@ const libraries: ("places")[] = ['places'];
 
 export interface AddressValue {
   street?: string;
+  suite?: string;
   city?: string;
   state?: string;
   zip?: string;
