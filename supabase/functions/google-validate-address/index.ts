@@ -74,7 +74,8 @@ serve(async (req) => {
     }
 
     // Build address for Google API
-    const addressLines = [street, `${city}, ${state} ${zip}`].filter(Boolean);
+    const streetWithSuite = suite ? `${street} ${suite}` : street;
+    const addressLines = [streetWithSuite, `${city}, ${state} ${zip}`].filter(Boolean);
 
     // Call Google Address Validation API
     const response = await fetch(
