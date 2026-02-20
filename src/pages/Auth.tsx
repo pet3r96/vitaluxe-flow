@@ -433,7 +433,7 @@ const Auth = () => {
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {!isLogin && <>
               <div className="space-y-2">
-                <Label htmlFor="name">Practice Name</Label>
+                <Label htmlFor="name">{role === "doctor" ? "Practice Name" : role === "pharmacy" ? "Pharmacy Name" : "Contact Name"}</Label>
                 <Input id="name" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Acme Medical Spa" className="bg-input border-border text-foreground" required />
               </div>
 
