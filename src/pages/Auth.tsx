@@ -352,7 +352,9 @@ const Auth = () => {
                 error
               } = await supabase.functions.invoke('send-verification-email', {
                 body: {
-                  email: reminderEmail
+                  userId: reminderUserId || undefined,
+                  email: reminderEmail,
+                  name: ''
                 }
               });
               if (error) throw error;
