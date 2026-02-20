@@ -465,7 +465,8 @@ const Auth = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="practiceNpi">Practice NPI</Label>
-                    <Input id="practiceNpi" type="text" value={practiceNpi} onChange={e => setPracticeNpi(e.target.value)} placeholder="Your practice or organization's NPI" className="bg-input border-border text-foreground" />
+                    <Input id="practiceNpi" type="text" value={practiceNpi} onChange={e => setPracticeNpi(e.target.value.replace(/\D/g, ''))} placeholder="Your practice or organization's NPI" className={`bg-input border-border text-foreground ${practiceNpi && practiceNpi.length > 0 && practiceNpi.length !== 10 ? 'border-destructive' : ''}`} maxLength={10} />
+                    {practiceNpi && practiceNpi.length > 0 && practiceNpi.length !== 10 && <p className="text-xs text-destructive">Practice NPI must be exactly 10 digits</p>}
                   </div>
 
                   <div className="space-y-2">
