@@ -117,11 +117,14 @@ serve(async (req) => {
     // Skip IP check for pharmacy_staff — pharmacy owners add staff from their browser
     // Their authorization is verified downstream (ownership of the pharmacy)
     const isPharmacyStaffCreation = (signupData.role as string) === 'pharmacy_staff';
-    if (!isPharmacyStaffCreation) {
+    const isSelfSignup = signupData.isSelfSignup === true;
+    if (!isPharmacyStaffCreation && !isSelfSignup) {
       const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'assign-user-role');
       if (ipCheckResponse) return ipCheckResponse;
     } else {
-      edgeLogger.info('[assign-user-role] Skipping IP check for pharmacy_staff creation');
+      edgeLogger.info('[assign-user-role] Skipping IP check', { 
+        reason: isSelfSignup ? 'self-signup' : 'pharmacy_staff creation' 
+      });
     }
 
     // Rate limiting to prevent abuse
@@ -468,7 +471,7 @@ serve(async (req) => {
     }
 
     // Determine user status and email confirmation based on flow
-    const isSelfSignup = signupData.isSelfSignup === true;
+    // isSelfSignup already declared above (line 120)
     const isAdminCreated = signupData.isAdminCreated === true || isAdminCaller;
     const userStatus = isSelfSignup ? 'pending_verification' : 'active';
     const requiresTempPassword = isAdminCreated && !isSelfSignup;
