@@ -159,11 +159,7 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Enforce IP check for non-practice owners
-        if (!isDoctor) {
-          const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status:staff-status');
-          if (ipCheckResponse) return ipCheckResponse;
-        }
+
 
         const updateData: any = { updated_at: new Date().toISOString() };
         if (active !== undefined) updateData.active = active;
