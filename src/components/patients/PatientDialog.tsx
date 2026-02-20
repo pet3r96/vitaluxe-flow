@@ -322,6 +322,7 @@ export const PatientDialog = ({
         allergies: formData.allergies || null,
         notes: formData.notes || null,
         address_street: formData.address_street || null,
+        address_suite: formData.address_suite || null,
         address_city: formData.address_city || null,
         address_state: formData.address_state || null,
         address_zip: formData.address_zip || null,
