@@ -267,6 +267,7 @@ const Auth = () => {
           phone,
           address: address.formatted || `${address.street}, ${address.city}, ${address.state} ${address.zip}`,
           address_street: address.street,
+          address_suite: address.suite || null,
           address_city: address.city,
           address_state: address.state,
           address_zip: address.zip,
