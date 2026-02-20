@@ -108,12 +108,6 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check Pro subscription requirement (use context's isSubscribed which handles all status logic)
-    if (!isSubscribed) {
-      toast.error("VitaLuxePro subscription required to add providers. Please upgrade your practice subscription.");
-      return;
-    }
-    
     // Check NPI verification status BEFORE format validation
     if (npiVerificationStatus !== "verified") {
       if (npiVerificationStatus === "verifying") {

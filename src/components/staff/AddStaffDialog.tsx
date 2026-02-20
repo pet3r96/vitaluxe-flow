@@ -88,12 +88,6 @@ export const AddStaffDialog = ({ open, onOpenChange, onSuccess, practiceId }: Ad
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check Pro subscription requirement (use context's isSubscribed which handles all status logic)
-    if (!isSubscribed) {
-      toast.error("VitaLuxePro subscription required to add staff members. Please upgrade your practice subscription.");
-      return;
-    }
-    
     // Validate phone if provided
     if (formData.phone) {
       const phoneResult = validatePhone(formData.phone);
