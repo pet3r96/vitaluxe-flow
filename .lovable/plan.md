@@ -1,71 +1,30 @@
 
 
-# Fix: User Deletion Blocked by Foreign Key Constraints
+# Fix: Slow/Laggy Search Input on Accounts Page
 
-## Root Cause
+## Problem
 
-When deleting user "Demo Pharmacy 1", the cascade chain hits a wall:
+The search input is a **controlled component** (`value={searchQuery}`) but the `onChange` handler uses a debounced function to update `searchQuery`. This means every keystroke waits 300ms before the input visually updates -- making typing feel frozen and laggy. Single-character (unique) searches feel fast because one keystroke resolves quickly.
 
-```text
-auth.users (DELETE)
-  -> profiles (CASCADE - deleted)
-    -> pharmacies (CASCADE - tries to delete)
-      -> order_lines (NO ACTION - 66 rows BLOCK deletion!)
-```
+## Fix
 
-There are also 16 other `NO ACTION` foreign keys on `auth.users` that will block future deletions for any user who has records in those tables. And the cleanup function references a non-existent `active_sessions` table.
+Split the state into two:
+- `inputValue` -- updates instantly on every keystroke (so typing feels responsive)
+- `searchQuery` -- updates after a 300ms debounce (used for filtering)
 
-## Fix (2 changes)
+Replace the custom `debounce` wrapper with the existing `useDebounce` hook already in the codebase.
 
-### 1. Database Migration: Change all blocking FK constraints to SET NULL
+## Changes
 
-These are "reference" columns (like `cancelled_by`, `uploaded_by`, `assigned_pharmacy_id`) -- historical audit data that should be preserved but should not block deletion. Changing them to `SET NULL` means the column becomes NULL when the referenced row is deleted, but the record itself is kept.
+**File: `src/components/accounts/AccountsDataTable.tsx`**
 
-**auth.users references (16 constraints):**
+1. Import `useDebounce` hook (already exists at `@/hooks/use-debounce`)
+2. Remove the `debounce` import from `@/lib/performance`
+3. Replace `searchQuery` state + `debouncedSetSearch` with:
+   - `inputValue` state (for the input display)
+   - `debouncedSearch = useDebounce(inputValue, 300)` (for filtering)
+4. Update the Input component to use `value={inputValue}` and `onChange={(e) => setInputValue(e.target.value)}`
+5. Update `filteredAccounts` to use `debouncedSearch` instead of `searchQuery`
 
-| Table | Column | Current | New |
-|-------|--------|---------|-----|
-| orders | cancelled_by | NO ACTION | SET NULL |
-| patient_documents | uploaded_by | NO ACTION | SET NULL |
-| provider_documents | uploaded_by | NO ACTION | SET NULL |
-| provider_document_assignments | created_by | NO ACTION | SET NULL |
-| terms_and_conditions | created_by | NO ACTION | SET NULL |
-| terms_and_conditions | updated_by | NO ACTION | SET NULL |
-| prescription_refills | refilled_by | NO ACTION | SET NULL |
-| user_2fa_settings | reset_requested_by | NO ACTION | SET NULL |
-| system_settings | updated_by | NO ACTION | SET NULL |
-| video_session_guest_links | created_by | NO ACTION | SET NULL |
-| checkout_attestation | updated_by | NO ACTION | SET NULL |
-| patient_portal_terms | updated_by | NO ACTION | SET NULL |
-| provider_document_patients | assigned_by | NO ACTION | SET NULL |
-| video_usage_pricing | created_by | NO ACTION | SET NULL |
-| pharmacy_order_transmissions | retried_by | NO ACTION | SET NULL |
-| video_sessions | created_by_user_id | NO ACTION | SET NULL |
-
-**pharmacies references (5 constraints):**
-
-| Table | Column | Current | New |
-|-------|--------|---------|-----|
-| order_lines | assigned_pharmacy_id | NO ACTION | SET NULL |
-| cart_lines | assigned_pharmacy_id | NO ACTION | SET NULL |
-| pharmacy_webhook_events | pharmacy_id | NO ACTION | SET NULL |
-| pharmacy_shipping_rates | pharmacy_id | NO ACTION | CASCADE |
-| pharmacy_order_jobs | pharmacy_id | NO ACTION | CASCADE |
-
-### 2. Edge Function: Fix cleanup-test-data/index.ts
-
-- Remove the reference to non-existent `active_sessions` table (line 317)
-- Add `notification_preferences` cleanup before auth deletion
-- Add `user_2fa_settings` cleanup before auth deletion
-
-## Why SET NULL is Safe
-
-These columns are all audit/reference fields ("who cancelled this order?", "who uploaded this document?"). The actual data (order, document, etc.) should be preserved even if the user is deleted. Setting the reference to NULL simply means "deleted user" while keeping the historical record intact.
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| New database migration | Change 21 FK constraints from NO ACTION to SET NULL/CASCADE |
-| `supabase/functions/cleanup-test-data/index.ts` | Remove `active_sessions`, add `notification_preferences` and `user_2fa_settings` cleanup |
+No other files need changes. The filtering logic stays the same -- only the input responsiveness improves.
 
