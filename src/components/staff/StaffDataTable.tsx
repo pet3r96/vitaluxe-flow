@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
