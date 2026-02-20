@@ -160,12 +160,12 @@ serve(async (req) => {
     const isValid = isHighQuality && !hasUnconfirmedComponents;
 
     if (isValid) {
-      // Address is valid
       return new Response(
         JSON.stringify({
           is_valid: true,
           formatted_address: formattedAddress,
           street: validatedStreet,
+          suite: suite || '',
           city: validatedCity,
           state: validatedState,
           zip: validatedZip,
@@ -180,14 +180,15 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else if (hasInferredComponents || hasUnconfirmedComponents) {
-      // Address has corrections/suggestions
       return new Response(
         JSON.stringify({
           is_valid: false,
           formatted_address: formattedAddress,
+          suite: suite || '',
           verification_source: 'google_places',
           suggestions: {
             street: validatedStreet,
+            suite: suite || '',
             city: validatedCity,
             state: validatedState,
             zip: validatedZip,
