@@ -1,44 +1,52 @@
 
 
-# Fix: "Missing provider credentials" Error When Adding Provider
+# Fix: Cleanup Failed + Suppress Handled Signup Errors
 
-## Problem
+## Two Issues Found
 
-When a practice adds a provider **without** a DEA number, the backend rejects the request with "Missing provider credentials". This happens because:
+### Issue 1: "Cleanup failed" when deleting accounts
+**Root cause:** The `performance_metrics` table has a foreign key `performance_metrics_user_id_fkey` referencing `auth.users` WITHOUT `ON DELETE CASCADE`. When the admin deletes a user account, Postgres blocks the auth user deletion because rows still exist in `performance_metrics`.
 
-- The **Add Provider form** treats DEA as optional (no asterisk, not required)
-- The **edge function** (line 370) treats DEA as mandatory: `if (!signupData.roleData.npi || !signupData.roleData.dea)`
-- An empty string `""` is falsy in JavaScript, so `!""` evaluates to `true`, triggering the error
+**Fix (two parts):**
 
-DEA numbers are genuinely optional for many provider types (e.g., nurse practitioners in some states, providers who don't prescribe controlled substances).
+A. **Database migration** -- Delete `performance_metrics` rows for the user before deleting the auth user in the cleanup edge function. Also alter the foreign key to add `ON DELETE CASCADE` so this class of bug can't recur:
 
-## Fix
-
-### File: `supabase/functions/assign-user-role/index.ts` (line 370)
-
-Change the provider credential validation to only require NPI (which is always mandatory), and make DEA optional:
-
-```typescript
-// Before (line 370):
-if (!signupData.roleData.npi || !signupData.roleData.dea) {
-
-// After:
-if (!signupData.roleData.npi) {
+```sql
+ALTER TABLE performance_metrics
+  DROP CONSTRAINT performance_metrics_user_id_fkey,
+  ADD CONSTRAINT performance_metrics_user_id_fkey
+    FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 ```
 
-Update the error message on line 375 accordingly:
+B. **Edge function update** -- Add a step in `cleanup-test-data/index.ts` (before Step 9) to delete `performance_metrics` rows for the target user, as a safety net:
 
 ```typescript
-// Before:
-return errorResponse('Providers must have NPI and DEA numbers', 400);
-
-// After:
-return errorResponse('Providers must have a valid NPI number', 400);
+await supabaseAdmin.from('performance_metrics').delete().eq('user_id', userId);
 ```
 
-No other files need changes. The form already correctly treats DEA as optional.
+---
 
-## Why the audit didn't catch this
+### Issue 2: Preview error banner on handled signup errors
+**Root cause:** `authService.ts` calls `logger.error()` for expected business outcomes like duplicate emails (lines 78, 84, 142, 149). This triggers `console.error`, which the preview error boundary catches and shows the red banner.
 
-The audit tested the **existing user flows** (patient addition, calendar, vault, intake). The provider-addition flow wasn't triggered during testing -- the "Missing provider credentials" errors appeared at 17:46 and 17:47 (after the audit), when a real user tried adding a provider without a DEA.
+**Fix:** Downgrade these to `logger.warn()` since they are expected/handled errors, not crashes. Also improve the duplicate email message to be clearer:
+
+| Line | Current | Updated |
+|------|---------|---------|
+| 50-55 (signupUser) | "This email address is already registered..." | "This email already exists in the system. No duplicate users allowed -- please use another email or log in with your existing account." |
+| 78 | `logger.error('Self-signup error', error)` | `logger.warn('Self-signup rejected', { message: msg })` |
+| 84 | `logger.error('Self-signup validation error', ...)` | `logger.warn('Self-signup validation rejected', { message: data.error })` |
+| 115-119 (createUserByAdmin) | "This email address is already registered in the system." | "This email already exists in the system. No duplicate users allowed -- please use another email or log in with the existing account." |
+| 142 | `logger.error('Admin user creation error', error)` | `logger.warn('Admin user creation rejected', { message: msg })` |
+| 149 | `logger.error('Admin user creation validation error', ...)` | `logger.warn('Admin user creation rejected', { message: data.error })` |
+
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| New database migration | Add `ON DELETE CASCADE` to `performance_metrics_user_id_fkey` |
+| `supabase/functions/cleanup-test-data/index.ts` | Delete `performance_metrics` rows before auth user deletion |
+| `src/lib/authService.ts` | Downgrade handled errors to `logger.warn`, improve duplicate email messages |
 
