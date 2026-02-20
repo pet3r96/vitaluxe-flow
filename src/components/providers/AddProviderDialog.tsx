@@ -110,12 +110,8 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check Pro subscription requirement
-    const hasActivePro = 
-      (status === 'trial' && trialEndsAt && new Date(trialEndsAt) > new Date()) ||
-      (status === 'active' && currentPeriodEnd && new Date(currentPeriodEnd) > new Date());
-    
-    if (!hasActivePro) {
+    // Check Pro subscription requirement (use context's isSubscribed which handles all status logic)
+    if (!isSubscribed) {
       toast.error("VitaLuxePro subscription required to add providers. Please upgrade your practice subscription.");
       return;
     }
