@@ -175,6 +175,8 @@ export const PatientSelectionDialog = ({
       return validPatients;
     },
     enabled: open && !!finalPracticeId,
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   // Helper to derive readable name from email
