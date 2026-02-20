@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { validatePhone } from "@/lib/validators";
 import { getCurrentCSRFToken } from "@/lib/csrf";
-import { useSubscription } from "@/contexts/SubscriptionContext";
 
 interface AddStaffDialogProps {
   open: boolean;
