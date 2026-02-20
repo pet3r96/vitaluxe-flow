@@ -645,7 +645,7 @@ serve(async (req) => {
         allOrderLineKeys: allOrderLines.length > 0 ? Object.keys(allOrderLines[0]) : [],
         missingShippingSpeeds: allOrderLines.filter(line => !line.shipping_speed).length,
         invalidShippingSpeeds: allOrderLines.filter(line => 
-          line.shipping_speed && !['ground', '2day', 'overnight'].includes(line.shipping_speed)
+          line.shipping_speed && !['overnight', '2day', 'priority', 'first_class', 'ground'].includes(line.shipping_speed)
         ).map(line => ({ id: line.id, speed: line.shipping_speed })),
         missingOrderIds: allOrderLines.filter(line => !line.order_id).length,
         missingProductIds: allOrderLines.filter(line => !line.product_id).length,
