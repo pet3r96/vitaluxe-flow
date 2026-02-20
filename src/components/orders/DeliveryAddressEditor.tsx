@@ -9,6 +9,7 @@ interface DeliveryAddressEditorProps {
   addressType: 'practice' | 'patient';
   currentAddress?: {
     street: string;
+    suite?: string;
     city: string;
     state: string;
     zip: string;
