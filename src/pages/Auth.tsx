@@ -447,7 +447,7 @@ const Auth = () => {
           {!isLogin && <>
               <div className="space-y-2">
                 <Label htmlFor="name">{role === "doctor" ? "Practice Name" : role === "pharmacy" ? "Pharmacy Name" : "Contact Name"}</Label>
-                <Input id="name" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Acme Medical Spa" className="bg-input border-border text-foreground" required />
+                <Input id="name" type="text" value={name} onChange={e => setName(e.target.value)} placeholder={role === "topline" ? "Your full name" : role === "pharmacy" ? "ABC Pharmacy" : "Acme Medical Spa"} className="bg-input border-border text-foreground" required />
               </div>
 
               <div className="space-y-3">
