@@ -1,30 +1,33 @@
 
 
-# Fix: Slow/Laggy Search Input on Accounts Page
+# Fix: Patient Add Says "Already Exists" + Success But Not Showing
 
-## Problem
+## Three Bugs Found
 
-The search input is a **controlled component** (`value={searchQuery}`) but the `onChange` handler uses a debounced function to update `searchQuery`. This means every keystroke waits 300ms before the input visually updates -- making typing feel frozen and laggy. Single-character (unique) searches feel fast because one keystroke resolves quickly.
+### Bug 1: "Patient already exists" for cross-practice patients
+The database has a **global** unique index on `lower(email)`:
+```
+patient_accounts_email_lower_unique ON (lower(email)) WHERE email IS NOT NULL
+```
+This prevents the same email from existing in **any** two practices. Since a patient can belong to multiple clinics, this needs to be scoped per-practice.
 
-## Fix
+**Fix**: Drop the global unique index and create a new one scoped to `(practice_id, lower(email))`.
 
-Split the state into two:
-- `inputValue` -- updates instantly on every keystroke (so typing feels responsive)
-- `searchQuery` -- updates after a 300ms debounce (used for filtering)
+### Bug 2: Patient added successfully but doesn't appear in the list
+After creating a patient, `PatientDialog` invalidates the query key `["practice-patients"]`. But the `PatientsDataTable` component fetches patients using `usePatients()`, which uses the query key `["patients", effectiveRole, effectivePracticeId]`. These don't match, so the list never refreshes after adding.
 
-Replace the custom `debounce` wrapper with the existing `useDebounce` hook already in the codebase.
+**Fix**: Update `PatientDialog` to also invalidate `["patients"]` query keys so the data table refreshes.
 
-## Changes
+### Bug 3: Search input lag (same issue fixed on Accounts page)
+The search input on this Patients page has the same debounce bug -- typing feels frozen because the input value only updates after the 300ms debounce.
 
-**File: `src/components/accounts/AccountsDataTable.tsx`**
+**Fix**: Split into `inputValue` (instant) and debounced `searchQuery` (for filtering), same pattern applied to the Accounts and Staff pages.
 
-1. Import `useDebounce` hook (already exists at `@/hooks/use-debounce`)
-2. Remove the `debounce` import from `@/lib/performance`
-3. Replace `searchQuery` state + `debouncedSetSearch` with:
-   - `inputValue` state (for the input display)
-   - `debouncedSearch = useDebounce(inputValue, 300)` (for filtering)
-4. Update the Input component to use `value={inputValue}` and `onChange={(e) => setInputValue(e.target.value)}`
-5. Update `filteredAccounts` to use `debouncedSearch` instead of `searchQuery`
+## Files Changed
 
-No other files need changes. The filtering logic stays the same -- only the input responsiveness improves.
+| File | Change |
+|------|--------|
+| New database migration | Drop `patient_accounts_email_lower_unique`, create `patient_accounts_practice_email_unique` on `(practice_id, lower(email))` |
+| `src/components/patients/PatientDialog.tsx` | Also invalidate `["patients"]` query key after create/update |
+| `src/components/patients/PatientsDataTable.tsx` | Fix search input lag with `useDebounce` pattern |
 
