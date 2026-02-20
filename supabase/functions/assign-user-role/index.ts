@@ -113,19 +113,7 @@ serve(async (req) => {
       );
     }
 
-    // PHASE 3: IP filtering for admin function
-    // Skip IP check for pharmacy_staff — pharmacy owners add staff from their browser
-    // Their authorization is verified downstream (ownership of the pharmacy)
-    const isPharmacyStaffCreation = (signupData.role as string) === 'pharmacy_staff';
-    const isSelfSignup = signupData.isSelfSignup === true;
-    if (!isPharmacyStaffCreation && !isSelfSignup) {
-      const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'assign-user-role');
-      if (ipCheckResponse) return ipCheckResponse;
-    } else {
-      edgeLogger.info('[assign-user-role] Skipping IP check', { 
-        reason: isSelfSignup ? 'self-signup' : 'pharmacy_staff creation' 
-      });
-    }
+
 
     // Rate limiting to prevent abuse
     edgeLogger.info('[assign-user-role] Checking rate limit');

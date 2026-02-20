@@ -43,9 +43,7 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createAdminClient();
 
-    // PHASE 3: IP filtering for admin function
-    const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'factory-reset');
-    if (ipCheckResponse) return ipCheckResponse;
+
 
     // PHASE 3: Request size validation
     const sizeCheckResponse = validateRequestSize(req, 'factory-reset', corsHeaders);

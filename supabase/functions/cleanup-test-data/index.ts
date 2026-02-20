@@ -47,9 +47,7 @@ serve(async (req) => {
       );
     }
 
-    // PHASE 3: IP filtering for admin function
-    const ipCheck = await enforceAdminIP(req, supabaseAdmin, 'cleanup-test-data');
-    if (ipCheck) return ipCheck;
+
 
     // Verify admin role
     try {

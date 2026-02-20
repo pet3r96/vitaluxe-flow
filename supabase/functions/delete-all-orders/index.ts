@@ -21,9 +21,7 @@ serve(async (req) => {
     // Admin client for IP check and deletions
     const supabaseAdmin = createAdminClient();
 
-    // PHASE 3: IP filtering for admin function
-    const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'delete-all-orders');
-    if (ipCheckResponse) return ipCheckResponse;
+
 
     // PHASE 3: Request size validation
     const sizeCheckResponse = validateRequestSize(req, 'delete-all-orders', corsHeaders);

@@ -377,9 +377,7 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Enforce IP check for admin-only operations
-        const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status:status-configs');
-        if (ipCheckResponse) return ipCheckResponse;
+
 
         let result;
 
