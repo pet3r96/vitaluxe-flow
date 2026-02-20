@@ -8724,6 +8724,19 @@ export type Database = {
             }
             Returns: Json
           }
+        | {
+            Args: {
+              p_created_by?: string
+              p_email: string
+              p_name: string
+              p_role: string
+              p_role_data?: Json
+              p_status?: string
+              p_temp_password?: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
       decrypt_2fa_phone: {
         Args: { p_encrypted_phone: string }
         Returns: string
