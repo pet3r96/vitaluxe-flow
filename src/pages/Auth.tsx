@@ -140,6 +140,47 @@ const Auth = () => {
           setLoading(false);
           return;
         }
+
+        // Validate Provider NPI format
+        if (!/^\d{10}$/.test(npi)) {
+          toast({
+            title: "Error",
+            description: "Provider NPI must be exactly 10 digits",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Block submit if NPI not verified
+        if (npiVerificationStatus !== "verified") {
+          if (npiVerificationStatus === "verifying") {
+            toast({
+              title: "Please Wait",
+              description: "NPI verification is in progress. Please wait.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Error",
+              description: "Provider NPI must be verified before signing up",
+              variant: "destructive"
+            });
+          }
+          setLoading(false);
+          return;
+        }
+
+        // Validate Practice NPI format if provided
+        if (practiceNpi && !/^\d{10}$/.test(practiceNpi)) {
+          toast({
+            title: "Error",
+            description: "Practice NPI must be exactly 10 digits",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
       } else if (role === "pharmacy") {
         if (!contactEmail || statesServiced.length === 0) {
           toast({
