@@ -1,128 +1,117 @@
 
 
-# Fix: Body Preserve Free Subscription + Replace Shipping Options (Ground -> Priority + First Class)
+# Full Audit: Shipping Options, Subscription Module, and Email Edge Function
 
-## 1. Body Preserve Free Pro Subscription
+## Audit 1: Shipping Options -- 3 Issues Found
 
-### Current State
-- Practice ID: `4a6ca268-c18e-44bb-9213-80183fdd1726`
-- Status: `trial` (expires Mar 6, 2026)
-- Monthly price: `$0.00`
-
-### Problem
-Even though price is $0, the status is `trial` which will expire in 13 days. After that, Body Preserve loses access to Pro features.
-
-### Fix
-- Update the subscription record: set `status` to `active`, set `current_period_start` to now, set `current_period_end` to far future (2099-12-31)
-- The existing auto-renewal logic in `subscriptionCheck.ts` already treats `status: 'active'` as always subscribed regardless of period end
-- Combined with `monthly_price: 0`, they will never be billed and never lose access
-
----
-
-## 2. Shipping Speed Changes: Remove Ground, Add Priority + First Class
-
-### Scope of Changes
-The shipping speed system touches **every layer** -- database enums, constraints, edge functions, validators, and UI components. All references to `ground` must be removed, and `priority` + `first_class` must be added.
-
-### Database Migration
-
-**Enum modification:**
-```sql
-ALTER TYPE shipping_speed ADD VALUE 'priority';
-ALTER TYPE shipping_speed ADD VALUE 'first_class';
+### Issue A: OrderDetailsDialog still shows "Ground" as fallback (CRITICAL)
+`src/components/orders/OrderDetailsDialog.tsx` at line 836-838 still has old labels:
 ```
-Note: Postgres does not allow removing enum values. Old `ground` value stays in the enum but will no longer be used by any code. Existing orders with `ground` shipping will retain their historical data.
+{line.shipping_speed === '2day' ? '2-Day Shipping' :
+ line.shipping_speed === 'overnight' ? 'Overnight Shipping' :
+ 'Ground (5-7 days)'}
+```
+This means any order with `priority` or `first_class` shipping will display as "Ground (5-7 days)". Fix: add `priority` and `first_class` labels, keep `ground` as a historical fallback.
 
-**CHECK constraint on `order_lines`:**
-- Drop the existing `valid_shipping_speed` CHECK constraint
-- Recreate it with: `CHECK (shipping_speed IN ('2day', 'overnight', 'priority', 'first_class'))`
+### Issue B: Checkout.tsx still shows "Ground" as fallback
+`src/pages/Checkout.tsx` at lines 900-901 and 976-978, the shipping speed badge falls through to `'Ground'` for any speed that isn't `overnight`, `2day`, `priority`, or `first_class`. The ternary chain ends with `'Ground'` instead of a proper label. Fix: the fallback should say "Standard" or handle all 4 speeds properly.
 
-**Default values:**
-- Update any default values from `'ground'` to `'priority'` on `cart_lines` and `order_lines`
+### Issue C: PharmacyShippingWorkflow.tsx still shows "Ground" as fallback
+`src/components/pharmacies/PharmacyShippingWorkflow.tsx` at line 512 falls through to `'Ground'` for unrecognized speeds. Fix: same pattern -- add `priority` and `first_class` labels.
 
-### Frontend Changes (6 files)
+### Verified Working (no issues)
+- ShippingSpeedSelector.tsx -- 4 options correctly defined
+- PharmacyShippingRatesDialog.tsx -- 4 options, saves correctly
+- Cart.tsx -- normalizes `ground` to `first_class`, auto-selects correctly
+- calculate-shipping edge function -- accepts all 4 + ground fallback
+- place-order edge function -- defaults to `first_class`
+- requestValidators.ts -- accepts all 4 + ground
+- viosConfig.ts -- maps `priority` and `first_class` to USPS_PRIORITY
+- viosOrders.ts -- uses `getViosShippingCode()` correctly
+- DeliveryConfirmation.tsx -- has all 4 labels
 
-1. **`src/components/cart/ShippingSpeedSelector.tsx`**
-   - Remove `ground` option
-   - Add `priority` option (icon: Truck, label: "Priority Shipping", desc: "(2-3 business days)")
-   - Add `first_class` option (icon: Mail/Package, label: "First Class", desc: "(3-5 business days)")
-   - Update all type references from `'ground' | '2day' | 'overnight'` to `'overnight' | '2day' | 'priority' | 'first_class'`
-
-2. **`src/components/pharmacies/PharmacyShippingRatesDialog.tsx`**
-   - Replace `ground` rate input with `priority` and `first_class` inputs
-   - Update state, types, and save mutation
-
-3. **`src/pages/Cart.tsx`**
-   - Update all type references and default fallbacks from `'ground'` to `'first_class'` (cheapest option)
-   - Update normalization logic to use new speed values
-   - Priority order for auto-select: `overnight` -> `2day` -> `priority` -> `first_class`
-
-4. **`src/components/orders/OrderDetailsDialog.tsx`**
-   - Update display labels: add `priority` -> "Priority Shipping" and `first_class` -> "First Class"
-   - Keep `ground` label as fallback for historical orders
-
-5. **`src/components/orders/OrdersDataTable.tsx`**
-   - Same display label updates for the orders table
-
-6. **`src/components/pharmacies/PharmacyShippingWorkflow.tsx`**
-   - Update shipping speed display labels
-
-### Edge Function Changes (5 files)
-
-1. **`supabase/functions/calculate-shipping/index.ts`**
-   - Update `CalculateShippingRequest` type
-   - Update default fallback rates: replace `ground` with `priority` and `first_class`
-
-2. **`supabase/functions/update-shipping-speed/index.ts`**
-   - No type validation to update (it accepts any string), but logging references should be updated
-
-3. **`supabase/functions/place-order/index.ts`**
-   - Update the `invalidShippingSpeeds` validation check to use new values
-
-4. **`supabase/functions/_shared/requestValidators.ts`**
-   - Update `validateCalculateShippingRequest` to accept `['overnight', '2day', 'priority', 'first_class']`
-
-5. **`supabase/functions/_shared/vios/viosConfig.ts`**
-   - Add mappings for `priority` and `first_class` to VIOS shipping codes
-   - `priority` -> USPS Priority (7615)
-   - `first_class` -> will need a VIOS code (user may need to configure this, or map to USPS Priority as default)
-   - Remove/deprecate `ground` mapping
-
-### Hook Changes (2 files)
-
-1. **`src/hooks/useMultiplePharmacyRates.ts`** - No code changes needed (already generic)
-2. **`src/hooks/usePharmacyShippingRates.ts`** - No code changes needed (already generic)
-
-### Supabase Types
-- `src/integrations/supabase/types.ts` will auto-update after migration to include `'priority'` and `'first_class'` in the shipping_speed enum
+### VIOS Service Codes
+The `pharmacy_shipping_rates` table has `vios_service_code = null` for `priority` and `first_class` entries. However, the system uses `getViosShippingCode()` from `viosConfig.ts` which maps based on the speed string, not the DB column. So VIOS orders will still work -- `priority` and `first_class` both map to USPS_PRIORITY (7615). No action needed.
 
 ---
 
-## 3. Data Migration for Existing Shipping Rates
+## Audit 2: Subscription Module -- 2 Issues Found
 
-Any existing pharmacy shipping rates with `ground` speed will need to be handled. Options:
-- Leave existing `ground` rates in the database (they won't appear in UI anymore)
-- The pharmacy admin will need to configure new `priority` and `first_class` rates via the shipping rates dialog
+### Issue A: `hasActiveSubscription()` contradicts main logic (BUG)
+The `hasActiveSubscription()` function (line 62-64) checks `current_period_end > now` for active subscriptions. But `getSubscriptionStatus()` (line 114-118) treats all active subscriptions as always subscribed regardless of period end. This inconsistency means `shouldShowUpgradePrompt()` (which calls `hasActiveSubscription`) could incorrectly show upgrade prompts to active subscribers whose period technically expired but status is still active.
+
+For Body Preserve this isn't an issue (period ends 2099), but for the other active practice (`2feb9460`) whose period ended Jan 11, 2026, `hasActiveSubscription` returns `false` even though `getSubscriptionStatus` returns `isSubscribed: true`.
+
+Fix: align `hasActiveSubscription` with `getSubscriptionStatus` -- active status means subscribed, period end is irrelevant.
+
+### Issue B: Body Preserve subscription -- VERIFIED CORRECT
+- Status: `active`
+- Monthly price: `$0.00`
+- Period end: `2099-12-31`
+- The auto-extend logic will never trigger (period end is in the far future)
+- `getSubscriptionStatus` returns `isSubscribed: true`
+- No billing mechanism exists in the code that would charge $0 users
+- All other practices have `monthly_price: 149.99`
+- The pricing constant `PRO_MONTHLY_PRICE = 149.99` is used everywhere for new signups
+- No special "free plan" flag is needed -- the $0 price + active status + 2099 period is sufficient
+
+### Other Subscriptions -- Safe
+- Practice `f4ced413`: trial, $149.99, trial expired (Nov 13, 2025) -- correctly shows as not subscribed
+- Practice `2feb9460`: active, $149.99, period end Jan 11, 2026 -- getSubscriptionStatus correctly returns subscribed, but hasActiveSubscription incorrectly returns false
 
 ---
 
-## Summary of All Changes
+## Audit 3: Email Edge Functions -- VERIFIED WORKING
 
-| Area | File | Change |
-|------|------|--------|
-| Data | practice_subscriptions | Body Preserve: status -> active, period -> 2099 |
-| DB Migration | shipping_speed enum | Add `priority`, `first_class` values |
-| DB Migration | order_lines constraint | Update CHECK to new values |
-| DB Migration | cart_lines default | Change default from ground to first_class |
-| Frontend | ShippingSpeedSelector.tsx | Replace ground with priority + first_class |
-| Frontend | PharmacyShippingRatesDialog.tsx | Replace ground with priority + first_class inputs |
-| Frontend | Cart.tsx | Update types, defaults, normalization |
-| Frontend | OrderDetailsDialog.tsx | Update display labels |
-| Frontend | OrdersDataTable.tsx | Update display labels |
-| Frontend | PharmacyShippingWorkflow.tsx | Update display labels |
-| Edge Fn | calculate-shipping | Update types and default rates |
-| Edge Fn | place-order | Update validation |
-| Edge Fn | requestValidators.ts | Update allowed values |
-| Edge Fn | viosConfig.ts | Add VIOS code mappings for priority + first_class |
-| Edge Fn | update-shipping-speed | No changes needed |
+### send-verification-email
+- Accepts email-only requests (falls back to profile lookup for userId)
+- Generates 24-hour tokens
+- Uses unified-email-sender
+- Proper error handling and audit logging
+- No issues found
+
+### verify-email
+- Not modified, confirmed working in previous audit
+
+---
+
+## Implementation Plan
+
+### File 1: `src/components/orders/OrderDetailsDialog.tsx` (line 836-838)
+Update the shipping speed label to handle all 4 speeds:
+```
+{line.shipping_speed === '2day' ? '2-Day Shipping' :
+ line.shipping_speed === 'overnight' ? 'Overnight Shipping' :
+ line.shipping_speed === 'priority' ? 'Priority Shipping' :
+ line.shipping_speed === 'first_class' ? 'First Class' :
+ 'Ground (historical)'}
+```
+
+### File 2: `src/pages/Checkout.tsx` (lines 900-901 and 976-978)
+Update both shipping badge fallbacks to include priority and first_class labels, with a generic fallback instead of "Ground".
+
+### File 3: `src/components/pharmacies/PharmacyShippingWorkflow.tsx` (line 512)
+Update the shipping speed label to include priority and first_class.
+
+### File 4: `src/lib/subscriptionCheck.ts` (lines 62-64)
+Fix `hasActiveSubscription` to treat `status === 'active'` as always subscribed (matching `getSubscriptionStatus` logic):
+```typescript
+if (subscription.status === 'active') {
+  return true;
+}
+```
+
+---
+
+## Summary
+
+| Area | Issue | Severity | Fix |
+|------|-------|----------|-----|
+| OrderDetailsDialog | Shows "Ground" for priority/first_class | High | Update label chain |
+| Checkout.tsx | Shows "Ground" for priority/first_class | High | Update label chain |
+| PharmacyShippingWorkflow | Shows "Ground" for priority/first_class | Medium | Update label chain |
+| subscriptionCheck.ts | hasActiveSubscription contradicts main logic | Medium | Align with getSubscriptionStatus |
+| Body Preserve subscription | Correctly configured | None | No change needed |
+| Email edge functions | Working correctly | None | No change needed |
+| VIOS shipping codes | Working via config mapping | None | No change needed |
 
