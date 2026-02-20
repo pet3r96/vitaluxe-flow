@@ -384,12 +384,14 @@ export default function DeliveryConfirmation() {
     }, {} as Record<string, any[]>);
 
   const getShippingSpeedLabel = (speed: string) => {
-    const labels = {
-      ground: "Ground Shipping (5-7 business days)",
-      priority: "Priority Shipping (3-5 business days)",
-      express: "Express Shipping (2 business days)",
+    const labels: Record<string, string> = {
+      overnight: "Overnight Shipping (Next business day)",
+      '2day': "2-Day Shipping (2 business days)",
+      priority: "Priority Shipping (2-3 business days)",
+      first_class: "First Class (3-5 business days)",
+      ground: "Ground Shipping (5-7 business days)", // historical
     };
-    return labels[speed as keyof typeof labels] || speed;
+    return labels[speed] || speed;
   };
 
   const hasAllAddresses = () => {
@@ -534,7 +536,7 @@ export default function DeliveryConfirmation() {
 
               <div className="flex items-center gap-2 pl-7">
                 <Truck className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{getShippingSpeedLabel(practiceOrders[0]?.shipping_speed || 'ground')}</span>
+                <span className="text-sm">{getShippingSpeedLabel(practiceOrders[0]?.shipping_speed || 'first_class')}</span>
               </div>
 
               <div className="pl-7 space-y-2">
@@ -621,7 +623,7 @@ export default function DeliveryConfirmation() {
 
               <div className="flex items-center gap-2 pl-7">
                 <Truck className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{getShippingSpeedLabel(lines[0]?.shipping_speed || 'ground')}</span>
+                <span className="text-sm">{getShippingSpeedLabel(lines[0]?.shipping_speed || 'first_class')}</span>
               </div>
 
               <div className="pl-7 space-y-2">

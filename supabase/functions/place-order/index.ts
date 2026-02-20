@@ -446,7 +446,7 @@ serve(async (req) => {
         price_before_discount: line.price_snapshot,
         discount_percentage: discount_percentage || 0,
         discount_amount: ((line.price_snapshot - discountedPrice) * (line.quantity || 1)) || 0,
-        shipping_speed: line.shipping_speed || 'ground', // Default to 'ground' if not specified
+        shipping_speed: line.shipping_speed || 'first_class',
         shipping_cost: lineShippingCost,
         patient_id: line.patient_id,
         patient_name: line.patient_name,
@@ -645,7 +645,7 @@ serve(async (req) => {
         allOrderLineKeys: allOrderLines.length > 0 ? Object.keys(allOrderLines[0]) : [],
         missingShippingSpeeds: allOrderLines.filter(line => !line.shipping_speed).length,
         invalidShippingSpeeds: allOrderLines.filter(line => 
-          line.shipping_speed && !['ground', '2day', 'overnight'].includes(line.shipping_speed)
+          line.shipping_speed && !['overnight', '2day', 'priority', 'first_class', 'ground'].includes(line.shipping_speed)
         ).map(line => ({ id: line.id, speed: line.shipping_speed })),
         missingOrderIds: allOrderLines.filter(line => !line.order_id).length,
         missingProductIds: allOrderLines.filter(line => !line.product_id).length,

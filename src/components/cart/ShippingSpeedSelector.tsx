@@ -1,14 +1,16 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Truck, Clock, Zap } from "lucide-react";
+import { Truck, Clock, Zap, Package } from "lucide-react";
 import { memo, useMemo, useCallback } from "react";
 
+export type ShippingSpeed = 'overnight' | '2day' | 'priority' | 'first_class';
+
 interface ShippingSpeedSelectorProps {
-  value: 'ground' | '2day' | 'overnight';
-  onChange: (value: 'ground' | '2day' | 'overnight') => void;
+  value: ShippingSpeed;
+  onChange: (value: ShippingSpeed) => void;
   disabled?: boolean;
   patientName: string;
-  enabledOptions?: Array<'ground' | '2day' | 'overnight'>;
+  enabledOptions?: ShippingSpeed[];
   isLoading?: boolean;
   rates?: Record<string, number>;
 }
@@ -23,20 +25,18 @@ export const ShippingSpeedSelector = memo(({
   rates
 }: ShippingSpeedSelectorProps) => {
   
-  // Memoize options array to prevent recreation on every render
   const allOptions = useMemo(() => [
-    { value: 'ground' as const, icon: Truck, label: 'Ground Shipping', desc: '(5-7 days)', iconColor: 'text-muted-foreground' },
+    { value: 'overnight' as const, icon: Zap, label: 'Overnight Shipping', desc: '(Next business day)', iconColor: 'text-yellow-500' },
     { value: '2day' as const, icon: Clock, label: '2-Day Shipping', desc: '(2 business days)', iconColor: 'text-blue-500' },
-    { value: 'overnight' as const, icon: Zap, label: 'Overnight Shipping', desc: '(Next business day)', iconColor: 'text-yellow-500' }
+    { value: 'priority' as const, icon: Truck, label: 'Priority Shipping', desc: '(2-3 business days)', iconColor: 'text-green-600' },
+    { value: 'first_class' as const, icon: Package, label: 'First Class', desc: '(3-5 business days)', iconColor: 'text-muted-foreground' },
   ], []);
 
-  // Memoize format rate helper
   const formatRate = useCallback((speed: string) => {
     if (!rates || !rates[speed]) return '';
     return ` - $${rates[speed].toFixed(2)}`;
   }, [rates]);
 
-  // Memoize visible options
   const visibleOptions = useMemo(() => 
     enabledOptions 
       ? allOptions.filter(opt => enabledOptions.includes(opt.value))
@@ -44,9 +44,8 @@ export const ShippingSpeedSelector = memo(({
     [allOptions, enabledOptions]
   );
 
-  // Memoize onChange handler
   const handleChange = useCallback((newValue: string) => {
-    onChange(newValue as 'ground' | '2day' | 'overnight');
+    onChange(newValue as ShippingSpeed);
   }, [onChange]);
 
   if (isLoading) {
@@ -75,7 +74,6 @@ export const ShippingSpeedSelector = memo(({
     );
   }
 
-  // Show radio group for all available options (forces explicit selection)
   return (
     <div className="space-y-1.5 p-3 border rounded-lg bg-muted/30">
       <Label className="text-sm font-semibold flex items-center gap-2">

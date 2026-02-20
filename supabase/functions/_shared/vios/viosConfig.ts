@@ -47,11 +47,14 @@ export const SHIPPING_SPEED_TO_VIOS: Record<string, ViosShippingCode> = {
   'standard_overnight': VIOS_SHIPPING_CODES.FEDEX_STANDARD_OVERNIGHT,
   'overnight_california': VIOS_SHIPPING_CODES.FEDEX_OVERNIGHT_CALIFORNIA,
   '2_day': VIOS_SHIPPING_CODES.FEDEX_2_DAY,
-  'ground': VIOS_SHIPPING_CODES.FEDEX_GROUND,
   'usps_priority': VIOS_SHIPPING_CODES.USPS_PRIORITY,
   'overnight': VIOS_SHIPPING_CODES.FEDEX_STANDARD_OVERNIGHT,
   'express': VIOS_SHIPPING_CODES.FEDEX_PRIORITY_OVERNIGHT,
-  'standard': VIOS_SHIPPING_CODES.FEDEX_GROUND,
+  '2day': VIOS_SHIPPING_CODES.FEDEX_2_DAY,
+  'priority': VIOS_SHIPPING_CODES.USPS_PRIORITY,
+  'first_class': VIOS_SHIPPING_CODES.USPS_PRIORITY,
+  'ground': VIOS_SHIPPING_CODES.FEDEX_GROUND, // historical
+  'standard': VIOS_SHIPPING_CODES.FEDEX_GROUND, // historical
 };
 
 // GLP-1 medication keywords that require clinical difference statement
@@ -81,9 +84,9 @@ export function isViosPharmacy(pharmacyId: string, pharmacyName?: string, apiEnd
  * Get VIOS shipping code from internal shipping speed
  */
 export function getViosShippingCode(shippingSpeed: string | null | undefined): ViosShippingCode {
-  if (!shippingSpeed) return VIOS_SHIPPING_CODES.FEDEX_GROUND;
+  if (!shippingSpeed) return VIOS_SHIPPING_CODES.USPS_PRIORITY;
   const normalized = shippingSpeed.toLowerCase().replace(/[-\s]/g, '_');
-  return SHIPPING_SPEED_TO_VIOS[normalized] || VIOS_SHIPPING_CODES.FEDEX_GROUND;
+  return SHIPPING_SPEED_TO_VIOS[normalized] || VIOS_SHIPPING_CODES.USPS_PRIORITY;
 }
 
 /**

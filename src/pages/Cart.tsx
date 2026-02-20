@@ -157,7 +157,7 @@ const Cart = React.memo(function Cart() {
           patient_id: line.patient_id,
           patient_name: line.patient_name,
           pharmacy_id: line.assigned_pharmacy_id,
-          shipping_speed: line.shipping_speed || 'overnight',
+        shipping_speed: line.shipping_speed === 'ground' ? 'first_class' : (line.shipping_speed || 'overnight'),
           lines: []
         });
       }
@@ -202,7 +202,7 @@ const Cart = React.memo(function Cart() {
   // All callbacks
   const getEnabledSpeeds = useCallback((pharmacyId: string) => {
     const rates = pharmacyRatesMap?.[pharmacyId];
-    return rates ? Object.keys(rates) as ('ground' | '2day' | 'overnight')[] : [];
+    return rates ? Object.keys(rates) as ('overnight' | '2day' | 'priority' | 'first_class')[] : [];
   }, [pharmacyRatesMap]);
 
   const handleDiscountApplied = useCallback((code: string, percentage: number) => {
@@ -252,7 +252,7 @@ const Cart = React.memo(function Cart() {
   });
 
   const updateShippingSpeedMutation = useMutation({
-    mutationFn: async ({ lineIds, shipping_speed }: { lineIds: string[]; shipping_speed: 'ground' | '2day' | 'overnight' }) => {
+    mutationFn: async ({ lineIds, shipping_speed }: { lineIds: string[]; shipping_speed: 'overnight' | '2day' | 'priority' | 'first_class' }) => {
       const { data, error } = await supabase.functions.invoke('update-shipping-speed', {
         body: { lineIds, shipping_speed }
       });
@@ -332,7 +332,7 @@ const Cart = React.memo(function Cart() {
         groups.set(key, {
           patient_id: line.patient_id,
           pharmacy_id: line.assigned_pharmacy_id,
-          shipping_speed: line.shipping_speed || 'overnight',
+          shipping_speed: line.shipping_speed === 'ground' ? 'first_class' : (line.shipping_speed || 'overnight'),
           lines: []
         });
       }
@@ -342,7 +342,7 @@ const Cart = React.memo(function Cart() {
     mark('Cart:normalization-start', { cartId: cart.id, version: cartVersion, groupCount: groups.size });
 
     // Build normalization plan - SKIP groups already normalized
-    const normalizationPlan: Array<{ lineIds: string[]; targetSpeed: 'ground' | '2day' | 'overnight'; groupKey: string }> = [];
+    const normalizationPlan: Array<{ lineIds: string[]; targetSpeed: 'overnight' | '2day' | 'priority' | 'first_class'; groupKey: string }> = [];
     
     groups.forEach((group: any, key: string) => {
       // Skip if already normalized
@@ -357,18 +357,20 @@ const Cart = React.memo(function Cart() {
         return; // Skip this group
       }
 
-      const enabledSpeeds = Object.keys(rates) as ('ground' | '2day' | 'overnight')[];
+      const enabledSpeeds = Object.keys(rates) as ('overnight' | '2day' | 'priority' | 'first_class')[];
       
-      // Normalize if shipping_speed is missing, invalid ('standard'), or not in enabled list
+      // Normalize if shipping_speed is missing, invalid ('standard'/'ground'), or not in enabled list
       const needsNormalization = !group.shipping_speed || 
         group.shipping_speed === 'standard' || 
+        group.shipping_speed === 'ground' ||
         !enabledSpeeds.includes(group.shipping_speed);
 
       if (needsNormalization && enabledSpeeds.length > 0) {
-        // Pick default in priority order: fastest/most expensive first (overnight → 2day → ground)
+        // Pick default in priority order: fastest first (overnight → 2day → priority → first_class)
         const targetSpeed = enabledSpeeds.includes('overnight') ? 'overnight' :
                             enabledSpeeds.includes('2day') ? '2day' : 
-                            enabledSpeeds.includes('ground') ? 'ground' :
+                            enabledSpeeds.includes('priority') ? 'priority' :
+                            enabledSpeeds.includes('first_class') ? 'first_class' :
                             enabledSpeeds[0];
         const lineIds = group.lines.map((l: any) => l.id);
         normalizationPlan.push({ lineIds, targetSpeed, groupKey: key });

@@ -12,7 +12,7 @@ const corsHeaders = {
 
 interface CalculateShippingRequest {
   pharmacy_id: string;
-  shipping_speed: 'ground' | '2day' | 'overnight';
+  shipping_speed: 'overnight' | '2day' | 'priority' | 'first_class' | 'ground';
 }
 
 serve(async (req) => {
@@ -70,10 +70,12 @@ serve(async (req) => {
     }
 
     // Default fallback rates if pharmacy hasn't configured
-    const defaultRates = {
-      ground: 9.99,
+    const defaultRates: Record<string, number> = {
+      overnight: 29.99,
       '2day': 19.99,
-      overnight: 29.99
+      priority: 14.99,
+      first_class: 9.99,
+      ground: 9.99, // historical fallback
     };
 
     const shipping_cost = data?.rate ?? defaultRates[shipping_speed] ?? 9.99;

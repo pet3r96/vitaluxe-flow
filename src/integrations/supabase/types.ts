@@ -9320,7 +9320,12 @@ export type Database = {
         | "lab_result"
         | "other_document"
       shipping_carrier: "fedex" | "ups" | "usps" | "amazon"
-      shipping_speed: "ground" | "2day" | "overnight"
+      shipping_speed:
+        | "ground"
+        | "2day"
+        | "overnight"
+        | "priority"
+        | "first_class"
       ticket_priority: "low" | "medium" | "high" | "urgent"
       ticket_status:
         | "open"
@@ -9554,7 +9559,13 @@ export const Constants = {
         "other_document",
       ],
       shipping_carrier: ["fedex", "ups", "usps", "amazon"],
-      shipping_speed: ["ground", "2day", "overnight"],
+      shipping_speed: [
+        "ground",
+        "2day",
+        "overnight",
+        "priority",
+        "first_class",
+      ],
       ticket_priority: ["low", "medium", "high", "urgent"],
       ticket_status: [
         "open",

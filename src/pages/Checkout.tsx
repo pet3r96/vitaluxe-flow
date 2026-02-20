@@ -896,6 +896,8 @@ export default function Checkout() {
                             <Truck className="h-3 w-3 mr-1" />
                             {line.shipping_speed === '2day' ? '2-Day' : 
                              line.shipping_speed === 'overnight' ? 'Overnight' : 
+                             line.shipping_speed === 'priority' ? 'Priority' :
+                             line.shipping_speed === 'first_class' ? 'First Class' :
                              'Ground'} Shipping
                           </Badge>
                           <Badge variant="secondary">Practice Order</Badge>
@@ -971,6 +973,8 @@ export default function Checkout() {
                       <Truck className="h-3 w-3 mr-1" />
                       {line.shipping_speed === '2day' ? '2-Day' : 
                        line.shipping_speed === 'overnight' ? 'Overnight' : 
+                       line.shipping_speed === 'priority' ? 'Priority' :
+                       line.shipping_speed === 'first_class' ? 'First Class' :
                        'Ground'} Shipping
                     </Badge>
                     <Badge>Patient: {line.patient_name}</Badge>

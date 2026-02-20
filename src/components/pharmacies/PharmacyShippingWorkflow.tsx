@@ -507,7 +507,9 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
                 {order.ship_to === 'practice' ? 'Ship to Practice' : 'Ship to Patient'}
                 {' • '}
                 {order.lines?.[0]?.shipping_speed === 'overnight' ? 'Overnight' :
-                 order.lines?.[0]?.shipping_speed === '2day' ? '2-Day' : 'Ground'}
+                 order.lines?.[0]?.shipping_speed === '2day' ? '2-Day' :
+                 order.lines?.[0]?.shipping_speed === 'priority' ? 'Priority' :
+                 order.lines?.[0]?.shipping_speed === 'first_class' ? 'First Class' : 'Ground'}
               </p>
             </div>
             <div>

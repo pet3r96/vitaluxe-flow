@@ -7,13 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Truck, Clock, Zap } from "lucide-react";
+import { Zap, Clock, Truck, Package } from "lucide-react";
 
 interface PharmacyShippingRatesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pharmacy: { id: string; name: string };
 }
+
+type ShippingSpeed = 'overnight' | '2day' | 'priority' | 'first_class';
+
+const SHIPPING_OPTIONS: Array<{ key: ShippingSpeed; label: string; icon: any; iconColor: string; placeholder: string }> = [
+  { key: 'overnight', label: 'Overnight Shipping', icon: Zap, iconColor: 'text-yellow-500', placeholder: '29.99' },
+  { key: '2day', label: '2-Day Shipping', icon: Clock, iconColor: 'text-blue-500', placeholder: '19.99' },
+  { key: 'priority', label: 'Priority Shipping (2-3 days)', icon: Truck, iconColor: 'text-green-600', placeholder: '14.99' },
+  { key: 'first_class', label: 'First Class (3-5 days)', icon: Package, iconColor: '', placeholder: '9.99' },
+];
 
 export const PharmacyShippingRatesDialog = ({ 
   open, 
@@ -23,13 +32,13 @@ export const PharmacyShippingRatesDialog = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [rates, setRates] = useState({
-    ground: { rate: '', enabled: true },
+  const [rates, setRates] = useState<Record<ShippingSpeed, { rate: string; enabled: boolean }>>({
+    overnight: { rate: '', enabled: true },
     '2day': { rate: '', enabled: true },
-    overnight: { rate: '', enabled: true }
+    priority: { rate: '', enabled: true },
+    first_class: { rate: '', enabled: true },
   });
 
-  // Fetch existing rates
   const { data: existingRates } = useQuery({
     queryKey: ['pharmacy-shipping-rates', pharmacy.id],
     queryFn: async () => {
@@ -47,16 +56,17 @@ export const PharmacyShippingRatesDialog = ({
   useEffect(() => {
     if (existingRates) {
       const ratesMap = existingRates.reduce((acc, rate) => {
-        acc[rate.shipping_speed] = {
+        acc[rate.shipping_speed as ShippingSpeed] = {
           rate: rate.rate.toString(),
           enabled: rate.enabled ?? true
         };
         return acc;
       }, { 
-        ground: { rate: '', enabled: true }, 
+        overnight: { rate: '', enabled: true },
         '2day': { rate: '', enabled: true }, 
-        overnight: { rate: '', enabled: true } 
-      });
+        priority: { rate: '', enabled: true },
+        first_class: { rate: '', enabled: true },
+      } as Record<ShippingSpeed, { rate: string; enabled: boolean }>);
       setRates(ratesMap);
     }
   }, [existingRates]);
@@ -65,19 +75,21 @@ export const PharmacyShippingRatesDialog = ({
     mutationFn: async () => {
       const updates: Array<{
         pharmacy_id: string;
-        shipping_speed: 'ground' | '2day' | 'overnight';
+        shipping_speed: ShippingSpeed;
         rate: number;
         enabled: boolean;
       }> = [];
 
       for (const [speedKey, config] of Object.entries(rates)) {
-        const speed = speedKey as 'ground' | '2day' | 'overnight';
+        const speed = speedKey as ShippingSpeed;
         const parsed = parseFloat(config.rate);
         const hasValidNumber = Number.isFinite(parsed) && parsed >= 0;
 
+        const label = SHIPPING_OPTIONS.find(o => o.key === speed)?.label || speed;
+
         if (config.enabled) {
           if (!hasValidNumber) {
-            throw new Error(`Please enter a valid price for ${speed === 'ground' ? 'Ground' : speed === '2day' ? '2-Day' : 'Overnight'} or disable it.`);
+            throw new Error(`Please enter a valid price for ${label} or disable it.`);
           }
           updates.push({ pharmacy_id: pharmacy.id, shipping_speed: speed, rate: parsed, enabled: true });
         } else {
@@ -113,44 +125,32 @@ export const PharmacyShippingRatesDialog = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="ground" className="flex items-center gap-2">
-                <Truck className="h-4 w-4" /> Ground Shipping (5-7 days)
-              </Label>
-              <div className="flex items-center gap-2">
-                <Checkbox checked={rates.ground.enabled} onCheckedChange={(checked) => setRates({ ...rates, ground: { ...rates.ground, enabled: !!checked }})} />
-                <span className="text-xs text-muted-foreground">{rates.ground.enabled ? 'Enabled' : 'Disabled'}</span>
+          {SHIPPING_OPTIONS.map(({ key, label, icon: Icon, iconColor, placeholder }) => (
+            <div key={key} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor={key} className="flex items-center gap-2">
+                  <Icon className={`h-4 w-4 ${iconColor}`} /> {label}
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Checkbox 
+                    checked={rates[key].enabled} 
+                    onCheckedChange={(checked) => setRates({ ...rates, [key]: { ...rates[key], enabled: !!checked }})} 
+                  />
+                  <span className="text-xs text-muted-foreground">{rates[key].enabled ? 'Enabled' : 'Disabled'}</span>
+                </div>
               </div>
+              <Input 
+                id={key} 
+                type="number" 
+                step="0.01" 
+                min="0" 
+                placeholder={placeholder} 
+                value={rates[key].rate} 
+                onChange={(e) => setRates({ ...rates, [key]: { ...rates[key], rate: e.target.value }})} 
+                disabled={!rates[key].enabled} 
+              />
             </div>
-            <Input id="ground" type="number" step="0.01" min="0" placeholder="9.99" value={rates.ground.rate} onChange={(e) => setRates({ ...rates, ground: { ...rates.ground, rate: e.target.value }})} disabled={!rates.ground.enabled} />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="2day" className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-blue-500" /> 2-Day Shipping
-              </Label>
-              <div className="flex items-center gap-2">
-                <Checkbox checked={rates['2day'].enabled} onCheckedChange={(checked) => setRates({ ...rates, '2day': { ...rates['2day'], enabled: !!checked }})} />
-                <span className="text-xs text-muted-foreground">{rates['2day'].enabled ? 'Enabled' : 'Disabled'}</span>
-              </div>
-            </div>
-            <Input id="2day" type="number" step="0.01" min="0" placeholder="19.99" value={rates['2day'].rate} onChange={(e) => setRates({ ...rates, '2day': { ...rates['2day'], rate: e.target.value }})} disabled={!rates['2day'].enabled} />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="overnight" className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-yellow-500" /> Overnight Shipping
-              </Label>
-              <div className="flex items-center gap-2">
-                <Checkbox checked={rates.overnight.enabled} onCheckedChange={(checked) => setRates({ ...rates, overnight: { ...rates.overnight, enabled: !!checked }})} />
-                <span className="text-xs text-muted-foreground">{rates.overnight.enabled ? 'Enabled' : 'Disabled'}</span>
-              </div>
-            </div>
-            <Input id="overnight" type="number" step="0.01" min="0" placeholder="29.99" value={rates.overnight.rate} onChange={(e) => setRates({ ...rates, overnight: { ...rates.overnight, rate: e.target.value }})} disabled={!rates.overnight.enabled} />
-          </div>
+          ))}
         </div>
 
         <DialogFooter>
