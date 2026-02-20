@@ -8,7 +8,7 @@ import { RateLimiter, RATE_LIMITS, getClientIP } from '../_shared/rateLimiter.ts
 import { validateCSRFToken } from '../_shared/csrfValidator.ts';
 import { edgeLogger } from '../_shared/logger.ts';
 import { hasRole, isAdmin as checkIsAdmin } from '../_shared/roleChecker.ts';
-import { enforceAdminIP } from '../_shared/ipFilter.ts';
+
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 import { validatePasswordStrength } from '../_shared/passwordValidator.ts';
 
@@ -113,19 +113,7 @@ serve(async (req) => {
       );
     }
 
-    // PHASE 3: IP filtering for admin function
-    // Skip IP check for pharmacy_staff — pharmacy owners add staff from their browser
-    // Their authorization is verified downstream (ownership of the pharmacy)
-    const isPharmacyStaffCreation = (signupData.role as string) === 'pharmacy_staff';
-    const isSelfSignup = signupData.isSelfSignup === true;
-    if (!isPharmacyStaffCreation && !isSelfSignup) {
-      const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'assign-user-role');
-      if (ipCheckResponse) return ipCheckResponse;
-    } else {
-      edgeLogger.info('[assign-user-role] Skipping IP check', { 
-        reason: isSelfSignup ? 'self-signup' : 'pharmacy_staff creation' 
-      });
-    }
+
 
     // Rate limiting to prevent abuse
     edgeLogger.info('[assign-user-role] Checking rate limit');
@@ -471,7 +459,7 @@ serve(async (req) => {
     }
 
     // Determine user status and email confirmation based on flow
-    // isSelfSignup already declared above (line 120)
+    const isSelfSignup = signupData.isSelfSignup === true;
     const isAdminCreated = signupData.isAdminCreated === true || isAdminCaller;
     const userStatus = isSelfSignup ? 'pending_verification' : 'active';
     const requiresTempPassword = isAdminCreated && !isSelfSignup;

@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createAdminClient } from "../_shared/supabaseAdmin.ts";
 import { edgeLogger } from '../_shared/logger.ts';
 import { requireAdmin } from '../_shared/roleChecker.ts';
-import { enforceAdminIP } from '../_shared/ipFilter.ts';
+
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 
 const corsHeaders = {
@@ -43,9 +43,7 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createAdminClient();
 
-    // PHASE 3: IP filtering for admin function
-    const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'factory-reset');
-    if (ipCheckResponse) return ipCheckResponse;
+
 
     // PHASE 3: Request size validation
     const sizeCheckResponse = validateRequestSize(req, 'factory-reset', corsHeaders);

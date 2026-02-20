@@ -1,7 +1,7 @@
 import { createAuthClient, createAdminClient } from '../_shared/supabaseAdmin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { edgeLogger } from '../_shared/logger.ts';
-import { enforceAdminIP } from '../_shared/ipFilter.ts';
+
 import { validateRequestSize } from '../_shared/requestSizeValidator.ts';
 import { isAdmin as checkAdmin } from '../_shared/roleChecker.ts';
 
@@ -78,11 +78,7 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Enforce IP check for non-practice owners
-        if (!isDoctor) {
-          const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status:provider-status');
-          if (ipCheckResponse) return ipCheckResponse;
-        }
+
 
         let providerQuery = supabaseClient
           .from('providers')
@@ -163,11 +159,7 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Enforce IP check for non-practice owners
-        if (!isDoctor) {
-          const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status:staff-status');
-          if (ipCheckResponse) return ipCheckResponse;
-        }
+
 
         const updateData: any = { updated_at: new Date().toISOString() };
         if (active !== undefined) updateData.active = active;
@@ -385,9 +377,7 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Enforce IP check for admin-only operations
-        const ipCheckResponse = await enforceAdminIP(req, supabaseAdmin, 'manage-entity-status:status-configs');
-        if (ipCheckResponse) return ipCheckResponse;
+
 
         let result;
 
