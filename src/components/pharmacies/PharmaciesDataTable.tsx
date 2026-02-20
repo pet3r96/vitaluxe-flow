@@ -335,7 +335,7 @@ export const PharmaciesDataTable = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      {!pharmacy.user_id && (
+                      {!pharmacy.user_id && !pharmacy.api_enabled && (
                         <Button
                           variant="outline"
                           size="sm"
