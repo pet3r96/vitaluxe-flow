@@ -314,11 +314,12 @@ serve(async (req) => {
 
         // STEP 8: Delete user metadata (CRITICAL - must succeed)
         try {
-          await supabaseAdmin.from('active_sessions').delete().eq('user_id', userId);
+          await supabaseAdmin.from('notification_preferences').delete().eq('user_id', userId);
+          await supabaseAdmin.from('user_2fa_settings').delete().eq('user_id', userId);
           await supabaseAdmin.from('user_roles').delete().eq('user_id', userId);
           await supabaseAdmin.from('user_password_status').delete().eq('user_id', userId);
           await supabaseAdmin.from('pending_reps').delete().eq('created_by_user_id', userId);
-          edgeLogger.info('Deleted user metadata (sessions, roles, password status)');
+          edgeLogger.info('Deleted user metadata (notifications, 2fa, roles, password status)');
         } catch (error: any) {
           edgeLogger.error('CRITICAL: Failed to delete user metadata', error);
           throw new Error(`Failed to delete critical user metadata: ${error.message}`);
