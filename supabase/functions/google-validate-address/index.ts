@@ -19,6 +19,7 @@ interface ValidationResponse {
   is_valid: boolean;
   formatted_address?: string;
   street?: string;
+  suite?: string;
   city?: string;
   state?: string;
   zip?: string;
@@ -28,6 +29,7 @@ interface ValidationResponse {
   error?: string;
   suggestions?: {
     street?: string;
+    suite?: string;
     city?: string;
     state?: string;
     zip?: string;
