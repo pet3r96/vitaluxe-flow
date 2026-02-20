@@ -143,7 +143,7 @@ export default function Checkout() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip, shipping_address_formatted, name")
+        .select("shipping_address_street, shipping_address_suite, shipping_address_city, shipping_address_state, shipping_address_zip, shipping_address_formatted, name")
         .eq("id", practiceIdForShipping)
         .single();
 

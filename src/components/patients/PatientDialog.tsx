@@ -238,6 +238,7 @@ export const PatientDialog = ({
       allergies: "",
       notes: "",
       address_street: "",
+      address_suite: "",
       address_city: "",
       address_state: "",
       address_zip: "",

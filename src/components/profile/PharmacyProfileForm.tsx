@@ -124,6 +124,7 @@ export function PharmacyProfileForm() {
         phone: pharmacy.phone ? pharmacy.phone.replace(/\D/g, "") : "",
         address: {
           street: pharmacy.address_street || "",
+          suite: (pharmacy as any).address_suite || "",
           city: pharmacy.address_city || "",
           state: pharmacy.address_state || "",
           zip: pharmacy.address_zip || "",
