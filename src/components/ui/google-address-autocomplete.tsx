@@ -38,8 +38,83 @@ export const GoogleAddressAutocomplete = ({
   placeholder = "Start typing address...",
   disabled = false,
 }: GoogleAddressAutocompleteProps) => {
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [apiKeyLoading, setApiKeyLoading] = useState(true);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+
+  // Fetch Google Maps API key from backend on mount
+  useEffect(() => {
+    const fetchKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-google-maps-key');
+        if (error) throw error;
+        if (data?.key) {
+          setApiKey(data.key);
+        } else {
+          setApiKeyError('No API key returned');
+        }
+      } catch (err) {
+        logger.error('Failed to fetch Google Maps API key', err);
+        setApiKeyError('Failed to load address autocomplete');
+      } finally {
+        setApiKeyLoading(false);
+      }
+    };
+    fetchKey();
+  }, []);
+
+  if (apiKeyLoading) {
+    return (
+      <div className="space-y-2">
+        <Label>{label} {required && '*'}</Label>
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="text-sm text-muted-foreground">Loading address autocomplete...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (apiKeyError || !apiKey) {
+    return (
+      <div className="space-y-2">
+        <Label>{label} {required && '*'}</Label>
+        <Input
+          placeholder={placeholder}
+          value={value.formatted || ''}
+          onChange={(e) => onChange({ ...value, formatted: e.target.value, status: 'manual', source: 'manual_entry' })}
+          disabled={disabled}
+        />
+        <p className="text-xs text-muted-foreground">Address autocomplete unavailable. Please enter manually.</p>
+      </div>
+    );
+  }
+
+  return (
+    <GoogleAddressAutocompleteInner
+      apiKey={apiKey}
+      value={value}
+      onChange={onChange}
+      label={label}
+      required={required}
+      placeholder={placeholder}
+      disabled={disabled}
+    />
+  );
+};
+
+// Inner component that uses the fetched API key
+const GoogleAddressAutocompleteInner = ({
+  apiKey,
+  value,
+  onChange,
+  label,
+  required,
+  placeholder,
+  disabled,
+}: GoogleAddressAutocompleteProps & { apiKey: string }) => {
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey: apiKey,
     libraries,
   });
 
@@ -89,7 +164,6 @@ export const GoogleAddressAutocomplete = ({
   useEffect(() => {
     if (!autocomplete || !inputRef.current) return;
     
-    const input = inputRef.current;
     const handleInteraction = (e: Event) => {
       const target = e.target as HTMLElement;
       if (target.closest('.pac-container')) {
@@ -97,7 +171,6 @@ export const GoogleAddressAutocomplete = ({
       }
     };
     
-    // Handle all interaction events that could close parent dialogs
     document.addEventListener('mousedown', handleInteraction, true);
     document.addEventListener('pointerdown', handleInteraction, true);
     document.addEventListener('touchstart', handleInteraction, true);
@@ -149,10 +222,8 @@ export const GoogleAddressAutocomplete = ({
       
       const formattedAddress = (place.formatted_address || `${street}, ${city}, ${state} ${zip}`).replace(/, USA$/i, '');
       
-      // IMMEDIATELY set the input value (don't wait for validation)
       setInputValue(formattedAddress);
       
-      // IMMEDIATELY update parent with basic address data
       onChange({
         street,
         city,
@@ -163,7 +234,6 @@ export const GoogleAddressAutocomplete = ({
         source: 'google_places',
       });
       
-      // Then validate in background
       await validateAddress({ street, city, state, zip }, formattedAddress);
     }
   };
@@ -251,7 +321,7 @@ export const GoogleAddressAutocomplete = ({
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              e.preventDefault(); // Prevent form submission
+              e.preventDefault();
             }
           }}
           onFocus={(e) => {

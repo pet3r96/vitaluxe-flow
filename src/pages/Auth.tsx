@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import { hasAuthErrorCode } from "@/types/errors";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
+import { verifyNPIDebounced } from "@/lib/npiVerification";
 
 const Auth = () => {
   usePagePerformance('Auth');
