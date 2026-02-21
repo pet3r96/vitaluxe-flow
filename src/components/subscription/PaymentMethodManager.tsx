@@ -169,6 +169,7 @@ export function PaymentMethodManager({ paymentMethods: initialMethods, practiceI
       <AddCreditCardDialog
         open={showAddCard}
         onOpenChange={setShowAddCard}
+        practiceId={practiceId}
         onSuccess={() => {
           // Refresh payment methods after adding new card
           window.location.reload();

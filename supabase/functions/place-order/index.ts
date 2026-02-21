@@ -336,7 +336,7 @@ serve(async (req) => {
 
     // Fetch payment method info
     const { data: selectedPaymentMethod } = await supabaseAdmin
-      .from("payment_methods")
+      .from("practice_payment_methods")
       .select("payment_type")
       .eq("id", payment_method_id)
       .single();
