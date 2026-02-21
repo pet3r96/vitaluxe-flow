@@ -29,6 +29,7 @@ export interface ProductVariantFormData {
   retail_price: string;
   active: boolean;
   product_code: string;
+  default_sig: string;
   isNew?: boolean;
   toDelete?: boolean;
 }
