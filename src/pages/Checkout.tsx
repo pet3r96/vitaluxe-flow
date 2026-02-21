@@ -1319,7 +1319,7 @@ export default function Checkout() {
               }
             : undefined
         }
-        practiceId={effectiveUserId}
+        practiceId={practiceIdForPayment}
       />
 
     </div>

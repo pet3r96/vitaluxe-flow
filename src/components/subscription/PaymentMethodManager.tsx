@@ -136,7 +136,7 @@ export function PaymentMethodManager({ paymentMethods: initialMethods }: Payment
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Expires {method.expiration_month}/{method.expiration_year}
+                      Expires {method.card_expiry || 'N/A'}
                     </p>
                   </div>
                 </div>
