@@ -15,6 +15,7 @@ export interface ProductVariant {
   active: boolean;
   sort_order: number;
   product_code?: string | null;
+  default_sig?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -28,6 +29,7 @@ export interface ProductVariantFormData {
   retail_price: string;
   active: boolean;
   product_code: string;
+  default_sig: string;
   isNew?: boolean;
   toDelete?: boolean;
 }
@@ -41,6 +43,7 @@ export function createEmptyVariant(): ProductVariantFormData {
     retail_price: '',
     active: true,
     product_code: '',
+    default_sig: '',
     isNew: true,
   };
 }

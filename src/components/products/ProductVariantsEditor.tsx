@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProductVariantFormData } from "@/types/domain/productVariant";
@@ -174,6 +175,19 @@ export function ProductVariantsEditor({
                       placeholder="0.00"
                       disabled={disabled}
                       className="mt-1"
+                    />
+                  </div>
+
+                  {/* Default SIG */}
+                  <div className="col-span-2">
+                    <Label className="text-xs">Default SIG (Directions)</Label>
+                    <Textarea
+                      value={variant.default_sig || ''}
+                      onChange={(e) => handleUpdate(index, 'default_sig', e.target.value)}
+                      placeholder="e.g., Take 1 capsule by mouth once daily..."
+                      disabled={disabled}
+                      className="mt-1"
+                      rows={2}
                     />
                   </div>
                 </div>

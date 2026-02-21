@@ -93,6 +93,7 @@ export function useSyncProductVariants() {
           active: variant.active,
           sort_order: i,
           product_code: variant.product_code || null,
+          default_sig: variant.default_sig || null,
         };
         
         if (variant.id && !variant.isNew) {
