@@ -555,7 +555,7 @@ export const PracticeProfileForm = () => {
         <div className="flex justify-end">
           <Button
             type="submit" 
-            disabled={updateMutation.isPending || npiVerificationStatus !== "verified"}
+            disabled={updateMutation.isPending}
             className="w-full sm:w-auto"
           >
             {updateMutation.isPending ? (
