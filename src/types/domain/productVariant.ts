@@ -15,6 +15,7 @@ export interface ProductVariant {
   active: boolean;
   sort_order: number;
   product_code?: string | null;
+  default_sig?: string | null;
   created_at?: string;
   updated_at?: string;
 }
