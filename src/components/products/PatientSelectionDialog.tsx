@@ -360,9 +360,11 @@ export const PatientSelectionDialog = ({
       return;
     }
     
-    // Initialize custom sig and dosage from product defaults
-    if (product?.sig && !customSig) {
-      setCustomSig(product.sig);
+    // Initialize custom sig from variant default_sig, falling back to product sig
+    const selectedVariantForSig = variants?.find(v => v.id === selectedVariantId);
+    const variantSig = selectedVariantForSig?.default_sig || product?.sig;
+    if (variantSig && !customSig) {
+      setCustomSig(variantSig);
     }
     // Use selected variant's dosage_label instead of product.dosage
     const selectedVariant = variants?.find(v => v.id === selectedVariantId);
