@@ -113,6 +113,7 @@ export default function MySubscription() {
             <TabsContent value="payment-methods" className="space-y-4">
               <PaymentMethodManager 
                 paymentMethods={subscriptionData?.paymentMethods || []} 
+                practiceId={effectivePracticeId || user?.id}
               />
             </TabsContent>
             <TabsContent value="invoices">
