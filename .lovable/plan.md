@@ -1,46 +1,84 @@
 
 
-# Fix: Profile Address Not Saving / Not Updating Instantly
+# Pre-Set SIG (Directions) Per Product Variant
 
-## Root Cause
+## Overview
 
-There are two issues preventing the client from saving their practice address on the Profile page:
+Add a `default_sig` column to each product variant so that when a prescriber writes a script, the SIG field auto-fills with variant-specific directions. The prescriber can still edit it. A liability disclaimer will be added to the SIG header.
 
-### Issue 1: Save Button Blocked by NPI Verification
-The "Save Profile" button is disabled unless NPI verification status is "verified". This means if a practice has any NPI issue (or the verification check hasn't run), they **cannot save any changes** -- including address updates. This is the primary blocker.
+## Steps
 
-**Current code (line 563):**
-```
-disabled={updateMutation.isPending || npiVerificationStatus !== "verified"}
-```
+### Step 1: Database Migration -- Add `default_sig` column
 
-### Issue 2: UI Not Refreshing After Save
-When the save does succeed, the cache invalidation key doesn't perfectly match, and the form may not visually update until a hard refresh. The query fetches with key `["practice-profile", effectiveUserId]` but invalidation targets `["practice-profile"]`. While React Query prefix matching should handle this, adding the exact key ensures instant refetch.
+Add a nullable `default_sig` text column to the `product_variants` table.
 
----
-
-## Fix Plan
-
-### 1. Decouple NPI verification from the Save button (PracticeProfileForm.tsx, line 563)
-
-Change the Save button to only be disabled during the mutation (loading state). Move NPI verification to a warning/toast on submit instead of blocking the button entirely.
-
-- The Save button will be: `disabled={updateMutation.isPending}`
-- On submit, if NPI is not verified, show a warning toast but still allow saving address and other fields
-- This unblocks address editing for all practices regardless of NPI status
-
-### 2. Fix cache invalidation key (PracticeProfileForm.tsx, line 183)
-
-Update the invalidation to use the exact query key:
-```
-queryClient.invalidateQueries({ queryKey: ["practice-profile", effectiveUserId] });
+```sql
+ALTER TABLE product_variants ADD COLUMN default_sig text;
 ```
 
-Also add `refetchType: 'all'` to force immediate refetch so the UI updates instantly without needing a hard refresh.
+### Step 2: Populate SIG Data for All ~297 Variants
 
-### 3. Force form reset after successful save
+Using the product_code (VIOS Med ID) as the matching key, run UPDATE statements to set the `default_sig` for every variant. The SIG values from the spreadsheet group into these categories:
 
-After mutation success, call `form.reset()` with the new values or let the `values` prop auto-sync by ensuring the refetch completes before showing the success toast.
+- **Capsules (swallow with water):** Clomiphene, Enclomiphene, Estradiol IR, Naltrexone, Tadalafil Cap, Methylene Blue, Pregnenolone IR, Liothyronine IR, Levothyroxine Dye-Free, T4/T3 IR, etc.
+- **Capsules SR (do not crush/chew):** DHEA SR, Progesterone IR/SR, Liothyronine SR, Levothyroxine SR, T4/T3 SR, etc.
+- **Creams (topical):** All Biest Cream, DHEA Cream, Estradiol Cream, Estriol Cream, GHK-CU, Hydroquinone, Progesterone Cream, Testosterone Cream, etc.
+- **Injectables (subcutaneous):** Sermorelin, Semaglutide combos, Tirzepatide combos
+- **Injectables (intramuscular):** Testosterone Cypionate Oil, Nandrolone, Glutathione, NAD+, Methylcobalamin
+- **RDTs (rapid dissolve tablets):** Biest RDT, Progesterone RDT, Testosterone RDT, Tadalafil Raspberry, Sildenafil Raspberry, Semaglutide ODT, Tirzepatide ODT
+- **Troches (sublingual):** Biest Troche, Progesterone Troche, Testosterone Troche, Tadalafil Troche, Sildenafil Troche, NAD+ Troche, Oxytocin Troche
+- **Nasal Spray:** Oxytocin
+- **Solutions (scalp):** Finasteride/Minoxidil, Minoxidil
+- **Tablets:** Finasteride
+
+Each variant will be matched by its `product_code` and updated with the exact SIG text from the spreadsheet. Where multiple variants share the same product_code (different quantities), they all get the same SIG.
+
+### Step 3: Update Type Definitions
+
+**File:** `src/types/domain/productVariant.ts`
+
+- Add `default_sig?: string | null` to the `ProductVariant` interface
+- Add `default_sig: string` to `ProductVariantFormData`
+- Update `createEmptyVariant()` to include `default_sig: ''`
+
+### Step 4: Update SIG Initialization Logic
+
+**File:** `src/components/products/PatientSelectionDialog.tsx` (lines 363-366)
+
+Change from using product-level SIG to variant-level:
+
+```
+Before: if (product?.sig && !customSig) { setCustomSig(product.sig); }
+After:  const variantSig = selectedVariant?.default_sig || product?.sig;
+        if (variantSig && !customSig) { setCustomSig(variantSig); }
+```
+
+Also update the helper text (line 885) from "Default from product: ..." to "Default from variant: ..." showing the variant's specific SIG.
+
+### Step 5: Add Liability Disclaimer to SIG Labels
+
+**Files:** `PatientSelectionDialog.tsx` (line 876) and `PrescriptionWriterDialog.tsx` (line 431)
+
+Update the SIG label to include a disclaimer subtitle:
+
+```
+SIG - Directions for Use *
+Please confirm and adjust directions as per your clinical judgment.
+```
+
+This will appear as a small helper text line directly below the label to protect against liability.
+
+### Step 6: Admin Editing Support
+
+**File:** `src/components/products/ProductVariantsEditor.tsx`
+
+Add a "Default SIG" textarea field within each variant card so admins can view and edit the pre-set directions per variant. This allows future SIG changes without needing database updates.
+
+### Step 7: Update Variant Hook
+
+**File:** `src/hooks/useProductVariants.ts`
+
+Ensure `default_sig` is included in the upsert data when syncing variants (in `useSyncProductVariants`).
 
 ---
 
@@ -48,12 +86,17 @@ After mutation success, call `form.reset()` with the new values or let the `valu
 
 | File | Change |
 |------|--------|
-| `src/components/profile/PracticeProfileForm.tsx` (line 563) | Remove NPI check from Save button disabled state |
-| `src/components/profile/PracticeProfileForm.tsx` (line 183) | Fix invalidation query key to include effectiveUserId |
-| `src/components/profile/PracticeProfileForm.tsx` (line 194-213) | Move NPI validation to a warning instead of a hard block |
+| Database | Add `default_sig text` column |
+| Database | ~297 UPDATE statements to populate SIG values |
+| `src/types/domain/productVariant.ts` | Add `default_sig` to interfaces |
+| `src/components/products/PatientSelectionDialog.tsx` | Use variant `default_sig` for SIG init + disclaimer |
+| `src/components/products/PrescriptionWriterDialog.tsx` | Add disclaimer to SIG label |
+| `src/components/products/ProductVariantsEditor.tsx` | Add default_sig textarea for admin editing |
+| `src/hooks/useProductVariants.ts` | Include default_sig in variant sync |
 
 ## Expected Result
-- Clients can save address changes regardless of NPI verification status
-- After saving, the UI updates instantly without needing a page refresh
-- NPI verification still shows a warning but doesn't block other profile updates
+- When a prescriber selects a variant (e.g., "DHEA SR 40 MG - 30ct"), the SIG field auto-fills with "Take 1 capsule by mouth once daily as directed by your provider; swallow whole--do not crush or chew; take at the same time each day unless otherwise directed."
+- Different product types get different SIG text (creams get topical instructions, injectables get injection instructions, etc.)
+- Prescribers see a disclaimer: "Please confirm and adjust directions as per your clinical judgment"
+- Admins can edit default SIGs per variant through the product management UI
 
