@@ -180,7 +180,7 @@ export const PracticeProfileForm = () => {
         title: "Profile Updated",
         description: "Your profile information has been saved successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["practice-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["practice-profile", effectiveUserId], refetchType: 'all' });
     },
     onError: (error: any) => {
       toast({
