@@ -1,59 +1,75 @@
 
-
-# Fix Credit Card Add / Save / Display Issues
+# Credit Card Flow -- Complete Audit & Fix Plan
 
 ## Issues Found
 
-### Issue 1: Subscription Page Shows Blank Card Details (Critical)
-`PaymentMethodManager.tsx` (subscription page) uses `method.last_four`, `method.expiration_month`, and `method.expiration_year` -- but these fields don't exist in the database. The actual database columns are `card_last_five` and `card_expiry` (stored as "MM/YY"). This means cards display as "undefined ---- undefined" with "Expires undefined/undefined" on the subscription page.
+### Issue 1: CRITICAL -- `place-order` Edge Function Queries Non-Existent Table
+**File:** `supabase/functions/place-order/index.ts` (lines 338-342)
 
-### Issue 2: First Card Not Set as Default
-`AddCreditCardDialog` always sends `is_default: false`. When a user adds their very first card, it should automatically become the default. Otherwise it won't show the "Default" badge and could cause confusion.
+The code queries `"payment_methods"` table, but this table does NOT exist in the database. The correct table is `"practice_payment_methods"`.
 
-### Issue 3: Checkout Query Cache Not Refreshed After Adding Card (Staff/Provider)
-The `AddCreditCardDialog` invalidates query key `['payment-methods', practiceId]` (where practiceId = effectiveUserId), but checkout uses a 3-part key `['payment-methods', practiceIdForPayment, user?.id]`. For staff/providers, `practiceIdForPayment !== effectiveUserId`, so the invalidation doesn't trigger a refetch. The newly added card won't appear until manual page refresh.
+```
+// CURRENT (BROKEN):
+const { data: selectedPaymentMethod } = await supabaseAdmin
+  .from("payment_methods")        // <-- WRONG TABLE
+  .select("payment_type")
+  .eq("id", payment_method_id)
+  .single();
+```
 
-### Issue 4: Checkout AddCreditCardDialog Uses Wrong practiceId for Staff
-Line 1322 passes `practiceId={effectiveUserId}` but should use `practiceIdForPayment` so staff cards are saved under the practice, not their personal account.
+**Impact:** `selectedPaymentMethod` is always `null`, so `payment_method_used` is stored as `null` on every order. This is a data integrity issue -- order records don't properly track which payment type was used. The payment itself still processes because the actual charge logic (lines 94-129) correctly queries `practice_payment_methods`.
+
+**Fix:** Change `"payment_methods"` to `"practice_payment_methods"`.
 
 ---
 
-## Fixes
+### Issue 2: PaymentMethodManager Does Not Pass `practiceId` to AddCreditCardDialog
+**File:** `src/components/subscription/PaymentMethodManager.tsx` (line 168-175)
 
-### Fix 1: PaymentMethodManager.tsx -- Map DB Fields Correctly
-Update the component to use `card_last_five`, `card_expiry`, and `card_type` from the actual database columns:
-
+The `AddCreditCardDialog` is rendered without a `practiceId` prop:
 ```
-Before: {method.card_type} •••• {method.last_four}
-         Expires {method.expiration_month}/{method.expiration_year}
-
-After:  {method.card_type} •••• {method.card_last_five}
-         Expires {method.card_expiry}
-```
-
-Also update the `PaymentMethod` interface in this file to match the DB schema.
-
-### Fix 2: AddCreditCardDialog -- Auto-Default First Card
-Before sending the request, check if the user has any existing active cards. If none, set `is_default: true` automatically.
-
-### Fix 3: AddCreditCardDialog -- Broader Query Invalidation
-After successfully adding a card, invalidate all payment-methods queries (not just the one matching `practiceId`) using a predicate-based invalidation:
-```
-queryClient.invalidateQueries({ 
-  predicate: (query) => query.queryKey[0] === 'payment-methods' 
-});
+<AddCreditCardDialog
+  open={showAddCard}
+  onOpenChange={setShowAddCard}
+  onSuccess={() => { window.location.reload(); }}
+  // NO practiceId passed!
+/>
 ```
 
-### Fix 4: Checkout -- Pass Correct practiceId
-Change line 1322 from `practiceId={effectiveUserId}` to `practiceId={practiceIdForPayment}` so staff/provider cards are saved under the correct practice.
+**Impact:** 
+1. The auto-default-first-card logic (lines 60-69 in AddCreditCardDialog) is **skipped** because `practiceId` is falsy, meaning `shouldBeDefault` stays `false`. The first card added via the subscription page will NOT be set as default.
+2. The edge function receives no `practice_id` in the request body, so the card may be saved under `user.id` (the auth user) instead of the practice. For practice owners this is fine (user.id === practice_id), but for staff/providers this would be wrong.
+
+**Fix:** Pass the current user's practice ID to `PaymentMethodManager` and forward it to `AddCreditCardDialog`. The component needs to accept a `practiceId` prop.
 
 ---
 
-## Files to Modify
+### Issue 3: PaymentMethodManager Uses Local State Instead of React Query
+**File:** `src/components/subscription/PaymentMethodManager.tsx` (line 32-33)
 
-| File | Change |
-|------|--------|
-| `src/components/subscription/PaymentMethodManager.tsx` | Fix interface + field names to match DB columns |
-| `src/components/profile/AddCreditCardDialog.tsx` | Auto-default first card + broader cache invalidation |
-| `src/pages/Checkout.tsx` | Pass `practiceIdForPayment` to AddCreditCardDialog |
+The component copies `initialMethods` into local state and never refetches. After adding a card, it does `window.location.reload()` which is a poor UX pattern. Also, if the parent doesn't re-render with updated props, the state becomes stale.
 
+**Fix:** This is a UX improvement (not blocking), but the `onSuccess` callback should invalidate the subscription query instead of doing a full page reload.
+
+---
+
+## Fix Summary
+
+| # | File | Change | Severity |
+|---|------|--------|----------|
+| 1 | `supabase/functions/place-order/index.ts` | Change `"payment_methods"` to `"practice_payment_methods"` on line 339 | Critical |
+| 2 | `src/components/subscription/PaymentMethodManager.tsx` | Accept `practiceId` prop and pass it to `AddCreditCardDialog` | High |
+| 3 | `src/pages/practice/MySubscription.tsx` | Pass `practiceId` (effectivePracticeId or user.id) to `PaymentMethodManager` | High |
+
+## What Already Works Correctly
+
+- **AddCreditCardDialog** (Checkout path): Correctly receives `practiceId={practiceIdForPayment}` from Checkout.tsx (line 1322)
+- **Card tokenization**: Accept.js integration is properly configured
+- **Edge function `authorizenet-create-customer-profile`**: Correctly inserts into `practice_payment_methods` with all fields
+- **Checkout payment method query**: Correctly queries `practice_payment_methods` with proper filtering
+- **Auto-select default**: Checkout auto-selects the first active/default card
+- **Cache invalidation**: Uses predicate-based invalidation that covers all payment-methods queries
+- **Card display at checkout**: Correctly uses `card_last_five`, `card_expiry`, `card_type`
+- **Card display on subscription page**: Correctly maps to DB columns after previous fix
+- **Payment charging**: `authorizenet-charge-payment` is correctly invoked with proper payment method ID
+- **Payment validation**: place-order validates payment method exists and is active (lines 94-129) against the correct `practice_payment_methods` table
