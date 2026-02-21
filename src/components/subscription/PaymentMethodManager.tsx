@@ -27,9 +27,10 @@ interface PaymentMethod {
 
 interface PaymentMethodManagerProps {
   paymentMethods: PaymentMethod[];
+  practiceId?: string;
 }
 
-export function PaymentMethodManager({ paymentMethods: initialMethods }: PaymentMethodManagerProps) {
+export function PaymentMethodManager({ paymentMethods: initialMethods, practiceId }: PaymentMethodManagerProps) {
   const [paymentMethods, setPaymentMethods] = useState(initialMethods);
   const [showAddCard, setShowAddCard] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
