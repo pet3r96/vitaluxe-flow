@@ -428,7 +428,10 @@ export function PrescriptionWriterDialog({
 
           {/* Editable SIG */}
           <div className="grid gap-2">
-            <Label htmlFor="sig">SIG - Directions for Use *</Label>
+            <div>
+              <Label htmlFor="sig">SIG - Directions for Use *</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Please confirm and adjust directions as per your clinical judgment.</p>
+            </div>
             <Textarea
               id="sig"
               placeholder="e.g., Take 1 tablet by mouth daily, Apply to affected area twice daily, etc."
@@ -437,9 +440,6 @@ export function PrescriptionWriterDialog({
               rows={3}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              These are the patient instructions for how to use this medication
-            </p>
           </div>
 
           {/* Days Supply */}

@@ -875,7 +875,10 @@ export const PatientSelectionDialog = ({
               </div>
 
                     <div className="grid gap-2">
-                      <Label htmlFor="sig-input">SIG - Directions for Use <span className="text-destructive">*</span></Label>
+                      <div>
+                        <Label htmlFor="sig-input">SIG - Directions for Use <span className="text-destructive">*</span></Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">Please confirm and adjust directions as per your clinical judgment.</p>
+                      </div>
                       <Textarea
                         id="sig-input"
                         placeholder="e.g., Take 1 tablet by mouth daily..."
@@ -883,9 +886,6 @@ export const PatientSelectionDialog = ({
                         onChange={(e) => setCustomSig(e.target.value)}
                         rows={3}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Default from product: {product.sig || 'Not specified'}
-                      </p>
                     </div>
 
                     <div className="grid gap-2">

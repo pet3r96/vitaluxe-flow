@@ -43,6 +43,7 @@ export function createEmptyVariant(): ProductVariantFormData {
     retail_price: '',
     active: true,
     product_code: '',
+    default_sig: '',
     isNew: true,
   };
 }

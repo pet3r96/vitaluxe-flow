@@ -177,6 +177,19 @@ export function ProductVariantsEditor({
                       className="mt-1"
                     />
                   </div>
+
+                  {/* Default SIG */}
+                  <div className="col-span-2">
+                    <Label className="text-xs">Default SIG (Directions)</Label>
+                    <Textarea
+                      value={variant.default_sig || ''}
+                      onChange={(e) => handleUpdate(index, 'default_sig', e.target.value)}
+                      placeholder="e.g., Take 1 capsule by mouth once daily..."
+                      disabled={disabled}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex flex-col items-center gap-2 pt-2">
