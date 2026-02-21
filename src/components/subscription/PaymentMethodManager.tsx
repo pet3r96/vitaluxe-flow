@@ -37,6 +37,7 @@ export function PaymentMethodManager({ paymentMethods: initialMethods, practiceI
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleSetDefault = async (methodId: string) => {
     try {
