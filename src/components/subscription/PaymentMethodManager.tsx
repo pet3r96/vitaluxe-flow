@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ export function PaymentMethodManager({ paymentMethods: initialMethods, practiceI
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleSetDefault = async (methodId: string) => {
     try {
@@ -171,8 +173,11 @@ export function PaymentMethodManager({ paymentMethods: initialMethods, practiceI
         onOpenChange={setShowAddCard}
         practiceId={practiceId}
         onSuccess={() => {
-          // Refresh payment methods after adding new card
-          window.location.reload();
+          queryClient.invalidateQueries({ 
+            predicate: (query) => 
+              query.queryKey[0] === 'payment-methods' || 
+              query.queryKey[0] === 'subscription-data'
+          });
         }}
       />
 
