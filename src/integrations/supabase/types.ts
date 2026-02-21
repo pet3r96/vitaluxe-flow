@@ -5516,6 +5516,7 @@ export type Database = {
           active: boolean | null
           base_price: number
           created_at: string | null
+          default_sig: string | null
           dosage_label: string
           downline_price: number | null
           id: string
@@ -5531,6 +5532,7 @@ export type Database = {
           active?: boolean | null
           base_price: number
           created_at?: string | null
+          default_sig?: string | null
           dosage_label: string
           downline_price?: number | null
           id?: string
@@ -5546,6 +5548,7 @@ export type Database = {
           active?: boolean | null
           base_price?: number
           created_at?: string | null
+          default_sig?: string | null
           dosage_label?: string
           downline_price?: number | null
           id?: string
