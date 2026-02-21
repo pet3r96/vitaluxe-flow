@@ -56,6 +56,18 @@ export const AddCreditCardDialog = ({
         throw new Error('Card tokenization failed');
       }
 
+      // Check if user has any existing payment methods to auto-default first card
+      let shouldBeDefault = false;
+      if (practiceId) {
+        const { data: existing } = await supabase
+          .from('practice_payment_methods')
+          .select('id')
+          .eq('practice_id', practiceId)
+          .eq('status', 'active')
+          .limit(1);
+        shouldBeDefault = !existing || existing.length === 0;
+      }
+
       const cardType = detectCardType(cardNumber);
       const cardLastFive = cardNumber.replace(/\s/g, '').slice(-5);
       const cardExpiry = `${expiryMonth.padStart(2, '0')}/${expiryYear.padStart(2, '0')}`;
@@ -75,7 +87,7 @@ export const AddCreditCardDialog = ({
             state: billingAddress.state || "",
             zip: billingAddress.zip || "",
           },
-          is_default: false,
+          is_default: shouldBeDefault,
           practice_id: practiceId,
         },
       });
