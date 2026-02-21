@@ -30,7 +30,7 @@ async function resolvePracticeId(supabaseAdmin: any, userId: string): Promise<st
     .from('providers')
     .select('practice_id')
     .eq('user_id', userId)
-    .eq('status', 'active')
+    .eq('active', true)
     .limit(1);
 
   if (provider && provider.length > 0) {
@@ -42,7 +42,7 @@ async function resolvePracticeId(supabaseAdmin: any, userId: string): Promise<st
     .from('practice_staff')
     .select('practice_id')
     .eq('user_id', userId)
-    .eq('status', 'active')
+    .eq('active', true)
     .limit(1);
 
   if (staff && staff.length > 0) {
