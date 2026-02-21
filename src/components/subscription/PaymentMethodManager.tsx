@@ -19,16 +19,9 @@ import {
 
 interface PaymentMethod {
   id: string;
-  card?: {
-    brand: string;
-    last4: string;
-    exp_month: number;
-    exp_year: number;
-  };
   card_type?: string;
-  last_four?: string;
-  expiration_month?: number;
-  expiration_year?: number;
+  card_last_five?: string;
+  card_expiry?: string;
   is_default?: boolean;
 }
 
@@ -133,7 +126,7 @@ export function PaymentMethodManager({ paymentMethods: initialMethods }: Payment
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-medium">
-                        {method.card_type} •••• {method.last_four}
+                        {method.card_type} •••• {method.card_last_five}
                       </p>
                       {method.is_default && (
                         <Badge variant="secondary" className="text-xs">
@@ -143,7 +136,7 @@ export function PaymentMethodManager({ paymentMethods: initialMethods }: Payment
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Expires {method.expiration_month}/{method.expiration_year}
+                      Expires {method.card_expiry || 'N/A'}
                     </p>
                   </div>
                 </div>
