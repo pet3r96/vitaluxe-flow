@@ -180,7 +180,7 @@ export const PracticeProfileForm = () => {
         title: "Profile Updated",
         description: "Your profile information has been saved successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["practice-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["practice-profile", effectiveUserId], refetchType: 'all' });
     },
     onError: (error: any) => {
       toast({
@@ -192,22 +192,17 @@ export const PracticeProfileForm = () => {
   });
 
   const onSubmit = (values: ProfileFormValues) => {
-    // Check NPI verification status
-    if (npiVerificationStatus !== "verified") {
-      if (npiVerificationStatus === "verifying") {
-        toast({
-          title: "Please wait",
-          description: "NPI verification is in progress",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Verification Required",
-          description: "NPI must be verified before saving",
-          variant: "destructive",
-        });
-      }
-      return;
+    // Warn about NPI but don't block saving
+    if (npiVerificationStatus === "verifying") {
+      toast({
+        title: "NPI Verification In Progress",
+        description: "Your profile will be saved, but NPI verification is still running.",
+      });
+    } else if (npiVerificationStatus !== "verified") {
+      toast({
+        title: "NPI Not Verified",
+        description: "Your profile has been saved, but please verify your NPI number.",
+      });
     }
 
     updateMutation.mutate(values);
@@ -560,7 +555,7 @@ export const PracticeProfileForm = () => {
         <div className="flex justify-end">
           <Button
             type="submit" 
-            disabled={updateMutation.isPending || npiVerificationStatus !== "verified"}
+            disabled={updateMutation.isPending}
             className="w-full sm:w-auto"
           >
             {updateMutation.isPending ? (
