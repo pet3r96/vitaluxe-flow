@@ -1,84 +1,51 @@
 
 
-# Pre-Set SIG (Directions) Per Product Variant
+# Fix Credit Card Add / Save / Display Issues
 
-## Overview
+## Issues Found
 
-Add a `default_sig` column to each product variant so that when a prescriber writes a script, the SIG field auto-fills with variant-specific directions. The prescriber can still edit it. A liability disclaimer will be added to the SIG header.
+### Issue 1: Subscription Page Shows Blank Card Details (Critical)
+`PaymentMethodManager.tsx` (subscription page) uses `method.last_four`, `method.expiration_month`, and `method.expiration_year` -- but these fields don't exist in the database. The actual database columns are `card_last_five` and `card_expiry` (stored as "MM/YY"). This means cards display as "undefined ---- undefined" with "Expires undefined/undefined" on the subscription page.
 
-## Steps
+### Issue 2: First Card Not Set as Default
+`AddCreditCardDialog` always sends `is_default: false`. When a user adds their very first card, it should automatically become the default. Otherwise it won't show the "Default" badge and could cause confusion.
 
-### Step 1: Database Migration -- Add `default_sig` column
+### Issue 3: Checkout Query Cache Not Refreshed After Adding Card (Staff/Provider)
+The `AddCreditCardDialog` invalidates query key `['payment-methods', practiceId]` (where practiceId = effectiveUserId), but checkout uses a 3-part key `['payment-methods', practiceIdForPayment, user?.id]`. For staff/providers, `practiceIdForPayment !== effectiveUserId`, so the invalidation doesn't trigger a refetch. The newly added card won't appear until manual page refresh.
 
-Add a nullable `default_sig` text column to the `product_variants` table.
+### Issue 4: Checkout AddCreditCardDialog Uses Wrong practiceId for Staff
+Line 1322 passes `practiceId={effectiveUserId}` but should use `practiceIdForPayment` so staff cards are saved under the practice, not their personal account.
 
-```sql
-ALTER TABLE product_variants ADD COLUMN default_sig text;
-```
+---
 
-### Step 2: Populate SIG Data for All ~297 Variants
+## Fixes
 
-Using the product_code (VIOS Med ID) as the matching key, run UPDATE statements to set the `default_sig` for every variant. The SIG values from the spreadsheet group into these categories:
-
-- **Capsules (swallow with water):** Clomiphene, Enclomiphene, Estradiol IR, Naltrexone, Tadalafil Cap, Methylene Blue, Pregnenolone IR, Liothyronine IR, Levothyroxine Dye-Free, T4/T3 IR, etc.
-- **Capsules SR (do not crush/chew):** DHEA SR, Progesterone IR/SR, Liothyronine SR, Levothyroxine SR, T4/T3 SR, etc.
-- **Creams (topical):** All Biest Cream, DHEA Cream, Estradiol Cream, Estriol Cream, GHK-CU, Hydroquinone, Progesterone Cream, Testosterone Cream, etc.
-- **Injectables (subcutaneous):** Sermorelin, Semaglutide combos, Tirzepatide combos
-- **Injectables (intramuscular):** Testosterone Cypionate Oil, Nandrolone, Glutathione, NAD+, Methylcobalamin
-- **RDTs (rapid dissolve tablets):** Biest RDT, Progesterone RDT, Testosterone RDT, Tadalafil Raspberry, Sildenafil Raspberry, Semaglutide ODT, Tirzepatide ODT
-- **Troches (sublingual):** Biest Troche, Progesterone Troche, Testosterone Troche, Tadalafil Troche, Sildenafil Troche, NAD+ Troche, Oxytocin Troche
-- **Nasal Spray:** Oxytocin
-- **Solutions (scalp):** Finasteride/Minoxidil, Minoxidil
-- **Tablets:** Finasteride
-
-Each variant will be matched by its `product_code` and updated with the exact SIG text from the spreadsheet. Where multiple variants share the same product_code (different quantities), they all get the same SIG.
-
-### Step 3: Update Type Definitions
-
-**File:** `src/types/domain/productVariant.ts`
-
-- Add `default_sig?: string | null` to the `ProductVariant` interface
-- Add `default_sig: string` to `ProductVariantFormData`
-- Update `createEmptyVariant()` to include `default_sig: ''`
-
-### Step 4: Update SIG Initialization Logic
-
-**File:** `src/components/products/PatientSelectionDialog.tsx` (lines 363-366)
-
-Change from using product-level SIG to variant-level:
+### Fix 1: PaymentMethodManager.tsx -- Map DB Fields Correctly
+Update the component to use `card_last_five`, `card_expiry`, and `card_type` from the actual database columns:
 
 ```
-Before: if (product?.sig && !customSig) { setCustomSig(product.sig); }
-After:  const variantSig = selectedVariant?.default_sig || product?.sig;
-        if (variantSig && !customSig) { setCustomSig(variantSig); }
+Before: {method.card_type} •••• {method.last_four}
+         Expires {method.expiration_month}/{method.expiration_year}
+
+After:  {method.card_type} •••• {method.card_last_five}
+         Expires {method.card_expiry}
 ```
 
-Also update the helper text (line 885) from "Default from product: ..." to "Default from variant: ..." showing the variant's specific SIG.
+Also update the `PaymentMethod` interface in this file to match the DB schema.
 
-### Step 5: Add Liability Disclaimer to SIG Labels
+### Fix 2: AddCreditCardDialog -- Auto-Default First Card
+Before sending the request, check if the user has any existing active cards. If none, set `is_default: true` automatically.
 
-**Files:** `PatientSelectionDialog.tsx` (line 876) and `PrescriptionWriterDialog.tsx` (line 431)
-
-Update the SIG label to include a disclaimer subtitle:
-
+### Fix 3: AddCreditCardDialog -- Broader Query Invalidation
+After successfully adding a card, invalidate all payment-methods queries (not just the one matching `practiceId`) using a predicate-based invalidation:
 ```
-SIG - Directions for Use *
-Please confirm and adjust directions as per your clinical judgment.
+queryClient.invalidateQueries({ 
+  predicate: (query) => query.queryKey[0] === 'payment-methods' 
+});
 ```
 
-This will appear as a small helper text line directly below the label to protect against liability.
-
-### Step 6: Admin Editing Support
-
-**File:** `src/components/products/ProductVariantsEditor.tsx`
-
-Add a "Default SIG" textarea field within each variant card so admins can view and edit the pre-set directions per variant. This allows future SIG changes without needing database updates.
-
-### Step 7: Update Variant Hook
-
-**File:** `src/hooks/useProductVariants.ts`
-
-Ensure `default_sig` is included in the upsert data when syncing variants (in `useSyncProductVariants`).
+### Fix 4: Checkout -- Pass Correct practiceId
+Change line 1322 from `practiceId={effectiveUserId}` to `practiceId={practiceIdForPayment}` so staff/provider cards are saved under the correct practice.
 
 ---
 
@@ -86,17 +53,7 @@ Ensure `default_sig` is included in the upsert data when syncing variants (in `u
 
 | File | Change |
 |------|--------|
-| Database | Add `default_sig text` column |
-| Database | ~297 UPDATE statements to populate SIG values |
-| `src/types/domain/productVariant.ts` | Add `default_sig` to interfaces |
-| `src/components/products/PatientSelectionDialog.tsx` | Use variant `default_sig` for SIG init + disclaimer |
-| `src/components/products/PrescriptionWriterDialog.tsx` | Add disclaimer to SIG label |
-| `src/components/products/ProductVariantsEditor.tsx` | Add default_sig textarea for admin editing |
-| `src/hooks/useProductVariants.ts` | Include default_sig in variant sync |
-
-## Expected Result
-- When a prescriber selects a variant (e.g., "DHEA SR 40 MG - 30ct"), the SIG field auto-fills with "Take 1 capsule by mouth once daily as directed by your provider; swallow whole--do not crush or chew; take at the same time each day unless otherwise directed."
-- Different product types get different SIG text (creams get topical instructions, injectables get injection instructions, etc.)
-- Prescribers see a disclaimer: "Please confirm and adjust directions as per your clinical judgment"
-- Admins can edit default SIGs per variant through the product management UI
+| `src/components/subscription/PaymentMethodManager.tsx` | Fix interface + field names to match DB columns |
+| `src/components/profile/AddCreditCardDialog.tsx` | Auto-default first card + broader cache invalidation |
+| `src/pages/Checkout.tsx` | Pass `practiceIdForPayment` to AddCreditCardDialog |
 
