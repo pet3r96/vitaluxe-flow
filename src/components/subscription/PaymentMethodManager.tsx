@@ -19,16 +19,9 @@ import {
 
 interface PaymentMethod {
   id: string;
-  card?: {
-    brand: string;
-    last4: string;
-    exp_month: number;
-    exp_year: number;
-  };
   card_type?: string;
-  last_four?: string;
-  expiration_month?: number;
-  expiration_year?: number;
+  card_last_five?: string;
+  card_expiry?: string;
   is_default?: boolean;
 }
 
