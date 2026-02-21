@@ -173,8 +173,11 @@ export function PaymentMethodManager({ paymentMethods: initialMethods, practiceI
         onOpenChange={setShowAddCard}
         practiceId={practiceId}
         onSuccess={() => {
-          // Refresh payment methods after adding new card
-          window.location.reload();
+          queryClient.invalidateQueries({ 
+            predicate: (query) => 
+              query.queryKey[0] === 'payment-methods' || 
+              query.queryKey[0] === 'subscription-data'
+          });
         }}
       />
 
