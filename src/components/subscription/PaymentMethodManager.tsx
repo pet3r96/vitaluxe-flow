@@ -126,7 +126,7 @@ export function PaymentMethodManager({ paymentMethods: initialMethods }: Payment
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-medium">
-                        {method.card_type} •••• {method.last_four}
+                        {method.card_type} •••• {method.card_last_five}
                       </p>
                       {method.is_default && (
                         <Badge variant="secondary" className="text-xs">
