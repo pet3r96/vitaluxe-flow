@@ -20,6 +20,7 @@ export async function getPracticeDetails(practiceId: string | null) {
       name,
       company,
       address_street,
+      address_suite,
       address_city,
       address_state,
       address_zip,
