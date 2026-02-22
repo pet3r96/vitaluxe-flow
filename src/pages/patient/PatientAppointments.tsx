@@ -196,7 +196,7 @@ export default function PatientAppointments() {
         // Fetch practice address and name from profiles
         const { data: practiceProfile } = await supabase
           .from('profiles')
-          .select('name, company, address_street, address_city, address_state, address_zip')
+          .select('name, company, address_street, address_suite, address_city, address_state, address_zip')
           .eq('id', patientAccount.practice_id)
           .maybeSingle();
 
