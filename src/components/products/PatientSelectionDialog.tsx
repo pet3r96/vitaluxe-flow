@@ -303,6 +303,8 @@ export const PatientSelectionDialog = ({
       setDaysSupply("");
       setOrderNotes("");
       setProviderSignature("");
+      setPracticeLinkedPatientId("");
+      setPracticePatientComboboxOpen(false);
       setShowPrescriptionWriter(false);
       // Only reset provider selection when dialog closes
       if (effectiveRole === "doctor") {
