@@ -95,6 +95,8 @@ export const PatientSelectionDialog = ({
   const [orderNotes, setOrderNotes] = useState("");
   const [daysSupply, setDaysSupply] = useState("");
   const [providerSignature, setProviderSignature] = useState("");
+  const [practiceLinkedPatientId, setPracticeLinkedPatientId] = useState("");
+  const [practicePatientComboboxOpen, setPracticePatientComboboxOpen] = useState(false);
   
   // Auto-select single variant or set initial step for multiple variants
   useEffect(() => {
