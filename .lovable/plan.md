@@ -1,72 +1,144 @@
 
-# Complete Payment System Audit -- Final Report
 
-## Current Database State
-- Only 1 active card exists (Amex ending 79003 for practice 2feb9460...)
-- It has valid numeric `authorizenet_profile_id: 796505386` and `authorizenet_payment_profile_id: 1348955647`
-- It is correctly set as `is_default: true`
-- All legacy/invalid cards have been properly marked as `removed` or `declined`
+# Suite/Address Display & Persistence -- Complete Fix Plan
+
+## Problem Summary
+"Suite 275" is stored in the database (`address_suite: "suite 275"`, `shipping_address_suite: "suite 275"`) but is not showing up in several display locations and is being **silently dropped** when addresses are updated.
 
 ---
 
-## CRITICAL BUG: `update-payment-method` Queries Wrong Column on providers/practice_staff
+## Root Causes Found
 
-**File:** `supabase/functions/update-payment-method/index.ts` (lines 30-48)
+### Issue 1: CRITICAL -- DeliveryConfirmation Drops Suite on Save
+**File:** `src/pages/DeliveryConfirmation.tsx` (lines 92-105)
 
-The `resolvePracticeId` function queries:
+The `updatePracticeAddress` mutation saves every address field EXCEPT `shipping_address_suite`:
+
 ```
-.eq('status', 'active')   // line 33 (providers)
-.eq('status', 'active')   // line 45 (practice_staff)
+.update({
+  shipping_address_street: address.street,
+  shipping_address_city: address.city,
+  shipping_address_state: address.state,
+  shipping_address_zip: address.zip,
+  shipping_address_formatted: address.formatted,
+  // MISSING: shipping_address_suite: address.suite,
+})
 ```
 
-But both `providers` and `practice_staff` tables have a **boolean `active` column**, NOT a `status` column. This means these queries always return 0 rows, so:
+**Impact:** Every time a user updates their practice address from the Delivery Confirmation page, their suite number is erased from the database.
 
-- Staff and providers can NEVER set a default payment method (returns "No associated practice found")
-- Only practice owners (where `role === 'practice'`) can manage cards via this function
+### Issue 2: CRITICAL -- DeliveryConfirmation Does Not Display Suite
+**File:** `src/pages/DeliveryConfirmation.tsx` (lines 554-559)
 
-**Fix:** Change both lines to `.eq('active', true)` to match the actual database schema.
+The address display shows street, city, state, zip but no suite:
 
-Note: The `authorizenet-charge-payment` function already correctly uses `.eq('active', true)` for the same lookups -- only `update-payment-method` has this bug.
+```
+<div>{profile.shipping_address_street}</div>
+<div>{profile.shipping_address_city}, {profile.shipping_address_state} {profile.shipping_address_zip}</div>
+// No suite line
+```
+
+### Issue 3: CRITICAL -- place-order Queries Non-Existent `practices` Table
+**File:** `supabase/functions/place-order/index.ts` (lines 264-271)
+
+```
+const { data: practice } = await supabaseAdmin
+  .from("practices")           // <-- TABLE DOES NOT EXIST
+  .select("shipping_address")  // <-- COLUMN ALSO DOESN'T EXIST ON profiles
+  .eq("id", effectivePracticeId)
+  .single();
+```
+
+The `practices` table does not exist in the database. The practice address lives in the `profiles` table under structured fields (`shipping_address_street`, `shipping_address_suite`, etc.). This means `practiceAddress` is always `null`, so every practice order is created with `practice_address: null` and `formatted_shipping_address: null`.
+
+### Issue 4: HIGH -- formatPracticeAddress Utility Missing Suite
+**File:** `src/lib/practiceUtils.ts` (lines 48-63)
+
+The `formatPracticeAddress` function and `getPracticeDetails` both omit `address_suite` from both the query and the formatting logic.
+
+### Issue 5: HIGH -- Multiple Display Locations Missing Suite
+
+The following files construct address strings by concatenating `address_street, address_city, address_state address_zip` without including suite:
+
+- `src/components/calendar/CreateAppointmentDialog.tsx` (line 331)
+- `src/components/pharmacies/PharmacyShippingWorkflow.tsx` (line 537)
+- `src/components/products/ProductsGrid.tsx` (line 698) -- patient address display
+- `src/components/products/PrescriptionWriterDialog.tsx` (line 390)
+- `src/pages/patient/PatientAppointments.tsx` (lines 107, 199) -- missing from select query
+
+### Issue 6: MEDIUM -- Checkout defaultBillingAddress Missing Suite
+**File:** `src/pages/Checkout.tsx` (lines 1313-1319)
+
+The `AddCreditCardDialog` receives a `defaultBillingAddress` without the suite:
+```
+street: providerProfile.shipping_address_street,
+city: providerProfile.shipping_address_city,
+// Missing: suite: providerProfile.shipping_address_suite,
+```
 
 ---
 
-## What Passed Audit (Confirmed Working)
+## Fix Plan
 
-| Component | Status | Details |
-|-----------|--------|---------|
-| Accept.js tokenization | OK | Production keys, card data sanitized, Luhn validation available |
-| `authorizenet-create-customer-profile` | OK | Numeric ID validation, correct table, proper error handling |
-| `authorizenet-charge-payment` | OK | Retry logic, CSRF, correct staff/provider auth (uses `active: true`) |
-| `authorizenet-refund-transaction` | OK | CSRF, proper order lookups |
-| `place-order` | OK | Correct `practice_payment_methods` table, payment validation |
-| `AddCreditCardDialog` | OK | Auto-default first card, predicate-based cache invalidation, passes practiceId |
-| `Checkout.tsx` | OK | Passes `practiceIdForPayment` correctly to AddCreditCardDialog |
-| `PaymentMethodManager` display | OK | Uses `card_last_five`, `card_expiry`, `card_type` |
-| `PaymentMethodManager` add card | OK | Passes `practiceId`, uses queryClient invalidation |
-| `MySubscription` | OK | Passes `effectivePracticeId` to PaymentMethodManager |
-| Database data integrity | OK | Only card with valid Authorize.Net IDs is active, default is set |
-| Card creation flow | OK | Tokenize -> edge function -> Authorize.Net API -> DB insert with numeric profile IDs |
+### Fix 1: DeliveryConfirmation -- Save Suite on Update
+**File:** `src/pages/DeliveryConfirmation.tsx`
 
-## Card Creation Flow Verification
+Add `shipping_address_suite: address.suite || null` to the `updatePracticeAddress` mutation (line 97-101).
 
-The end-to-end flow when adding a card:
+### Fix 2: DeliveryConfirmation -- Display Suite
+**File:** `src/pages/DeliveryConfirmation.tsx`
 
-1. Client calls `tokenizeCard()` via Accept.js -- gets opaque data token (never sends raw card to server)
-2. Client sends token + metadata to `authorizenet-create-customer-profile` edge function
-3. Edge function calls Authorize.Net API with opaque data to create/add profile
-4. Authorize.Net returns numeric `customerProfileId` and `customerPaymentProfileId`
-5. Edge function validates response `resultCode === 'Ok'` before proceeding
-6. Edge function inserts into `practice_payment_methods` with the real numeric IDs
-7. If Authorize.Net returns an error, the function returns a 400 with the error message -- no orphaned DB records
+Add a suite line between street and city in the address display (around line 557):
+```
+<div>{profile.shipping_address_street}</div>
+{profile.shipping_address_suite && <div>{profile.shipping_address_suite}</div>}
+<div>{profile.shipping_address_city}, ...
+```
 
-This flow guarantees that every active card in the database has a valid Authorize.Net profile, because the insert only happens AFTER a successful API response.
+### Fix 3: place-order -- Fix Practice Address Query
+**File:** `supabase/functions/place-order/index.ts`
+
+Change the query from the non-existent `practices` table to `profiles`, and select the structured address fields:
+```
+const { data: practice } = await supabaseAdmin
+  .from("profiles")
+  .select("shipping_address_street, shipping_address_suite, shipping_address_city, shipping_address_state, shipping_address_zip")
+  .eq("id", effectivePracticeId)
+  .single();
+
+const practiceAddress = practice
+  ? [practice.shipping_address_street, practice.shipping_address_suite, practice.shipping_address_city, practice.shipping_address_state, practice.shipping_address_zip].filter(Boolean).join(', ')
+  : null;
+```
+
+### Fix 4: practiceUtils -- Include Suite
+**File:** `src/lib/practiceUtils.ts`
+
+Add `address_suite` to the select query in `getPracticeDetails` and include it in `formatPracticeAddress`.
+
+### Fix 5: All Address Display Locations -- Include Suite
+Update the following files to include suite in address formatting:
+- `src/components/calendar/CreateAppointmentDialog.tsx`
+- `src/components/pharmacies/PharmacyShippingWorkflow.tsx`
+- `src/components/products/ProductsGrid.tsx`
+- `src/components/products/PrescriptionWriterDialog.tsx`
+- `src/pages/patient/PatientAppointments.tsx`
+
+### Fix 6: Checkout -- Pass Suite to defaultBillingAddress
+**File:** `src/pages/Checkout.tsx` (line 1315-1318)
+
+Add `suite: providerProfile.shipping_address_suite` to the defaultBillingAddress object.
 
 ---
 
 ## Fix Summary
 
-| # | Issue | Severity | File |
-|---|-------|----------|------|
-| 1 | `update-payment-method` uses `.eq('status', 'active')` instead of `.eq('active', true)` for providers and practice_staff | Critical | `supabase/functions/update-payment-method/index.ts` lines 33, 45 |
+| # | File | Change | Severity |
+|---|------|--------|----------|
+| 1 | `src/pages/DeliveryConfirmation.tsx` | Save `shipping_address_suite` on address update | Critical |
+| 2 | `src/pages/DeliveryConfirmation.tsx` | Display suite in address view | Critical |
+| 3 | `supabase/functions/place-order/index.ts` | Query `profiles` instead of non-existent `practices` table, include suite | Critical |
+| 4 | `src/lib/practiceUtils.ts` | Add `address_suite` to query and format function | High |
+| 5 | 5 component files | Include suite in inline address formatting | High |
+| 6 | `src/pages/Checkout.tsx` | Pass suite to defaultBillingAddress | Medium |
 
-Only 1 fix needed. Everything else is verified working.
