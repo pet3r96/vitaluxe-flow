@@ -47,7 +47,8 @@ export interface CartLine {
   created_at?: string | null;
   variant_id?: string | null; // NEW: Product variant ID for dosage selection
   days_supply?: number | null; // Days supply for pharmacy
-  
+  ship_to?: string | null; // 'practice' or 'patient' - determines shipping destination
+
   // Hydrated relationships (optional - may be joined)
   product?: {
     id: string;
