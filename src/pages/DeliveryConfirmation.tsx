@@ -95,6 +95,7 @@ export default function DeliveryConfirmation() {
         .from("profiles")
         .update({
           shipping_address_street: address.street,
+          shipping_address_suite: address.suite || null,
           shipping_address_city: address.city,
           shipping_address_state: address.state,
           shipping_address_zip: address.zip,
