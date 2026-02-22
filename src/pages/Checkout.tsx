@@ -135,7 +135,7 @@ export default function Checkout() {
   }, [cart?.lines, discountPercentage, calculateMerchantFee, location.state?.merchantFeeAmount]);
 
   const hasPracticeOrder = (cart?.lines || []).some(
-    (line: CartLine) => line.patient_name === "Practice Order"
+    (line: CartLine) => (line as any).ship_to === 'practice' || line.patient_name === "Practice Order"
   );
 
   const { data: providerProfile, isLoading: isLoadingProfile } = useQuery({
