@@ -833,6 +833,7 @@ export const ProductsGrid = () => {
             prescriptionMethod: prescriptionMethod,
             variantId: variantId,
             daysSupply: daysSupply,
+            shipTo: 'patient',
           }
         }).then(({ error }) => {
           if (error) {
