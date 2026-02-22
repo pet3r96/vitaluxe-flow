@@ -917,6 +917,46 @@ export const OrderDetailsDialog = ({
                     </div>
                   </div>
                   
+                  {order.ship_to === 'practice' && canLinkPatient && (
+                    <div className="pt-2 border-t border-border">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Patient</p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        {line.patient_id && line.patient_name !== 'Practice Order' ? (
+                          <>
+                            <p className="text-sm font-medium">{line.patient_name}</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => handleUnlinkPatient(line.id)}
+                            >
+                              Clear
+                            </Button>
+                          </>
+                        ) : (
+                          <Select onValueChange={(value) => handleLinkPatient(line.id, value)}>
+                            <SelectTrigger className="w-[220px] h-8 text-sm">
+                              <SelectValue placeholder="Select Patient" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {practicePatients?.map((patient) => (
+                                <SelectItem key={patient.id} value={patient.id}>
+                                  {patient.last_name}, {patient.first_name}
+                                </SelectItem>
+                              ))}
+                              {(!practicePatients || practicePatients.length === 0) && (
+                                <SelectItem value="__none" disabled>No patients found</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div>
+                  )
+                  
                   {order.ship_to === 'patient' && (
                     <div className="pt-2 border-t border-border">
                       <p className="text-sm text-muted-foreground mb-2">Patient Information</p>
