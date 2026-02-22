@@ -1,80 +1,56 @@
 
-# Add "Link to Patient" Dropdown on Ship-to-Practice Orders (At Cart Time)
+# Fix: Practice Orders Using Patient Address Instead of Practice Address
 
-## What This Does
-When a user selects "Ship to My Practice" in the Add Product to Cart dialog, a new optional "Link to Patient" dropdown appears below the practice shipping info. This lets users associate a patient from their CRM with the order line at the time of adding to cart, instead of having to do it later from the Orders page.
+## Problem
+When you link a patient to a "Ship to Practice" order, the patient's name replaces "Practice Order" in the cart line. The Delivery Confirmation page uses `patient_name === "Practice Order"` to determine whether to show the practice address or ask for a patient address. Since the name is now "Demo Patient 1" instead of "Practice Order", the system treats it as a patient shipment and tries to use/request the patient's address.
 
-## Current Behavior
-- Selecting "Ship to My Practice" shows only: "This product will be shipped to your practice address on file."
-- `patientId` is passed as `null` and `patientName` is hardcoded to `"Practice Order"`
+## Root Cause
+There is no explicit `ship_to` field on `cart_lines`. The system relied on a naming convention (`patient_name = "Practice Order"`) which breaks when a real patient is linked.
 
-## Changes
+## Solution
+Add a `ship_to` column to the `cart_lines` table (values: `'practice'` or `'patient'`) so the system can reliably distinguish shipping destination regardless of patient name.
 
-### 1. PatientSelectionDialog.tsx -- Add Optional Patient Dropdown for Practice Orders
-**File:** `src/components/products/PatientSelectionDialog.tsx`
+### 1. Database Migration -- Add `ship_to` column to `cart_lines`
+- Add column `ship_to TEXT DEFAULT 'patient'` to `cart_lines`
+- Backfill existing rows: set `ship_to = 'practice'` where `patient_name = 'Practice Order'`
+- This also flows naturally to orders since `place-order` already copies cart line data
 
-In the `shipTo === 'practice'` section (lines 814-821), add a patient combobox dropdown below the existing info alert. This reuses the same patient data already fetched (the `patients` query on line 157).
+### 2. ProductsGrid.tsx -- Set `ship_to` when adding to cart
+In the practice order block (line 662), add `shipTo: 'practice'` to the manage-cart body.
+In the patient order block, add `shipTo: 'patient'`.
 
-Add a new state variable:
-```typescript
-const [practiceLinkedPatientId, setPracticeLinkedPatientId] = useState("");
+### 3. manage-cart Edge Function -- Persist `ship_to`
+Update the `add` action to save the new `ship_to` field from the request body to the `cart_lines` row.
+
+### 4. DeliveryConfirmation.tsx -- Use `ship_to` field instead of name check
+Change line 372 from:
 ```
-
-Replace the practice-only Alert block (lines 814-821) with:
-- The existing info alert (kept)
-- A new "Link to Patient (Optional)" combobox using the same patient list and same style as the existing patient combobox above it
-- A "Clear" button if a patient is selected
-
-Reset `practiceLinkedPatientId` to `""` in the `useEffect` that runs when `open` changes (line 288-310).
-
-### 2. PatientSelectionDialog.tsx -- Pass Linked Patient Through onAddToCart
-**File:** `src/components/products/PatientSelectionDialog.tsx` (line 473)
-
-Change the `onAddToCart` call to pass the linked patient when shipping to practice:
-```typescript
-// Before:
-isPracticeOrder ? null : selectedPatientId
-
-// After:
-isPracticeOrder ? (practiceLinkedPatientId || null) : selectedPatientId
+const isPracticeOrder = (line: any) => !line.patient_name || line.patient_name === "Practice Order";
 ```
-
-### 3. ProductsGrid.tsx -- Use Linked Patient Info for Practice Orders
-**File:** `src/components/products/ProductsGrid.tsx` (lines 645-668)
-
-When `shipToPractice` is true AND `patientId` is not null (meaning a patient was linked):
-- Fetch the patient record from `patient_accounts` (same as the patient order path)
-- Use their name as `patientName` instead of "Practice Order"
-- Pass their `patientId` to the cart
-- Keep everything else the same (practice shipping address, practice destination state -- shipping still goes to the practice)
-
-```typescript
-// In the shipToPractice block, before the manage-cart call:
-let practicePatientName = "Practice Order";
-let practicePatientId = null;
-
-if (patientId) {
-  const { data: linkedPatient } = await supabase
-    .from("patient_accounts")
-    .select("id, name, first_name, last_name")
-    .eq("id", patientId)
-    .single();
-  if (linkedPatient) {
-    practicePatientName = linkedPatient.name || `${linkedPatient.first_name} ${linkedPatient.last_name}`;
-    practicePatientId = linkedPatient.id;
-  }
-}
-
-// Then in manage-cart body:
-patientId: practicePatientId,
-patientName: practicePatientName,
+To:
 ```
+const isPracticeOrder = (line: any) => line.ship_to === 'practice' || (!line.patient_name || line.patient_name === "Practice Order");
+```
+The fallback keeps backward compatibility with existing cart lines that don't have `ship_to` set yet.
 
-This does NOT change the shipping destination -- the order still ships to the practice address. It only links the patient record for tracking purposes.
+### 5. get-cart Edge Function -- Include `ship_to` in select
+The `get-cart` function selects `*` from `cart_lines`, so `ship_to` will be included automatically. No change needed.
+
+### 6. Checkout.tsx -- Pass `ship_to` to order creation
+Ensure the `ship_to` value from cart lines flows through to the created orders so order management also knows the shipping type.
 
 ## Files Modified
 
 | # | File | Change |
 |---|------|--------|
-| 1 | `src/components/products/PatientSelectionDialog.tsx` | Add optional patient dropdown in practice shipping section, pass linked patient ID |
-| 2 | `src/components/products/ProductsGrid.tsx` | Use linked patient name/ID when provided for practice orders |
+| 1 | Database | Add `ship_to` column to `cart_lines`, backfill existing data |
+| 2 | `src/components/products/ProductsGrid.tsx` | Pass `shipTo: 'practice'` or `'patient'` to manage-cart |
+| 3 | `supabase/functions/manage-cart/index.ts` | Save `ship_to` field on cart line insert |
+| 4 | `src/pages/DeliveryConfirmation.tsx` | Use `line.ship_to === 'practice'` with fallback |
+| 5 | `src/pages/Checkout.tsx` | Pass `ship_to` from cart line to order |
+
+## What Does NOT Change
+- Shipping address logic: practice orders still ship to practice address from `profiles.shipping_address_*`
+- Patient orders still ship to patient address
+- The "Link to Patient" dropdown still works -- it just sets `patient_id` and `patient_name` while `ship_to` remains `'practice'`
+- No changes to `calculate-shipping`, `place-order`, or any pharmacy API integrations
