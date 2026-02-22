@@ -104,7 +104,7 @@ export default function PatientAppointments() {
         if (practiceIds.length > 0) {
           const { data: profilesData } = await supabase
             .from('profiles')
-            .select('id, address_street, address_city, address_state, address_zip, name, company')
+            .select('id, address_street, address_suite, address_city, address_state, address_zip, name, company')
             .in('id', practiceIds as string[]);
           
           (profilesData || []).forEach((p: any) => { profilesById[p.id] = p; });
