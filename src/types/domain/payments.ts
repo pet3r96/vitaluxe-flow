@@ -39,6 +39,7 @@ export interface PaymentMethod {
 
 export interface BillingAddress {
   street: string;
+  suite?: string;
   city: string;
   state: string;
   zip: string;

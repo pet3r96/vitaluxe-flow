@@ -20,6 +20,7 @@ export async function getPracticeDetails(practiceId: string | null) {
       name,
       company,
       address_street,
+      address_suite,
       address_city,
       address_state,
       address_zip,
@@ -47,6 +48,7 @@ export async function getPracticeDetails(practiceId: string | null) {
  */
 export function formatPracticeAddress(practice: {
   address_street?: string | null;
+  address_suite?: string | null;
   address_city?: string | null;
   address_state?: string | null;
   address_zip?: string | null;
@@ -55,6 +57,7 @@ export function formatPracticeAddress(practice: {
   
   const parts = [
     practice.address_street,
+    practice.address_suite,
     practice.address_city,
     practice.address_state,
     practice.address_zip

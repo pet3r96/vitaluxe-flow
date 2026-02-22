@@ -95,6 +95,7 @@ export default function DeliveryConfirmation() {
         .from("profiles")
         .update({
           shipping_address_street: address.street,
+          shipping_address_suite: address.suite || null,
           shipping_address_city: address.city,
           shipping_address_state: address.state,
           shipping_address_zip: address.zip,
@@ -555,6 +556,7 @@ export default function DeliveryConfirmation() {
                       <div className="text-sm text-muted-foreground">
                         <div>{profile.name}</div>
                         <div>{profile.shipping_address_street}</div>
+                        {profile.shipping_address_suite && <div>{profile.shipping_address_suite}</div>}
                         <div>{profile.shipping_address_city}, {profile.shipping_address_state} {profile.shipping_address_zip}</div>
                       </div>
                     ) : profile?.shipping_address_formatted ? (

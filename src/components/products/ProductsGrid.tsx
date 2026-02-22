@@ -680,7 +680,7 @@ export const ProductsGrid = () => {
         // PATIENT ORDER - fetch from patient_accounts table (patientId is patient_accounts.id from dialog)
         const { data: patientRecord, error: patientError } = await supabase
           .from("patient_accounts")
-          .select("id, name, first_name, last_name, email, phone, address_street, address_city, address_state, address_zip, user_id, gender_at_birth")
+          .select("id, name, first_name, last_name, email, phone, address_street, address_suite, address_city, address_state, address_zip, user_id, gender_at_birth")
           .eq("id", patientId!)
           .single();
 
@@ -695,7 +695,7 @@ export const ProductsGrid = () => {
 
         // Build formatted address for display
         const patientAddress = patientRecord.address_street && patientRecord.address_city && patientRecord.address_state && patientRecord.address_zip
-            ? `${patientRecord.address_street}, ${patientRecord.address_city}, ${patientRecord.address_state} ${patientRecord.address_zip}`
+            ? [patientRecord.address_street, patientRecord.address_suite, patientRecord.address_city, `${patientRecord.address_state} ${patientRecord.address_zip}`].filter(Boolean).join(', ')
             : patientRecord.address_street || null;
 
 

@@ -104,7 +104,7 @@ export default function PatientAppointments() {
         if (practiceIds.length > 0) {
           const { data: profilesData } = await supabase
             .from('profiles')
-            .select('id, address_street, address_city, address_state, address_zip, name, company')
+            .select('id, address_street, address_suite, address_city, address_state, address_zip, name, company')
             .in('id', practiceIds as string[]);
           
           (profilesData || []).forEach((p: any) => { profilesById[p.id] = p; });
@@ -196,7 +196,7 @@ export default function PatientAppointments() {
         // Fetch practice address and name from profiles
         const { data: practiceProfile } = await supabase
           .from('profiles')
-          .select('name, company, address_street, address_city, address_state, address_zip')
+          .select('name, company, address_street, address_suite, address_city, address_state, address_zip')
           .eq('id', patientAccount.practice_id)
           .maybeSingle();
 
@@ -209,8 +209,9 @@ export default function PatientAppointments() {
           const addrCity = r.city || practiceProfile?.address_city || null;
           const addrState = r.state || practiceProfile?.address_state || null;
           const addrZip = r.zip || practiceProfile?.address_zip || null;
+          const addrSuite = r.suite || practiceProfile?.address_suite || null;
           const formatted = (addrStreet && addrCity) 
-            ? `${addrStreet}, ${addrCity}, ${addrState || ''} ${addrZip || ''}`.trim() 
+            ? [addrStreet, addrSuite, addrCity, `${addrState || ''} ${addrZip || ''}`].filter(Boolean).join(', ').trim() 
             : null;
 
           return {
