@@ -387,7 +387,7 @@ export function PrescriptionWriterDialog({
                   if (patient.address_formatted) {
                     return <p className="mt-2"><strong>Address:</strong> {patient.address_formatted}</p>;
                   } else if (patient.address_street) {
-                    const addr = `${patient.address_street}, ${patient.address_city || ''}, ${patient.address_state || ''} ${patient.address_zip || ''}`.trim();
+                    const addr = [patient.address_street, patient.address_suite, patient.address_city, `${patient.address_state || ''} ${patient.address_zip || ''}`].filter(Boolean).join(', ').trim();
                     return <p className="mt-2"><strong>Address:</strong> {addr}</p>;
                   } else if (patient.address) {
                     return <p className="mt-2"><strong>Address:</strong> {patient.address}</p>;

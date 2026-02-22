@@ -556,6 +556,7 @@ export default function DeliveryConfirmation() {
                       <div className="text-sm text-muted-foreground">
                         <div>{profile.name}</div>
                         <div>{profile.shipping_address_street}</div>
+                        {profile.shipping_address_suite && <div>{profile.shipping_address_suite}</div>}
                         <div>{profile.shipping_address_city}, {profile.shipping_address_state} {profile.shipping_address_zip}</div>
                       </div>
                     ) : profile?.shipping_address_formatted ? (

@@ -534,7 +534,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {order.profiles?.address_street && order.profiles?.address_city && order.profiles?.address_state && order.profiles?.address_zip
-                    ? `${order.profiles.address_street}, ${order.profiles.address_city}, ${order.profiles.address_state} ${order.profiles.address_zip}`
+                    ? [order.profiles.address_street, order.profiles.address_suite, order.profiles.address_city, `${order.profiles.address_state} ${order.profiles.address_zip}`].filter(Boolean).join(', ')
                     : 'Address not available'}
                 </p>
               </div>

@@ -261,14 +261,16 @@ serve(async (req) => {
       staffProviderRecord = data;
     }
 
-    // Get practice shipping address
+    // Get practice shipping address from profiles table
     const { data: practice } = await supabaseAdmin
-      .from("practices")
-      .select("shipping_address")
+      .from("profiles")
+      .select("shipping_address_street, shipping_address_suite, shipping_address_city, shipping_address_state, shipping_address_zip")
       .eq("id", effectivePracticeId)
       .single();
 
-    const practiceAddress = practice?.shipping_address;
+    const practiceAddress = practice
+      ? [practice.shipping_address_street, practice.shipping_address_suite, practice.shipping_address_city, practice.shipping_address_state, practice.shipping_address_zip].filter(Boolean).join(', ')
+      : null;
 
     // Separate lines by ship_to destination
     const practiceLines = cart.lines.filter(line => !line.patient_id);

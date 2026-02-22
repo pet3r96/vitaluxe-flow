@@ -695,7 +695,7 @@ export const ProductsGrid = () => {
 
         // Build formatted address for display
         const patientAddress = patientRecord.address_street && patientRecord.address_city && patientRecord.address_state && patientRecord.address_zip
-            ? `${patientRecord.address_street}, ${patientRecord.address_city}, ${patientRecord.address_state} ${patientRecord.address_zip}`
+            ? [patientRecord.address_street, patientRecord.address_suite, patientRecord.address_city, `${patientRecord.address_state} ${patientRecord.address_zip}`].filter(Boolean).join(', ')
             : patientRecord.address_street || null;
 
 

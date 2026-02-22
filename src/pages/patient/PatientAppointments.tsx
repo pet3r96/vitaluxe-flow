@@ -209,8 +209,9 @@ export default function PatientAppointments() {
           const addrCity = r.city || practiceProfile?.address_city || null;
           const addrState = r.state || practiceProfile?.address_state || null;
           const addrZip = r.zip || practiceProfile?.address_zip || null;
+          const addrSuite = r.suite || practiceProfile?.address_suite || null;
           const formatted = (addrStreet && addrCity) 
-            ? `${addrStreet}, ${addrCity}, ${addrState || ''} ${addrZip || ''}`.trim() 
+            ? [addrStreet, addrSuite, addrCity, `${addrState || ''} ${addrZip || ''}`].filter(Boolean).join(', ').trim() 
             : null;
 
           return {

@@ -328,7 +328,7 @@ export function CreateAppointmentDialog({
           const title = 'Appointment Scheduled';
           
           const address = practice 
-            ? `${practice.address_street}, ${practice.address_city}, ${practice.address_state} ${practice.address_zip}`
+            ? [practice.address_street, practice.address_suite, practice.address_city, `${practice.address_state} ${practice.address_zip}`].filter(Boolean).join(', ')
             : '';
           const message = `Your appointment is scheduled for an in-office appointment on ${formattedDate} at ${formattedTime}${address ? ` at ${address}` : ''}.`;
           

@@ -1313,6 +1313,7 @@ export default function Checkout() {
           providerProfile
             ? {
                 street: providerProfile.shipping_address_street,
+                suite: providerProfile.shipping_address_suite,
                 city: providerProfile.shipping_address_city,
                 state: providerProfile.shipping_address_state,
                 zip: providerProfile.shipping_address_zip,
