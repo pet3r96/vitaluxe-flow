@@ -587,6 +587,7 @@ export default function DeliveryConfirmation() {
                       type: 'practice',
                       currentAddress: {
                         street: profile?.shipping_address_street || '',
+                        suite: profile?.shipping_address_suite || '',
                         city: profile?.shipping_address_city || '',
                         state: profile?.shipping_address_state || '',
                         zip: profile?.shipping_address_zip || '',
