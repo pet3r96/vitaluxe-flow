@@ -475,7 +475,7 @@ export const PatientSelectionDialog = ({
     
     // Add to cart - ProductsGrid expects user_id for routing
     onAddToCart(
-      isPracticeOrder ? null : selectedPatientId, 
+      isPracticeOrder ? (practiceLinkedPatientId || null) : selectedPatientId, 
       quantity,
       isPracticeOrder,
       providerUserId,
