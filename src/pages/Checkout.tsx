@@ -302,7 +302,7 @@ export default function Checkout() {
       }
 
       const patientLines = linesAll.filter(
-        (line) => line.patient_name !== "Practice Order"
+        (line) => (line as any).ship_to !== 'practice' && line.patient_name !== "Practice Order"
       );
 
       // Validate practice shipping address if needed

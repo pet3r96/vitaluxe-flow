@@ -89,7 +89,7 @@ export interface Cart {
 
 // Type guard for checking if a cart line is a practice order
 export function isPracticeOrder(line: CartLine): boolean {
-  return !line.patient_name || line.patient_name === "Practice Order";
+  return line.ship_to === 'practice' || !line.patient_name || line.patient_name === "Practice Order";
 }
 
 // Type guard for checking if cart line has prescription
