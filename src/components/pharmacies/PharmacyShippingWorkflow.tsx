@@ -51,6 +51,7 @@ export const PharmacyShippingWorkflow = ({ orderId, onUpdate, onClose }: Pharmac
               name,
               company,
               address_street,
+              address_suite,
               address_city,
               address_state,
               address_zip,

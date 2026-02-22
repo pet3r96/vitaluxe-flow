@@ -321,7 +321,7 @@ export function CreateAppointmentDialog({
           // Fetch practice address
           const { data: practice } = await supabase
             .from('profiles')
-            .select('address_street, address_city, address_state, address_zip')
+            .select('address_street, address_suite, address_city, address_state, address_zip')
             .eq('id', practiceId)
             .single();
           
