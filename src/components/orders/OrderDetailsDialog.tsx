@@ -955,7 +955,7 @@ export const OrderDetailsDialog = ({
                         )}
                       </div>
                     </div>
-                  )
+                  )}
                   
                   {order.ship_to === 'patient' && (
                     <div className="pt-2 border-t border-border">
