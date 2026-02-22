@@ -47,6 +47,7 @@ export const OrderDetailsDialog = ({
 }: OrderDetailsDialogProps) => {
   const { effectiveRole, effectiveUserId } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [decryptedPatientPHI, setDecryptedPatientPHI] = useState<Map<string, { allergies?: string | null, notes?: string | null }>>(new Map());
