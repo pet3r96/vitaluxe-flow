@@ -47,7 +47,8 @@ export interface CartLine {
   created_at?: string | null;
   variant_id?: string | null; // NEW: Product variant ID for dosage selection
   days_supply?: number | null; // Days supply for pharmacy
-  
+  ship_to?: string | null; // 'practice' or 'patient' - determines shipping destination
+
   // Hydrated relationships (optional - may be joined)
   product?: {
     id: string;
@@ -89,7 +90,7 @@ export interface Cart {
 
 // Type guard for checking if a cart line is a practice order
 export function isPracticeOrder(line: CartLine): boolean {
-  return !line.patient_name || line.patient_name === "Practice Order";
+  return line.ship_to === 'practice' || !line.patient_name || line.patient_name === "Practice Order";
 }
 
 // Type guard for checking if cart line has prescription

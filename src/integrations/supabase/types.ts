@@ -474,6 +474,7 @@ export type Database = {
           refills_allowed: boolean | null
           refills_remaining: number | null
           refills_total: number | null
+          ship_to: string | null
           shipping_speed: Database["public"]["Enums"]["shipping_speed"] | null
           variant_id: string | null
         }
@@ -516,6 +517,7 @@ export type Database = {
           refills_allowed?: boolean | null
           refills_remaining?: number | null
           refills_total?: number | null
+          ship_to?: string | null
           shipping_speed?: Database["public"]["Enums"]["shipping_speed"] | null
           variant_id?: string | null
         }
@@ -558,6 +560,7 @@ export type Database = {
           refills_allowed?: boolean | null
           refills_remaining?: number | null
           refills_total?: number | null
+          ship_to?: string | null
           shipping_speed?: Database["public"]["Enums"]["shipping_speed"] | null
           variant_id?: string | null
         }

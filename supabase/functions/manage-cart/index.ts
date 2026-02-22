@@ -183,6 +183,7 @@ serve(async (req) => {
         if (genderAtBirth !== undefined) insertData.gender_at_birth = genderAtBirth;
         if (variantId !== undefined) insertData.variant_id = variantId;
         if (daysSupply !== undefined) insertData.days_supply = daysSupply;
+        if (body.shipTo !== undefined) insertData.ship_to = body.shipTo;
 
         const { data: newLine, error: insertError } = await supabase
           .from("cart_lines")

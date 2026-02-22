@@ -135,7 +135,7 @@ export default function Checkout() {
   }, [cart?.lines, discountPercentage, calculateMerchantFee, location.state?.merchantFeeAmount]);
 
   const hasPracticeOrder = (cart?.lines || []).some(
-    (line: CartLine) => line.patient_name === "Practice Order"
+    (line: CartLine) => (line as any).ship_to === 'practice' || line.patient_name === "Practice Order"
   );
 
   const { data: providerProfile, isLoading: isLoadingProfile } = useQuery({
@@ -256,7 +256,7 @@ export default function Checkout() {
       const linesAll = (cart.lines as unknown as CartLineItem[]) || [];
 
       // If there are any practice lines, make sure profile is loaded before proceeding
-      const practiceLines = linesAll.filter((line) => line.patient_name === "Practice Order");
+      const practiceLines = linesAll.filter((line) => (line as any).ship_to === 'practice' || line.patient_name === "Practice Order");
       
       if (practiceLines.length > 0 && isLoadingProfile) {
         throw new Error("Loading practice information... Please wait and try again.");
@@ -302,7 +302,7 @@ export default function Checkout() {
       }
 
       const patientLines = linesAll.filter(
-        (line) => line.patient_name !== "Practice Order"
+        (line) => (line as any).ship_to !== 'practice' && line.patient_name !== "Practice Order"
       );
 
       // Validate practice shipping address if needed
