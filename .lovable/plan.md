@@ -1,144 +1,111 @@
 
 
-# Suite/Address Display & Persistence -- Complete Fix Plan
+# Link Patient to Practice Orders + Fix Remaining Suite Bug
 
-## Problem Summary
-"Suite 275" is stored in the database (`address_suite: "suite 275"`, `shipping_address_suite: "suite 275"`) but is not showing up in several display locations and is being **silently dropped** when addresses are updated.
+## Overview
 
----
-
-## Root Causes Found
-
-### Issue 1: CRITICAL -- DeliveryConfirmation Drops Suite on Save
-**File:** `src/pages/DeliveryConfirmation.tsx` (lines 92-105)
-
-The `updatePracticeAddress` mutation saves every address field EXCEPT `shipping_address_suite`:
-
-```
-.update({
-  shipping_address_street: address.street,
-  shipping_address_city: address.city,
-  shipping_address_state: address.state,
-  shipping_address_zip: address.zip,
-  shipping_address_formatted: address.formatted,
-  // MISSING: shipping_address_suite: address.suite,
-})
-```
-
-**Impact:** Every time a user updates their practice address from the Delivery Confirmation page, their suite number is erased from the database.
-
-### Issue 2: CRITICAL -- DeliveryConfirmation Does Not Display Suite
-**File:** `src/pages/DeliveryConfirmation.tsx` (lines 554-559)
-
-The address display shows street, city, state, zip but no suite:
-
-```
-<div>{profile.shipping_address_street}</div>
-<div>{profile.shipping_address_city}, {profile.shipping_address_state} {profile.shipping_address_zip}</div>
-// No suite line
-```
-
-### Issue 3: CRITICAL -- place-order Queries Non-Existent `practices` Table
-**File:** `supabase/functions/place-order/index.ts` (lines 264-271)
-
-```
-const { data: practice } = await supabaseAdmin
-  .from("practices")           // <-- TABLE DOES NOT EXIST
-  .select("shipping_address")  // <-- COLUMN ALSO DOESN'T EXIST ON profiles
-  .eq("id", effectivePracticeId)
-  .single();
-```
-
-The `practices` table does not exist in the database. The practice address lives in the `profiles` table under structured fields (`shipping_address_street`, `shipping_address_suite`, etc.). This means `practiceAddress` is always `null`, so every practice order is created with `practice_address: null` and `formatted_shipping_address: null`.
-
-### Issue 4: HIGH -- formatPracticeAddress Utility Missing Suite
-**File:** `src/lib/practiceUtils.ts` (lines 48-63)
-
-The `formatPracticeAddress` function and `getPracticeDetails` both omit `address_suite` from both the query and the formatting logic.
-
-### Issue 5: HIGH -- Multiple Display Locations Missing Suite
-
-The following files construct address strings by concatenating `address_street, address_city, address_state address_zip` without including suite:
-
-- `src/components/calendar/CreateAppointmentDialog.tsx` (line 331)
-- `src/components/pharmacies/PharmacyShippingWorkflow.tsx` (line 537)
-- `src/components/products/ProductsGrid.tsx` (line 698) -- patient address display
-- `src/components/products/PrescriptionWriterDialog.tsx` (line 390)
-- `src/pages/patient/PatientAppointments.tsx` (lines 107, 199) -- missing from select query
-
-### Issue 6: MEDIUM -- Checkout defaultBillingAddress Missing Suite
-**File:** `src/pages/Checkout.tsx` (lines 1313-1319)
-
-The `AddCreditCardDialog` receives a `defaultBillingAddress` without the suite:
-```
-street: providerProfile.shipping_address_street,
-city: providerProfile.shipping_address_city,
-// Missing: suite: providerProfile.shipping_address_suite,
-```
+Add a "Link to Patient" dropdown on each order line when `ship_to = 'practice'`, using the existing patient CRM data. Also fix one remaining suite bug found during this audit.
 
 ---
 
-## Fix Plan
+## Remaining Suite Bug (Fix First)
 
-### Fix 1: DeliveryConfirmation -- Save Suite on Update
-**File:** `src/pages/DeliveryConfirmation.tsx`
+### DeliveryConfirmation Edit Button Missing Suite
+**File:** `src/pages/DeliveryConfirmation.tsx` (lines 586-594)
 
-Add `shipping_address_suite: address.suite || null` to the `updatePracticeAddress` mutation (line 97-101).
-
-### Fix 2: DeliveryConfirmation -- Display Suite
-**File:** `src/pages/DeliveryConfirmation.tsx`
-
-Add a suite line between street and city in the address display (around line 557):
+The "Edit" button passes `currentAddress` to the editor without `suite`:
 ```
-<div>{profile.shipping_address_street}</div>
-{profile.shipping_address_suite && <div>{profile.shipping_address_suite}</div>}
-<div>{profile.shipping_address_city}, ...
-```
-
-### Fix 3: place-order -- Fix Practice Address Query
-**File:** `supabase/functions/place-order/index.ts`
-
-Change the query from the non-existent `practices` table to `profiles`, and select the structured address fields:
-```
-const { data: practice } = await supabaseAdmin
-  .from("profiles")
-  .select("shipping_address_street, shipping_address_suite, shipping_address_city, shipping_address_state, shipping_address_zip")
-  .eq("id", effectivePracticeId)
-  .single();
-
-const practiceAddress = practice
-  ? [practice.shipping_address_street, practice.shipping_address_suite, practice.shipping_address_city, practice.shipping_address_state, practice.shipping_address_zip].filter(Boolean).join(', ')
-  : null;
+currentAddress: {
+  street: profile?.shipping_address_street || '',
+  city: profile?.shipping_address_city || '',
+  state: profile?.shipping_address_state || '',
+  zip: profile?.shipping_address_zip || '',
+  // MISSING: suite
+}
 ```
 
-### Fix 4: practiceUtils -- Include Suite
-**File:** `src/lib/practiceUtils.ts`
+**Impact:** When a user clicks "Edit" on the practice address, the suite field starts blank even though Suite 275 is stored. If they save without re-entering it, it gets wiped.
 
-Add `address_suite` to the select query in `getPracticeDetails` and include it in `formatPracticeAddress`.
-
-### Fix 5: All Address Display Locations -- Include Suite
-Update the following files to include suite in address formatting:
-- `src/components/calendar/CreateAppointmentDialog.tsx`
-- `src/components/pharmacies/PharmacyShippingWorkflow.tsx`
-- `src/components/products/ProductsGrid.tsx`
-- `src/components/products/PrescriptionWriterDialog.tsx`
-- `src/pages/patient/PatientAppointments.tsx`
-
-### Fix 6: Checkout -- Pass Suite to defaultBillingAddress
-**File:** `src/pages/Checkout.tsx` (line 1315-1318)
-
-Add `suite: providerProfile.shipping_address_suite` to the defaultBillingAddress object.
+**Fix:** Add `suite: profile?.shipping_address_suite || ''` to the `currentAddress` object.
 
 ---
 
-## Fix Summary
+## Link Patient to Practice Orders
 
-| # | File | Change | Severity |
-|---|------|--------|----------|
-| 1 | `src/pages/DeliveryConfirmation.tsx` | Save `shipping_address_suite` on address update | Critical |
-| 2 | `src/pages/DeliveryConfirmation.tsx` | Display suite in address view | Critical |
-| 3 | `supabase/functions/place-order/index.ts` | Query `profiles` instead of non-existent `practices` table, include suite | Critical |
-| 4 | `src/lib/practiceUtils.ts` | Add `address_suite` to query and format function | High |
-| 5 | 5 component files | Include suite in inline address formatting | High |
-| 6 | `src/pages/Checkout.tsx` | Pass suite to defaultBillingAddress | Medium |
+### What Changes
+
+In `src/components/orders/OrderDetailsDialog.tsx`, for orders where `ship_to === 'practice'`, add a "Link to Patient" section on each order line. This lets practice staff assign a patient from their CRM after the order arrives at the practice.
+
+### How It Works
+
+1. When the order details dialog opens for a `ship_to = 'practice'` order, fetch the practice's patient list from `patient_accounts` (using the order's `doctor_id` as the practice ID, or the order's `practice_id` if available)
+2. For each order line, show:
+   - If no patient is linked: a Select dropdown with searchable patient names + a "Link to Patient" label
+   - If a patient is already linked: the patient name with a "Change" button
+3. On selection, update `order_lines` with `patient_id` and `patient_name` (first + last name)
+4. Invalidate order query cache so the UI refreshes
+5. Show success toast
+
+### Technical Details
+
+**No database changes needed** -- `order_lines.patient_id` (uuid, nullable) and `patient_name` (text) already exist.
+
+**New query in OrderDetailsDialog:** Fetch patients only when `order.ship_to === 'practice'` and dialog is open:
+```typescript
+const { data: practicePatients } = useQuery({
+  queryKey: ['practice-patients-for-linking', order.doctor_id],
+  queryFn: async () => {
+    const { data } = await supabase
+      .from('patient_accounts')
+      .select('id, first_name, last_name')
+      .eq('practice_id', order.practice_id || order.doctor_id)
+      .order('last_name');
+    return data || [];
+  },
+  enabled: open && order.ship_to === 'practice',
+});
+```
+
+**Update handler:** Simple inline function per order line:
+```typescript
+const handleLinkPatient = async (lineId: string, patient: { id: string, first_name: string, last_name: string }) => {
+  const { error } = await supabase
+    .from('order_lines')
+    .update({
+      patient_id: patient.id,
+      patient_name: `${patient.first_name} ${patient.last_name}`
+    })
+    .eq('id', lineId);
+  // invalidate + toast
+};
+```
+
+**UI location:** Inside each order line card (lines 816-1008), add a new section after the grid but before the prescription section, only when `order.ship_to === 'practice'`:
+```
+Patient: Practice Order  [ Select Patient v ]
+```
+
+After linking:
+```
+Patient: John Smith  [x Clear]
+```
+
+**Access control:** Only `doctor`, `provider`, `staff`, and `admin` roles can link patients. Pharmacy role cannot.
+
+**RLS:** Existing RLS on `order_lines` and `patient_accounts` already handles access. No new policies needed.
+
+### Checkout/Shipping Flow -- No Changes
+
+- The checkout flow (`Checkout.tsx`, `place-order` edge function) is unaffected. Practice orders continue to ship to the practice address from `profiles.shipping_address_*` fields.
+- Patient linking happens post-order only, in the order details view. It does not change shipping destination, pricing, or any checkout logic.
+- The `DeliveryConfirmation.tsx` page remains unchanged for this feature -- it already correctly shows practice shipping address with suite.
+
+---
+
+## Files Modified
+
+| # | File | Change |
+|---|------|--------|
+| 1 | `src/pages/DeliveryConfirmation.tsx` | Add `suite` to edit button's `currentAddress` (1 line) |
+| 2 | `src/components/orders/OrderDetailsDialog.tsx` | Add patient query, link handler, and Select UI for practice orders |
 
