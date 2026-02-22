@@ -92,6 +92,65 @@ export const OrderDetailsDialog = ({
     staleTime: 60 * 1000,
   });
 
+  // Fetch practice patients for linking when ship_to is practice
+  const { data: practicePatients } = useQuery({
+    queryKey: ['practice-patients-for-linking', order.doctor_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('patient_accounts')
+        .select('id, first_name, last_name')
+        .eq('practice_id', (order as any).practice_id || order.doctor_id)
+        .order('last_name');
+      return data || [];
+    },
+    enabled: open && order.ship_to === 'practice',
+  });
+
+  const canLinkPatient = ['doctor', 'provider', 'staff', 'admin'].includes(effectiveRole || '');
+
+  const handleLinkPatient = async (lineId: string, patientId: string) => {
+    const patient = practicePatients?.find(p => p.id === patientId);
+    if (!patient) return;
+
+    const { error } = await supabase
+      .from('order_lines')
+      .update({
+        patient_id: patient.id,
+        patient_name: `${patient.first_name} ${patient.last_name}`
+      })
+      .eq('id', lineId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to link patient.", variant: "destructive" });
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["order-full-details", order.id] });
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSuccess();
+    toast({ title: "Patient Linked", description: `Linked to ${patient.first_name} ${patient.last_name}` });
+  };
+
+  const handleUnlinkPatient = async (lineId: string) => {
+    const { error } = await supabase
+      .from('order_lines')
+      .update({
+        patient_id: null,
+        patient_name: 'Practice Order'
+      })
+      .eq('id', lineId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to unlink patient.", variant: "destructive" });
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["order-full-details", order.id] });
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSuccess();
+    toast({ title: "Patient Unlinked", description: "Patient has been unlinked from this order line." });
+  };
+
   const canSendToPharmacy = ['admin', 'pharmacy'].includes(effectiveRole || '') && 
     pharmacyApiStatus?.hasApiEnabled && 
     order.status !== 'cancelled';
