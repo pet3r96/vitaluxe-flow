@@ -642,15 +642,31 @@ export const ProductsGrid = () => {
         // Success - pharmacy found, proceed with insertion
         logger.info(`✅ Pharmacy routed: ${routingResult.reason}`);
 
+        // Resolve linked patient info for practice orders
+        let practicePatientName = "Practice Order";
+        let practicePatientId: string | null = null;
+
+        if (patientId) {
+          const { data: linkedPatient } = await supabase
+            .from("patient_accounts")
+            .select("id, name, first_name, last_name")
+            .eq("id", patientId)
+            .single();
+          if (linkedPatient) {
+            practicePatientName = linkedPatient.name || `${linkedPatient.first_name} ${linkedPatient.last_name}`.trim();
+            practicePatientId = linkedPatient.id;
+          }
+        }
+
         // Non-blocking cart addition for instant UI feedback
         supabase.functions.invoke('manage-cart', {
           body: {
             action: 'add',
             cartOwnerId: cartOwnerForDb,
             productId: productForCart.id,
-            patientId: null,
+            patientId: practicePatientId,
             providerId: actualProviderId,
-            patientName: "Practice Order",
+            patientName: practicePatientName,
             patientEmail: null,
             patientPhone: null,
             patientAddress: null,
