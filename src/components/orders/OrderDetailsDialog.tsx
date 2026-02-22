@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Download, XCircle, AlertCircle, Send } from "lucide-react";
+import { Download, XCircle, AlertCircle, Send, User } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShippingInfoForm } from "./ShippingInfoForm";
 import { ShippingAuditLog } from "./ShippingAuditLog";
 import { ShipmentTrackingCard } from "./ShipmentTrackingCard";
@@ -46,6 +47,7 @@ export const OrderDetailsDialog = ({
 }: OrderDetailsDialogProps) => {
   const { effectiveRole, effectiveUserId } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [decryptedPatientPHI, setDecryptedPatientPHI] = useState<Map<string, { allergies?: string | null, notes?: string | null }>>(new Map());
@@ -89,6 +91,65 @@ export const OrderDetailsDialog = ({
     enabled: open && ['admin', 'pharmacy'].includes(effectiveRole || ''),
     staleTime: 60 * 1000,
   });
+
+  // Fetch practice patients for linking when ship_to is practice
+  const { data: practicePatients } = useQuery({
+    queryKey: ['practice-patients-for-linking', order.doctor_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('patient_accounts')
+        .select('id, first_name, last_name')
+        .eq('practice_id', (order as any).practice_id || order.doctor_id)
+        .order('last_name');
+      return data || [];
+    },
+    enabled: open && order.ship_to === 'practice',
+  });
+
+  const canLinkPatient = ['doctor', 'provider', 'staff', 'admin'].includes(effectiveRole || '');
+
+  const handleLinkPatient = async (lineId: string, patientId: string) => {
+    const patient = practicePatients?.find(p => p.id === patientId);
+    if (!patient) return;
+
+    const { error } = await supabase
+      .from('order_lines')
+      .update({
+        patient_id: patient.id,
+        patient_name: `${patient.first_name} ${patient.last_name}`
+      })
+      .eq('id', lineId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to link patient.", variant: "destructive" });
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["order-full-details", order.id] });
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSuccess();
+    toast({ title: "Patient Linked", description: `Linked to ${patient.first_name} ${patient.last_name}` });
+  };
+
+  const handleUnlinkPatient = async (lineId: string) => {
+    const { error } = await supabase
+      .from('order_lines')
+      .update({
+        patient_id: null,
+        patient_name: 'Practice Order'
+      })
+      .eq('id', lineId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to unlink patient.", variant: "destructive" });
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["order-full-details", order.id] });
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSuccess();
+    toast({ title: "Patient Unlinked", description: "Patient has been unlinked from this order line." });
+  };
 
   const canSendToPharmacy = ['admin', 'pharmacy'].includes(effectiveRole || '') && 
     pharmacyApiStatus?.hasApiEnabled && 
@@ -855,6 +916,46 @@ export const OrderDetailsDialog = ({
                       <p className="font-medium">{line.pharmacies?.name || "Unassigned"}</p>
                     </div>
                   </div>
+                  
+                  {order.ship_to === 'practice' && canLinkPatient && (
+                    <div className="pt-2 border-t border-border">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Patient</p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        {line.patient_id && line.patient_name !== 'Practice Order' ? (
+                          <>
+                            <p className="text-sm font-medium">{line.patient_name}</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => handleUnlinkPatient(line.id)}
+                            >
+                              Clear
+                            </Button>
+                          </>
+                        ) : (
+                          <Select onValueChange={(value) => handleLinkPatient(line.id, value)}>
+                            <SelectTrigger className="w-[220px] h-8 text-sm">
+                              <SelectValue placeholder="Select Patient" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {practicePatients?.map((patient) => (
+                                <SelectItem key={patient.id} value={patient.id}>
+                                  {patient.last_name}, {patient.first_name}
+                                </SelectItem>
+                              ))}
+                              {(!practicePatients || practicePatients.length === 0) && (
+                                <SelectItem value="__none" disabled>No patients found</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
                   {order.ship_to === 'patient' && (
                     <div className="pt-2 border-t border-border">
