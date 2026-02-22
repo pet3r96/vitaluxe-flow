@@ -256,7 +256,7 @@ export default function Checkout() {
       const linesAll = (cart.lines as unknown as CartLineItem[]) || [];
 
       // If there are any practice lines, make sure profile is loaded before proceeding
-      const practiceLines = linesAll.filter((line) => line.patient_name === "Practice Order");
+      const practiceLines = linesAll.filter((line) => (line as any).ship_to === 'practice' || line.patient_name === "Practice Order");
       
       if (practiceLines.length > 0 && isLoadingProfile) {
         throw new Error("Loading practice information... Please wait and try again.");
