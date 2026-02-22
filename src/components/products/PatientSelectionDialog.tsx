@@ -816,12 +816,72 @@ export const PatientSelectionDialog = ({
                     </Popover>
                   </div>
                 ) : (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      This product will be shipped to your practice address on file.
-                    </AlertDescription>
-                  </Alert>
+                  <div className="space-y-3">
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        This product will be shipped to your practice address on file.
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <div className="grid gap-2">
+                      <Label>Link to Patient (Optional)</Label>
+                      <Popover open={practicePatientComboboxOpen} onOpenChange={setPracticePatientComboboxOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={practicePatientComboboxOpen}
+                            className="w-full justify-between"
+                          >
+                            {practiceLinkedPatientId
+                              ? (() => {
+                                  const p = patients?.find(pat => pat.id === practiceLinkedPatientId);
+                                  return p ? (p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email || 'Unknown') : 'Select patient...';
+                                })()
+                              : "Select patient..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full min-w-[300px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search patients..." />
+                            <CommandList>
+                              <CommandEmpty>No patients found.</CommandEmpty>
+                              <CommandGroup>
+                                {patients?.map((patient) => {
+                                  const displayName = patient.name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.email || 'Unknown';
+                                  return (
+                                    <CommandItem
+                                      key={patient.id}
+                                      value={displayName}
+                                      onSelect={() => {
+                                        setPracticeLinkedPatientId(patient.id);
+                                        setPracticePatientComboboxOpen(false);
+                                      }}
+                                    >
+                                      <Check className={cn("mr-2 h-4 w-4", practiceLinkedPatientId === patient.id ? "opacity-100" : "opacity-0")} />
+                                      {displayName}
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      {practiceLinkedPatientId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-fit text-muted-foreground"
+                          onClick={() => setPracticeLinkedPatientId("")}
+                        >
+                          <X className="mr-1 h-3 w-3" /> Clear patient
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 <div className="grid gap-2">
