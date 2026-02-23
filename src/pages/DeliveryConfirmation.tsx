@@ -531,6 +531,9 @@ export default function DeliveryConfirmation() {
                 {practiceOrders.map((line) => (
                   <div key={line.id} className="text-muted-foreground">
                     • {line.product?.name} (Qty: {line.quantity})
+                    {line.patient_name && line.patient_name !== "Practice Order" && (
+                      <span className="text-foreground/70"> — for {line.patient_name}</span>
+                    )}
                   </div>
                 ))}
               </div>
