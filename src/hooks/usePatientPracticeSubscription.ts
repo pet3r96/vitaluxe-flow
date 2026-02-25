@@ -18,6 +18,16 @@ export function usePatientPracticeSubscription(): PatientPracticeSubscriptionSta
   const { data, isLoading } = useQuery({
     queryKey: ["patient-practice-subscription", effectiveUserId, effectiveRole],
     queryFn: async () => {
+      // === FREE MODE: All features free for all roles ===
+      return {
+        isSubscribed: true,
+        status: "active",
+        practiceId: null,
+        practiceName: null,
+        reason: "free_mode"
+      };
+      // === END FREE MODE ===
+
       // EARLY EXIT: Non-patient roles should not check subscriptions
       if (effectiveRole !== 'patient') {
         logger.info('[usePatientPracticeSubscription] Skipping for non-patient role', { 

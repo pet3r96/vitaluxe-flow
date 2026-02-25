@@ -25,6 +25,21 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const refreshSubscription = async () => {
+    // === FREE MODE TOGGLE ===
+    // All Pro features are currently free. To re-enable subscription gating,
+    // remove this block down to the "END FREE MODE" comment.
+    setSubscriptionStatus({
+      isSubscribed: true,
+      status: 'active',
+      trialEndsAt: null,
+      currentPeriodEnd: null,
+      trialDaysRemaining: null,
+      gracePeriodEndsAt: null,
+    });
+    setLoading(false);
+    return;
+    // === END FREE MODE ===
+
     logger.info('[SubscriptionContext] refreshSubscription called', { effectiveRole, effectivePracticeId });
     
     // Patients, Pharmacies, and Providers always have access (operational accounts, not subscription customers)
