@@ -430,7 +430,7 @@ export function PrescriptionWriterDialog({
           <div className="grid gap-2">
             <div>
               <Label htmlFor="sig">SIG - Directions for Use *</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">Please confirm and adjust directions as per your clinical judgment.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">VitaLuxe does not provide medical advice. All prescribing decisions and directions for use are determined solely by the licensed provider.</p>
             </div>
             <Textarea
               id="sig"
