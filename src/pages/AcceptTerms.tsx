@@ -220,8 +220,9 @@ export default function AcceptTerms() {
           ? `Terms accepted for ${impersonatedUserName || 'impersonated user'}!`
           : "Terms accepted successfully!");
 
-        // Auto-enroll practice in trial after terms acceptance
-        if (effectiveRole === 'doctor' && !isImpersonating) {
+        // FREE MODE: Skip trial auto-enrollment (all features are free)
+        // To re-enable, change `if (false &&` back to `if (`
+        if (false && effectiveRole === 'doctor' && !isImpersonating) {
           try {
             logger.info('[AcceptTerms] Auto-enrolling practice in trial after terms acceptance');
             const { data: subData, error: subError } = await supabase.functions.invoke(
