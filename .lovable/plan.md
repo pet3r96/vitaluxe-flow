@@ -1,53 +1,25 @@
 
 
-# Fix: Surface Real Error Messages from Backend Functions
+# Add "Product Catalog" Download Button to Products Page
 
-## The Problem
+## What we're doing
 
-When adding a provider (or any user) with an email that already exists, the system shows a generic error: **"Edge Function returned a non-2xx status code"** instead of the actual helpful message: **"A user with this email address has already been registered."**
+Adding a "Product Catalog" download button next to the existing "Don't see a product?" button in the Products page toolbar. This will let providers, staff, and other users download the professionally branded PDF catalog directly from the products page.
 
-This affects 6 dialogs across the app that all use the same broken pattern.
+## Where it goes
 
-## Root Cause
+The button will appear in the top toolbar of the Products page, right next to the "Don't see a product?" button -- visible to the same roles that can see products (providers, staff with ordering privileges, and admins).
 
-All 6 dialogs use `getEdgeFunctionError(data, error)` -- the **synchronous** version -- which cannot read the response body because parsing the response requires an **async** call (`context.json()`). The async version `getEdgeFunctionErrorAsync` already exists but is not being used.
+## Technical steps
 
-## Affected Files
+**File: `src/components/products/ProductsGrid.tsx`**
 
-1. `src/components/providers/AddProviderDialog.tsx` (line 195) -- the one you just hit
-2. `src/components/staff/AddStaffDialog.tsx` (line 141)
-3. `src/components/pharmacies/PharmacyDialog.tsx` (line 192)
-4. `src/components/pharmacies/AddPharmacyStaffDialog.tsx` (line 110)
-5. `src/components/practices/AddPracticeDialog.tsx` (line 226)
-6. `src/components/accounts/AddAccountDialog.tsx` (line 258)
+1. Import `FileDown` icon from lucide-react and `generateProductCatalogPDF` from the existing PDF generator
+2. Add a `catalogGenerating` state variable
+3. Add a "Product Catalog" button in the toolbar area (around line 967-978), placed just before or after the "Don't see a product?" button
+4. The button triggers the existing `generateProductCatalogPDF()` function (already fully built and working in `src/lib/productCatalogPdfGenerator.ts`)
+5. Show a loading spinner while generating, then auto-download the PDF
+6. The button will be visible to all authenticated roles viewing the products page (not restricted to admin)
 
-## The Fix
-
-In each file, change:
-```typescript
-import { getEdgeFunctionError } from "@/types/edgeFunction";
-// ...
-if (error) throw new Error(getEdgeFunctionError(data, error));
-```
-
-To:
-```typescript
-import { getEdgeFunctionErrorAsync } from "@/types/edgeFunction";
-// ...
-if (error) {
-  const errorMsg = await getEdgeFunctionErrorAsync(data, error);
-  throw new Error(errorMsg);
-}
-```
-
-All 6 call sites are already inside `async` functions, so adding `await` is safe with no other changes needed.
-
-## Result
-
-After this fix, users will see clear, actionable error messages like:
-- "A user with this email address has already been registered"
-- "Invalid NPI format"
-- Any other specific error the backend returns
-
-Instead of the unhelpful generic "Edge Function returned a non-2xx status code."
+**No new files or dependencies needed** -- the PDF generator and all supporting code already exist. This is purely a UI wiring change in one file.
 
