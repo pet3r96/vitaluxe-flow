@@ -9,11 +9,9 @@ import { ResponsivePage } from "@/components/layout/ResponsivePage";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useEffect, useRef } from "react";
 import { measurePageLoad } from "@/lib/performanceMonitor";
-import { useQueryClient } from "@tanstack/react-query";
 
 const Products = () => {
   const perf = useRef(measurePageLoad('Products')).current;
-  const queryClient = useQueryClient();
   const { effectiveRole, effectiveUserId } = useAuth();
   const { canOrder, isLoading, isStaffAccount } = useStaffOrderingPrivileges();
   const isTopline = effectiveRole === "topline";
@@ -21,11 +19,6 @@ const Products = () => {
   
   // Only check staff privileges for actual staff role (not doctor/provider)
   const shouldCheckPrivileges = effectiveRole === 'staff';
-
-  // Force invalidate products cache on mount to ensure fresh prices
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ["products"] });
-  }, [queryClient]);
 
   useEffect(() => {
     return () => {
