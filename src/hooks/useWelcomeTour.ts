@@ -36,7 +36,7 @@ export function useWelcomeTour() {
     if (effectiveUserId) {
       await supabase
         .from("profiles")
-        .update({ has_seen_welcome_tour: true } as any)
+        .update({ has_seen_welcome_tour: true })
         .eq("id", effectiveUserId);
     }
   }, [effectiveUserId]);
