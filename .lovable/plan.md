@@ -1,119 +1,80 @@
 
-# Disable All Subscription Gating -- Full Free Mode
+
+# Welcome Tour Module -- First-Login Onboarding Experience
 
 ## Summary
-A complete audit identified **10 locations** across the codebase where subscription status affects behavior. The fix uses a single-source-of-truth approach: make `SubscriptionContext` always return `isSubscribed: true`, then handle the 2 code paths that bypass the context. All original code is preserved (unreachable) for easy re-enabling later.
+Build a multi-step welcome tour dialog that appears on first login for doctor/staff roles, showcasing all portal features. The tour is tracked in the database so it only shows once. Users can skip at any time. A "Replay Tutorial" option is added to the Profile/Settings page for later access.
 
-## Full Audit Results
+## What Users Will See
 
-### A. Central Subscription Source (controls 90% of gating)
-| # | File | What it does |
-|---|------|-------------|
-| 1 | `src/contexts/SubscriptionContext.tsx` | Central state -- ALL practice-side checks read from here |
+### Step-by-step Welcome Tour (Modal Dialog)
+A full-screen or large modal with multiple slides/steps:
 
-### B. Components that read from the context (auto-fixed by changing #1)
-| # | File | What it does |
-|---|------|-------------|
-| 2 | `src/components/subscription/SubscriptionProtectedRoute.tsx` | Route guard for Patient Inbox, Calendar, Documents, Reporting, Chat |
-| 3 | `src/components/subscription/SubscriptionGuard.tsx` | Component-level guard (used in PracticeReporting) |
-| 4 | `src/components/AppSidebar.tsx` | Lock icons on Pro menu items + "Upgrade to Pro" button in footer |
-| 5 | `src/components/layout/FlyoutMenu.tsx` | Lock icons on flyout menu Pro items |
-| 6 | `src/components/responsive/MobileMenuNav.tsx` | Lock icons on mobile menu Pro items |
-| 7 | `src/pages/Dashboard.tsx` | "Unlock VitaLuxePro" upgrade banner + dashboard content visibility |
-| 8 | `src/components/subscription/UpgradeDialog.tsx` | Upgrade dialog (never triggered if isSubscribed=true) |
+**Step 1 -- "Welcome to Vitaluxe!"**
+Overview of what's included in their portal:
+- Full Product Catalog and Ordering capabilities
+- Patient Appointment Booking -- Automated scheduling with SMS reminders
+- Secure Patient Messaging -- HIPAA-compliant two-way communication
+- Digital EMR and Charting -- Complete patient medical vault system
+- Practice Analytics Dashboard -- Revenue tracking and patient insights
+- Automated SMS Reminders -- Reduce no-shows with smart notifications
+- Add Staff Members and your providers
+- Priority support
+- Much more...
 
-### C. Independent paths (NOT controlled by SubscriptionContext)
-| # | File | What it does |
-|---|------|-------------|
-| 9 | `src/hooks/usePatientPracticeSubscription.ts` | Patient-side: calls `practice-context` edge function to check practice subscription |
-| 10 | `src/pages/AcceptTerms.tsx` | Auto-enrolls new doctors in 14-day trial via `subscribe-to-vitaluxepro` edge function |
+**Step 2 -- "Get Started: Add a Licensed Provider"**
+Explains that to start ordering, they need to go to User Management and add a licensed provider. Includes a direct link/button to the Providers page.
 
-### D. Edge Functions (no changes needed)
-| Function | Why no change |
-|----------|--------------|
-| `practice-context` | Bypassed by #9 short-circuit |
-| `subscribe-to-vitaluxepro` | Bypassed by #10 skip |
-| `get-practice-subscription-status` | Bypassed by #1 short-circuit |
-| `notify-patients-subscription-change` | Only fires on DB changes, harmless |
+**Step 3 -- "Add Your First Patient"**
+Explains that they need to add a patient before they can place orders. Includes a link to the Patients page.
 
----
+**Step 4 -- "Your Portal Pages"**
+A quick overview of each main page and what they can do:
+- Dashboard -- Overview of your practice at a glance
+- Products -- Browse and order from the full catalog
+- Orders -- Track and manage all orders
+- Patients -- Manage patient records and medical vaults
+- Providers/Staff -- Add licensed providers and staff members
+- Messages -- HIPAA-compliant communication
+- Calendar -- Appointment scheduling with SMS reminders
+- Documents -- Document center for your practice
+- Reports -- Analytics and revenue insights
 
-## Changes (3 files)
+**Step 5 -- "You're All Set!"**
+Final step with a "Get Started" button that closes the tour.
 
-### File 1: `src/contexts/SubscriptionContext.tsx`
-**What**: Add early return at the top of `refreshSubscription()` to always set `isSubscribed: true` and `status: 'active'`.
+Each step has: Back / Next / Skip buttons. Skip closes immediately.
 
-This single change automatically fixes items #2-#8 above since they all read `isSubscribed` from this context.
+### Profile Page Addition
+A "Replay Welcome Tour" button added to the Profile page so users can rewatch the tutorial anytime.
 
-```
-// === FREE MODE TOGGLE ===
-// All Pro features are currently free. To re-enable subscription gating,
-// remove this block down to the "END FREE MODE" comment.
-setSubscriptionStatus({
-  isSubscribed: true,
-  status: 'active',
-  trialEndsAt: null,
-  currentPeriodEnd: null,
-  trialDaysRemaining: null,
-  gracePeriodEndsAt: null,
-});
-setLoading(false);
-return;
-// === END FREE MODE ===
-```
+## Technical Approach
 
-All original logic remains below (unreachable but preserved).
+### Database Change
+Add a `has_seen_welcome_tour` column to the `profiles` table (boolean, default `false`). This is the simplest approach since profiles already exist for every user and is queried on login.
 
-### File 2: `src/hooks/usePatientPracticeSubscription.ts`
-**What**: Add early return in `queryFn` to always return subscribed for patients. This bypasses the `practice-context` edge function call.
+### New Files
+1. **`src/components/onboarding/WelcomeTourDialog.tsx`** -- The multi-step dialog component with all tour content
+2. **`src/components/onboarding/WelcomeTourContent.tsx`** -- Individual step content components (features list, provider setup, patient setup, pages overview, completion)
+3. **`src/hooks/useWelcomeTour.ts`** -- Hook to check `has_seen_welcome_tour` from profiles, show/dismiss logic, and mark as seen in DB
 
-```
-// === FREE MODE: All features free for patients ===
-return {
-  isSubscribed: true,
-  status: "active",
-  practiceId: null,
-  practiceName: null,
-  reason: "free_mode"
-};
-// === END FREE MODE ===
-```
+### Modified Files
+1. **`src/App.tsx`** -- Add `<WelcomeTourDialog />` as a global component (similar to `GlobalIntakeDialog`)
+2. **`src/pages/Profile.tsx`** -- Add "Replay Welcome Tour" button
 
-This fixes patient-side gating in PatientDocuments, PatientAppointments, AppointmentBookingDialog, and TabbedAppointmentsWidget.
+### Flow Logic
+1. After login, password change, terms acceptance, and 2FA are all complete
+2. The `WelcomeTourDialog` component checks if `effectiveRole` is `doctor` or `staff`
+3. Queries `profiles.has_seen_welcome_tour` for the user
+4. If `false`, shows the multi-step tour dialog
+5. On completion or skip, updates `has_seen_welcome_tour = true` in the profiles table
+6. The "Replay Tutorial" button on Profile temporarily sets the state to show the dialog again (without resetting the DB flag)
 
-### File 3: `src/pages/AcceptTerms.tsx`
-**What**: Skip the auto-enrollment trial call for new doctors (lines 224-246). Since everything is free, there's no need to create a trial subscription record or call the edge function.
+### Why This Approach
+- Uses the existing `profiles` table (no new tables needed)
+- Single DB column tracks the state
+- Fully client-side dialog rendering (no edge functions needed)
+- Skippable at any step
+- Replayable from Profile page
+- Only targets doctor/staff roles (patients have their own intake flow)
 
-Wrap the block with a `false` guard:
-
-```
-// FREE MODE: Skip trial auto-enrollment (all features are free)
-if (false) {
-  // ... original auto-enrollment code preserved inside ...
-}
-```
-
----
-
-## What This Achieves
-- No lock icons anywhere in menus
-- No "Upgrade to Pro" button in sidebar
-- No upgrade banner on Dashboard
-- No route blocking for Pro features
-- No subscription terms/enrollment during onboarding
-- Patient portal features (appointments, documents) fully accessible
-- No edge function calls for subscription checks (faster page loads)
-
-## How to Re-Enable Later
-1. Remove the "FREE MODE" early-return in `SubscriptionContext.tsx`
-2. Remove the "FREE MODE" early-return in `usePatientPracticeSubscription.ts`
-3. Remove the `if (false)` wrapper in `AcceptTerms.tsx`
-
-Three small reverts, all clearly marked with comments.
-
-## What Does NOT Change
-- Database tables (`practice_subscriptions`) remain intact
-- Edge functions remain deployed and functional
-- Subscription management admin page still works
-- No route removals -- pages like `/subscribe-to-vitaluxepro` still exist but users won't be directed there
-- No database migrations needed
