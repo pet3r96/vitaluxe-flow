@@ -1,35 +1,19 @@
 
 
-# Fix: Include Suite in Both Address Copy Buttons
+# Update SIG Disclaimer Text
 
-## Problem
+## Change
 
-Both "Copy from Practice" and "Copy from Shipping" buttons in the Practice Profile form skip the `suite` (Apt/Unit) field when copying addresses. So if a practice address has "Suite 300", it gets lost when copied to shipping or billing.
+Replace the sub-text under "SIG - Directions for Use" in both prescription dialogs.
 
-## Fix
+**Old text:** "Please confirm and adjust directions as per your clinical judgment."
 
-**File: `src/components/profile/PracticeProfileForm.tsx`**
+**New text:** "VitaLuxe does not provide medical advice. All prescribing decisions and directions for use are determined solely by the licensed provider."
 
-**1. "Copy from Practice" button (line 477)** -- add `suite`:
-```typescript
-form.setValue('shipping_address', {
-  street: practiceAddr.street,
-  suite: practiceAddr.suite,   // <-- add
-  city: practiceAddr.city,
-  state: practiceAddr.state,
-  zip: practiceAddr.zip,
-});
-```
+## Files to update
 
-**2. "Copy from Shipping" button (line 523)** -- add `suite`:
-```typescript
-form.setValue('billing_address', {
-  street: shippingAddr.street,
-  suite: shippingAddr.suite,   // <-- add
-  city: shippingAddr.city,
-  state: shippingAddr.state,
-  zip: shippingAddr.zip,
-});
-```
+1. **`src/components/products/PatientSelectionDialog.tsx`** (line 944)
+2. **`src/components/products/PrescriptionWriterDialog.tsx`** (line 433)
 
-Two lines added, one file changed. Both copy buttons will now carry the suite/unit field through.
+One-line text replacement in each file. No logic changes.
+
