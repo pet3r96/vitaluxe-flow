@@ -22,7 +22,7 @@ import { GlobalIntakeDialog } from "./components/patient/GlobalIntakeDialog";
 import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
 import { PracticeOnlyRoute } from "./components/subscription/PracticeOnlyRoute";
 import { DeveloperRoute } from "./components/DeveloperRoute";
-import { SessionTimer } from "./components/auth/SessionTimer";
+
 import { realtimeManager } from "./lib/realtimeManager";
 import { ProGate } from "./components/subscription/ProGate";
 import { WelcomeTourDialog } from "./components/onboarding/WelcomeTourDialog";
@@ -115,8 +115,6 @@ const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const AcceptTerms = lazy(() => import("./pages/AcceptTerms"));
 const AdminTermsManagement = lazy(() => import("./pages/AdminTermsManagement"));
 const AdminDiscountCodes = lazy(() => import("./pages/AdminDiscountCodes"));
-const PracticeAuditLog = lazy(() => import("./pages/PracticeAuditLog"));
-
 const AdminAlerts = lazy(() => import("./pages/AdminAlerts"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const PharmacyShipping = lazy(() => import("./pages/PharmacyShipping"));
@@ -153,8 +151,6 @@ const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 
 // Loading fallback component
-
-// Loading fallback component
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -165,11 +161,6 @@ const PageLoader = () => (
 // Initialize realtime manager with React Query client for automatic cache invalidation
 realtimeManager.setQueryClient(queryClient);
 
-// SessionTimerWrapper component to access auth context and location
-const SessionTimerWrapper = () => {
-  // Timer is now in Topbar - no longer needed here
-  return null;
-};
 
 // Wrapper removed - subscriptions are now automatic on first login
 // Users are auto-enrolled in 14-day trial when they create a practice account
@@ -193,7 +184,7 @@ const App = () => {
             <BrowserRouter>
               <AuthProvider>
                 <SubscriptionProvider>
-                  <SessionTimerWrapper />
+                  
                   <GlobalImpersonationBanner>
                     <ErrorBoundary>
                       <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
