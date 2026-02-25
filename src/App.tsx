@@ -25,6 +25,7 @@ import { DeveloperRoute } from "./components/DeveloperRoute";
 import { SessionTimer } from "./components/auth/SessionTimer";
 import { realtimeManager } from "./lib/realtimeManager";
 import { ProGate } from "./components/subscription/ProGate";
+import { WelcomeTourDialog } from "./components/onboarding/WelcomeTourDialog";
 
 // Helper function to retry dynamic imports on failure
 const lazyWithRetry = (componentImport: () => Promise<any>, componentName: string = "Component") =>
@@ -196,8 +197,9 @@ const App = () => {
                   <GlobalImpersonationBanner>
                     <ErrorBoundary>
                       <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
-                        <Global2FADialogs />
+                      <Global2FADialogs />
                         <GlobalIntakeDialog />
+                        <WelcomeTourDialog />
                       </Suspense>
                     </ErrorBoundary>
                   <Suspense fallback={<PageLoader />}>
