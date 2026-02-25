@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { useErrorDialog } from "@/hooks/use-error-dialog";
 import { ErrorAlertDialog } from "@/components/ui/error-alert-dialog";
 import { hasAuthErrorCode } from "@/types/errors";
-import { SignupForm } from "@/components/auth/SignupForm";
+
 import { LoginForm } from "@/components/auth/LoginForm";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
 import { verifyNPIDebounced } from "@/lib/npiVerification";

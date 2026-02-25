@@ -101,7 +101,7 @@ const Reports = lazy(() => import("./pages/Reports"));
 const Cart = lazy(() => import("./pages/Cart"));
 const DeliveryConfirmation = lazy(() => import("./pages/DeliveryConfirmation"));
 const Checkout = lazy(() => import("./pages/Checkout"));
-const Downlines = lazy(() => import("./pages/Downlines"));
+
 const MedSpas = lazy(() => import("./pages/MedSpas"));
 const Profile = lazy(() => import("./pages/Profile"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
