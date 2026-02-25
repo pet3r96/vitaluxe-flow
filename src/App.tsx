@@ -21,7 +21,7 @@ import { Global2FADialogs } from "./components/auth/Global2FADialogs";
 import { GlobalIntakeDialog } from "./components/patient/GlobalIntakeDialog";
 import { SubscriptionProtectedRoute } from "./components/subscription/SubscriptionProtectedRoute";
 import { PracticeOnlyRoute } from "./components/subscription/PracticeOnlyRoute";
-import { DeveloperRoute } from "./components/DeveloperRoute";
+
 
 import { realtimeManager } from "./lib/realtimeManager";
 import { ProGate } from "./components/subscription/ProGate";

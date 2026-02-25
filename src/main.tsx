@@ -3,13 +3,9 @@ import App from "./App.tsx";
 import "./index.css";
 import { initializeErrorHandlers } from "./lib/errorLogger";
 import './lib/performanceReporter';
-import { trackWebVitals } from './lib/webVitals';
 
 // Initialize global error handlers
 initializeErrorHandlers();
-
-// Initialize Web Vitals tracking
-trackWebVitals('App');
 
 // Log build identifier for deployment verification
 import { logger } from "./lib/logger";
