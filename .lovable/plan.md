@@ -1,44 +1,53 @@
 
 
-# Cleanup: Legacy Routes and Dead Code
+# Fix: Surface Real Error Messages from Backend Functions
 
-## What was found
+## The Problem
 
-Checking every route from the screenshots and cross-referencing with the codebase:
+When adding a provider (or any user) with an email that already exists, the system shows a generic error: **"Edge Function returned a non-2xx status code"** instead of the actual helpful message: **"A user with this email address has already been registered."**
 
-### Routes from your URL history dropdown
+This affects 6 dialogs across the app that all use the same broken pattern.
 
-| Route | Status | Action |
-|-------|--------|--------|
-| `/developer` | 404 -- No route exists in App.tsx | Clean up the unused component file |
-| `/products` | Valid | None needed |
-| `/subscribe-to-vitaluxepro` | Valid | None needed |
-| `/change-password` | Valid | None needed |
-| `/auth` | Valid | None needed |
-| `/accept-terms` | Valid | None needed |
-| `/` | Valid | None needed |
-| `/delivery-confirmation` | Valid | None needed |
-| `/dashboard` | Valid | None needed |
+## Root Cause
 
-### What to clean up
+All 6 dialogs use `getEdgeFunctionError(data, error)` -- the **synchronous** version -- which cannot read the response body because parsing the response requires an **async** call (`context.json()`). The async version `getEdgeFunctionErrorAsync` already exists but is not being used.
 
-**1. Delete `src/components/DeveloperRoute.tsx`**
-- This component is not imported anywhere (the import was removed in the last audit)
-- Contains hardcoded email addresses
-- The `/developer` route was never added to App.tsx, so visiting it shows a 404
-- Safe to delete -- zero references remain
+## Affected Files
 
-**2. Clean up legacy performance metrics data**
-- The database has old tracking entries for pages that no longer exist: `VideoCallTest`, `VideoRoom`, `PharmacyApiLogs`
-- These are historical metrics from deleted features -- they don't cause any errors but clutter reporting
-- A one-time database cleanup query will remove them
+1. `src/components/providers/AddProviderDialog.tsx` (line 195) -- the one you just hit
+2. `src/components/staff/AddStaffDialog.tsx` (line 141)
+3. `src/components/pharmacies/PharmacyDialog.tsx` (line 192)
+4. `src/components/pharmacies/AddPharmacyStaffDialog.tsx` (line 110)
+5. `src/components/practices/AddPracticeDialog.tsx` (line 226)
+6. `src/components/accounts/AddAccountDialog.tsx` (line 258)
 
-### What is NOT being touched
-- All valid routes remain unchanged
-- `AdminProfitReports.tsx`, `PracticeProfitReports.tsx`, `PracticeAuditLog.tsx` -- these are sub-components used inside other pages (Reports, Security), confirmed in the previous audit. They stay.
-- The `/developer` 404 entries in the browser's URL history will naturally clear over time once the route stops being visited
+## The Fix
 
-### Technical steps
-1. Delete `src/components/DeveloperRoute.tsx`
-2. Run a database migration to clean stale `performance_metrics` rows for deleted pages (`VideoCallTest`, `VideoRoom`, `PharmacyApiLogs`)
+In each file, change:
+```typescript
+import { getEdgeFunctionError } from "@/types/edgeFunction";
+// ...
+if (error) throw new Error(getEdgeFunctionError(data, error));
+```
+
+To:
+```typescript
+import { getEdgeFunctionErrorAsync } from "@/types/edgeFunction";
+// ...
+if (error) {
+  const errorMsg = await getEdgeFunctionErrorAsync(data, error);
+  throw new Error(errorMsg);
+}
+```
+
+All 6 call sites are already inside `async` functions, so adding `await` is safe with no other changes needed.
+
+## Result
+
+After this fix, users will see clear, actionable error messages like:
+- "A user with this email address has already been registered"
+- "Invalid NPI format"
+- Any other specific error the backend returns
+
+Instead of the unhelpful generic "Edge Function returned a non-2xx status code."
 
