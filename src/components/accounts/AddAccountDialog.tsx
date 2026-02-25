@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { EdgeFunctionResponse, getEdgeFunctionError } from "@/types/edgeFunction";
+import { EdgeFunctionResponse, getEdgeFunctionErrorAsync } from "@/types/edgeFunction";
 import {
   Dialog,
   DialogContent,
@@ -255,7 +255,10 @@ export const AddAccountDialog = ({ open, onOpenChange, onSuccess }: AddAccountDi
         }
       });
 
-      if (error) throw new Error(getEdgeFunctionError(data, error));
+      if (error) {
+        const errorMsg = await getEdgeFunctionErrorAsync(data, error);
+        throw new Error(errorMsg);
+      }
 
       toast.success(`Account created! Welcome email with login credentials sent to ${formData.email}`);
       onSuccess();

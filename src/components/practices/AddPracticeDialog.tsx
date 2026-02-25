@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { EdgeFunctionResponse, getEdgeFunctionError } from "@/types/edgeFunction";
+import { EdgeFunctionResponse, getEdgeFunctionErrorAsync } from "@/types/edgeFunction";
 import {
   Dialog,
   DialogContent,
@@ -223,7 +223,10 @@ export const AddPracticeDialog = ({ open, onOpenChange, onSuccess, preAssignedRe
         }
       });
 
-      if (error) throw new Error(getEdgeFunctionError(data, error));
+      if (error) {
+        const errorMsg = await getEdgeFunctionErrorAsync(data, error);
+        throw new Error(errorMsg);
+      }
 
       toast.success("✅ Practice account created! Welcome email with login credentials sent to " + formData.email);
       onSuccess();

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PharmacyRepAssign } from '@/integrations/supabase/table-helpers';
-import { EdgeFunctionResponse, getEdgeFunctionError } from "@/types/edgeFunction";
+import { EdgeFunctionResponse, getEdgeFunctionErrorAsync } from "@/types/edgeFunction";
 import type { PharmacyRepAssignmentRow, PharmacyRepAssignmentInsert } from "@/types/manual-schema";
 import {
   Dialog,
@@ -189,7 +189,10 @@ export const PharmacyDialog = ({ open, onOpenChange, pharmacy, onSuccess }: Phar
           }
         });
 
-        if (error) throw new Error(getEdgeFunctionError(data, error));
+        if (error) {
+          const errorMsg = await getEdgeFunctionErrorAsync(data, error);
+          throw new Error(errorMsg);
+        }
 
         // Update the pharmacy record with additional fields
         const { error: updateError } = await supabase
