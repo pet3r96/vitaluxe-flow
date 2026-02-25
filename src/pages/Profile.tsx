@@ -9,14 +9,16 @@ import { PaymentMethodsSection } from "@/components/profile/PaymentMethodsSectio
 import PatientProfile from "@/pages/patient/PatientProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CreditCard } from "lucide-react";
+import { Loader2, CreditCard, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { usePagePerformance } from "@/hooks/usePagePerformance";
+import { useWelcomeTour } from "@/hooks/useWelcomeTour";
 
 const Profile = () => {
   usePagePerformance('Profile');
   const { effectiveRole, effectiveUserId } = useAuth();
+  const { replayTour, isEligibleRole } = useWelcomeTour();
   const navigate = useNavigate();
   const [isProvider, setIsProvider] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
@@ -91,16 +93,28 @@ const Profile = () => {
                         : "Manage your personal information and account settings"}
               </p>
             </div>
-            {isDoctorNotProvider && (
-              <Button 
-                onClick={() => navigate('/my-subscription')}
-                variant="outline"
-                className="gap-2 whitespace-nowrap"
-              >
-                <CreditCard className="h-4 w-4" />
-                Manage Subscription
-              </Button>
-            )}
+            <div className="flex gap-2 flex-wrap">
+              {isEligibleRole && (
+                <Button
+                  onClick={replayTour}
+                  variant="outline"
+                  className="gap-2 whitespace-nowrap"
+                >
+                  <PlayCircle className="h-4 w-4" />
+                  Replay Welcome Tour
+                </Button>
+              )}
+              {isDoctorNotProvider && (
+                <Button 
+                  onClick={() => navigate('/my-subscription')}
+                  variant="outline"
+                  className="gap-2 whitespace-nowrap"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Manage Subscription
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}

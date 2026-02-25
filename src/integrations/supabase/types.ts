@@ -5703,6 +5703,7 @@ export type Database = {
           email_encrypted: string | null
           full_name: string | null
           has_prescriber: boolean
+          has_seen_welcome_tour: boolean
           id: string
           license_number: string | null
           license_number_encrypted: string | null
@@ -5762,6 +5763,7 @@ export type Database = {
           email_encrypted?: string | null
           full_name?: string | null
           has_prescriber?: boolean
+          has_seen_welcome_tour?: boolean
           id: string
           license_number?: string | null
           license_number_encrypted?: string | null
@@ -5821,6 +5823,7 @@ export type Database = {
           email_encrypted?: string | null
           full_name?: string | null
           has_prescriber?: boolean
+          has_seen_welcome_tour?: boolean
           id?: string
           license_number?: string | null
           license_number_encrypted?: string | null
