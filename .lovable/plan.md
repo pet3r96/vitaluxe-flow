@@ -1,25 +1,35 @@
 
 
-# Add "Product Catalog" Download Button to Products Page
+# Fix: Include Suite in Both Address Copy Buttons
 
-## What we're doing
+## Problem
 
-Adding a "Product Catalog" download button next to the existing "Don't see a product?" button in the Products page toolbar. This will let providers, staff, and other users download the professionally branded PDF catalog directly from the products page.
+Both "Copy from Practice" and "Copy from Shipping" buttons in the Practice Profile form skip the `suite` (Apt/Unit) field when copying addresses. So if a practice address has "Suite 300", it gets lost when copied to shipping or billing.
 
-## Where it goes
+## Fix
 
-The button will appear in the top toolbar of the Products page, right next to the "Don't see a product?" button -- visible to the same roles that can see products (providers, staff with ordering privileges, and admins).
+**File: `src/components/profile/PracticeProfileForm.tsx`**
 
-## Technical steps
+**1. "Copy from Practice" button (line 477)** -- add `suite`:
+```typescript
+form.setValue('shipping_address', {
+  street: practiceAddr.street,
+  suite: practiceAddr.suite,   // <-- add
+  city: practiceAddr.city,
+  state: practiceAddr.state,
+  zip: practiceAddr.zip,
+});
+```
 
-**File: `src/components/products/ProductsGrid.tsx`**
+**2. "Copy from Shipping" button (line 523)** -- add `suite`:
+```typescript
+form.setValue('billing_address', {
+  street: shippingAddr.street,
+  suite: shippingAddr.suite,   // <-- add
+  city: shippingAddr.city,
+  state: shippingAddr.state,
+  zip: shippingAddr.zip,
+});
+```
 
-1. Import `FileDown` icon from lucide-react and `generateProductCatalogPDF` from the existing PDF generator
-2. Add a `catalogGenerating` state variable
-3. Add a "Product Catalog" button in the toolbar area (around line 967-978), placed just before or after the "Don't see a product?" button
-4. The button triggers the existing `generateProductCatalogPDF()` function (already fully built and working in `src/lib/productCatalogPdfGenerator.ts`)
-5. Show a loading spinner while generating, then auto-download the PDF
-6. The button will be visible to all authenticated roles viewing the products page (not restricted to admin)
-
-**No new files or dependencies needed** -- the PDF generator and all supporting code already exist. This is purely a UI wiring change in one file.
-
+Two lines added, one file changed. Both copy buttons will now carry the suite/unit field through.
