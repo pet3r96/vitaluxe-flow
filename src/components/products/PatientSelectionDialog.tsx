@@ -941,7 +941,7 @@ export const PatientSelectionDialog = ({
                     <div className="grid gap-2">
                       <div>
                         <Label htmlFor="sig-input">SIG - Directions for Use <span className="text-destructive">*</span></Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">Please confirm and adjust directions as per your clinical judgment.</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">VitaLuxe does not provide medical advice. All prescribing decisions and directions for use are determined solely by the licensed provider.</p>
                       </div>
                       <Textarea
                         id="sig-input"
