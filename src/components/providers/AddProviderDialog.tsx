@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { EdgeFunctionResponse, getEdgeFunctionError } from "@/types/edgeFunction";
+import { EdgeFunctionResponse, getEdgeFunctionErrorAsync } from "@/types/edgeFunction";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -192,7 +192,8 @@ export const AddProviderDialog = ({ open, onOpenChange, onSuccess, practiceId }:
       });
 
       if (error) {
-        throw new Error(getEdgeFunctionError(data, error));
+        const errorMsg = await getEdgeFunctionErrorAsync(data, error);
+        throw new Error(errorMsg);
       }
 
       // Invalidate all provider-related queries for instant UI update
