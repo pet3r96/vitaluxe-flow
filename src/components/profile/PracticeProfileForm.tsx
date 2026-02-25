@@ -476,6 +476,7 @@ export const PracticeProfileForm = () => {
                     if (practiceAddr) {
                       form.setValue('shipping_address', {
                         street: practiceAddr.street,
+                        suite: practiceAddr.suite,
                         city: practiceAddr.city,
                         state: practiceAddr.state,
                         zip: practiceAddr.zip,
@@ -522,6 +523,7 @@ export const PracticeProfileForm = () => {
                     if (shippingAddr) {
                       form.setValue('billing_address', {
                         street: shippingAddr.street,
+                        suite: shippingAddr.suite,
                         city: shippingAddr.city,
                         state: shippingAddr.state,
                         zip: shippingAddr.zip,
