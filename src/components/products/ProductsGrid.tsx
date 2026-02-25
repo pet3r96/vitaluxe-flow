@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ShoppingCart, Plus, HelpCircle } from "lucide-react";
+import { Search, ShoppingCart, Plus, HelpCircle, FileDown, Loader2 } from "lucide-react";
 import { ProductDialog } from "./ProductDialog";
 import { RequestMedicationDialog } from "./RequestMedicationDialog";
 import { PatientSelectionDialog } from "./PatientSelectionDialog";
@@ -31,6 +31,7 @@ import { usePracticeRxPrivileges } from "@/hooks/usePracticeRxPrivileges";
 import { usePracticeShippingAddress } from "@/hooks/usePracticeShippingAddress";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
+import { generateProductCatalogPDF } from "@/lib/productCatalogPdfGenerator";
 import { extractStateWithFallback, isValidStateCode } from "@/lib/addressUtils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lock, AlertTriangle } from "lucide-react";
@@ -63,6 +64,28 @@ export const ProductsGrid = () => {
   const [productToDelete, setProductToDelete] = useState<any>(null);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [requestMedDialogOpen, setRequestMedDialogOpen] = useState(false);
+  const [catalogGenerating, setCatalogGenerating] = useState(false);
+
+  const handleDownloadCatalog = async () => {
+    setCatalogGenerating(true);
+    try {
+      const blob = await generateProductCatalogPDF();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Vitaluxe-Product-Catalog-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Product catalog downloaded!');
+    } catch (err) {
+      logger.error('Catalog generation failed:', err);
+      toast.error('Failed to generate catalog. Please try again.');
+    } finally {
+      setCatalogGenerating(false);
+    }
+  };
 
   const isAdmin = effectiveRole === "admin";
   const isProvider = effectiveRole === "provider" || effectiveRole === "doctor";
@@ -976,6 +999,22 @@ export const ProductsGrid = () => {
               <span className="sm:hidden">Request</span>
             </Button>
           )}
+
+          <Button
+            variant="outline"
+            size="default"
+            className="h-10 px-3 sm:px-4"
+            disabled={catalogGenerating}
+            onClick={handleDownloadCatalog}
+          >
+            {catalogGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+            ) : (
+              <FileDown className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+            )}
+            <span className="hidden sm:inline">{catalogGenerating ? 'Generating...' : 'Product Catalog'}</span>
+            <span className="sm:hidden">{catalogGenerating ? '...' : 'Catalog'}</span>
+          </Button>
         </div>
       </div>
 
