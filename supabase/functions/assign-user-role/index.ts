@@ -975,29 +975,27 @@ serve(async (req) => {
         edgeLogger.info('[assign-user-role] Password status record created');
       }
 
-      // Send welcome email using email-dispatcher with retry logic
+      // Send welcome email
       try {
-        const correlationId = crypto.randomUUID();
-        edgeLogger.info('[assign-user-role] Invoking email-dispatcher for welcome', { correlationId });
+        edgeLogger.info('[assign-user-role] Invoking send-welcome-email', { userId });
         
-        const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('email-dispatcher', {
+        const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-welcome-email', {
           body: {
-            type: 'welcome',
             userId: userId,
             email: signupData.email,
             name: signupData.name,
+            role: signupData.role,
             practiceId: signupData.roleData?.practiceId,
-            correlationId
           }
         });
 
         if (emailError) {
-          edgeLogger.error('[assign-user-role] Welcome email failed', emailError, { correlationId });
+          edgeLogger.error('[assign-user-role] Welcome email failed', emailError);
         } else {
-          edgeLogger.info('[assign-user-role] Welcome email sent', { correlationId, emailData });
+          edgeLogger.info('[assign-user-role] Welcome email sent', { emailData });
         }
       } catch (emailErr) {
-        edgeLogger.error('[assign-user-role] Exception invoking email-dispatcher', emailErr);
+        edgeLogger.error('[assign-user-role] Exception invoking send-welcome-email', emailErr);
       }
     } else {
       edgeLogger.info('[assign-user-role] No email sent - not self-signup or admin-created flow');
