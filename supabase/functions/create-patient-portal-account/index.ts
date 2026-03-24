@@ -488,13 +488,13 @@ Deno.serve(async (req) => {
     // Generate secure temporary password
     const temporaryPassword = generateSecurePassword();
 
-    // Check if auth user exists (case-insensitive email lookup)
+    // Check if auth user exists (direct email lookup instead of paginated listUsers)
     let authUserId: string;
-    const { data: { users: allUsers }, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    if (listError) {
-      edgeLogger.error('[create-patient-portal-account] Failed to list auth users', listError);
+    const { data: foundUserLookup, error: lookupError } = await supabaseAdmin.auth.admin.getUserByEmail(normalizedEmail);
+    if (lookupError && !lookupError.message?.includes('not found')) {
+      edgeLogger.error('[create-patient-portal-account] Failed to lookup auth user', lookupError);
     }
-    const foundUser = allUsers?.find(u => u.email?.toLowerCase() === normalizedEmail);
+    const foundUser = foundUserLookup?.user || null;
 
     if (foundUser) {
       edgeLogger.info('[create-patient-portal-account] Found existing auth user', { authUserId: foundUser.id });
