@@ -1,39 +1,29 @@
 
 
-# Audit: Email Delivery for All User Creation Paths
+# Plan: Resend Welcome Email + Verify Affiliate Practice Email Flow
 
-## Current State
+## Part 1: Resend Welcome Email to john.simon.grant@gmail.com
 
-The code fix from the previous session (replacing `email-dispatcher` with `send-verification-email` / `send-welcome-email`) is correctly in the source code. However, **there are no recent edge function logs for `assign-user-role`**, which suggests the function may not have been successfully redeployed, or no new users have been created since the fix.
+The user exists in the system:
+- **User ID**: `6f167081-c882-4864-9830-2b9ffffe32a0`
+- **Email**: john.simon.grant@gmail.com
+- **Name**: John Simon
+- **Role**: topline
 
-## Email Path Coverage
+**Action**: Invoke the `send-welcome-email` edge function directly via `curl_edge_functions` with this user's data to resend their welcome email immediately.
 
-| Creation Path | Email Function | Source | Status |
-|---|---|---|---|
-| Self-signup | `send-verification-email` | `assign-user-role` (line 941) | ✅ Correct |
-| Admin-created doctor/practice/pharmacy/topline/downline/provider | `send-welcome-email` | `assign-user-role` (line 982) | ✅ Correct |
-| Admin-created staff | `send-welcome-email` | Frontend (`AddStaffDialog`, line 148) | ✅ Correct (intentionally skipped in assign-user-role to avoid duplicates) |
-| Admin-created pharmacy staff | `send-welcome-email` | Frontend (`AddPharmacyStaffDialog`, line 117) | ✅ Correct |
-| Resend welcome (all roles) | `send-welcome-email` | Various UI components (AccountDetails, StaffDetails, PharmacyStaffTable, PracticePatients, PatientsDataTable) | ✅ Correct |
-| Resend verification | `send-verification-email` | Auth page (line 353) | ✅ Correct |
-| Admin-created admin | None | Neither backend nor frontend sends | ⚠️ Gap (rare edge case) |
+## Part 2: Verify Affiliate → Practice Email Flow
 
-## Action Required
+After investigation, the affiliate practice creation flow already handles emails correctly:
 
-**1. Redeploy `assign-user-role`** — The function must be redeployed to ensure the email fix (from the previous session) is live. Without redeployment, the old code calling `email-dispatcher` is still running in production.
+1. **Affiliate submits request** → `AddPracticeRequestDialog` inserts into `pending_practices` table (no user created yet, no email needed)
+2. **Admin approves** → `approve-pending-practice` edge function creates the user account AND sends a welcome email via `send-welcome-email` (lines 294-325)
 
-**2. (Optional) Include admin role in welcome emails** — Line 957 excludes `admin` and `staff` roles. Staff is handled by the frontend, but admin-created admin users get no email. This is a rare edge case but should be fixed for completeness by removing `&& signupData.role !== 'admin'` from the condition.
+This flow is working. However, the `approve-pending-practice` function uses raw `fetch()` instead of `supabaseAdmin.functions.invoke()` to call `send-welcome-email`. While functional, switching to `supabaseAdmin.functions.invoke()` would be more robust and consistent with the rest of the codebase.
 
-## Files to Change
+## Changes
 
-- **`supabase/functions/assign-user-role/index.ts`** (line 957): Change condition from:
-  ```typescript
-  } else if (isAdminCreated && signupData.role !== 'admin' && signupData.role !== 'staff') {
-  ```
-  to:
-  ```typescript
-  } else if (isAdminCreated && signupData.role !== 'staff') {
-  ```
-
-- **Redeploy**: `assign-user-role`, `send-welcome-email`, `send-verification-email`, and `unified-email-sender` edge functions to ensure all are running latest code.
+1. **Resend email** — Call `send-welcome-email` for john.simon.grant@gmail.com (no code change, just invocation)
+2. **Improve `approve-pending-practice`** — Replace raw `fetch()` call (lines 296-315) with `supabaseAdmin.functions.invoke('send-welcome-email', ...)` for consistency and better error handling
+3. **Redeploy** `approve-pending-practice` after the change
 
