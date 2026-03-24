@@ -1,57 +1,39 @@
 
 
-# Fix: Welcome/Verification Emails Not Sending for New Users
+# Audit: Email Delivery for All User Creation Paths
 
-## Root Cause
+## Current State
 
-The `assign-user-role` edge function (which handles all new user creation) calls a non-existent `email-dispatcher` function on lines 942 and 986. This means:
+The code fix from the previous session (replacing `email-dispatcher` with `send-verification-email` / `send-welcome-email`) is correctly in the source code. However, **there are no recent edge function logs for `assign-user-role`**, which suggests the function may not have been successfully redeployed, or no new users have been created since the fix.
 
-- **Self-signup users** never receive their verification email
-- **Admin-created users** never receive their welcome email with password setup link
+## Email Path Coverage
 
-The working edge functions `send-welcome-email` and `send-verification-email` exist and work correctly (used by resend buttons in the UI), but `assign-user-role` was changed at some point to call `email-dispatcher` instead — which was never created.
+| Creation Path | Email Function | Source | Status |
+|---|---|---|---|
+| Self-signup | `send-verification-email` | `assign-user-role` (line 941) | ✅ Correct |
+| Admin-created doctor/practice/pharmacy/topline/downline/provider | `send-welcome-email` | `assign-user-role` (line 982) | ✅ Correct |
+| Admin-created staff | `send-welcome-email` | Frontend (`AddStaffDialog`, line 148) | ✅ Correct (intentionally skipped in assign-user-role to avoid duplicates) |
+| Admin-created pharmacy staff | `send-welcome-email` | Frontend (`AddPharmacyStaffDialog`, line 117) | ✅ Correct |
+| Resend welcome (all roles) | `send-welcome-email` | Various UI components (AccountDetails, StaffDetails, PharmacyStaffTable, PracticePatients, PatientsDataTable) | ✅ Correct |
+| Resend verification | `send-verification-email` | Auth page (line 353) | ✅ Correct |
+| Admin-created admin | None | Neither backend nor frontend sends | ⚠️ Gap (rare edge case) |
 
-## Fix
+## Action Required
 
-**File: `supabase/functions/assign-user-role/index.ts`**
+**1. Redeploy `assign-user-role`** — The function must be redeployed to ensure the email fix (from the previous session) is live. Without redeployment, the old code calling `email-dispatcher` is still running in production.
 
-### 1. Self-signup verification email (lines 938-959)
+**2. (Optional) Include admin role in welcome emails** — Line 957 excludes `admin` and `staff` roles. Staff is handled by the frontend, but admin-created admin users get no email. This is a rare edge case but should be fixed for completeness by removing `&& signupData.role !== 'admin'` from the condition.
 
-Replace the `email-dispatcher` call with a direct call to `send-verification-email`:
+## Files to Change
 
-```typescript
-const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-verification-email', {
-  body: {
-    userId: userId,
-    email: signupData.email,
-    name: signupData.name,
-  }
-});
-```
+- **`supabase/functions/assign-user-role/index.ts`** (line 957): Change condition from:
+  ```typescript
+  } else if (isAdminCreated && signupData.role !== 'admin' && signupData.role !== 'staff') {
+  ```
+  to:
+  ```typescript
+  } else if (isAdminCreated && signupData.role !== 'staff') {
+  ```
 
-### 2. Admin-created welcome email (lines 981-1004)
-
-Replace the `email-dispatcher` call with a direct call to `send-welcome-email`:
-
-```typescript
-const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-welcome-email', {
-  body: {
-    userId: userId,
-    email: signupData.email,
-    name: signupData.name,
-    role: signupData.role,
-    practiceId: signupData.roleData?.practiceId,
-  }
-});
-```
-
-### 3. Deploy
-
-Redeploy the `assign-user-role` edge function so the fix takes effect.
-
-## Impact
-
-- All new self-signup users will receive verification emails again
-- All admin-created users will receive welcome emails with password setup links
-- Existing resend buttons (in AccountDetails, StaffDetails, etc.) are unaffected — they already call the correct functions directly
+- **Redeploy**: `assign-user-role`, `send-welcome-email`, `send-verification-email`, and `unified-email-sender` edge functions to ensure all are running latest code.
 
