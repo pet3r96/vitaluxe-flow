@@ -1,29 +1,35 @@
 
+# VitaLuxe Production Audit — Fix Implementation Status
 
-# Plan: Resend Welcome Email + Verify Affiliate Practice Email Flow
+## Completed Fixes (Phase 1 + Phase 2)
 
-## Part 1: Resend Welcome Email to john.simon.grant@gmail.com
+### Critical (C1-C3): ✅ Fixed listUsers() pagination
+- `assign-user-role` → replaced `listUsers()` with `getUserByEmail()`
+- `create-patient-portal-account` → replaced `listUsers()` with `getUserByEmail()`
+- `detect-brute-force` → replaced `listUsers()` with `getUserByEmail()`
 
-The user exists in the system:
-- **User ID**: `6f167081-c882-4864-9830-2b9ffffe32a0`
-- **Email**: john.simon.grant@gmail.com
-- **Name**: John Simon
-- **Role**: topline
+### High (H1): ✅ Fixed approve-pending-rep email invocation
+- Replaced raw `fetch()` with `supabaseAdmin.functions.invoke()`
 
-**Action**: Invoke the `send-welcome-email` edge function directly via `curl_edge_functions` with this user's data to resend their welcome email immediately.
+### High (H3/H5): ✅ Removed temporaryPassword from responses
+- `create-patient-portal-account` no longer returns password
+- `approve-pending-rep` no longer returns password
 
-## Part 2: Verify Affiliate → Practice Email Flow
+### High (H4/H6): ✅ Made role/staff creation failures fatal
+- Patient role assignment now throws on non-duplicate errors
+- Staff practice_staff creation now throws on non-duplicate errors
 
-After investigation, the affiliate practice creation flow already handles emails correctly:
+### Medium (M4): ✅ Fixed 2FA settings key mismatch
+- `send-welcome-email` now uses `setting_key: 'two_fa_enforcement_enabled'`
 
-1. **Affiliate submits request** → `AddPracticeRequestDialog` inserts into `pending_practices` table (no user created yet, no email needed)
-2. **Admin approves** → `approve-pending-practice` edge function creates the user account AND sends a welcome email via `send-welcome-email` (lines 294-325)
+### Cleanup: ✅ Deleted deprecated sessionValidator.ts
 
-This flow is working. However, the `approve-pending-practice` function uses raw `fetch()` instead of `supabaseAdmin.functions.invoke()` to call `send-welcome-email`. While functional, switching to `supabaseAdmin.functions.invoke()` would be more robust and consistent with the rest of the codebase.
+## All 5 edge functions redeployed to production
 
-## Changes
-
-1. **Resend email** — Call `send-welcome-email` for john.simon.grant@gmail.com (no code change, just invocation)
-2. **Improve `approve-pending-practice`** — Replace raw `fetch()` call (lines 296-315) with `supabaseAdmin.functions.invoke('send-welcome-email', ...)` for consistency and better error handling
-3. **Redeploy** `approve-pending-practice` after the change
-
+## Remaining (Phase 3-4, lower priority)
+- M6-M8: Hardcoded production URLs in email templates
+- M9: ChangePassword auto-login bypasses authService checks
+- M3: Bootstrap cache 2FA bypass
+- M10-M11: Session listener/timeout inconsistencies
+- M12: approve-pending-rep creates profile directly (not via RPC)
+- Observability improvements and integration tests
