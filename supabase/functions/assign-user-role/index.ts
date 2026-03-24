@@ -954,7 +954,7 @@ serve(async (req) => {
       } catch (emailErr) {
         edgeLogger.error('[assign-user-role] Exception invoking send-verification-email', emailErr);
       }
-    } else if (isAdminCreated && signupData.role !== 'admin' && signupData.role !== 'staff') {
+    } else if (isAdminCreated && signupData.role !== 'staff') {
       // Admin-created (but NOT staff): Send temp password email and set password status
       edgeLogger.info('✉️ [assign-user-role] Admin-created flow: sending welcome email', { emailDomain: signupData.email?.split('@')[1] });
       edgeLogger.info('[assign-user-role] Invoking send-welcome-email function', { userId });
