@@ -902,8 +902,11 @@ serve(async (req) => {
       
       if (pharmStaffError) {
         edgeLogger.error('❌ Failed to create pharmacy_staff record', pharmStaffError);
-        // Don't fail the whole operation, but log it prominently
-        edgeLogger.error('⚠️ CRITICAL: Pharmacy staff user created but pharmacy membership failed! User may not have proper access.');
+        // Only ignore if it's a duplicate (pharmacy staff already exists)
+        if (!pharmStaffError.message?.includes('duplicate') && !pharmStaffError.code?.includes('23505')) {
+          throw new Error(`Failed to create pharmacy_staff record: Pharmacy staff user created but pharmacy membership failed. ${pharmStaffError.message}`);
+        }
+        edgeLogger.warn('⚠️ pharmacy_staff record already exists (duplicate ignored)');
       } else {
         edgeLogger.info('✅ pharmacy_staff record created successfully');
       }

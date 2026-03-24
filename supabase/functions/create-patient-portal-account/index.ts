@@ -530,11 +530,10 @@ Deno.serve(async (req) => {
         // Handle case where user already exists but wasn't found in listUsers (pagination issue)
         if (createAuthError.message?.includes('already registered')) {
           edgeLogger.info('[PATIENT PORTAL] User already registered, fetching existing user');
-          const { data: retryAuthUser } = await supabaseAdmin.auth.admin.listUsers();
-          const retryFoundUser = retryAuthUser?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+          const { data: retryResult, error: retryError } = await supabaseAdmin.auth.admin.getUserByEmail(normalizedEmail);
           
-          if (retryFoundUser) {
-            authUserId = retryFoundUser.id;
+          if (!retryError && retryResult?.user) {
+            authUserId = retryResult.user.id;
             // Update password for found user
             await supabaseAdmin.auth.admin.updateUserById(authUserId, { password: temporaryPassword });
             edgeLogger.info('[PATIENT PORTAL] Found and updated existing auth user', { authUserId });

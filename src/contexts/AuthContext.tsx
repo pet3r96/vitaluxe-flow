@@ -227,7 +227,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (practiceId) setPracticeParentId(practiceId);
             if (typeof canImpersonate === 'boolean') setCanImpersonateDb(canImpersonate);
             setPasswordStatusChecked(true);
-            setTwoFAStatusChecked(true);
+            // Do NOT set twoFAStatusChecked from cache — 2FA must always be verified live
+            // to prevent bypass on slow networks (M3 audit fix)
             setInitializing(false);
             return;
           }
@@ -668,10 +669,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (error) logger.info('Auth: provider practice lookup', logger.sanitize({ error: error.message }));
           }
         } 
-        // If role is staff, fetch the practice_id from providers table
+        // If role is staff, fetch the practice_id from practice_staff table
         else if (effectiveRole === 'staff') {
           const { data, error } = await supabase
-            .from('providers')
+            .from('practice_staff')
             .select('practice_id')
             .eq('user_id', effectiveUserId)
             .maybeSingle();
