@@ -421,11 +421,10 @@ serve(async (req) => {
     // PHASE 2: Normalize email before any processing
     signupData.email = signupData.email.toLowerCase().trim();
 
-    // Check if user already exists by email
-    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
-    const userExists = existingUser?.users?.some(u => u.email?.toLowerCase() === signupData.email.toLowerCase());
+    // Check if user already exists by email (using direct lookup instead of paginated listUsers)
+    const { data: existingUserLookup } = await supabaseAdmin.auth.admin.getUserByEmail(signupData.email);
     
-    if (userExists) {
+    if (existingUserLookup?.user) {
       edgeLogger.warn('User already exists with email', { emailDomain: signupData.email?.split('@')[1] });
       return new Response(
         JSON.stringify({ error: 'A user with this email already exists. Please use a different email address.' }),
