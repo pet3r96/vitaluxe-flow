@@ -293,30 +293,17 @@ serve(async (req) => {
       // Send welcome email only for new users
       if (isNewUser) {
         try {
-          const functionUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-welcome-email`;
-          const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-          if (!anonKey) {
-            throw new Error('Missing SUPABASE_ANON_KEY');
-          }
-          
-          const emailResponse = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${anonKey}`,
-              'apikey': anonKey
-            },
-            body: JSON.stringify({
+          const emailResult = await supabaseAdmin.functions.invoke('send-welcome-email', {
+            body: {
               userId: userId,
               email: practiceData.email,
               name: practiceData.practice_name,
               role: 'doctor'
-            })
+            }
           });
           
-          if (!emailResponse.ok) {
-            const errorText = await emailResponse.text();
-            edgeLogger.error('Error sending welcome email', new Error(errorText));
+          if (emailResult.error) {
+            edgeLogger.error('Error sending welcome email', emailResult.error);
           } else {
             edgeLogger.info('Welcome email sent successfully', { emailDomain: practiceData.email?.split('@')[1] });
           }
