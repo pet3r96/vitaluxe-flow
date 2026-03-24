@@ -609,8 +609,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
     
     if (roleError) {
-      edgeLogger.error('Failed to create patient role (will be created by trigger)', roleError);
-      // Don't fail - trigger will handle this
+      edgeLogger.error('Failed to create patient role - this is critical for authorization', roleError);
+      // Only ignore if it's a duplicate (role already exists)
+      if (!roleError.message?.includes('duplicate') && !roleError.code?.includes('23505')) {
+        throw new Error(`Failed to assign patient role: ${roleError.message}`);
+      }
     }
 
     // Create temp password token for token-based password reset
