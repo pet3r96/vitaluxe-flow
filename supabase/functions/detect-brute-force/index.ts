@@ -81,9 +81,9 @@ serve(async (req) => {
       },
     });
 
-    // Lock account if user exists
-    const { data: userData } = await supabaseClient.auth.admin.listUsers();
-    const user = userData.users.find(u => u.email === email);
+    // Lock account if user exists (direct email lookup instead of paginated listUsers)
+    const { data: userLookup } = await supabaseClient.auth.admin.getUserByEmail(email);
+    const user = userLookup?.user || null;
     
     if (user) {
       await supabaseClient.from("account_lockouts").insert({

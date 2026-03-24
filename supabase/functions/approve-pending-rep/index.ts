@@ -394,8 +394,7 @@ serve(async (req) => {
           message: userAlreadyExisted 
             ? 'Representative request completed (user already existed)' 
             : 'Representative approved and welcome email sent',
-          userId: newUserId,
-          temporaryPassword: userAlreadyExisted ? null : temporaryPassword
+          userId: newUserId
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

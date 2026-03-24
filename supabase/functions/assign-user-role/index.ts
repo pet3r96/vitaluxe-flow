@@ -851,8 +851,11 @@ serve(async (req) => {
         
         if (staffError) {
           edgeLogger.error('❌ Failed to create practice_staff record', staffError);
-          // Don't fail the whole operation, but log it prominently
-          edgeLogger.error('⚠️ CRITICAL: Staff user created but practice membership failed! User may not have proper access.');
+          // Only ignore if it's a duplicate (staff already exists for this practice)
+          if (!staffError.message?.includes('duplicate') && !staffError.code?.includes('23505')) {
+            throw new Error(`Failed to create practice_staff record: Staff user created but practice membership failed. ${staffError.message}`);
+          }
+          edgeLogger.warn('⚠️ practice_staff record already exists (duplicate ignored)');
         } else {
           edgeLogger.info('✅ practice_staff record created successfully');
         }

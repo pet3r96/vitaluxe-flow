@@ -663,7 +663,6 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true,
         userId: authUserId,
-        temporaryPassword: temporaryPassword,
         patientAccountId: patientAccount.id,
         token: token
       }),
