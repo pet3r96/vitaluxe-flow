@@ -353,30 +353,17 @@ serve(async (req) => {
       // Send welcome email only for newly created users
       if (!userAlreadyExisted && temporaryPassword) {
         try {
-          const functionUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-welcome-email`;
-          const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-          if (!anonKey) {
-            throw new Error('Missing SUPABASE_ANON_KEY');
-          }
-          
-          const emailResponse = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${anonKey}`,
-              'apikey': anonKey
-            },
-            body: JSON.stringify({
+          const emailResult = await supabaseAdmin.functions.invoke('send-welcome-email', {
+            body: {
               userId: newUserId,
               email: pendingRep.email,
               name: pendingRep.full_name,
               role: pendingRep.role
-            })
+            }
           });
           
-          if (!emailResponse.ok) {
-            const errorText = await emailResponse.text();
-            edgeLogger.error('Error sending welcome email', new Error(errorText));
+          if (emailResult.error) {
+            edgeLogger.error('Error sending welcome email', emailResult.error);
           } else {
             edgeLogger.info('Welcome email sent successfully', { emailDomain: pendingRep.email?.split('@')[1] });
           }
@@ -407,8 +394,7 @@ serve(async (req) => {
           message: userAlreadyExisted 
             ? 'Representative request completed (user already existed)' 
             : 'Representative approved and welcome email sent',
-          userId: newUserId,
-          temporaryPassword: userAlreadyExisted ? null : temporaryPassword
+          userId: newUserId
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

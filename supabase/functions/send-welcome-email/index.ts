@@ -94,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: systemSettings } = await supabaseAdmin
       .from('system_settings')
       .select('value')
-      .eq('key', 'two_factor_auth_enabled')
+      .eq('setting_key', 'two_fa_enforcement_enabled')
       .maybeSingle();
 
     const twoFactorEnabled = systemSettings?.value === true;
