@@ -149,10 +149,9 @@ export default function ChangePassword() {
         // Auto-login the user with their new password
         if (userEmail) {
           try {
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-              email: userEmail,
-              password: formData.newPassword
-            });
+            // Use authService.loginUser to ensure account status checks run
+            // (disabled accounts, patient portal status, temp_password flags, etc.)
+            const { error: signInError } = await authService.loginUser(userEmail, formData.newPassword);
             
             if (signInError) {
               logger.error('[ChangePassword] Auto-login failed', signInError);
