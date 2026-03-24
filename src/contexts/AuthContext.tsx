@@ -668,10 +668,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (error) logger.info('Auth: provider practice lookup', logger.sanitize({ error: error.message }));
           }
         } 
-        // If role is staff, fetch the practice_id from providers table
+        // If role is staff, fetch the practice_id from practice_staff table
         else if (effectiveRole === 'staff') {
           const { data, error } = await supabase
-            .from('providers')
+            .from('practice_staff')
             .select('practice_id')
             .eq('user_id', effectiveUserId)
             .maybeSingle();
