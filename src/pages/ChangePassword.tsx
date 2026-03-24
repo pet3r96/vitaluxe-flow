@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { validatePasswordStrength } from "@/lib/passwordValidation";
 import { supabase } from "@/integrations/supabase/client";
+import { authService } from "@/lib/authService";
 import { toast } from "sonner";
 import { Eye, EyeOff, CheckCircle2, XCircle, Lock, Info } from "lucide-react";
 import { logger } from "@/lib/logger";
