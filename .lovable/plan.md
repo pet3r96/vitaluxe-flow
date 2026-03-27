@@ -1,38 +1,27 @@
 
 
-# Professional Use Products PDF Catalog
+# Fix Pro Products Page: Responsive Layout + Naming Consistency
 
-## What
+## Issues
 
-Create a separate downloadable PDF catalog for the Professional Use Products, styled similarly to the existing RX catalog but clearly branded **"PROFESSIONAL USE ONLY"** throughout. Pricing shown per product with "Pack of 10" noted. Completely separate from the RX catalog.
+1. **Not responsive** — The header (title + buttons) doesn't wrap on smaller screens, causing overflow. The product grid breakpoints could be tighter.
+2. **Naming inconsistency** — Page says "Professional Products", cart sheet says "Professional Products Cart". User wants consistent "Pro Products" naming throughout.
 
-## Approach
+## Changes
 
-Reuse the same design language (dark cover, gold accents, card grid) from the existing `productCatalogPdfGenerator.ts` but create a new dedicated generator that:
-- Fetches from `pro_products` table instead of `products`
-- Shows "PROFESSIONAL USE ONLY" on the cover and as a watermark/header on each page
-- Each card shows product name, image, price, and "Pack of 10" label
-- No variants/dosage forms (pro products are simple name + price)
-- Simpler card layout since there's no category pill or variant pricing table
+### 1. `src/pages/ProProducts.tsx`
+- Change the header layout to stack on mobile: title on top, buttons below (use `flex-col sm:flex-row` wrapper)
+- Rename page title from "Professional Products" to **"Pro Products"**
+- Update subtitle to "Pro-use peptides — ships to practice only"
+- Move the "Product Catalog" button to admin-only (per earlier approved plan — remove it here, it stays on admin page)
+- Adjust grid: `grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4` for better breakpoint coverage
 
-## Files
+### 2. `src/components/pro-products/ProCartSheet.tsx`
+- Rename cart title from "Professional Products Cart" to **"Pro Products Cart"**
 
-| Action | File |
-|--------|------|
-| Create | `src/lib/proProductCatalogPdfGenerator.ts` — new generator fetching from `pro_products`, cover titled "PROFESSIONAL USE PRODUCTS", each page header says "FOR PROFESSIONAL USE ONLY", cards show name + price + "Pack of 10" |
-| Modify | `src/pages/ProProducts.tsx` — add a "Download Catalog" button in the header area next to the cart icon |
+### 3. `src/components/pro-products/ProProductCard.tsx`
+- Tighten padding for smaller cards on mobile (`p-3` instead of `p-4`)
+- Make price and button sizing slightly more compact on small screens
 
-## Detail
-
-### New generator (`proProductCatalogPdfGenerator.ts`)
-- Same color scheme (dark cover, gold/white text, white cards with shadow)
-- Cover: VitaLuxe logo, "PROFESSIONAL USE PRODUCTS" title, "FOR PROFESSIONAL USE ONLY" subtitle, company address/phone
-- Cards: product image (or placeholder), product name, "Pack of 10" badge text, price in bold
-- 6 cards per page (3x2 grid), same dimensions as RX catalog
-- Footer on each page with "FOR PROFESSIONAL USE ONLY" and page numbers
-- Products sorted alphabetically
-
-### ProProducts.tsx update
-- Add a "Product Catalog" download button with loading state next to the cart button
-- Uses the new generator, triggers browser download as `Pro_Product_Catalog_{date}.pdf`
+Zero functional changes — layout and naming only.
 
