@@ -61,11 +61,11 @@ export default function ProProductsAdmin() {
   };
 
   return (
-    <div className="responsive-page">
+    <div className="responsive-page space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Professional Products Management</h1>
-          <p className="text-muted-foreground">Manage the professional-use peptide catalog and pricing</p>
+          <p className="text-muted-foreground">Manage the professional-use peptide catalog, pricing, and images</p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4 mr-2" />
@@ -73,7 +73,13 @@ export default function ProProductsAdmin() {
         </Button>
       </div>
 
-      {isLoading ? (
+      <Tabs defaultValue="products">
+        <TabsList>
+          <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="images">AI Images</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="products">
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
