@@ -1,54 +1,84 @@
 
 
-# AI-Generated Images for Professional Use Products
+# Professional Use Products — Full System Audit
 
-## Current State
-- The `pro_products` table has **no `image_url` column** — needs to be added via migration.
-- The existing `generate-product-image` edge function generates images for pharmaceutical products and uploads to the `product-images` storage bucket. It works well but its prompts don't include "Professional Use Only" text.
-- The `ProProductCard` component currently shows no image.
+## Verdict: 2 Critical Bugs, 2 Minor Issues
 
-## Plan
+---
 
-### 1. Database Migration
-Add `image_url text` column to `pro_products`.
+## CRITICAL BUG 1: Email with PDF Attachment Will Silently Fail
 
-### 2. New Edge Function: `generate-pro-product-image`
-A dedicated edge function (separate from the existing one to maintain isolation) that:
-- Takes `productName` from the `pro_products` table
-- Uses the same Gemini 3 Pro Image Preview model via AI Gateway
-- Generates prompts that **always include "PROFESSIONAL USE ONLY" prominently on the vial/label/packaging** — this is the key differentiator from the existing pharmaceutical images
-- All products are peptide injection vials, so prompts will focus on clear glass vials with sterile medical labels showing both the product name and "Professional Use Only"
-- Uploads to the same `product-images` storage bucket under a `pro/` prefix
-- Updates the `pro_products.image_url` column with the public URL
+The `send-pro-order` edge function calls `unified-email-sender` with this payload shape:
+```json
+{ "to": "...", "subject": "...", "html": "...", "attachments": [...] }
+```
 
-### 3. Admin UI: Pro Product Image Generator
-Add a new component `ProProductImageGenerator` (similar to the existing `ProductImageGenerator`) on the `ProProductsAdmin` page that:
-- Shows which pro products have images and which don't
-- "Generate All Missing" button for batch generation
-- Individual "Regenerate" button per product
-- Progress tracking during batch generation
+But `unified-email-sender` expects:
+- `htmlBody` (not `html`)
+- `textBody` (required, not sent at all)
+- **No attachments support** — the Postmark call in `sendViaPostmark()` never passes attachments through
 
-### 4. Update `ProProductCard` to Display Images
-Show the product image at the top of each card when `image_url` is present, with a placeholder/icon fallback when missing.
+**Result**: The email body will be empty (undefined `htmlBody`) and the PDF attachment will be silently dropped. The order notification email to operations is broken.
 
-### 5. Update Types
-The `ProProduct` interface in `useProProductsAdmin.ts` needs `image_url: string | null` added.
+**Fix**: Rewrite `send-pro-order` to call the Postmark API directly (like the existing working email functions do) instead of going through `unified-email-sender`. This gives it full control over the `Attachments` field in the Postmark payload.
 
-## Files
+---
 
-| Action | File |
-|--------|------|
-| Create | `supabase/functions/generate-pro-product-image/index.ts` |
-| Create | `src/components/admin/ProProductImageGenerator.tsx` |
-| Create | Migration: add `image_url` to `pro_products` |
-| Modify | `src/hooks/useProProductsAdmin.ts` — add `image_url` to interface |
-| Modify | `src/components/pro-products/ProProductCard.tsx` — show image |
-| Modify | `src/pages/ProProductsAdmin.tsx` — add image generator section |
+## CRITICAL BUG 2: `toLocaleString()` in Edge Function (Deno)
 
-## Prompt Strategy
-Every pro product image prompt will include:
-> "Professional injection vial for '{productName}'. Clear glass vial with white medical label showing '{productName}' prominently AND the text 'PROFESSIONAL USE ONLY' clearly visible on the label. Sterile clinical setting. Ultra high resolution pharmaceutical product photography. Clean white/gray gradient background."
+In `send-pro-order` line 44:
+```ts
+$${orderTotal?.toLocaleString() || "0"}
+```
 
-## Zero-Touch Guarantee
-No changes to existing `generate-product-image`, `ProductImageGenerator`, `products` table, or any pharmaceutical/billing flows.
+`toLocaleString()` behavior in Deno server runtime is unpredictable — it may not format with commas, or may produce unexpected locale-specific output. This should use a fixed formatter or just pass the raw number. Minor compared to Bug 1, but worth fixing in the same pass.
+
+---
+
+## MINOR ISSUE 1: Cart Minus Button Can Delete Item Without Confirmation
+
+In `ProCartSheet`, clicking minus when quantity is 1 calls `updateItem.mutate({ id, quantity: 0 })`, which triggers a DELETE in `useUpdateProCartItem`. This works correctly but there's no "are you sure?" — the item just disappears. This is acceptable UX (matches standard cart patterns) but worth noting.
+
+---
+
+## MINOR ISSUE 2: No `effectivePracticeId` Fallback for Contact Info
+
+In `ProProducts.tsx` line 42, if `effectivePracticeId` is null (e.g., a user not associated with a practice), the order gets submitted with empty contact info and empty shipping address. The PDF will generate with blank fields. This is an edge case but could be confusing.
+
+**Fix**: Add a guard that prevents order submission if no practice is associated, with a toast message like "You must be associated with a practice to submit pro orders."
+
+---
+
+## Isolation Verification: PASS
+
+- Pro hooks (`useProCart`, `useProOrders`, `useProProductsAdmin`) query ONLY `pro_*` tables — zero references to `carts`, `cart_lines`, `orders`, `order_lines`, or Authorize.Net
+- RLS policies are correct: users CRUD own cart/orders, admins manage products
+- Routes (`/pro-products`, `/pro-products-admin`) are separate from existing product routes
+- Cart state uses separate React Query keys (`pro-cart`, `pro-cart-count`)
+- The two carts (RX and Pro) are completely independent at every layer
+
+## PDF Generation: PASS
+
+- `proOrderPdfGenerator.ts` correctly formats the order form with product names + "(Pack of 10)"
+- Layout matches the uploaded template structure
+- Auto-download works via `pdf.save()` on submit
+
+## Database Schema: PASS
+
+- All 3 tables have RLS enabled with correct policies
+- FK cascade on `pro_cart_items → pro_products` (delete product removes from carts)
+- `updated_at` trigger exists on `pro_products`
+
+---
+
+## Fix Plan
+
+### 1. Rewrite `send-pro-order` edge function
+Replace `supabase.functions.invoke("unified-email-sender")` with a direct Postmark API call that properly includes the PDF as a base64 attachment. Use the same `POSTMARK_API_KEY` and `POSTMARK_FROM_EMAIL` env vars already available. Add proper `textBody` fallback.
+
+### 2. Add practice guard on order submission
+In `ProProducts.tsx`, before `handleSubmitOrder` proceeds, check that `effectivePracticeId` exists. If not, show a toast error and return early.
+
+### 3. Redeploy `send-pro-order`
+After the fix, the function auto-deploys.
 
