@@ -21,7 +21,10 @@ export function ProProductCard({ product, onAddToCart, isAdding }: ProProductCar
           <h3 className="font-semibold text-foreground text-base mb-1">
             {product.name}
           </h3>
-          {product.description && (
+          <span className="inline-block text-xs font-medium text-primary/80 bg-primary/10 rounded px-1.5 py-0.5 mb-2">
+            Pack of 10
+          </span>
+          {product.description && product.description !== "Pack of 10" && (
             <p className="text-sm text-muted-foreground mb-3">{product.description}</p>
           )}
         </div>

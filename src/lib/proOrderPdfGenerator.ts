@@ -90,7 +90,7 @@ export function generateProOrderPdf(data: ProOrderPdfData): jsPDF {
 
   // Product table
   const tableData = data.lineItems.map((item) => [
-    item.name,
+    `${item.name} (Pack of 10)`,
     `$${item.price.toLocaleString()}`,
     item.quantity.toString(),
     `$${item.total.toLocaleString()}`,
