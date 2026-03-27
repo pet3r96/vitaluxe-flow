@@ -115,7 +115,7 @@ serve(async (req) => {
     console.log(`Generating image for: ${productName}`);
     console.log(`Prompt: ${prompt}`);
 
-    // Call Lovable AI Gateway with Gemini 3 Pro Image Preview
+    // Call AI Gateway with Gemini 3 Pro Image Preview
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {

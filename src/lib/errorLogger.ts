@@ -18,6 +18,21 @@ export const logApplicationError = async (
   );
 };
 
+/**
+ * Sanitize URLs to strip sensitive tokens and preview domain info
+ */
+function sanitizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    // Remove sensitive query parameters
+    parsed.searchParams.delete('__lovable_token');
+    parsed.searchParams.delete('token');
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 export const initializeErrorHandlers = () => {
   // Handle unhandled JavaScript errors
   window.onerror = (message, source, lineno, colno, error) => {
@@ -35,7 +50,7 @@ export const initializeErrorHandlers = () => {
       line: lineno,
       column: colno,
       isNavigationError,
-      url: window.location.href,
+      url: sanitizeUrl(window.location.href),
     });
 
     // Don't suppress default error handling

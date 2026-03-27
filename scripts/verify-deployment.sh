@@ -139,7 +139,7 @@ else
     if [ "$ALL_CRITICAL_OK" = false ]; then
         echo ""
         print_error "Some public endpoints are unreachable"
-        print_warning "Functions are auto-deployed by Lovable. If this persists, contact support."
+        print_warning "Functions are auto-deployed. If this persists, contact support."
         exit 1
     fi
     
