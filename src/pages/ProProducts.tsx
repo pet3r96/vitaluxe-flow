@@ -27,25 +27,7 @@ export default function ProProducts() {
 
   const [cartOpen, setCartOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDownloadingCatalog, setIsDownloadingCatalog] = useState(false);
 
-  const handleDownloadCatalog = async () => {
-    setIsDownloadingCatalog(true);
-    try {
-      const blob = await generateProProductCatalogPDF();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Pro_Product_Catalog_${format(new Date(), "yyyy-MM-dd")}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Catalog downloaded!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to generate catalog");
-    } finally {
-      setIsDownloadingCatalog(false);
-    }
-  };
 
   const handleSubmitOrder = async () => {
     if (!user || cartItems.length === 0) return;
