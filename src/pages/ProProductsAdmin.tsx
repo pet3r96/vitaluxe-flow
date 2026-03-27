@@ -27,6 +27,7 @@ export default function ProProductsAdmin() {
   const deleteProduct = useDeleteProProduct();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isDownloadingCatalog, setIsDownloadingCatalog] = useState(false);
   const [editing, setEditing] = useState<ProProduct | null>(null);
   const [form, setForm] = useState<ProProductFormData>({
     name: "",
