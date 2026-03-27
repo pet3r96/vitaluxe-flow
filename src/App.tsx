@@ -150,6 +150,8 @@ const Support = lazy(() => import("./pages/Support"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const SupportTicketThread = lazy(() => import("./pages/SupportTicketThread"));
 const ProProducts = lazy(() => import("./pages/ProProducts"));
+const ProCart = lazy(() => import("./pages/ProCart"));
+const ProOrders = lazy(() => import("./pages/ProOrders"));
 const ProProductsAdmin = lazy(() => import("./pages/ProProductsAdmin"));
 
 // Loading fallback component
