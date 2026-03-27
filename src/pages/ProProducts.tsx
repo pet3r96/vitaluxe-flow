@@ -10,7 +10,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ProProductCard } from "@/components/pro-products/ProProductCard";
 import { ProCartSheet } from "@/components/pro-products/ProCartSheet";
 import { generateProOrderPdf, proOrderPdfToBase64 } from "@/lib/proOrderPdfGenerator";
-import { generateProProductCatalogPDF } from "@/lib/proProductCatalogPdfGenerator";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
