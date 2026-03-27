@@ -80,58 +80,65 @@ export default function ProProductsAdmin() {
         </TabsList>
 
         <TabsContent value="products">
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Sort Order</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-24">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products?.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.name}</TableCell>
-                <TableCell>${p.price.toLocaleString()}</TableCell>
-                <TableCell>{p.sort_order}</TableCell>
-                <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.active ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"}`}>
-                    {p.active ? "Active" : "Inactive"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => deleteProduct.mutate(p.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {products?.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No products yet. Click "Add Product" to get started.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      )}
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Sort Order</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-24">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products?.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell>${p.price.toLocaleString()}</TableCell>
+                    <TableCell>{p.sort_order}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.active ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"}`}>
+                        {p.active ? "Active" : "Inactive"}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => deleteProduct.mutate(p.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {products?.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No products yet. Click "Add Product" to get started.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </TabsContent>
+
+        <TabsContent value="images">
+          <ProProductImageGenerator />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
