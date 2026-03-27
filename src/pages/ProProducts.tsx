@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, FileDown } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useActiveProProducts } from "@/hooks/useProProductsAdmin";
 import { useProCart, useProCartCount, useAddToProCart, useClearProCart } from "@/hooks/useProCart";
 import { useProOrders, useCreateProOrder } from "@/hooks/useProOrders";
