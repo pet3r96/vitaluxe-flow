@@ -17,6 +17,8 @@ import {
   ProProductFormData,
 } from "@/hooks/useProProductsAdmin";
 import { ProProductImageGenerator } from "@/components/admin/ProProductImageGenerator";
+import { generateProProductCatalogPDF } from "@/lib/proProductCatalogPdfGenerator";
+import { toast } from "sonner";
 
 export default function ProProductsAdmin() {
   const { data: products, isLoading } = useProProducts();
