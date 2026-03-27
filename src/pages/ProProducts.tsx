@@ -159,14 +159,24 @@ export default function ProProducts() {
           <h1 className="text-2xl font-bold text-foreground">Professional Products</h1>
           <p className="text-muted-foreground">Professional-use peptides — ships to practice only</p>
         </div>
-        <Button variant="outline" className="relative" onClick={() => setCartOpen(true)}>
-          <ShoppingCart className="h-5 w-5" />
-          {cartCount > 0 && (
-            <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-              {cartCount}
-            </Badge>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleDownloadCatalog}
+            disabled={isDownloadingCatalog}
+          >
+            <FileDown className="h-5 w-5 mr-1" />
+            {isDownloadingCatalog ? "Generating..." : "Product Catalog"}
+          </Button>
+          <Button variant="outline" className="relative" onClick={() => setCartOpen(true)}>
+            <ShoppingCart className="h-5 w-5" />
+            {cartCount > 0 && (
+              <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                {cartCount}
+              </Badge>
+            )}
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="products" className="w-full">
