@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, FileDown } from "lucide-react";
 import { useActiveProProducts } from "@/hooks/useProProductsAdmin";
 import { useProCart, useProCartCount, useAddToProCart, useClearProCart } from "@/hooks/useProCart";
 import { useProOrders, useCreateProOrder } from "@/hooks/useProOrders";
@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ProProductCard } from "@/components/pro-products/ProProductCard";
 import { ProCartSheet } from "@/components/pro-products/ProCartSheet";
 import { generateProOrderPdf, proOrderPdfToBase64 } from "@/lib/proOrderPdfGenerator";
+import { generateProProductCatalogPDF } from "@/lib/proProductCatalogPdfGenerator";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -27,6 +28,25 @@ export default function ProProducts() {
 
   const [cartOpen, setCartOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloadingCatalog, setIsDownloadingCatalog] = useState(false);
+
+  const handleDownloadCatalog = async () => {
+    setIsDownloadingCatalog(true);
+    try {
+      const blob = await generateProProductCatalogPDF();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Pro_Product_Catalog_${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Catalog downloaded!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to generate catalog");
+    } finally {
+      setIsDownloadingCatalog(false);
+    }
+  };
 
   const handleSubmitOrder = async () => {
     if (!user || cartItems.length === 0) return;
@@ -139,14 +159,24 @@ export default function ProProducts() {
           <h1 className="text-2xl font-bold text-foreground">Professional Products</h1>
           <p className="text-muted-foreground">Professional-use peptides — ships to practice only</p>
         </div>
-        <Button variant="outline" className="relative" onClick={() => setCartOpen(true)}>
-          <ShoppingCart className="h-5 w-5" />
-          {cartCount > 0 && (
-            <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-              {cartCount}
-            </Badge>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleDownloadCatalog}
+            disabled={isDownloadingCatalog}
+          >
+            <FileDown className="h-5 w-5 mr-1" />
+            {isDownloadingCatalog ? "Generating..." : "Product Catalog"}
+          </Button>
+          <Button variant="outline" className="relative" onClick={() => setCartOpen(true)}>
+            <ShoppingCart className="h-5 w-5" />
+            {cartCount > 0 && (
+              <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                {cartCount}
+              </Badge>
+            )}
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="products" className="w-full">
