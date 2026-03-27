@@ -154,20 +154,12 @@ export default function ProProducts() {
 
   return (
     <div className="responsive-page">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Professional Products</h1>
-          <p className="text-muted-foreground">Professional-use peptides — ships to practice only</p>
+          <h1 className="text-2xl font-bold text-foreground">Pro Products</h1>
+          <p className="text-muted-foreground">Pro-use peptides — ships to practice only</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={handleDownloadCatalog}
-            disabled={isDownloadingCatalog}
-          >
-            <FileDown className="h-5 w-5 mr-1" />
-            {isDownloadingCatalog ? "Generating..." : "Product Catalog"}
-          </Button>
           <Button variant="outline" className="relative" onClick={() => setCartOpen(true)}>
             <ShoppingCart className="h-5 w-5" />
             {cartCount > 0 && (
