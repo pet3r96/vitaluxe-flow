@@ -1,27 +1,46 @@
 
 
-# Fix Pro Products Page: Responsive Layout + Naming Consistency
+# Add Pro Cart & Pro Orders as Separate Sidebar Nav Items
 
-## Issues
+## What
 
-1. **Not responsive** — The header (title + buttons) doesn't wrap on smaller screens, causing overflow. The product grid breakpoints could be tighter.
-2. **Naming inconsistency** — Page says "Professional Products", cart sheet says "Professional Products Cart". User wants consistent "Pro Products" naming throughout.
+Currently, the "Professional Products" sidebar section only has one item: "Pro Products". The cart is a slide-out sheet and order history is a tab within the same page. The user wants **"Pro Cart"** and **"Pro Orders"** as separate navigation items under the Professional Products section.
 
 ## Changes
 
-### 1. `src/pages/ProProducts.tsx`
-- Change the header layout to stack on mobile: title on top, buttons below (use `flex-col sm:flex-row` wrapper)
-- Rename page title from "Professional Products" to **"Pro Products"**
-- Update subtitle to "Pro-use peptides — ships to practice only"
-- Move the "Product Catalog" button to admin-only (per earlier approved plan — remove it here, it stays on admin page)
-- Adjust grid: `grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4` for better breakpoint coverage
+### 1. Create `src/pages/ProCart.tsx`
+- Dedicated full-page cart view showing all pro cart items with quantity controls, remove buttons, subtotal/shipping/total summary, and "Submit Order" button
+- Reuses existing hooks: `useProCart`, `useUpdateProCartItem`, `useRemoveProCartItem`, `useClearProCart`, `useCreateProOrder`
+- Contains the same order submission logic currently in `ProProducts.tsx` (PDF generation, email, clear cart)
+- Responsive layout matching the app's design patterns
 
-### 2. `src/components/pro-products/ProCartSheet.tsx`
-- Rename cart title from "Professional Products Cart" to **"Pro Products Cart"**
+### 2. Create `src/pages/ProOrders.tsx`
+- Dedicated full-page order history view
+- Extracts the order history table currently in the "Order History" tab of `ProProducts.tsx`
+- Shows date, items count, total, contact name — same columns
+- Reuses `useProOrders` hook
 
-### 3. `src/components/pro-products/ProProductCard.tsx`
-- Tighten padding for smaller cards on mobile (`p-3` instead of `p-4`)
-- Make price and button sizing slightly more compact on small screens
+### 3. Update `src/pages/ProProducts.tsx`
+- Remove the "Order History" tab (moved to its own page)
+- Remove the order submission logic (moved to ProCart page)
+- Remove cart sheet component and cart-related imports
+- Keep only: product grid with "Add to Cart" buttons
+- Cart icon button in header navigates to `/pro-cart` instead of opening sheet
 
-Zero functional changes — layout and naming only.
+### 4. Update `src/config/menus.ts`
+- Add two new items under every "Professional Products" section (4 role menus):
+  - `{ label: "Pro Cart", href: "/pro-cart", icon: ShoppingCart }`
+  - `{ label: "Pro Orders", href: "/pro-orders", icon: FileText }`
+
+### 5. Update `src/App.tsx`
+- Add routes: `/pro-cart` → `ProCart`, `/pro-orders` → `ProOrders`
+- Lazy import both new pages
+
+### 6. Remove `ProCartSheet.tsx`
+- No longer needed since cart is now a full page
+
+## Technical Notes
+- The `ShoppingCart` and `FileText` icons are already imported in `menus.ts`
+- All data hooks (`useProCart`, `useProOrders`, etc.) remain unchanged
+- Zero impact on RX products, billing, or any other system
 
