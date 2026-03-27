@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShoppingCart, Plus, Minus } from "lucide-react";
+import { ShoppingCart, Plus, Minus, FlaskConical } from "lucide-react";
 import { ProProduct } from "@/hooks/useProProductsAdmin";
 
 interface ProProductCardProps {
