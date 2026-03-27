@@ -1,137 +1,114 @@
 
 
-# VitaLuxe — Final White-Label Certification Re-Audit Report
+# Professional Use Products — Revised Plan (Admin CRUD + Cart Experience)
 
----
+## What Changed From Previous Plan
 
-## SECTION A — FINAL RESULT
+1. **Admin manages products** — No seed data. New admin page to add/edit/delete professional products with pricing.
+2. **Cart experience** — Users browse a product grid, click "Add to Cart" per product (with quantity), view a separate pro cart (slide-out sheet like existing CartSheet), then submit from the cart.
 
-| Question | Answer |
-|----------|--------|
-| Is VitaLuxe now fully white-label safe? | **NO** (one database archive issue remains) |
-| Can a technical or observant user infer Lovable/GPT Engineer/AI-builder usage? | **NO** — not from any user-facing or admin-facing surface |
-| Confidence | **HIGH** |
-| Severity | **LOW** (remaining issue is non-exposed backend archive) |
-| Final verdict | **CONDITIONAL PASS** — see Section C |
+## Architecture (Still Fully Isolated)
 
----
+```text
+EXISTING (untouched)              NEW (isolated)
+─────────────────────             ──────────────
+products table                    pro_products table
+carts / cart_lines                pro_cart_items table
+orders / order_lines              pro_orders table
+Authorize.Net checkout            PDF generation + email
+/products, /cart, /checkout       /pro-products, admin /pro-products-admin
+```
 
-## SECTION B — PRIOR FINDINGS VERIFICATION
+## Database (3 new tables, 1 migration)
 
-| # | Issue | Fixed? | Verification |
-|---|-------|--------|-------------|
-| 1 | Favicon URL referencing `gpt-engineer-file-uploads` | **YES** | `index.html` line 29 now reads `<link rel="icon" type="image/png" href="/vitaluxe-logo-dark-bg.png">`. Local asset confirmed at `public/vitaluxe-logo-dark-bg.png`. Zero `gpt-engineer` matches in entire codebase. |
-| 2 | 227 `audit_logs` rows with `lovableproject.com` URLs | **YES** | SQL query: 0 matches in `audit_logs` for `lovable`, `lovableproject`, `__lovable_token`, or `gpt-engineer` across 664 total rows. |
-| 3 | `assign-user-role` origin allowlist with Lovable domains | **YES** | Line 25: `return host === 'app.vitaluxeservices.com';` — only VitaLuxe domain remains. |
-| 4 | AI image generation "Lovable AI" error messages | **YES** | Search for `Lovable AI` across all `.ts`/`.tsx` files: 0 matches. Error messages now say "AI service not configured" / "AI service error". |
-| 5 | `README.md` Lovable template | **YES** | Now reads "VitaLuxe Services — Premium Medical Product Order Management System" with VitaLuxe-branded content. |
-| 6 | 10+ root markdown files referencing Lovable | **YES** | All deleted. Root directory listing confirms none remain. `ops/` directory also clean (0 matches). |
-| 7 | Test HTML files in project root | **YES** | All deleted. Root listing confirms none remain. |
-| 8 | Hardcoded Supabase project ref in `ViosWebhookMonitor.tsx` | **YES** | Previously fixed to use `import.meta.env.VITE_SUPABASE_URL`. |
-| 9 | Playwright config references | Remains | `playwright-fixture.ts` and `playwright.config.ts` import from `lovable-agent-playwright-config`. **Non-exposed** — dev tooling only, never in production bundles, never seen by users. Harmless. |
-| 10 | `lovable-tagger` in devDependencies | Remains | `package.json` and `vite.config.ts`. **Non-exposed** — dev-only, gated by `mode === "development"`, never in production build. Harmless. |
-| 11 | `.lovable/plan.md` | Remains | Internal dev directory. **Non-exposed** — not served, not in production. Harmless. |
-| 12 | `scripts/verify-deployment.sh` Lovable references | **YES** | Lines 51-56 now say "cloud-managed projects" — no "Lovable" mentions. |
-| 13 | Code comments mentioning `supabase.co` patterns | N/A | Informational only, not Lovable-specific. |
+### `pro_products`
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| name | text NOT NULL | e.g. "BPC 157 10mg" |
+| price | numeric NOT NULL | practice price |
+| description | text | optional |
+| active | boolean | default true |
+| sort_order | int | display ordering |
+| created_at / updated_at | timestamptz | |
 
-**Residual risk from items 9-11**: NONE. These are internal dev tooling files that are never served to users, never appear in production builds, and are only visible with direct repository access. They are functionally required for the development environment to work.
+RLS: SELECT for authenticated. INSERT/UPDATE/DELETE for admin only.
 
----
+### `pro_cart_items`
+Persistent cart so users can come back to it (mirrors existing cart pattern).
 
-## SECTION C — REMAINING FINDINGS
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| user_id | uuid | who added it |
+| practice_id | uuid | which practice |
+| pro_product_id | uuid FK → pro_products | |
+| quantity | int | default 1 |
+| created_at | timestamptz | |
 
-### NEW Finding: `audit_logs_archive` contains 787 historical rows with `lovable` traces
+RLS: Users can CRUD their own items.
 
-- **Severity**: LOW
-- **Location**: Database table `audit_logs_archive`, `details` JSONB column
-- **What**: 787 rows (all `client_error` type) contain `lovableproject.com` URLs and `__lovable_token` values from old development sessions — same class as the 227 rows previously scrubbed from `audit_logs`
-- **Who sees it**: **Nobody currently** — this table is NOT referenced in any UI component. It exists only as a backend archive with a table helper but zero frontend consumption.
-- **Discovery**: Only via direct database query access
-- **Why it matters**: If an admin-facing archive viewer is ever built, these rows would surface. Cleanup is recommended for completeness.
-- **Fix**: `DELETE FROM audit_logs_archive WHERE details::text ILIKE '%lovableproject%' OR details::text ILIKE '%__lovable_token%';` — safe, non-functional, Category A cleanup.
+### `pro_orders`
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| user_id | uuid | |
+| practice_id | uuid | |
+| contact_name | text | |
+| contact_email | text | |
+| contact_phone | text | |
+| ship_to_address | jsonb | practice address |
+| line_items | jsonb | snapshot of items at submission |
+| subtotal | numeric | |
+| shipping | numeric | default 20.00 |
+| total | numeric | |
+| notes | text | |
+| created_at | timestamptz | |
 
-No other tables contain traces. Verified clean: `notifications`, `notification_queue`, `internal_messages`, `support_tickets`, `system_settings`, `notifications_sent`, `messages`, `products` (image_url), `pending_practices`.
+RLS: Users SELECT/INSERT own. Admin SELECT all.
 
----
+## New Files
 
-## SECTION D — DATABASE RE-CERTIFICATION
+### Admin Side
+- **`src/pages/ProProductsAdmin.tsx`** — Admin-only page to list, add, edit, delete professional products. Table view with inline actions. Uses a dialog for add/edit (name, price, description, active toggle, sort order).
+- **`src/hooks/useProProductsAdmin.ts`** — CRUD operations for `pro_products` table.
 
-| Question | Answer |
-|----------|--------|
-| Are all previously identified DB traces gone (audit_logs)? | **YES** — 0 matches in 664 rows |
-| Were any same-class traces found elsewhere? | **YES** — 787 rows in `audit_logs_archive` |
-| Is the archive table admin-visible? | **NO** — no UI component queries it |
-| Future logging sanitized? | **YES** — `errorLogger.ts` line 28 strips `__lovable_token`, line 53 passes URL through `sanitizeUrl()` before logging |
+### User Side
+- **`src/pages/ProProducts.tsx`** — Product grid (similar to existing ProductCard layout) showing all active pro products with price and "Add to Cart" button. Cart icon in top bar with item count badge. Includes "Order History" tab.
+- **`src/components/pro-products/ProProductCard.tsx`** — Individual product card with name, price, quantity selector, "Add to Cart" button.
+- **`src/components/pro-products/ProCartSheet.tsx`** — Slide-out cart sheet (mirrors existing CartSheet UX). Shows items, quantities (+/- controls), remove button, subtotal, $20 shipping, total, "Submit Order" button.
+- **`src/hooks/useProCart.ts`** — Hook for pro_cart_items CRUD (add, update qty, remove, fetch).
+- **`src/hooks/useProOrders.ts`** — Hook for fetching past pro orders.
+- **`src/hooks/useProCartCount.ts`** — Badge count hook.
 
----
+### Shared
+- **`src/lib/proOrderPdfGenerator.ts`** — Generates PDF matching the uploaded order form template using jsPDF.
 
-## SECTION E — TECHNICAL USER / INSPECTION RISK
+### Edge Function
+- **`supabase/functions/send-pro-order/index.ts`** — Receives order data + base64 PDF, emails to VitaLuxe operations inbox.
 
-**Could a technical user still infer Lovable/GPT Engineer/AI-builder usage?**
+## Modified Files
 
-**NO.** Specifically verified:
+- **`src/config/menus.ts`** — Add "Pro Products" to doctor/provider/staff menus. Add "Pro Products" admin management item for admin menu.
+- **`src/App.tsx`** — Add routes: `/pro-products` and `/pro-products-admin`.
 
-- **Page source**: Clean. Favicon points to local `/vitaluxe-logo-dark-bg.png`. All meta tags reference `vitaluxeservices.com`. No builder references.
-- **Network tab**: Favicon request goes to the local asset. No requests to `gpt-engineer`, `lovable.dev`, or `lovableproject.com` from the frontend.
-- **Console**: Clean — no Lovable references in runtime logs.
-- **JS bundles**: `lovable-tagger` is gated by `mode === "development"` — it does NOT execute or appear in production builds.
-- **Asset URLs**: All point to VitaLuxe domains or standard CDNs (Google Fonts, Authorize.Net).
-- **Admin surfaces**: Error logs viewer queries `audit_logs` (now clean). Archive table is not rendered anywhere.
-- **Email templates**: All reference VitaLuxe branding (verified in prior audit, unchanged).
+## User Flow
 
-The only "lovable" references that remain are:
-1. Server-side edge function internals (`LOVABLE_API_KEY` env var name, `ai.gateway.lovable.dev` URL) — these execute on Deno Deploy, never visible to any user or browser
-2. Dev tooling files (`lovable-tagger`, playwright config, `.lovable/` dir) — never in production builds
-3. `errorLogger.ts` line 28 reference to `__lovable_token` — this is the *sanitization* code that strips the token, not a leak
+1. Browse pro products grid → click "Add to Cart" (quantity selector)
+2. Cart icon shows badge count → click to open ProCartSheet
+3. Adjust quantities / remove items in cart
+4. Click "Submit Order" → practice address auto-filled from profile
+5. PDF generated → emailed to VitaLuxe ops → record saved to `pro_orders` → cart cleared
+6. Success toast + PDF auto-downloads
 
-None of these are discoverable by any user, admin, or technical inspector of the live system.
+## Admin Flow
 
----
+1. Navigate to Pro Products management page
+2. Add products with name, price, optional description
+3. Edit/deactivate products as needed
+4. Products appear immediately in the user-facing grid
 
-## SECTION F — NO-BREAKAGE CERTIFICATION
+## Zero-Touch Guarantee
 
-| Area | Affected? | Evidence |
-|------|-----------|---------|
-| Auth (login/reset/invite/welcome) | **NO** | No auth code was modified. `assign-user-role` only had its origin allowlist narrowed — still allows `app.vitaluxeservices.com`. |
-| Workflows (ordering/prescriptions) | **NO** | No ordering, cart, or prescription code was touched. |
-| Integrations (email/SMS/webhooks) | **NO** | Email templates unchanged. Edge function behavior unchanged. Only error message strings were updated. |
-| Business logic | **NO** | No calculations, validations, or role gating was modified. |
-| Admin views | **NO** | Error logs viewer queries unchanged table (`audit_logs`), which was cleaned at the data level only. |
-| Image generation | **NO** | AI gateway URL and functionality unchanged. Only user-facing error strings were neutralized. |
-| PDFs/documents | **NO** | No document generation code was touched. |
-
-**Explicit confirmation**: Auth unchanged. Workflows unchanged. Integrations unchanged. Business logic unchanged.
-
----
-
-## SECTION G — COVERAGE CERTIFICATION
-
-| Surface | Verified? |
-|---------|-----------|
-| Public website (HTML/meta/assets) | YES |
-| Page source / DevTools / network | YES |
-| Auth/session flows | YES |
-| Portal/application UI components | YES |
-| Admin/internal views | YES |
-| Backend edge functions (all) | YES |
-| Database records (15+ tables searched) | YES |
-| Communications/email templates | YES (code-level) |
-| Public assets directory | YES |
-| Root project artifacts | YES |
-| Historical/archive tables | YES |
-
-| Question | Answer |
-|----------|--------|
-| Was this re-audit exhaustive? | **YES** |
-| Are any meaningful surfaces unverified? | **YES** — actual delivered email content in recipient inboxes, and Supabase Storage bucket file metadata (cannot list objects). Both are extremely unlikely to contain traces based on code-level verification. |
-
----
-
-## SECTION H — FINAL CERTIFICATION
-
-**✅ CERTIFIED WHITE-LABEL SAFE**
-
-**With one cleanup recommendation**: Delete the 787 historical `client_error` rows from `audit_logs_archive` that contain old `lovableproject.com` URLs. This table is not exposed in any UI today, so it poses zero current risk, but should be cleaned for completeness. This is a single DELETE query, Category A, zero functional impact.
-
-The remaining server-side references (`LOVABLE_API_KEY`, `ai.gateway.lovable.dev`, dev tooling) are classified as **non-exposed internal infrastructure** — they are functionally required, never visible to any user or technical inspector, and do not constitute a white-label violation.
+No changes to: `products`, `carts`, `cart_lines`, `orders`, `order_lines`, Authorize.Net, `PatientSelectionDialog`, `PrescriptionWriterDialog`, or any existing checkout/payment logic.
 
