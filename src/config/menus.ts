@@ -147,6 +147,8 @@ export const menus: MenuConfig = {
       icon: Package,
       items: [
         { label: "Pro Products", href: "/pro-products", icon: Package },
+        { label: "Pro Cart", href: "/pro-cart", icon: ShoppingCart },
+        { label: "Pro Orders", href: "/pro-orders", icon: FileText },
       ],
     },
     {
