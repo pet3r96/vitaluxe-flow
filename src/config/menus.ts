@@ -85,6 +85,14 @@ export const menus: MenuConfig = {
       ],
     },
     {
+      title: "Professional Products",
+      isParent: true,
+      icon: Package,
+      items: [
+        { label: "Pro Products Catalog", href: "/pro-products-admin", icon: Package },
+      ],
+    },
+    {
       title: "Settings",
       isParent: true,
       icon: Settings,
