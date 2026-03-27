@@ -49,7 +49,19 @@ export function useCreateProOrder() {
     mutationFn: async (order: Omit<ProOrder, "id" | "created_at">) => {
       const { data, error } = await supabase
         .from("pro_orders")
-        .insert(order)
+        .insert({
+          user_id: order.user_id,
+          practice_id: order.practice_id,
+          contact_name: order.contact_name,
+          contact_email: order.contact_email,
+          contact_phone: order.contact_phone,
+          ship_to_address: order.ship_to_address as any,
+          line_items: order.line_items as any,
+          subtotal: order.subtotal,
+          shipping: order.shipping,
+          total: order.total,
+          notes: order.notes,
+        })
         .select()
         .single();
       if (error) throw error;
