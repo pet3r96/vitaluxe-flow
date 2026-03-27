@@ -16,7 +16,17 @@ export function ProProductCard({ product, onAddToCart, isAdding }: ProProductCar
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 bg-card">
-      <CardContent className="p-5 flex flex-col h-full">
+      <CardContent className="p-0 flex flex-col h-full">
+        {/* Product Image */}
+        <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
+          {product.image_url ? (
+            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+          ) : (
+            <FlaskConical className="h-12 w-12 text-muted-foreground/30" />
+          )}
+        </div>
+
+        <div className="p-4 flex flex-col flex-1">
         <div className="flex-1">
           <h3 className="font-semibold text-foreground text-base mb-1">
             {product.name}
