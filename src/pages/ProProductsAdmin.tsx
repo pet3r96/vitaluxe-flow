@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, FileDown, Loader2 } from "lucide-react";
 import {
   useProProducts,
   useCreateProProduct,
@@ -16,6 +17,8 @@ import {
   ProProductFormData,
 } from "@/hooks/useProProductsAdmin";
 import { ProProductImageGenerator } from "@/components/admin/ProProductImageGenerator";
+import { generateProProductCatalogPDF } from "@/lib/proProductCatalogPdfGenerator";
+import { toast } from "sonner";
 
 export default function ProProductsAdmin() {
   const { data: products, isLoading } = useProProducts();
@@ -24,6 +27,7 @@ export default function ProProductsAdmin() {
   const deleteProduct = useDeleteProProduct();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isDownloadingCatalog, setIsDownloadingCatalog] = useState(false);
   const [editing, setEditing] = useState<ProProduct | null>(null);
   const [form, setForm] = useState<ProProductFormData>({
     name: "",
@@ -67,10 +71,36 @@ export default function ProProductsAdmin() {
           <h1 className="text-2xl font-bold text-foreground">Professional Products Management</h1>
           <p className="text-muted-foreground">Manage the professional-use peptide catalog, pricing, and images</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Product
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              setIsDownloadingCatalog(true);
+              try {
+                const blob = await generateProProductCatalogPDF();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `Pro_Product_Catalog_${format(new Date(), "yyyy-MM-dd")}.pdf`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success("Catalog downloaded!");
+              } catch (err: any) {
+                toast.error(err.message || "Failed to generate catalog");
+              } finally {
+                setIsDownloadingCatalog(false);
+              }
+            }}
+            disabled={isDownloadingCatalog}
+          >
+            {isDownloadingCatalog ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
+            {isDownloadingCatalog ? "Generating..." : "Product Catalog"}
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Product
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="products">
