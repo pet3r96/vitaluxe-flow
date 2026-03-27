@@ -49,11 +49,11 @@ if command -v supabase &> /dev/null; then
             CLI_AVAILABLE=true
         else
             print_warning "CLI not linked to managed backend ($PROJECT_REF)"
-            print_warning "This is normal for Lovable Cloud projects"
+            print_warning "This is normal for cloud-managed projects"
         fi
     else
         print_warning "CLI not linked to any project"
-        print_warning "This is normal for Lovable Cloud projects"
+        print_warning "This is normal for cloud-managed projects"
     fi
 else
     print_warning "Supabase CLI not installed (optional)"
@@ -139,7 +139,7 @@ else
     if [ "$ALL_CRITICAL_OK" = false ]; then
         echo ""
         print_error "Some public endpoints are unreachable"
-        print_warning "Functions are auto-deployed by Lovable. If this persists, contact support."
+        print_warning "Functions are auto-deployed. If this persists, contact support."
         exit 1
     fi
     

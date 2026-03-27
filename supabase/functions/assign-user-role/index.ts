@@ -22,10 +22,7 @@ function isTrustedOrigin(url: string): boolean {
   try {
     const u = new URL(url);
     const host = u.hostname.toLowerCase();
-    return host === 'app.vitaluxeservices.com'
-      || host.endsWith('.lovableproject.com')
-      || host.endsWith('.lovable.app')
-      || host.endsWith('.lovable.dev');
+    return host === 'app.vitaluxeservices.com';
   } catch {
     return false;
   }

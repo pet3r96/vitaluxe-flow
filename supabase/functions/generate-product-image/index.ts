@@ -115,7 +115,7 @@ serve(async (req) => {
     console.log(`Generating image for: ${productName}`);
     console.log(`Prompt: ${prompt}`);
 
-    // Call Lovable AI Gateway with Gemini 3 Pro Image Preview
+    // Call AI Gateway with Gemini 3 Pro Image Preview
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -141,7 +141,7 @@ serve(async (req) => {
       }
       if (aiResponse.status === 402) {
         return new Response(
-          JSON.stringify({ error: 'Payment required. Please add credits to Lovable AI.' }),
+          JSON.stringify({ error: 'AI image service payment required. Please contact support.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

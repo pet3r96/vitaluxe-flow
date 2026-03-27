@@ -110,7 +110,7 @@ export function ViosWebhookMonitor() {
     },
     refetchInterval: 30000
   });
-  const webhookUrl = pharmacyConfig?.inbound_webhook_path ? `https://qbtsfajshnrwwlfzkeog.supabase.co/functions/v1/receive-pharmacy-webhook/${pharmacyConfig.inbound_webhook_path}` : null;
+  const webhookUrl = pharmacyConfig?.inbound_webhook_path ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-pharmacy-webhook/${pharmacyConfig.inbound_webhook_path}` : null;
   const copyWebhookUrl = () => {
     if (webhookUrl) {
       navigator.clipboard.writeText(webhookUrl);
