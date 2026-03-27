@@ -27,7 +27,7 @@ export function ProCartSheet({ open, onOpenChange, items, onSubmitOrder, isSubmi
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex flex-col w-full sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Professional Products Cart</SheetTitle>
+          <SheetTitle>Pro Products Cart</SheetTitle>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto py-4 space-y-3">

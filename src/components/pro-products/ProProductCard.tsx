@@ -26,7 +26,7 @@ export function ProProductCard({ product, onAddToCart, isAdding }: ProProductCar
           )}
         </div>
 
-        <div className="p-4 flex flex-col flex-1">
+        <div className="p-3 flex flex-col flex-1">
         <div className="flex-1">
           <h3 className="font-semibold text-foreground text-base mb-1">
             {product.name}
