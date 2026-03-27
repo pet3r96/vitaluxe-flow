@@ -5379,6 +5379,122 @@ export type Database = {
           },
         ]
       }
+      pro_cart_items: {
+        Row: {
+          created_at: string
+          id: string
+          practice_id: string | null
+          pro_product_id: string
+          quantity: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          practice_id?: string | null
+          pro_product_id: string
+          quantity?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          practice_id?: string | null
+          pro_product_id?: string
+          quantity?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pro_cart_items_pro_product_id_fkey"
+            columns: ["pro_product_id"]
+            isOneToOne: false
+            referencedRelation: "pro_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pro_orders: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          line_items: Json
+          notes: string | null
+          practice_id: string | null
+          ship_to_address: Json | null
+          shipping: number
+          subtotal: number
+          total: number
+          user_id: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          line_items?: Json
+          notes?: string | null
+          practice_id?: string | null
+          ship_to_address?: Json | null
+          shipping?: number
+          subtotal?: number
+          total?: number
+          user_id: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          line_items?: Json
+          notes?: string | null
+          practice_id?: string | null
+          ship_to_address?: Json | null
+          shipping?: number
+          subtotal?: number
+          total?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pro_products: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_pharmacies: {
         Row: {
           created_at: string | null

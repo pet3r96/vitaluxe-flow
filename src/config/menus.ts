@@ -85,6 +85,14 @@ export const menus: MenuConfig = {
       ],
     },
     {
+      title: "Professional Products",
+      isParent: true,
+      icon: Package,
+      items: [
+        { label: "Pro Products Catalog", href: "/pro-products-admin", icon: Package },
+      ],
+    },
+    {
       title: "Settings",
       isParent: true,
       icon: Settings,
@@ -131,6 +139,14 @@ export const menus: MenuConfig = {
         { label: "Orders", href: "/orders", icon: ShoppingCart },
         { label: "My Cart", href: "/cart", icon: ShoppingCart },
         { label: "Reporting", href: "/practice-reporting", icon: BarChart3, isPro: true, hideForStaff: true },
+      ],
+    },
+    {
+      title: "Professional Products",
+      isParent: true,
+      icon: Package,
+      items: [
+        { label: "Pro Products", href: "/pro-products", icon: Package },
       ],
     },
     {
@@ -188,6 +204,14 @@ export const menus: MenuConfig = {
         { label: "Orders", href: "/orders", icon: ShoppingCart },
         { label: "My Cart", href: "/cart", icon: ShoppingCart },
         { label: "Reporting", href: "/practice-reporting", icon: BarChart3, isPro: true, hideForStaff: true },
+      ],
+    },
+    {
+      title: "Professional Products",
+      isParent: true,
+      icon: Package,
+      items: [
+        { label: "Pro Products", href: "/pro-products", icon: Package },
       ],
     },
     {
@@ -322,6 +346,14 @@ export const menus: MenuConfig = {
         { label: "Products", href: "/products", icon: Package },
         { label: "Orders", href: "/orders", icon: ShoppingCart },
         { label: "My Cart", href: "/cart", icon: ShoppingCart },
+      ],
+    },
+    {
+      title: "Professional Products",
+      isParent: true,
+      icon: Package,
+      items: [
+        { label: "Pro Products", href: "/pro-products", icon: Package },
       ],
     },
     {
