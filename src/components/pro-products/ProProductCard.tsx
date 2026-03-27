@@ -85,6 +85,7 @@ export function ProProductCard({ product, onAddToCart, isAdding }: ProProductCar
             </Button>
           </div>
         </div>
+        </div>
       </CardContent>
     </Card>
   );
