@@ -142,6 +142,14 @@ export const menus: MenuConfig = {
       ],
     },
     {
+      title: "Professional Products",
+      isParent: true,
+      icon: Package,
+      items: [
+        { label: "Pro Products", href: "/pro-products", icon: Package },
+      ],
+    },
+    {
       title: "Communication",
       isParent: true,
       icon: MessageSquare,
