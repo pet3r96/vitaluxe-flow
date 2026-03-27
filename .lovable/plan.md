@@ -1,84 +1,38 @@
 
 
-# Professional Use Products — Full System Audit
+# Professional Use Products PDF Catalog
 
-## Verdict: 2 Critical Bugs, 2 Minor Issues
+## What
 
----
+Create a separate downloadable PDF catalog for the Professional Use Products, styled similarly to the existing RX catalog but clearly branded **"PROFESSIONAL USE ONLY"** throughout. Pricing shown per product with "Pack of 10" noted. Completely separate from the RX catalog.
 
-## CRITICAL BUG 1: Email with PDF Attachment Will Silently Fail
+## Approach
 
-The `send-pro-order` edge function calls `unified-email-sender` with this payload shape:
-```json
-{ "to": "...", "subject": "...", "html": "...", "attachments": [...] }
-```
+Reuse the same design language (dark cover, gold accents, card grid) from the existing `productCatalogPdfGenerator.ts` but create a new dedicated generator that:
+- Fetches from `pro_products` table instead of `products`
+- Shows "PROFESSIONAL USE ONLY" on the cover and as a watermark/header on each page
+- Each card shows product name, image, price, and "Pack of 10" label
+- No variants/dosage forms (pro products are simple name + price)
+- Simpler card layout since there's no category pill or variant pricing table
 
-But `unified-email-sender` expects:
-- `htmlBody` (not `html`)
-- `textBody` (required, not sent at all)
-- **No attachments support** — the Postmark call in `sendViaPostmark()` never passes attachments through
+## Files
 
-**Result**: The email body will be empty (undefined `htmlBody`) and the PDF attachment will be silently dropped. The order notification email to operations is broken.
+| Action | File |
+|--------|------|
+| Create | `src/lib/proProductCatalogPdfGenerator.ts` — new generator fetching from `pro_products`, cover titled "PROFESSIONAL USE PRODUCTS", each page header says "FOR PROFESSIONAL USE ONLY", cards show name + price + "Pack of 10" |
+| Modify | `src/pages/ProProducts.tsx` — add a "Download Catalog" button in the header area next to the cart icon |
 
-**Fix**: Rewrite `send-pro-order` to call the Postmark API directly (like the existing working email functions do) instead of going through `unified-email-sender`. This gives it full control over the `Attachments` field in the Postmark payload.
+## Detail
 
----
+### New generator (`proProductCatalogPdfGenerator.ts`)
+- Same color scheme (dark cover, gold/white text, white cards with shadow)
+- Cover: VitaLuxe logo, "PROFESSIONAL USE PRODUCTS" title, "FOR PROFESSIONAL USE ONLY" subtitle, company address/phone
+- Cards: product image (or placeholder), product name, "Pack of 10" badge text, price in bold
+- 6 cards per page (3x2 grid), same dimensions as RX catalog
+- Footer on each page with "FOR PROFESSIONAL USE ONLY" and page numbers
+- Products sorted alphabetically
 
-## CRITICAL BUG 2: `toLocaleString()` in Edge Function (Deno)
-
-In `send-pro-order` line 44:
-```ts
-$${orderTotal?.toLocaleString() || "0"}
-```
-
-`toLocaleString()` behavior in Deno server runtime is unpredictable — it may not format with commas, or may produce unexpected locale-specific output. This should use a fixed formatter or just pass the raw number. Minor compared to Bug 1, but worth fixing in the same pass.
-
----
-
-## MINOR ISSUE 1: Cart Minus Button Can Delete Item Without Confirmation
-
-In `ProCartSheet`, clicking minus when quantity is 1 calls `updateItem.mutate({ id, quantity: 0 })`, which triggers a DELETE in `useUpdateProCartItem`. This works correctly but there's no "are you sure?" — the item just disappears. This is acceptable UX (matches standard cart patterns) but worth noting.
-
----
-
-## MINOR ISSUE 2: No `effectivePracticeId` Fallback for Contact Info
-
-In `ProProducts.tsx` line 42, if `effectivePracticeId` is null (e.g., a user not associated with a practice), the order gets submitted with empty contact info and empty shipping address. The PDF will generate with blank fields. This is an edge case but could be confusing.
-
-**Fix**: Add a guard that prevents order submission if no practice is associated, with a toast message like "You must be associated with a practice to submit pro orders."
-
----
-
-## Isolation Verification: PASS
-
-- Pro hooks (`useProCart`, `useProOrders`, `useProProductsAdmin`) query ONLY `pro_*` tables — zero references to `carts`, `cart_lines`, `orders`, `order_lines`, or Authorize.Net
-- RLS policies are correct: users CRUD own cart/orders, admins manage products
-- Routes (`/pro-products`, `/pro-products-admin`) are separate from existing product routes
-- Cart state uses separate React Query keys (`pro-cart`, `pro-cart-count`)
-- The two carts (RX and Pro) are completely independent at every layer
-
-## PDF Generation: PASS
-
-- `proOrderPdfGenerator.ts` correctly formats the order form with product names + "(Pack of 10)"
-- Layout matches the uploaded template structure
-- Auto-download works via `pdf.save()` on submit
-
-## Database Schema: PASS
-
-- All 3 tables have RLS enabled with correct policies
-- FK cascade on `pro_cart_items → pro_products` (delete product removes from carts)
-- `updated_at` trigger exists on `pro_products`
-
----
-
-## Fix Plan
-
-### 1. Rewrite `send-pro-order` edge function
-Replace `supabase.functions.invoke("unified-email-sender")` with a direct Postmark API call that properly includes the PDF as a base64 attachment. Use the same `POSTMARK_API_KEY` and `POSTMARK_FROM_EMAIL` env vars already available. Add proper `textBody` fallback.
-
-### 2. Add practice guard on order submission
-In `ProProducts.tsx`, before `handleSubmitOrder` proceeds, check that `effectivePracticeId` exists. If not, show a toast error and return early.
-
-### 3. Redeploy `send-pro-order`
-After the fix, the function auto-deploys.
+### ProProducts.tsx update
+- Add a "Product Catalog" download button with loading state next to the cart button
+- Uses the new generator, triggers browser download as `Pro_Product_Catalog_{date}.pdf`
 
