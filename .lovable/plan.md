@@ -1,114 +1,57 @@
 
 
-# Professional Use Products — Revised Plan (Admin CRUD + Cart Experience)
+# Add 30 Pro Products + 5% Markup + "Pack of 10" Labeling
 
-## What Changed From Previous Plan
+## What
 
-1. **Admin manages products** — No seed data. New admin page to add/edit/delete professional products with pricing.
-2. **Cart experience** — Users browse a product grid, click "Add to Cart" per product (with quantity), view a separate pro cart (slide-out sheet like existing CartSheet), then submit from the cart.
+1. **Insert 30 products** into the `pro_products` table via a database migration, each with the listed price + 5% markup, and a description noting "Pack of 10".
+2. **Update the ProProductCard** to display a subtle "Pack of 10" indicator so users clearly understand the unit.
 
-## Architecture (Still Fully Isolated)
+## Pricing (price × 1.05)
 
-```text
-EXISTING (untouched)              NEW (isolated)
-─────────────────────             ──────────────
-products table                    pro_products table
-carts / cart_lines                pro_cart_items table
-orders / order_lines              pro_orders table
-Authorize.Net checkout            PDF generation + email
-/products, /cart, /checkout       /pro-products, admin /pro-products-admin
-```
+| Product | Listed | Final (×1.05) |
+|---------|--------|---------------|
+| BPC 157 10mg | $325 | $341.25 |
+| CJC-1295 w/o DAC 10mg | $355 | $372.75 |
+| CJC-1295 w/o DAC 5mg | $210 | $220.50 |
+| Epithalon 10mg | $195 | $204.75 |
+| GHK-Cu 100mg | $235 | $246.75 |
+| GHK-Cu 50mg | $170 | $178.50 |
+| GLOW Blend | $975 | $1023.75 |
+| HCG 5,000iu | $195 | $204.75 |
+| HGH 12IU | $230 | $241.50 |
+| Ipamorelin 10mg | $340 | $357.00 |
+| Kisspeptin-10 5mg | $325 | $341.25 |
+| KLOW | $1235 | $1296.75 |
+| KPV 10mg | $235 | $246.75 |
+| MOTS-C 10mg | $495 | $519.75 |
+| NAD+ 500mg | $235 | $246.75 |
+| PT-141 10mg | $455 | $477.75 |
+| Selank 5mg | $235 | $246.75 |
+| Semax 10mg | $260 | $273.00 |
+| Sermorelin 5mg | $380 | $399.00 |
+| SS-31 10mg | $495 | $519.75 |
+| TB-500 10mg | $510 | $535.50 |
+| TB-500 5mg | $295 | $309.75 |
+| Tesamorelin 10mg | $795 | $834.75 |
+| Thymosin alpha 1 | $495 | $519.75 |
+| Retatrutide 10mg | $725 | $761.25 |
+| Retatrutide 20mg | $1115 | $1170.75 |
+| Semaglutide 10mg | $565 | $593.25 |
+| Tirzepatide 10mg | $535 | $561.75 |
+| Tirzepatide 30mg | $1190 | $1249.50 |
+| Tirzepatide 60mg | $1990 | $2089.50 |
 
-## Database (3 new tables, 1 migration)
+## Changes
 
-### `pro_products`
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| name | text NOT NULL | e.g. "BPC 157 10mg" |
-| price | numeric NOT NULL | practice price |
-| description | text | optional |
-| active | boolean | default true |
-| sort_order | int | display ordering |
-| created_at / updated_at | timestamptz | |
+### 1. Database migration
+Insert all 30 products into `pro_products` with the 5%-marked-up prices, description "Pack of 10", `active = true`, and sequential `sort_order`.
 
-RLS: SELECT for authenticated. INSERT/UPDATE/DELETE for admin only.
+### 2. `src/components/pro-products/ProProductCard.tsx`
+Add a small badge/tag showing **"Pack of 10"** beneath or beside the product name so users understand the pricing unit. Simple visual — e.g., a muted text line or small badge.
 
-### `pro_cart_items`
-Persistent cart so users can come back to it (mirrors existing cart pattern).
+### 3. `src/lib/proOrderPdfGenerator.ts`
+Ensure the PDF order form also shows "Pack of 10" context in the product listing (e.g., append to product name or add a column note).
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| user_id | uuid | who added it |
-| practice_id | uuid | which practice |
-| pro_product_id | uuid FK → pro_products | |
-| quantity | int | default 1 |
-| created_at | timestamptz | |
-
-RLS: Users can CRUD their own items.
-
-### `pro_orders`
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| user_id | uuid | |
-| practice_id | uuid | |
-| contact_name | text | |
-| contact_email | text | |
-| contact_phone | text | |
-| ship_to_address | jsonb | practice address |
-| line_items | jsonb | snapshot of items at submission |
-| subtotal | numeric | |
-| shipping | numeric | default 20.00 |
-| total | numeric | |
-| notes | text | |
-| created_at | timestamptz | |
-
-RLS: Users SELECT/INSERT own. Admin SELECT all.
-
-## New Files
-
-### Admin Side
-- **`src/pages/ProProductsAdmin.tsx`** — Admin-only page to list, add, edit, delete professional products. Table view with inline actions. Uses a dialog for add/edit (name, price, description, active toggle, sort order).
-- **`src/hooks/useProProductsAdmin.ts`** — CRUD operations for `pro_products` table.
-
-### User Side
-- **`src/pages/ProProducts.tsx`** — Product grid (similar to existing ProductCard layout) showing all active pro products with price and "Add to Cart" button. Cart icon in top bar with item count badge. Includes "Order History" tab.
-- **`src/components/pro-products/ProProductCard.tsx`** — Individual product card with name, price, quantity selector, "Add to Cart" button.
-- **`src/components/pro-products/ProCartSheet.tsx`** — Slide-out cart sheet (mirrors existing CartSheet UX). Shows items, quantities (+/- controls), remove button, subtotal, $20 shipping, total, "Submit Order" button.
-- **`src/hooks/useProCart.ts`** — Hook for pro_cart_items CRUD (add, update qty, remove, fetch).
-- **`src/hooks/useProOrders.ts`** — Hook for fetching past pro orders.
-- **`src/hooks/useProCartCount.ts`** — Badge count hook.
-
-### Shared
-- **`src/lib/proOrderPdfGenerator.ts`** — Generates PDF matching the uploaded order form template using jsPDF.
-
-### Edge Function
-- **`supabase/functions/send-pro-order/index.ts`** — Receives order data + base64 PDF, emails to VitaLuxe operations inbox.
-
-## Modified Files
-
-- **`src/config/menus.ts`** — Add "Pro Products" to doctor/provider/staff menus. Add "Pro Products" admin management item for admin menu.
-- **`src/App.tsx`** — Add routes: `/pro-products` and `/pro-products-admin`.
-
-## User Flow
-
-1. Browse pro products grid → click "Add to Cart" (quantity selector)
-2. Cart icon shows badge count → click to open ProCartSheet
-3. Adjust quantities / remove items in cart
-4. Click "Submit Order" → practice address auto-filled from profile
-5. PDF generated → emailed to VitaLuxe ops → record saved to `pro_orders` → cart cleared
-6. Success toast + PDF auto-downloads
-
-## Admin Flow
-
-1. Navigate to Pro Products management page
-2. Add products with name, price, optional description
-3. Edit/deactivate products as needed
-4. Products appear immediately in the user-facing grid
-
-## Zero-Touch Guarantee
-
-No changes to: `products`, `carts`, `cart_lines`, `orders`, `order_lines`, Authorize.Net, `PatientSelectionDialog`, `PrescriptionWriterDialog`, or any existing checkout/payment logic.
+No existing products, billing, or checkout logic is touched.
 
