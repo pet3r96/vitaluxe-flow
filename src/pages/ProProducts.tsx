@@ -30,6 +30,10 @@ export default function ProProducts() {
 
   const handleSubmitOrder = async () => {
     if (!user || cartItems.length === 0) return;
+    if (!effectivePracticeId) {
+      toast.error("You must be associated with a practice to submit professional product orders.");
+      return;
+    }
     setIsSubmitting(true);
 
     try {

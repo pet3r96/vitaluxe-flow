@@ -6,6 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function formatCurrency(value: number | null | undefined): string {
+  if (value == null) return "0.00";
+  return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -32,43 +37,70 @@ serve(async (req) => {
       .select("value")
       .eq("key", "pro_order_ops_email")
       .maybeSingle();
-    
+
     if (settings?.value) {
       opsEmail = settings.value;
     }
 
-    // Send email via unified-email-sender
-    const { error: emailError } = await supabase.functions.invoke("unified-email-sender", {
-      body: {
-        to: opsEmail,
-        subject: `Professional Products Order - ${contactName || "Unknown"} - $${orderTotal?.toLocaleString() || "0"}`,
-        html: `
-          <h2>New Professional Products Order</h2>
-          <p><strong>Contact:</strong> ${contactName || "N/A"}</p>
-          <p><strong>Email:</strong> ${contactEmail || "N/A"}</p>
-          <p><strong>Items:</strong> ${itemCount || 0}</p>
-          <p><strong>Total:</strong> $${orderTotal?.toLocaleString() || "0"}</p>
-          <p>The completed order form is attached as a PDF.</p>
-          <p><em>Note: PDF was auto-downloaded by the submitting user. This email serves as notification to operations.</em></p>
-        `,
-        attachments: [
+    // Send email directly via Postmark with PDF attachment
+    const postmarkApiKey = Deno.env.get("POSTMARK_API_KEY");
+    const fromEmail = Deno.env.get("POSTMARK_FROM_EMAIL") || "noreply@vitaluxeservices.com";
+
+    if (!postmarkApiKey) {
+      console.error("POSTMARK_API_KEY not configured");
+      return new Response(
+        JSON.stringify({ success: true, emailSent: false, reason: "POSTMARK_API_KEY not configured" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const formattedTotal = formatCurrency(orderTotal);
+    const dateStr = new Date().toISOString().split("T")[0];
+
+    const htmlBody = `
+      <h2>New Professional Products Order</h2>
+      <p><strong>Contact:</strong> ${contactName || "N/A"}</p>
+      <p><strong>Email:</strong> ${contactEmail || "N/A"}</p>
+      <p><strong>Items:</strong> ${itemCount || 0}</p>
+      <p><strong>Total:</strong> $${formattedTotal}</p>
+      <p>The completed order form is attached as a PDF.</p>
+    `;
+
+    const textBody = `New Professional Products Order\n\nContact: ${contactName || "N/A"}\nEmail: ${contactEmail || "N/A"}\nItems: ${itemCount || 0}\nTotal: $${formattedTotal}\n\nThe completed order form is attached as a PDF.`;
+
+    const postmarkResponse = await fetch("https://api.postmarkapp.com/email", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-Postmark-Server-Token": postmarkApiKey,
+      },
+      body: JSON.stringify({
+        From: fromEmail,
+        To: opsEmail,
+        Subject: `Professional Products Order - ${contactName || "Unknown"} - $${formattedTotal}`,
+        HtmlBody: htmlBody,
+        TextBody: textBody,
+        Attachments: [
           {
-            filename: `Pro_Order_${new Date().toISOString().split("T")[0]}.pdf`,
-            content: pdfBase64,
-            encoding: "base64",
-            contentType: "application/pdf",
+            Name: `Pro_Order_${dateStr}.pdf`,
+            Content: pdfBase64,
+            ContentType: "application/pdf",
           },
         ],
-      },
+      }),
     });
 
-    if (emailError) {
-      console.error("Email send error:", emailError);
+    if (!postmarkResponse.ok) {
+      const errText = await postmarkResponse.text();
+      console.error("Postmark send error:", postmarkResponse.status, errText);
       // Don't fail the order — the PDF was already downloaded
+    } else {
+      console.log("Pro order email sent successfully to", opsEmail);
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, emailSent: postmarkResponse.ok }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
