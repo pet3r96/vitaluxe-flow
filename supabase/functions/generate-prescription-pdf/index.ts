@@ -153,10 +153,10 @@ serve(async (req) => {
         );
       }
 
-      // Fetch provider profile via providers table
+      // Fetch provider profile via providers table (include practice_id)
       const { data: provider, error: providerError } = await supabase
         .from('providers')
-        .select('user_id')
+        .select('user_id, practice_id')
         .eq('id', orderLine.provider_id)
         .single();
 
@@ -183,6 +183,17 @@ serve(async (req) => {
           JSON.stringify({ error: 'Provider profile not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // Fetch practice profile for address (practice owner's profile)
+      let practiceProfile: any = null;
+      if (provider.practice_id) {
+        const { data: pp } = await supabase
+          .from('profiles')
+          .select('name, company, address_street, address_city, address_state, address_zip')
+          .eq('id', provider.practice_id)
+          .single();
+        practiceProfile = pp;
       }
 
       // Fetch patient details from patient_accounts for address, DOB, sex
