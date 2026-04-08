@@ -185,6 +185,43 @@ serve(async (req) => {
         );
       }
 
+      // Fetch patient details from patient_accounts for address, DOB, sex
+      let patientAccount: any = null;
+      if (orderLine.patient_id) {
+        const { data: pa } = await supabase
+          .from('patient_accounts')
+          .select('address_street, address_suite, address_city, address_state, address_zip, birth_date, date_of_birth, gender_at_birth')
+          .eq('id', orderLine.patient_id)
+          .single();
+        patientAccount = pa;
+      }
+
+      // Format patient DOB
+      let patientDob = 'N/A';
+      let patientAge = 'N/A';
+      const rawDob = patientAccount?.birth_date || patientAccount?.date_of_birth;
+      if (rawDob) {
+        const dobDate = new Date(rawDob);
+        patientDob = `${(dobDate.getMonth() + 1).toString().padStart(2, '0')}/${dobDate.getDate().toString().padStart(2, '0')}/${dobDate.getFullYear()}`;
+        const ageDiffMs = Date.now() - dobDate.getTime();
+        const ageDate = new Date(ageDiffMs);
+        patientAge = Math.abs(ageDate.getUTCFullYear() - 1970).toString();
+      }
+
+      // Format patient address from patient_accounts
+      const paStreet = patientAccount?.address_street
+        ? `${patientAccount.address_street}${patientAccount.address_suite ? ', ' + patientAccount.address_suite : ''}`
+        : null;
+      const paFullAddress = paStreet
+        ? `${paStreet}, ${patientAccount.address_city}, ${patientAccount.address_state} ${patientAccount.address_zip}`
+        : null;
+
+      // Map gender_at_birth to display value
+      const genderMap: Record<string, string> = { 'm': 'Male', 'f': 'Female', 'male': 'Male', 'female': 'Female' };
+      const patientSex = patientAccount?.gender_at_birth
+        ? (genderMap[patientAccount.gender_at_birth.toLowerCase()] || patientAccount.gender_at_birth)
+        : 'N/A';
+
       // Build prescription data object
       prescriptionData = {
         provider_id: orderLine.provider_id,
@@ -193,7 +230,14 @@ serve(async (req) => {
         dosage: orderLine.custom_dosage || '',
         sig: orderLine.custom_sig || '',
         patient_name: orderLine.patient_name,
-        patient_address: orderLine.patient_address,
+        patient_dob: patientDob,
+        patient_age: patientAge,
+        patient_sex: patientSex,
+        patient_address: orderLine.patient_address || paFullAddress,
+        patient_address_street: paStreet || null,
+        patient_address_city: patientAccount?.address_city || null,
+        patient_address_state: patientAccount?.address_state || null,
+        patient_address_zip: patientAccount?.address_zip || null,
         provider_name: providerProfile.name || 'Provider',
         practice_name: providerProfile.company || null,
         practice_address: providerProfile.address_street 
