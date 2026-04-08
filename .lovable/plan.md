@@ -1,38 +1,34 @@
 
 
-# Fix: Practice Address & Signature on Regenerated Prescription
+# Fix: Add Medication Strength & Form to Prescription PDF
 
-## Problems Found
+## Problem
+The prescription PDF only shows the product name (e.g., "Semaglutide/Methylcobalamin/Glycine") but not the strength and form. The variant's `dosage_label` field contains this info (e.g., "5mg/1mg/10mg/ml - 2mL") and needs to appear on the PDF.
 
-1. **"Address on file"**: The `order_line_id` branch fetches the provider's personal profile for practice address, but the provider (Mary McMillin) has no address fields. The practice address is on the **practice owner's profile** (`3200 Hayden Road, Scottsdale, AZ 85251`, `Body Preserve Med Spa`). The code never queries the practice profile.
+## Data
+- `product_variants.dosage_label` = `"5mg/1mg/10mg/ml - 2mL"`
+- `order_lines.variant_id` = `"132744f4-b634-4341-970e-40ed30f0a2ff"`
+- Currently the code only fetches `products.name` and ignores the variant
 
-2. **Missing signature**: Line 249 sets `signature: ''` (empty string). The rendering code (line 598) only draws a signature when `signature` is truthy. For the backfill and all future `order_line_id` regenerations, we need to set the signature to the prescriber's name as a generic cursive signature.
-
-## Data Confirmed
-
-- Practice profile: `Body Preserve Med Spa`, `3200 Hayden Road, Scottsdale, AZ 85251`
-- Provider profile (Mary McMillin): no address fields set
-- Practice ID from providers table links to the practice owner's profile
-
-## Changes
+## Change
 
 ### File: `supabase/functions/generate-prescription-pdf/index.ts`
 
-**Fix 1 — Fetch practice profile for address** (after line 186, in the `order_line_id` branch):
-- Query the practice owner's profile using `providers.practice_id` to get `address_street`, `address_city`, `address_state`, `address_zip`, `name` (practice name), and `company`
-- Use these to build `practice_name` and `practice_address` in the prescriptionData object (lines 242-245)
-- Fallback chain: provider profile address → practice profile address → "Address on file"
+**1. Fetch variant data** (after the product fetch ~line 145):
+- Query `product_variants` using `orderLine.variant_id` to get `dosage_label`
 
-**Fix 2 — Set generic signature** (line 249):
-- Change `signature: ''` to `signature: providerProfile.name || 'Authorized Prescriber'`
-- This renders the prescriber's name in italic/cursive above the signature line
+**2. Build full medication name** (line 240):
+- Change `product_name: product.name` to include variant dosage_label:
+  `product_name: variant?.dosage_label ? \`${product.name} ${variant.dosage_label}\` : product.name`
+- Result on PDF: **"Semaglutide/Methylcobalamin/Glycine 5mg/1mg/10mg/ml - 2mL"**
 
-### After deploy: Regenerate Renee Rodriguez PDF
-- Call the edge function with `order_line_id: 95d9e316-3cf2-4a6c-8cd9-f54b348b80dd`
-- Verify the PDF shows `Body Preserve Med Spa` with `3200 Hayden Road, Scottsdale, AZ 85251` and the signature `Mary McMillin`
+**3. Also apply to the direct-call mode**: Ensure `PrescriptionWriterDialog` already passes the full name with strength (it likely does since it uses variant data directly — will verify and fix if needed).
+
+### After deploy: Regenerate Renee Rodriguez's prescription
+- Call with `order_line_id: 95d9e316-3cf2-4a6c-8cd9-f54b348b80dd`
+- Verify the medication box shows the full name with strength and form
 
 ## Scope
-- 1 file changed: `generate-prescription-pdf/index.ts`
-- 1 regeneration call after deploy
-- Fixes both this backfill and all future `order_line_id` regenerations
+- 1 file: `generate-prescription-pdf/index.ts`
+- 1 regeneration call
 
