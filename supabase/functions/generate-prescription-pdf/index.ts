@@ -250,14 +250,16 @@ serve(async (req) => {
         patient_address_state: patientAccount?.address_state || null,
         patient_address_zip: patientAccount?.address_zip || null,
         provider_name: providerProfile.name || 'Provider',
-        practice_name: providerProfile.company || null,
-        practice_address: providerProfile.address_street 
-          ? `${providerProfile.address_street}, ${providerProfile.address_city}, ${providerProfile.address_state} ${providerProfile.address_zip}`
-          : null,
+        practice_name: practiceProfile?.company || practiceProfile?.name || providerProfile.company || null,
+        practice_address: (practiceProfile?.address_street
+          ? `${practiceProfile.address_street}, ${practiceProfile.address_city}, ${practiceProfile.address_state} ${practiceProfile.address_zip}`
+          : (providerProfile.address_street
+            ? `${providerProfile.address_street}, ${providerProfile.address_city}, ${providerProfile.address_state} ${providerProfile.address_zip}`
+            : null)),
         date: new Date(orderLine.orders.created_at).toLocaleDateString('en-US'),
         notes: '',
         quantity: orderLine.quantity || 1,
-        signature: '',
+        signature: providerProfile.name || 'Authorized Prescriber',
         dispensing_option: 'dispense_as_written',
         refills_allowed: orderLine.refills_allowed ?? false,
         refills_total: orderLine.refills_total ?? 0,
