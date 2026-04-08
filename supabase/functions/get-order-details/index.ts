@@ -87,6 +87,8 @@ serve(async (req) => {
         discount_percentage,
         discount_amount,
         shipping_total,
+        formatted_shipping_address,
+        practice_address,
         merchant_fee_amount,
         merchant_fee_percentage,
         payment_status,
