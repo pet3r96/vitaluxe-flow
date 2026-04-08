@@ -1,66 +1,21 @@
 
 
-# Fix: "Send to Pharmacy API" Shows "Unknown Error" Instead of Actual Validation Errors
+# Add Shipping Destination & Address to Order Details Dialog
 
-## Root Cause
+## Problem
+The Order Details dialog shows a "Fulfillment Type" badge (Practice Order / Patient Order) but doesn't prominently display **where** the order is shipping to. The practice address only shows conditionally and the patient address is buried in individual order line details.
 
-Two layers of issues on order `#ae8f1f44`:
+## Changes
 
-### 1. Data Issue (this specific order)
-The order line has `provider_id = null` and `custom_sig = null`. VIOS validation correctly rejects it with:
-- "Prescriber name is required"
-- "Directions (sig) are required for VIOS orders"
+### `src/components/orders/OrderDetailsDialog.tsx`
 
-### 2. Error Message Not Surfaced (code bug)
-When VIOS routing fails, `send-order-to-pharmacy` returns:
-```json
-{ "success": false, "handler": "vios", "results": [{ "success": false, "error": "Validation failed..." }], "summary": "0/1..." }
-```
+Add a clear **"Shipping Destination"** section right after the Fulfillment Type badge (around line 803), before the Payment Status section:
 
-But in `OrderDetailsDialog.tsx` (line 214-215), the client reads:
-```js
-f.error?.message || f.data?.error || 'Unknown error'
-```
+1. **For practice orders (`ship_to === 'practice'`)**: Show a card with a MapPin icon, "Ship to Practice" header, and the `order.practice_address`. Remove the redundant practice address block currently at line 875-880.
 
-`f.data?.error` is undefined because the actual errors are in `f.data?.results[0]?.error` or `f.data?.summary`. Hence → **"Unknown error"**.
+2. **For patient orders (`ship_to === 'patient'`)**: Show a card with a MapPin icon, "Ship to Patient" header, and the decrypted patient address from the first order line's `decryptedContactInfo`. The address data is already being fetched and decrypted — it just needs to be surfaced at the order level, not buried inside each line.
 
-## Fixes
+The section will use the same `p-4 bg-muted rounded-lg` styling already used for the practice address block, placed prominently right after the fulfillment type so it's immediately visible.
 
-### 1. `src/components/orders/OrderDetailsDialog.tsx`
-Update the error extraction logic (around line 214) to also check `f.data?.results` array and `f.data?.summary` for VIOS-style error responses:
-
-```typescript
-const errorMessages = failures.map(f => {
-  if (f.error?.message) return f.error.message;
-  if (f.data?.error) return f.data.error;
-  // VIOS returns errors in results array
-  if (f.data?.results) {
-    const viosErrors = f.data.results
-      .filter(r => !r.success && r.error)
-      .map(r => r.error);
-    if (viosErrors.length > 0) return viosErrors.join('; ');
-  }
-  if (f.data?.summary) return f.data.summary;
-  return 'Unknown error';
-}).join(', ');
-```
-
-### 2. `supabase/functions/send-order-to-pharmacy/index.ts`
-Add a top-level `error` field to the VIOS routing response when `allSuccess` is false (around line 142), so the client can also find it at `data.error`:
-
-```typescript
-return new Response(
-  JSON.stringify({ 
-    success: allSuccess,
-    handler: "vios",
-    error: allSuccess ? undefined : results.filter(r => !r.success).map(r => r.error).join('; '),
-    results,
-    summary: `${successCount}/${results.length} order lines submitted successfully`
-  }),
-  ...
-);
-```
-
-## About the Data Issue
-The missing `provider_id` and `custom_sig` on this order are legitimate validation failures — the order was placed without a prescriber or directions. The fix above ensures the admin sees the real reason ("Prescriber name is required", "Directions required") instead of "Unknown error", so they can address the data before retrying.
+### No other files changed.
 
