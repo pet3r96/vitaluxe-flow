@@ -211,9 +211,18 @@ export const OrderDetailsDialog = ({
       }
 
       if (failures.length > 0) {
-        const errorMessages = failures.map(f => 
-          f.error?.message || f.data?.error || 'Unknown error'
-        ).join(', ');
+        const errorMessages = failures.map(f => {
+          if (f.error?.message) return f.error.message;
+          if (f.data?.error) return f.data.error;
+          if (f.data?.results) {
+            const viosErrors = f.data.results
+              .filter((r: any) => !r.success && r.error)
+              .map((r: any) => r.error);
+            if (viosErrors.length > 0) return viosErrors.join('; ');
+          }
+          if (f.data?.summary) return f.data.summary;
+          return 'Unknown error';
+        }).join(', ');
         
         toast({
           title: "Some Transmissions Failed",

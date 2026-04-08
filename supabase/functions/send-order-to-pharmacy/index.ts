@@ -143,12 +143,13 @@ serve(async (req) => {
         JSON.stringify({ 
           success: allSuccess,
           handler: "vios",
+          error: allSuccess ? undefined : results.filter(r => !r.success).map(r => r.error).join('; '),
           results,
           summary: `${successCount}/${results.length} order lines submitted successfully`
         }),
         { 
           headers: { ...corsHeaders, "Content-Type": "application/json" }, 
-          status: allSuccess ? 200 : 207 // 207 Multi-Status for partial success
+          status: allSuccess ? 200 : 207
         }
       );
     }
