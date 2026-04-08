@@ -363,7 +363,7 @@ export const OrderDetailsDialog = ({
         try {
           const { data: patientData } = await supabase
             .from('patient_accounts')
-            .select('id, user_id, first_name, last_name, email, phone, address, allergies')
+            .select('id, user_id, first_name, last_name, email, phone, address_street, address_suite, address_city, address_state, address_zip, allergies')
             .in('id', Array.from(patientAccountIds));
           
           patientData?.forEach(p => {
@@ -445,7 +445,11 @@ export const OrderDetailsDialog = ({
             contact: {
               patient_email: plainData.email !== '[ENCRYPTED]' ? plainData.email : null,
               patient_phone: plainData.phone !== '[ENCRYPTED]' ? plainData.phone : null,
-              patient_address: plainData.address !== '[ENCRYPTED]' ? plainData.address : null,
+              patient_address: (() => {
+                const parts = [plainData.address_street, plainData.address_suite, plainData.address_city, plainData.address_state, plainData.address_zip].filter(Boolean);
+                const constructed = parts.join(', ');
+                return constructed || null;
+              })(),
             }
           };
         }
