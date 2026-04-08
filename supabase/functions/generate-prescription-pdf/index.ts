@@ -737,6 +737,20 @@ serve(async (req) => {
 
       edgeLogger.info('Prescription generated successfully', { uploadMethod, fileName });
 
+      // Persist the new prescription_url back to order_lines when regenerating
+      if (requestData.order_line_id && prescriptionUrl) {
+        const { error: updateError } = await supabase
+          .from('order_lines')
+          .update({ prescription_url: prescriptionUrl })
+          .eq('id', requestData.order_line_id);
+        
+        if (updateError) {
+          edgeLogger.warn('Failed to update order_lines prescription_url', { error: updateError.message });
+        } else {
+          edgeLogger.info('Updated order_lines.prescription_url', { orderLineId: requestData.order_line_id });
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
