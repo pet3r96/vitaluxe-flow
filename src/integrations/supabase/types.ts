@@ -9120,6 +9120,7 @@ export type Database = {
           address_formatted: string
           address_state: string
           address_street: string
+          address_suite: string
           address_verification_source: string
           address_verification_status: string
           address_zip: string
