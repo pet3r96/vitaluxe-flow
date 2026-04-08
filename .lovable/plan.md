@@ -1,25 +1,46 @@
 
 
-# Backfill Order ae8f1f44 for Pharmacy Submission
+# Fix: "No Patient Address on File" — Address Never Reaches Order Details
 
-## What
+## Root Cause
 
-The order line `95d9e316` has `provider_id = null` and `custom_sig = null`. The practice has exactly one active provider: **Mary McMillin** (`9e8dd207`, NPI `1104570043`). We need to update both fields so the "Send to Pharmacy" action succeeds.
+Two layers of failure prevent the patient address from displaying:
 
-## Database Update (migration)
+### Bug 1: `place-order` never stores patient address on order lines
+The `place-order` edge function creates order lines but never encrypts or saves the patient's address into `patient_address_encrypted`. It also never writes `formatted_shipping_address` on the order. So the primary data source for the "Ship to Patient" display is always null.
 
-```sql
-UPDATE order_lines
-SET 
-  provider_id = '9e8dd207-6469-45ed-971e-c40f7eaa0838',
-  custom_sig = 'Inject subcutaneously once weekly as directed by prescriber'
-WHERE id = '95d9e316-3cf2-4a6c-8cd9-f54b348b80dd'
-  AND provider_id IS NULL;
+### Bug 2: Fallback query reads wrong column
+The `OrderDetailsDialog` fallback (line 366) queries `patient_accounts.address` — but this column is **empty** for this patient. The actual address lives in split fields: `address_street`, `address_suite`, `address_city`, `address_state`, `address_zip`.
+
+**Patient Renee Rodriguez has a full address**: 8750 East McDowell Road, Suite 113, Scottsdale, AZ 85257 — it's just never being read.
+
+## Fixes
+
+### 1. `src/components/orders/OrderDetailsDialog.tsx` — Fix fallback query (immediate fix)
+
+Update the patient_accounts SELECT on line 366 to include the split address fields:
+
+```
+.select('id, user_id, first_name, last_name, email, phone, address_street, address_suite, address_city, address_state, address_zip, allergies')
 ```
 
-Single migration, single row update. After this, retrying "Send to Pharmacy" on this order should pass VIOS validation.
+Then in the fallback contact builder (lines 442-449), construct the full address from the split fields:
 
-## No Code Changes
+```typescript
+const parts = [plainData.address_street, plainData.address_suite, plainData.address_city, plainData.address_state, plainData.address_zip].filter(Boolean);
+patient_address: parts.join(', ') || null
+```
 
-The code fixes from the previous task already prevent this from happening on future orders.
+### 2. `supabase/functions/place-order/index.ts` — Store patient address on order lines (prevents recurrence)
+
+After resolving the patient for each order line, fetch the patient's address from `patient_accounts` and encrypt it into `patient_address_encrypted` using the same encryption pattern already used for `patient_email_encrypted` and `patient_phone_encrypted`. Also write `formatted_shipping_address` on the order record.
+
+### 3. Backfill order ae8f1f44 — Write `formatted_shipping_address`
+
+Run a one-time UPDATE on the orders table to set `formatted_shipping_address` for this order from the patient's known address.
+
+## Summary
+- Fix 1 is the immediate visual fix — the dialog will show the address from patient_accounts
+- Fix 2 prevents this from happening on future orders by properly storing the address at order-creation time
+- Fix 3 backfills the specific order so it works even before the dialog fix loads
 
