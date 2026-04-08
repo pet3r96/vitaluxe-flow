@@ -153,6 +153,19 @@ serve(async (req) => {
         );
       }
 
+      // Fetch variant dosage_label if variant_id exists
+      let variantDosageLabel = '';
+      if (orderLine.variant_id) {
+        const { data: variant } = await supabase
+          .from('product_variants')
+          .select('dosage_label')
+          .eq('id', orderLine.variant_id)
+          .single();
+        if (variant?.dosage_label) {
+          variantDosageLabel = variant.dosage_label;
+        }
+      }
+
       // Fetch provider profile via providers table (include practice_id)
       const { data: provider, error: providerError } = await supabase
         .from('providers')
@@ -237,7 +250,7 @@ serve(async (req) => {
       prescriptionData = {
         provider_id: orderLine.provider_id,
         patient_id: orderLine.patient_id,
-        product_name: product.name,
+        product_name: variantDosageLabel ? `${product.name} ${variantDosageLabel}` : product.name,
         dosage: orderLine.custom_dosage || '',
         sig: orderLine.custom_sig || '',
         patient_name: orderLine.patient_name,
