@@ -153,10 +153,10 @@ serve(async (req) => {
         );
       }
 
-      // Fetch provider profile via providers table
+      // Fetch provider profile via providers table (include practice_id)
       const { data: provider, error: providerError } = await supabase
         .from('providers')
-        .select('user_id')
+        .select('user_id, practice_id')
         .eq('id', orderLine.provider_id)
         .single();
 
@@ -183,6 +183,17 @@ serve(async (req) => {
           JSON.stringify({ error: 'Provider profile not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // Fetch practice profile for address (practice owner's profile)
+      let practiceProfile: any = null;
+      if (provider.practice_id) {
+        const { data: pp } = await supabase
+          .from('profiles')
+          .select('name, company, address_street, address_city, address_state, address_zip')
+          .eq('id', provider.practice_id)
+          .single();
+        practiceProfile = pp;
       }
 
       // Fetch patient details from patient_accounts for address, DOB, sex
@@ -239,14 +250,16 @@ serve(async (req) => {
         patient_address_state: patientAccount?.address_state || null,
         patient_address_zip: patientAccount?.address_zip || null,
         provider_name: providerProfile.name || 'Provider',
-        practice_name: providerProfile.company || null,
-        practice_address: providerProfile.address_street 
-          ? `${providerProfile.address_street}, ${providerProfile.address_city}, ${providerProfile.address_state} ${providerProfile.address_zip}`
-          : null,
+        practice_name: practiceProfile?.company || practiceProfile?.name || providerProfile.company || null,
+        practice_address: (practiceProfile?.address_street
+          ? `${practiceProfile.address_street}, ${practiceProfile.address_city}, ${practiceProfile.address_state} ${practiceProfile.address_zip}`
+          : (providerProfile.address_street
+            ? `${providerProfile.address_street}, ${providerProfile.address_city}, ${providerProfile.address_state} ${providerProfile.address_zip}`
+            : null)),
         date: new Date(orderLine.orders.created_at).toLocaleDateString('en-US'),
         notes: '',
         quantity: orderLine.quantity || 1,
-        signature: '',
+        signature: providerProfile.name || 'Authorized Prescriber',
         dispensing_option: 'dispense_as_written',
         refills_allowed: orderLine.refills_allowed ?? false,
         refills_total: orderLine.refills_total ?? 0,
