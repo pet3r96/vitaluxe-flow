@@ -489,7 +489,7 @@ serve(async (req) => {
 
     // Medication information (in bordered box with enhanced visibility)
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(22);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     const medBoxY = rxY - 0.3;
     doc.setDrawColor(0, 0, 0);
