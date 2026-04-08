@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ReceiptDownloadButton } from "./ReceiptDownloadButton";
 import { logPatientPHIAccess } from "@/lib/auditLogger";
-import { CreditCard, Building2, DollarSign } from "lucide-react";
+import { CreditCard, Building2, DollarSign, MapPin } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { time, timeEnd } from "@/diag";
 import type { Order } from "@/types/orders";
