@@ -1,52 +1,78 @@
 
+# Emergency fix: regenerate the correct patient PDF and stop stale scripts from being reused
 
-# Fix & Regenerate Prescription PDF for Renee Rodriguez
+## What I found
 
-## Problem
+1. The Rx pad layout is still not being rendered from truly wrapped text.
+   - In `supabase/functions/generate-prescription-pdf/index.ts`, the code calculates wrapped SIG lines with `splitTextToSize`, but it still draws the raw `sig` string with `doc.text(...)`.
+   - The medication name is also drawn as one raw string inside the box.
+   - Result: long medication names overflow, SIG text spills, and Quantity/Notes drift into the wrong place.
 
-The `order_line_id` mode in `generate-prescription-pdf` doesn't fetch patient address, DOB, or sex from `patient_accounts`. It only uses `orderLine.patient_address` (which is null for this order) and `orderLine.patient_name`. So even though `is_office_dispensing` will now correctly be `false`, the PDF will show "N/A" for address, DOB, age, and sex.
+2. The wrong PDF can still be reused even after generation logic changes.
+   - The `order_line_id` regeneration path returns a new `prescription_url`, but it does not persist that new URL back to `order_lines.prescription_url`.
+   - The resend flow (`send-vios-order`) still reads the stored `orderLineData.prescription_url`.
+   - The download UI also prefers the existing stored URL.
+   - Result: the old office-dispensing PDF keeps getting downloaded/sent, which is why it looks like “it did not regenerate.”
 
-## Data Available in `patient_accounts`
+3. The patient/practice labeling logic is now mostly correct for new generation.
+   - `PrescriptionWriterDialog` passes `shipTo`
+   - `generate-prescription-pdf` order-line mode uses `orderLine.orders.ship_to === 'practice'`
+   - So the remaining issue is not just logic; it is that the stale PDF is still the one being used.
 
-| Field | Value |
-|-------|-------|
-| `address_street` | 8750 East McDowell Road |
-| `address_suite` | 113 |
-| `address_city` | Scottsdale |
-| `address_state` | AZ |
-| `address_zip` | 85257 |
-| `birth_date` | 1977-05-15 |
-| `gender_at_birth` | f |
+## Fix plan
 
-## Fix: `supabase/functions/generate-prescription-pdf/index.ts`
+### 1. Make the PDF layout deterministic in `generate-prescription-pdf`
+Refactor the Rx body so it renders explicit wrapped line arrays instead of raw strings:
+- create `medLines = doc.splitTextToSize(medText, availableWidth)`
+- create `sigLines = doc.splitTextToSize(sigText, availableWidth)`
+- render both line-by-line
+- compute medication box height from `medLines.length`
+- compute `quantityY` and `notesY` from the actual rendered SIG block height
 
-In the `order_line_id` branch (around line 186), after fetching the provider profile, add a lookup to `patient_accounts` to get the patient's address, DOB, and sex:
+This will fix:
+- medication name overflow
+- oversized-looking product text
+- SIG overflow
+- Quantity overlap
+- spacing inconsistencies on future orders
 
-```typescript
-// Fetch patient details from patient_accounts
-const { data: patientAccount } = await supabase
-  .from('patient_accounts')
-  .select('address_street, address_suite, address_city, address_state, address_zip, birth_date, date_of_birth, gender_at_birth')
-  .eq('id', orderLine.patient_id)
-  .single();
-```
+### 2. Make regeneration replace the stale prescription on the order line
+In the `order_line_id` branch of `generate-prescription-pdf`:
+- after upload succeeds, update that `order_lines` row with the new `prescription_url`
+- keep returning the new URL in the response
 
-Then include these in the `prescriptionData` object:
-- `patient_dob`: Format `birth_date || date_of_birth` as MM/DD/YYYY
-- `patient_address_street`: `address_street` + suite if present
-- `patient_address_city`: from patient_accounts
-- `patient_address_state`: from patient_accounts  
-- `patient_address_zip`: from patient_accounts
-- `patient_address`: formatted full address as fallback
-- `patient_sex`: from `gender_at_birth`
-- `patient_age`: calculated from DOB
+This is the core fix for the “did not regenerate” problem.
 
-This ensures the PDF renders with full patient info when using the `order_line_id` regeneration path.
+### 3. Make resend use a fresh PDF, not whatever old URL is stored
+Harden the pharmacy submission backend so a resend does not rely on an outdated script:
+- regenerate from `order_line_id` before sending, or
+- otherwise guarantee the send path uses the just-updated `prescription_url`
 
-## Regeneration
+I would do this in the backend send flow so it protects:
+- Order Details resend
+- pharmacy workflow resend
+- future send paths using the same backend
 
-After deploying the fix, call the edge function with `{ "order_line_id": "95d9e316-3cf2-4a6c-8cd9-f54b348b80dd" }` to regenerate the PDF. The function already handles uploading and returning the new URL. Then update the `prescription_url` on the order line.
+### 4. Keep patient/practice labeling tied to `orders.ship_to`
+Use the order record as the source of truth for regenerated/send-time PDFs.
+That ensures:
+- patient orders never show “DISPENSING IN OFFICE ONLY”
+- practice orders still do
+- future UI state issues cannot flip the label incorrectly
 
-## Files Changed
-- `supabase/functions/generate-prescription-pdf/index.ts` (add patient_accounts lookup in order_line_id mode)
+### 5. Backfill Renee Rodriguez immediately after the code fix
+For order line `95d9e316-3cf2-4a6c-8cd9-f54b348b80dd`:
+- regenerate through the corrected `order_line_id` path
+- verify the PDF shows patient info instead of office-only
+- confirm the order line now stores the corrected `prescription_url`
+- resend that corrected PDF to the pharmacy API
 
+## Files to change
+- `supabase/functions/generate-prescription-pdf/index.ts`
+- `supabase/functions/send-vios-order/index.ts` or `supabase/functions/send-order-to-pharmacy/index.ts`
+
+## Expected result
+- Renee’s PDF is actually replaced, not just theoretically regenerated
+- the medication name, SIG, and Quantity all fit correctly
+- the patient info box shows patient data for patient shipments
+- future orders and resends use the corrected PDF path automatically
