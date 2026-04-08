@@ -802,6 +802,24 @@ export const OrderDetailsDialog = ({
                 {order.ship_to === 'practice' ? '🏢 Practice Order' : '👤 Patient Order'}
               </Badge>
             </div>
+            <div className="p-4 bg-muted rounded-lg flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold mb-1">
+                  {order.ship_to === 'practice' ? 'Ship to Practice' : 'Ship to Patient'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {order.ship_to === 'practice'
+                    ? (order.practice_address || 'No practice address on file')
+                    : (() => {
+                        const firstLineId = order.order_lines?.[0]?.id;
+                        const addr = firstLineId ? decryptedContactInfo.get(firstLineId)?.patient_address : null;
+                        return addr || order.formatted_shipping_address || 'No patient address on file';
+                      })()
+                  }
+                </p>
+              </div>
+            </div>
             {order.payment_status && (
               <div>
                 <p className="text-sm text-muted-foreground">Payment Status</p>
@@ -872,12 +890,6 @@ export const OrderDetailsDialog = ({
             </div>
           )}
 
-          {order.ship_to === 'practice' && order.practice_address && (
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm font-medium mb-1">Practice Shipping Address</p>
-              <p className="text-sm text-muted-foreground">{order.practice_address}</p>
-            </div>
-          )}
 
           <div>
             <h3 className="text-lg font-semibold mb-4">Order Lines</h3>
