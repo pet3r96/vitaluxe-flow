@@ -218,7 +218,9 @@ serve(async (req) => {
           refills_allowed,
           refills_total,
           variant_id,
-          days_supply
+          days_supply,
+          custom_sig,
+          custom_dosage
         )
       `)
       .eq("id", cart_id)
@@ -259,6 +261,37 @@ serve(async (req) => {
         .eq("id", userProfile.provider_id)
         .single();
       staffProviderRecord = data;
+    }
+
+    // Fallback: if no staff provider, get practice's first active provider (prefer one with NPI)
+    let fallbackProviderId: string | null = null;
+    if (!staffProviderRecord && effectivePracticeId) {
+      const { data: practiceProviders } = await supabaseAdmin
+        .from("providers")
+        .select("id, user_id")
+        .eq("practice_id", effectivePracticeId)
+        .eq("active", true)
+        .limit(5);
+
+      if (practiceProviders && practiceProviders.length > 0) {
+        // Try to find one with NPI by checking profiles
+        const providerUserIds = practiceProviders.map(p => p.user_id).filter(Boolean);
+        if (providerUserIds.length > 0) {
+          const { data: providerProfiles } = await supabaseAdmin
+            .from("profiles")
+            .select("id, npi")
+            .in("id", providerUserIds);
+          
+          const withNpi = providerProfiles?.find(p => p.npi);
+          if (withNpi) {
+            fallbackProviderId = practiceProviders.find(p => p.user_id === withNpi.id)?.id || null;
+          }
+        }
+        if (!fallbackProviderId) {
+          fallbackProviderId = practiceProviders[0].id;
+        }
+      }
+      edgeLogger.info("Provider fallback resolved", { fallbackProviderId });
     }
 
     // Get practice shipping address from profiles table
@@ -378,7 +411,7 @@ serve(async (req) => {
       const discountedPrice = line.price_snapshot * (1 - discount_percentage / 100);
       const providerIdForOrderLine = isStaffAccount && staffProviderRecord?.id 
         ? staffProviderRecord.id 
-        : line.provider_id;
+        : (line.provider_id || fallbackProviderId);
 
       orderLineMap.set(orderIndex, [{
         product_id: line.product_id,
@@ -405,6 +438,8 @@ serve(async (req) => {
         refills_remaining: line.refills_total || 0,
         variant_id: line.variant_id || null,
         days_supply: line.days_supply || null,
+        custom_sig: line.custom_sig || null,
+        custom_dosage: line.custom_dosage || null,
       }]);
     }
 
@@ -439,7 +474,7 @@ serve(async (req) => {
       const discountedPrice = line.price_snapshot * (1 - discount_percentage / 100);
       const providerIdForOrderLine = isStaffAccount && staffProviderRecord?.id 
         ? staffProviderRecord.id 
-        : line.provider_id;
+        : (line.provider_id || fallbackProviderId);
 
       orderLineMap.set(orderIndex, [{
         product_id: line.product_id,
@@ -466,6 +501,8 @@ serve(async (req) => {
         refills_remaining: line.refills_total || 0,
         variant_id: line.variant_id || null,
         days_supply: line.days_supply || null,
+        custom_sig: line.custom_sig || null,
+        custom_dosage: line.custom_dosage || null,
       }]);
     }
 

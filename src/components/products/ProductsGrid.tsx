@@ -611,11 +611,19 @@ export const ProductsGrid = () => {
           return;
         }
 
-        // Only look up provider ID if this is actually a provider account
-        // Staff and practice owners don't have provider records
-        const actualProviderId = isProviderAccount 
-          ? await getProviderIdFromUserId(providerId)
-          : null;
+        // Look up provider ID - for provider accounts use their own, otherwise get practice's first active provider
+        let actualProviderId: string | null = null;
+        if (isProviderAccount) {
+          actualProviderId = await getProviderIdFromUserId(providerId);
+        } else {
+          const { data: practiceProviders } = await supabase
+            .from('providers')
+            .select('id')
+            .eq('practice_id', resolvedDoctorId)
+            .eq('active', true)
+            .limit(1);
+          actualProviderId = practiceProviders?.[0]?.id || null;
+        }
         
         logger.info('[ProductsGrid] Provider ID mapping', { providerId_userId: providerId, actualProviderId_providersId: actualProviderId });
 
@@ -753,11 +761,19 @@ export const ProductsGrid = () => {
           return;
         }
 
-        // Only look up provider ID if this is actually a provider account
-        // Staff and practice owners don't have provider records
-        const actualProviderId = isProviderAccount 
-          ? await getProviderIdFromUserId(providerId)
-          : null;
+        // Look up provider ID - for provider accounts use their own, otherwise get practice's first active provider
+        let actualProviderId: string | null = null;
+        if (isProviderAccount) {
+          actualProviderId = await getProviderIdFromUserId(providerId);
+        } else {
+          const { data: practiceProviders } = await supabase
+            .from('providers')
+            .select('id')
+            .eq('practice_id', resolvedDoctorId)
+            .eq('active', true)
+            .limit(1);
+          actualProviderId = practiceProviders?.[0]?.id || null;
+        }
 
         // Get user's topline rep ID for scoping - use resolvedDoctorId (practice_id) to get topline rep
         const userToplineRepId = await getUserToplineRepId(resolvedDoctorId);
