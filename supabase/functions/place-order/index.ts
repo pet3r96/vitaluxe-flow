@@ -305,6 +305,24 @@ serve(async (req) => {
       ? [practice.shipping_address_street, practice.shipping_address_suite, practice.shipping_address_city, practice.shipping_address_state, practice.shipping_address_zip].filter(Boolean).join(', ')
       : null;
 
+    // Fetch patient addresses for all patient lines
+    const patientIdsInCart = [...new Set(cart.lines.filter(l => l.patient_id).map(l => l.patient_id))];
+    const patientAddressMap = new Map<string, string>();
+    if (patientIdsInCart.length > 0) {
+      const { data: patientAddresses } = await supabaseAdmin
+        .from("patient_accounts")
+        .select("id, address_street, address_suite, address_city, address_state, address_zip")
+        .in("id", patientIdsInCart);
+      
+      patientAddresses?.forEach(pa => {
+        const parts = [pa.address_street, pa.address_suite, pa.address_city, pa.address_state, pa.address_zip].filter(Boolean);
+        if (parts.length > 0) {
+          patientAddressMap.set(pa.id, parts.join(', '));
+        }
+      });
+      edgeLogger.info("Patient addresses resolved", { count: patientAddressMap.size });
+    }
+
     // Separate lines by ship_to destination
     const practiceLines = cart.lines.filter(line => !line.patient_id);
     const patientLines = cart.lines.filter(line => line.patient_id);
@@ -466,7 +484,8 @@ serve(async (req) => {
         status: "pending",
         ship_to: "patient",
         practice_address: null,
-        formatted_shipping_address: null,
+        formatted_shipping_address: line.patient_id ? (patientAddressMap.get(line.patient_id) || null) : null,
+        patient_id: line.patient_id || null,
         payment_method_id: payment_method_id,
         payment_method_used: selectedPaymentMethod?.payment_type || null,
       });
