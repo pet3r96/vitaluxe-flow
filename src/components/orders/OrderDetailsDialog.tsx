@@ -810,15 +810,26 @@ export const OrderDetailsDialog = ({
               <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-semibold mb-1">
-                  {order.ship_to === 'practice' ? 'Ship to Practice' : 'Ship to Patient'}
+                  {orderData.ship_to === 'practice' ? 'Ship to Practice' : 'Ship to Patient'}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {order.ship_to === 'practice'
-                    ? (order.practice_address || 'No practice address on file')
+                  {orderData.ship_to === 'practice'
+                    ? (orderData.practice_address || order.practice_address || 'No practice address on file')
                     : (() => {
-                        const firstLineId = order.order_lines?.[0]?.id;
+                        // Priority: 1) decrypted contact, 2) formatted_shipping_address from fresh data, 3) patient fallback, 4) message
+                        const firstLineId = orderData.order_lines?.[0]?.id || order.order_lines?.[0]?.id;
                         const addr = firstLineId ? decryptedContactInfo.get(firstLineId)?.patient_address : null;
-                        return addr || order.formatted_shipping_address || 'No patient address on file';
+                        if (addr) return addr;
+                        if (orderData.formatted_shipping_address) return orderData.formatted_shipping_address;
+                        if (order.formatted_shipping_address) return order.formatted_shipping_address;
+                        // Try constructing from patient fallback data
+                        const firstPatientId = orderData.order_lines?.[0]?.patient_id || order.order_lines?.[0]?.patient_id;
+                        if (firstPatientId && patientFallbackData.has(firstPatientId)) {
+                          const p = patientFallbackData.get(firstPatientId);
+                          const parts = [p.address_street, p.address_suite, p.address_city, p.address_state, p.address_zip].filter(Boolean);
+                          if (parts.length > 0) return parts.join(', ');
+                        }
+                        return 'No patient address on file';
                       })()
                   }
                 </p>

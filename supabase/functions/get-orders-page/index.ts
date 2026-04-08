@@ -123,7 +123,9 @@ serve(async (req) => {
         total_amount,
         payment_status,
         doctor_id,
-        ship_to
+        ship_to,
+        formatted_shipping_address,
+        practice_address
       `, { count: 'estimated', head: false })
       .not('status', 'is', null);
 
