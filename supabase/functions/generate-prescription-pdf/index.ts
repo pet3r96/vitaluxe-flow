@@ -494,30 +494,39 @@ serve(async (req) => {
     const medBoxY = rxY - 0.3;
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.03);
-    doc.rect(3, medBoxY, 4.5, 0.6, 'S'); // Medication box with more height
+    doc.rect(3, medBoxY, 4.5, 0.9, 'S'); // Medication box with height for wrapping
     // Extract medication name without base dosage to avoid duplication
     const baseName = product_name.replace(/\s+\d+(\.\d+)?(mg|ml|g|mcg).*$/i, '').trim();
-    doc.text(`${baseName} ${dosage || ''}`, 5.25, medBoxY + 0.42, { align: 'center' });
+    const medText = `${baseName} ${dosage || ''}`;
+    doc.text(medText, 5.25, medBoxY + 0.35, { align: 'center', maxWidth: 4.3 });
 
-    // Medication details with improved readability
+    // Medication details with improved readability and dynamic positioning
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    const detailsY = medBoxY + 0.95;
+    const detailsY = medBoxY + 1.15;
     doc.setFont('helvetica', 'bold');
     doc.text('Sig:', 3, detailsY);
     doc.setFont('helvetica', 'normal');
-    doc.text(sig || 'As directed by prescriber', 3.6, detailsY, { maxWidth: 4.2 });
+    const sigText = sig || 'As directed by prescriber';
+    doc.text(sigText, 3.6, detailsY, { maxWidth: 4.2 });
 
+    // Calculate how many lines the SIG text occupies for dynamic positioning
+    const sigLineWidth = 4.2 * 72; // maxWidth in points
+    const sigLines = doc.splitTextToSize(sigText, sigLineWidth / 72);
+    const sigLineHeight = 0.18; // approx line height at 12pt
+    const sigBlockHeight = Math.max(1, sigLines.length) * sigLineHeight;
+
+    const quantityY = detailsY + sigBlockHeight + 0.15;
     doc.setFont('helvetica', 'bold');
-    doc.text('Quantity:', 3, detailsY + 0.35);
+    doc.text('Quantity:', 3, quantityY);
     doc.setFont('helvetica', 'normal');
-    doc.text(quantity?.toString() || '1', 3.9, detailsY + 0.35);
+    doc.text(quantity?.toString() || '1', 3.9, quantityY);
 
     if (notes) {
       doc.setFont('helvetica', 'bold');
-      doc.text('Notes:', 3, detailsY + 0.7);
+      doc.text('Notes:', 3, quantityY + 0.35);
       doc.setFont('helvetica', 'normal');
-      doc.text(notes, 3.6, detailsY + 0.7, { maxWidth: 4.2 });
+      doc.text(notes, 3.6, quantityY + 0.35, { maxWidth: 4.2 });
     }
 
     // Signature section

@@ -1138,6 +1138,7 @@ export const PatientSelectionDialog = ({
             onOpenChange={setShowPrescriptionWriter}
             product={product}
             patient={shipTo === 'practice' ? null : selectedPatient}
+            shipTo={shipTo as 'patient' | 'practice'}
             provider={{
               id: selectedProviderData.id,
               name: selectedProviderData.label || selectedProviderData.full_name || 'Unknown',

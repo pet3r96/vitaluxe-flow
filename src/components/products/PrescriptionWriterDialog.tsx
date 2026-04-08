@@ -21,6 +21,7 @@ interface PrescriptionWriterDialogProps {
   provider: any;
   practice: any;
   quantity: number;
+  shipTo?: 'patient' | 'practice';
   initialSig?: string;
   initialDosage?: string;
   initialNotes?: string;
@@ -46,6 +47,7 @@ export function PrescriptionWriterDialog({
   provider,
   practice,
   quantity,
+  shipTo,
   initialSig,
   initialDosage,
   initialNotes,
@@ -251,7 +253,7 @@ export function PrescriptionWriterDialog({
           patient_address_state: patient?.address_state || null,
           patient_address_zip: patient?.address_zip || null,
           patient_sex: null,
-          is_office_dispensing: !patient,
+          is_office_dispensing: shipTo ? shipTo === 'practice' : !patient,
           provider_name: provider.name,
           practice_name: practice.name,
           practice_address: practice.address_formatted || practice.address,
