@@ -565,9 +565,8 @@ serve(async (req) => {
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.03);
     
-    // Extract medication name without base dosage to avoid duplication
-    const baseName = product_name.replace(/\s+\d+(\.\d+)?(mg|ml|g|mcg).*$/i, '').trim();
-    const medText = `${baseName} ${dosage || ''}`.trim();
+    // Use full product name (includes strength from variant dosage_label)
+    const medText = dosage ? `${product_name} ${dosage}` : product_name;
     
     // Wrap medication text properly
     const medMaxWidth = 4.2;
