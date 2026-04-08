@@ -538,29 +538,46 @@ serve(async (req) => {
     const medBoxY = rxY - 0.3;
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.03);
-    doc.rect(3, medBoxY, 4.5, 0.9, 'S'); // Medication box with height for wrapping
+    
     // Extract medication name without base dosage to avoid duplication
     const baseName = product_name.replace(/\s+\d+(\.\d+)?(mg|ml|g|mcg).*$/i, '').trim();
-    const medText = `${baseName} ${dosage || ''}`;
-    doc.text(medText, 5.25, medBoxY + 0.35, { align: 'center', maxWidth: 4.3 });
+    const medText = `${baseName} ${dosage || ''}`.trim();
+    
+    // Wrap medication text properly
+    const medMaxWidth = 4.2;
+    const medLines: string[] = doc.splitTextToSize(medText, medMaxWidth);
+    const medLineHeight = 0.2; // line height at 12pt
+    const medBlockHeight = medLines.length * medLineHeight;
+    const medBoxHeight = Math.max(0.5, medBlockHeight + 0.3); // padding
+    
+    doc.rect(3, medBoxY, 4.5, medBoxHeight, 'S');
+    
+    // Draw medication lines centered in box
+    const medStartY = medBoxY + 0.25;
+    for (let i = 0; i < medLines.length; i++) {
+      doc.text(medLines[i], 5.25, medStartY + (i * medLineHeight), { align: 'center' });
+    }
 
-    // Medication details with improved readability and dynamic positioning
-    doc.setFontSize(12);
+    // SIG section with proper wrapping
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    const detailsY = medBoxY + 1.15;
+    const detailsY = medBoxY + medBoxHeight + 0.25;
     doc.setFont('helvetica', 'bold');
     doc.text('Sig:', 3, detailsY);
     doc.setFont('helvetica', 'normal');
     const sigText = sig || 'As directed by prescriber';
-    doc.text(sigText, 3.6, detailsY, { maxWidth: 4.2 });
-
-    // Calculate how many lines the SIG text occupies for dynamic positioning
-    const sigLineWidth = 4.2 * 72; // maxWidth in points
-    const sigLines = doc.splitTextToSize(sigText, sigLineWidth / 72);
-    const sigLineHeight = 0.18; // approx line height at 12pt
+    
+    // Wrap SIG text and render line by line
+    const sigMaxWidth = 4.0;
+    const sigLines: string[] = doc.splitTextToSize(sigText, sigMaxWidth);
+    const sigLineHeight = 0.18;
+    for (let i = 0; i < sigLines.length; i++) {
+      doc.text(sigLines[i], 3.6, detailsY + (i * sigLineHeight));
+    }
     const sigBlockHeight = Math.max(1, sigLines.length) * sigLineHeight;
 
-    const quantityY = detailsY + sigBlockHeight + 0.15;
+    // Quantity positioned dynamically below SIG
+    const quantityY = detailsY + sigBlockHeight + 0.1;
     doc.setFont('helvetica', 'bold');
     doc.text('Quantity:', 3, quantityY);
     doc.setFont('helvetica', 'normal');
@@ -568,9 +585,12 @@ serve(async (req) => {
 
     if (notes) {
       doc.setFont('helvetica', 'bold');
-      doc.text('Notes:', 3, quantityY + 0.35);
+      doc.text('Notes:', 3, quantityY + 0.3);
       doc.setFont('helvetica', 'normal');
-      doc.text(notes, 3.6, quantityY + 0.35, { maxWidth: 4.2 });
+      const noteLines: string[] = doc.splitTextToSize(notes, sigMaxWidth);
+      for (let i = 0; i < noteLines.length; i++) {
+        doc.text(noteLines[i], 3.6, quantityY + 0.3 + (i * sigLineHeight));
+      }
     }
 
     // Signature section
@@ -716,6 +736,20 @@ serve(async (req) => {
       }
 
       edgeLogger.info('Prescription generated successfully', { uploadMethod, fileName });
+
+      // Persist the new prescription_url back to order_lines when regenerating
+      if (requestData.order_line_id && prescriptionUrl) {
+        const { error: updateError } = await supabase
+          .from('order_lines')
+          .update({ prescription_url: prescriptionUrl })
+          .eq('id', requestData.order_line_id);
+        
+        if (updateError) {
+          edgeLogger.warn('Failed to update order_lines prescription_url', { error: updateError.message });
+        } else {
+          edgeLogger.info('Updated order_lines.prescription_url', { orderLineId: requestData.order_line_id });
+        }
+      }
 
       return new Response(
         JSON.stringify({
