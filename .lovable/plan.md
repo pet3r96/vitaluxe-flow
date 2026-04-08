@@ -1,74 +1,54 @@
 
-# Fix: Order Details Still Shows "No Patient Address on File"
 
-## What I found
+# Fix: Prescription PDF Wrong for Patient Order (Renee Rodriguez)
 
-The previous fix was incomplete. The UI can still show "No patient address on file" even when the patient does have an address.
+## Problems
 
-### Root causes in code
+1. **PDF shows "DISPENSING IN OFFICE ONLY"** for an order that is `ship_to = 'patient'`. The stored prescription filename is `prescription_OFFICE_DISPENSING_*`, confirming it was generated incorrectly at the time of ordering. The order record says `ship_to: patient` but the prescription was created as if it were a practice/office order.
 
-1. `src/components/orders/OrderDetailsDialog.tsx` still renders the shipping address from the stale `order` prop:
-   - It uses `order.formatted_shipping_address`
-   - It uses `order.practice_address`
-   - It uses `order.order_lines?.[0]?.id`
+2. **Medication name overflows the box** — no `maxWidth` constraint on the medication text (line 500), so "Semaglutide/Methylcobalamin/Glycine 5mg/1mg/10mg" bleeds past the box border.
 
-   But this dialog already fetches fresher data into `fullOrderDetails` / `orderData`.
+3. **Sig text overlaps with Quantity** — long SIG directions wrap but Quantity is placed at a fixed Y offset, causing text collision.
 
-2. `supabase/functions/get-order-details/index.ts` does **not** return:
-   - `formatted_shipping_address`
-   - `practice_address`
+## Root Cause of Bug #1
 
-   So even the fresh details payload does not currently include the fields the dialog should rely on.
+In `PatientSelectionDialog.tsx` line 1140:
+```
+patient={shipTo === 'practice' ? null : selectedPatient}
+```
 
-3. `supabase/functions/get-orders-page/index.ts` also omits those same address fields from the orders list payload, so the initial `selectedOrder` object opened in the dialog starts out missing them.
+If `selectedPatient` was null/undefined when the prescription was written, OR if `shipTo` defaulted to `'practice'`, the PrescriptionWriterDialog sets `is_office_dispensing: !patient` (line 254) = `true`, producing the wrong PDF.
 
-4. The PHI/contact fallback effect in `OrderDetailsDialog` also reads from `order.order_lines`, not the resolved full-details object, which makes the address lookup path less reliable than it should be.
+Additionally, when the `PharmacyShippingWorkflow` regenerates a prescription via `order_line_id`, line 209 correctly reads `ship_to` from the orders table — but the **original** prescription stored on this order was generated via the dialog path, not the order_line_id path, and it got it wrong.
 
-## Implementation plan
+## Fixes
 
-### 1. Update `supabase/functions/get-order-details/index.ts`
-Add these order fields to the select:
-- `formatted_shipping_address`
-- `practice_address`
+### 1. `supabase/functions/generate-prescription-pdf/index.ts` — Medication box overflow
+- Add `maxWidth: 4.3` to the medication name `doc.text()` call at line 500 so text wraps inside the box
+- Increase the medication box height from `0.6` to `0.9` to accommodate wrapped text
+- Adjust the Sig/Quantity Y positions to be relative to the taller box
 
-This makes the full order details payload actually contain the shipping address fields.
+### 2. `supabase/functions/generate-prescription-pdf/index.ts` — Dynamic Sig/Quantity positioning
+- After rendering the SIG text, calculate how many lines it occupied using `doc.getTextDimensions()` or estimate based on text length
+- Position "Quantity:" dynamically below the SIG instead of at a fixed offset
 
-### 2. Update `supabase/functions/get-orders-page/index.ts`
-Add these fields to the base orders select:
-- `formatted_shipping_address`
-- `practice_address`
+### 3. Regenerate Renee Rodriguez's prescription
+- Use the `PharmacyShippingWorkflow` path (order_line_id mode) which correctly reads `ship_to` from the `orders` table
+- This will produce a PDF with patient info (name, DOB, address) instead of "DISPENSING IN OFFICE ONLY"
+- Update the `prescription_url` on the order line to point to the new PDF
 
-This ensures the dialog has address data immediately when opened from the orders table, even before the full-details fetch finishes.
+### 4. `src/components/products/PrescriptionWriterDialog.tsx` — Prevent recurrence
+- Pass `shipTo` as an explicit prop instead of inferring `is_office_dispensing` from `!patient`
+- Change line 254 from `is_office_dispensing: !patient` to use the explicit `shipTo` value passed from the parent
+- This ensures even if `patient` object is temporarily null during loading, the dispensing type is determined by the user's explicit ship-to selection
 
-### 3. Update `src/components/orders/OrderDetailsDialog.tsx`
-Use a single resolved order object everywhere for shipping display logic, e.g. `const activeOrder = fullOrderDetails || order`.
+### 5. `src/components/products/PatientSelectionDialog.tsx` — Pass shipTo
+- Add `shipTo` prop to PrescriptionWriterDialog invocation at line 1140
+- Still pass `patient={shipTo === 'practice' ? null : selectedPatient}` for the patient data, but dispensing type is now controlled by `shipTo` directly
 
-Then switch the shipping card to use:
-- `activeOrder.ship_to`
-- `activeOrder.practice_address`
-- `activeOrder.formatted_shipping_address`
-- `activeOrder.order_lines?.[0]?.id`
+## Files Changed
+- `supabase/functions/generate-prescription-pdf/index.ts` (medication box sizing, dynamic positioning)
+- `src/components/products/PrescriptionWriterDialog.tsx` (use explicit shipTo prop)
+- `src/components/products/PatientSelectionDialog.tsx` (pass shipTo prop)
+- Database: regenerate and update prescription for order line `95d9e316`
 
-### 4. Harden the address fallback in `OrderDetailsDialog.tsx`
-Update the contact/decryption effect to use `activeOrder.order_lines` instead of `order.order_lines`, so the fallback address lookup stays aligned with the freshest order data.
-
-### 5. Final fallback behavior
-Keep this address priority for patient shipments:
-1. decrypted order-line patient address
-2. `activeOrder.formatted_shipping_address`
-3. constructed address from `patientFallbackData`
-4. only then show `"No patient address on file"`
-
-## Why this should fix the screenshot issue
-
-Right now, the dialog is effectively looking at the wrong object and the edge functions are not returning the address fields it needs. That means the UI can display "No patient address on file" even when the backend record is correct.
-
-## Scope
-- 3 files
-- no schema change
-- no migration required unless a specific historical order is later confirmed to truly have missing address data in the database
-
-## Files to change
-- `src/components/orders/OrderDetailsDialog.tsx`
-- `supabase/functions/get-order-details/index.ts`
-- `supabase/functions/get-orders-page/index.ts`
