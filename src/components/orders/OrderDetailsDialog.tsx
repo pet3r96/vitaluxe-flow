@@ -909,7 +909,7 @@ export const OrderDetailsDialog = ({
           <div>
             <h3 className="text-lg font-semibold mb-4">Order Lines</h3>
             <div className="space-y-4">
-              {order.order_lines?.map((line: any) => (
+              {(orderData?.order_lines || order.order_lines)?.map((line: any) => (
                 <div key={line.id} className="p-4 border border-border rounded-md space-y-2">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
