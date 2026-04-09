@@ -1,34 +1,58 @@
 
 
-# Fix: VIOS API Quantity Should Use Volume, Not Order Quantity
+# Fix: VIOS API Quantity + Payload Audit Trail
 
-## Problem
-The prescription PDF correctly shows the volume-based Rx quantity (e.g., `2` for a 2mL vial), but the VIOS pharmacy API payload still sends `quantity: "1"` (the order quantity) because `viosOrders.ts` line 211 uses `String(orderLine.quantity || 1)`.
+## What Happened
 
-VIOS requires quantity in **volume** (mL), not vial count — this is already documented in the validation function `validateVolumeQuantity`.
+The order for Renee Rodriguez was submitted to VIOS at 16:46 UTC today. The quantity fix code is present in `viosOrders.ts` (line 170-171), but the order was likely sent **before** the updated edge function was fully deployed — meaning VIOS received `quantity: "1"` instead of `quantity: "2"`.
 
-## Fix
+Additionally, the `pharmacy_order_transmissions` table has zero records, so there's no audit trail of what payload was actually sent. This makes debugging impossible.
 
-### `supabase/functions/_shared/vios/viosOrders.ts` (~line 209-211)
+## Plan
 
-Extract the mL volume from `product_variants.dosage_label` (already available on the order line data) and use it as the quantity. Fall back to `orderLine.quantity` if no mL pattern is found.
+### 1. Add payload logging to `send-vios-order/index.ts`
+
+After building the payload (before calling `submitViosOrder`), log the built payload's quantity to the transmission table and to the edge function logs so we can verify what's being sent:
 
 ```typescript
-// Before line 209, extract volume from dosage label
-const dosageLabel = orderLine.product_variants?.dosage_label || '';
-const mlMatch = dosageLabel.match(/[\-–]\s*(\d+)\s*mL/i);
-const rxQuantity = mlMatch ? parseInt(mlMatch[1]) : (orderLine.quantity || 1);
-
-// Line 211 changes from:
-quantity: String(orderLine.quantity || 1),
-// To:
-quantity: String(rxQuantity),
+// After result = await submitViosOrder(...)
+// Log to pharmacy_order_transmissions
+await supabaseAdmin.from("pharmacy_order_transmissions").insert({
+  order_id,
+  order_line_id,
+  pharmacy_id: pharmacyId,
+  transmission_type: 'order',
+  api_endpoint: '/api/orders',
+  request_payload: sanitizedPayload, // redact PHI
+  response_status: result.success ? 200 : 400,
+  response_body: result.response,
+  success: result.success,
+  error_message: result.error,
+  transmitted_at: new Date().toISOString(),
+  pharmacy_order_id: result.orderId
+});
 ```
 
-This ensures the API payload matches what the PDF shows and what VIOS expects (volume-based quantity).
+### 2. Allow re-submission for this specific order
 
-## Scope
-- 1 file changed: `supabase/functions/_shared/vios/viosOrders.ts`
-- Deploy edge functions after change
-- No database changes needed
+The idempotency check at line 135 blocks resubmission because `pharmacy_order_id` is already set. To fix the quantity for this order, we need to either:
+- Clear the `pharmacy_order_id` on the order line via a migration so it can be re-sent
+- Or contact VIOS to update the quantity on their end
+
+I recommend clearing it and re-sending, since the code now has the correct quantity logic.
+
+### 3. Verify the regex works
+
+The dosage label is `5mg/1mg/10mg/ml - 2mL`. The regex `/[\-–]\s*(\d+)\s*mL/i` matches `- 2mL` and extracts `2`. This is correct and confirmed by the data.
+
+### 4. Deploy and re-send
+
+- Deploy updated `send-vios-order` with transmission logging
+- Clear `pharmacy_order_id` on order line `95d9e316-3cf2-4a6c-8cd9-f54b348b80dd`
+- Re-trigger the order submission
+- Verify in logs that `quantity: "2"` was sent
+
+## Files Changed
+- `supabase/functions/send-vios-order/index.ts` — add transmission logging
+- Migration: clear `pharmacy_order_id` for this order line to allow re-send
 
