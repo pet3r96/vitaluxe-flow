@@ -1,24 +1,37 @@
 
 
-# Fix: DB Updates Silently Failing After VIOS Submission
+# Fix: Transmission Logging Fails Due to NULL pharmacy_id
 
-## Confirmed: Quantity Was Correct
-The dosage label `5mg/1mg/10mg/ml - 2mL` → regex extracts `2` → VIOS received `quantity: "2"`. VIOS accepted the order (ID: `122455182`). The quantity fix is working.
-
-## Problem: Silent DB Failures
-After VIOS accepts the order, the edge function updates the `order_lines` table and inserts into `pharmacy_order_transmissions` — but neither operation checks for errors. The Supabase client returns `{data, error}` instead of throwing, so errors go unnoticed. Current DB state: `pharmacy_order_id: null`, `status: pending`, and zero transmission records.
+## Root Cause
+The `pharmacy_order_transmissions.pharmacy_id` column is `NOT NULL`, but the edge function passes `orderLineData.assigned_pharmacy_id` which is `null` when no pharmacy is explicitly assigned. The insert silently fails with a constraint violation.
 
 ## Fix
 
-### 1. `supabase/functions/send-vios-order/index.ts`
-- Add error checking on the transmission insert (line 201) — log the actual error
-- Add error checking on the order line update (line 221) — log the actual error and return a warning in the response
-- This will surface the root cause so we can fix it
+### 1. `supabase/functions/send-vios-order/index.ts` (line 181 & 204)
 
-### 2. Immediate data fix
-- Use the insert tool to update the order line with the correct pharmacy_order_id (`122455182`) and status (`sent_to_pharmacy`) since VIOS already accepted the order
+Look up the VIOS pharmacy ID from the `pharmacies` table as a fallback when `assigned_pharmacy_id` is null:
+
+```typescript
+// Line 180-181: resolve pharmacy ID
+let pharmacyId = orderLineData.assigned_pharmacy_id || null;
+if (!pharmacyId) {
+  const { data: viosPharmacy } = await supabaseAdmin
+    .from("pharmacies")
+    .select("id")
+    .ilike("name", "%vios%")
+    .limit(1)
+    .maybeSingle();
+  pharmacyId = viosPharmacy?.id || null;
+}
+```
+
+If still null after lookup, skip the insert or use a placeholder — but the VIOS pharmacy should exist in the table.
+
+### 2. Verify VIOS pharmacy exists
+
+Query `pharmacies` table to confirm there's a VIOS entry and get its ID, so we use the correct UUID.
 
 ## Scope
-- 1 file changed: `send-vios-order/index.ts` (add error checking)
-- 1 data update to fix the current order line
+- 1 file, ~5 lines changed
+- No migration needed
 
