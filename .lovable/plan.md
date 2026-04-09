@@ -1,29 +1,46 @@
 
 
-# Fix: Order Lines Using Stale Data Instead of Full Details
+# Fix: Display "Qty: 2mL x 3" for Injectable Orders
 
 ## Problem
 
-Line 912 in `OrderDetailsDialog.tsx` renders order lines from `order.order_lines` (the original table prop) instead of `orderData.order_lines` (which includes `product_variants.dosage_label` from the edge function).
+When a patient orders 3 vials of a 2mL injectable, the system currently shows Rx Qty as just `2` (the mL per vial). The user wants **both** values shown — e.g., `Qty: 2mL x 3` — on both the prescription PDF and the order summary UI.
 
-The component already fetches full details via `get-order-details` and stores it as `orderData` (line 297), but the Order Lines section still references the raw `order` prop.
+## Changes
 
-## Fix
+### 1. `supabase/functions/generate-prescription-pdf/index.ts` (~line 276)
 
-### `src/components/orders/OrderDetailsDialog.tsx` (line 912)
+Update the quantity logic to combine per-vial volume with order quantity when both exist:
 
-Change:
-```tsx
-{order.order_lines?.map((line: any) => (
+```typescript
+quantity: (() => {
+  const mlMatch = variantDosageLabel?.match(/[\-–]\s*(\d+)\s*mL/i);
+  const orderQty = orderLine.quantity || 1;
+  if (mlMatch) {
+    const mlVol = parseInt(mlMatch[1]);
+    // Show "2mL x 3" when ordering multiple vials
+    return orderQty > 1 ? `${mlVol}mL x ${orderQty}` : mlVol;
+  }
+  return orderQty;
+})(),
 ```
-To:
-```tsx
-{(orderData?.order_lines || order.order_lines)?.map((line: any) => (
-```
 
-This ensures the rendered order lines use the enriched data (with `product_variants.dosage_label`) when available, falling back to the original prop while loading.
+Then in the PDF rendering section where quantity is drawn, ensure it renders as a string (it may already since `doc.text()` accepts strings).
+
+### 2. `src/components/orders/OrderDetailsDialog.tsx`
+
+Add a **Volume** column next to the existing Qty column in the order lines table:
+
+- **Qty**: The order quantity (number of vials, e.g., `3`)
+- **Volume**: The per-unit mL extracted from `dosage_label` (e.g., `2mL`)
+
+This gives two clear columns instead of one ambiguous number.
+
+### 3. `src/components/products/PrescriptionWriterDialog.tsx`
+
+Apply the same combined display logic when creating new prescriptions — if the cart quantity > 1 and the variant has an mL volume, format as `"2mL x 3"`.
 
 ## Scope
-- 1 file, 1-line change
-- No edge function changes needed — the data is already being fetched correctly
+- 3 files changed
+- No database/migration changes
 
