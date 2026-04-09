@@ -177,6 +177,9 @@ serve(async (req) => {
       }
     }
 
+    // Get pharmacy ID for logging
+    const pharmacyId = orderLineData.assigned_pharmacy_id || null;
+
     // Submit to VIOS
     const result = await submitViosOrder(orderLineData, practice, { 
       isTestOrder: is_test_order, 
@@ -184,6 +187,35 @@ serve(async (req) => {
       skipValidation: true,
       pdfBase64 
     });
+
+    // Log transmission to pharmacy_order_transmissions (sanitized - no PHI)
+    try {
+      const sanitizedPayload = {
+        product_id: orderLineData.products?.vios_lf_product_id,
+        variant_product_code: orderLineData.product_variants?.product_code,
+        quantity: result.metadata?.quantity || orderLineData.quantity,
+        is_test_order,
+        has_pdf: !!pdfBase64,
+        dosage_label: orderLineData.product_variants?.dosage_label,
+      };
+      await supabaseAdmin.from("pharmacy_order_transmissions").insert({
+        order_id,
+        order_line_id,
+        pharmacy_id: pharmacyId,
+        transmission_type: 'order',
+        api_endpoint: '/api/orders',
+        request_payload: sanitizedPayload,
+        response_status: result.success ? 200 : 400,
+        response_body: { orderId: result.orderId, rxNumber: result.rxNumber, error: result.error },
+        success: result.success,
+        error_message: result.error || null,
+        transmitted_at: new Date().toISOString(),
+        pharmacy_order_id: result.orderId || null,
+      });
+      edgeLogger.info("Transmission logged", { order_line_id, success: result.success });
+    } catch (logErr) {
+      edgeLogger.warn("Failed to log transmission", { error: logErr instanceof Error ? logErr.message : String(logErr) });
+    }
 
     if (result.success) {
       await supabaseAdmin.from("order_lines").update({ 
@@ -198,7 +230,6 @@ serve(async (req) => {
         rx_number: result.rxNumber 
       });
     } else {
-      // Log failure but don't update status - let caller handle
       edgeLogger.warn("VIOS order submission failed", { 
         order_line_id, 
         error: result.error 
