@@ -150,7 +150,7 @@ serve(async (req) => {
     if (!validation.valid) {
       // Update order line status to routing error
       await supabaseAdmin.from("order_lines").update({
-        status: "pharmacy_routing_error"
+        status: "denied"
       }).eq("id", order_line_id);
       
       return new Response(
@@ -167,7 +167,7 @@ serve(async (req) => {
       // For controlled substances, PDF is mandatory
       if (isControlledSubstance(orderLineData) && !pdfBase64) {
         await supabaseAdmin.from("order_lines").update({
-          status: "pharmacy_routing_error"
+          status: "denied"
         }).eq("id", order_line_id);
         
         return new Response(
@@ -198,7 +198,7 @@ serve(async (req) => {
         has_pdf: !!pdfBase64,
         dosage_label: orderLineData.product_variants?.dosage_label,
       };
-      await supabaseAdmin.from("pharmacy_order_transmissions").insert({
+      const { error: txLogError } = await supabaseAdmin.from("pharmacy_order_transmissions").insert({
         order_id,
         order_line_id,
         pharmacy_id: pharmacyId,
@@ -212,17 +212,25 @@ serve(async (req) => {
         transmitted_at: new Date().toISOString(),
         pharmacy_order_id: result.orderId || null,
       });
-      edgeLogger.info("Transmission logged", { order_line_id, success: result.success });
+      if (txLogError) {
+        edgeLogger.error("Failed to insert transmission log", new Error(JSON.stringify(txLogError)));
+      } else {
+        edgeLogger.info("Transmission logged", { order_line_id, success: result.success });
+      }
     } catch (logErr) {
-      edgeLogger.warn("Failed to log transmission", { error: logErr instanceof Error ? logErr.message : String(logErr) });
+      edgeLogger.warn("Failed to log transmission (exception)", { error: logErr instanceof Error ? logErr.message : String(logErr) });
     }
 
     if (result.success) {
-      await supabaseAdmin.from("order_lines").update({ 
+      const { error: updateError } = await supabaseAdmin.from("order_lines").update({ 
         pharmacy_order_id: result.orderId, 
         pharmacy_order_metadata: result.metadata,
-        status: "sent_to_pharmacy"
+        status: "filled"
       }).eq("id", order_line_id);
+      
+      if (updateError) {
+        edgeLogger.error("Failed to update order line after VIOS success", new Error(JSON.stringify(updateError)));
+      }
       
       edgeLogger.info("VIOS order submitted successfully", { 
         order_line_id, 
