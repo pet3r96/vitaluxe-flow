@@ -715,13 +715,13 @@ serve(async (req) => {
           .single();
         const rawTs = (olTs as any)?.orders?.created_at;
         fullTimestamp = rawTs
-          ? new Date(rawTs).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+          ? new Date(rawTs).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Phoenix' })
           : date;
       } catch {
         fullTimestamp = date;
       }
     } else {
-      fullTimestamp = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+      fullTimestamp = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Phoenix' });
     }
 
     if (attestationData) {
