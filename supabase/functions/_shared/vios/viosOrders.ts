@@ -165,6 +165,11 @@ export function buildViosOrderPayload(
   const allergyCodes = (patient as any)?.allergy_codes || [];
   const allergiesRaw = patient?.allergies ? [patient.allergies] : undefined;
   
+  // Extract mL volume from dosage label for injectable Rx quantity
+  const dosageLabel = orderLine.product_variants?.dosage_label || '';
+  const mlMatch = dosageLabel.match(/[\-–]\s*(\d+)\s*mL/i);
+  const rxQuantity = mlMatch ? parseInt(mlMatch[1]) : (orderLine.quantity || 1);
+
   const payload: ViosOrderPayload = {
     general: {
       referenceId: orderLine.id,
@@ -206,11 +211,6 @@ export function buildViosOrderPayload(
       recipientLastName: patientLastName,
       recipientPhone: formatViosPhone(orderLine.patient_phone)
     },
-    // Extract mL volume from dosage label for injectable Rx quantity
-    const dosageLabel = orderLine.product_variants?.dosage_label || '';
-    const mlMatch = dosageLabel.match(/[\-–]\s*(\d+)\s*mL/i);
-    const rxQuantity = mlMatch ? parseInt(mlMatch[1]) : (orderLine.quantity || 1);
-
     rxs: [{
       rxType: 'new',
       quantity: String(rxQuantity),
