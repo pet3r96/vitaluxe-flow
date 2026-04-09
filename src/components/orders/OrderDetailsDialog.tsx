@@ -931,9 +931,21 @@ export const OrderDetailsDialog = ({
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Quantity</p>
+                      <p className="text-sm text-muted-foreground">Qty</p>
                       <p className="font-medium">{line.quantity}</p>
                     </div>
+                    {(() => {
+                      const dlMatch = line.product_variants?.dosage_label?.match(/[\-–]\s*(\d+)\s*mL/i);
+                      if (dlMatch) {
+                        return (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Volume</p>
+                            <p className="font-medium">{dlMatch[1]}mL</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                     <div>
                       <p className="text-sm text-muted-foreground">Shipping Speed</p>
                       <Badge variant="outline" className="capitalize w-fit">

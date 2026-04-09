@@ -262,7 +262,11 @@ export function PrescriptionWriterDialog({
           // For injectables, extract mL volume from dosage as Rx quantity
           quantity: (() => {
             const mlMatch = customDosage?.match(/[\-–]\s*(\d+)\s*mL/i);
-            return mlMatch ? parseInt(mlMatch[1]) : quantity;
+            if (mlMatch) {
+              const mlVol = parseInt(mlMatch[1]);
+              return quantity > 1 ? `${mlVol}mL x ${quantity}` : mlVol;
+            }
+            return quantity;
           })(),
           signature: signature,
           dispensing_option: dispensingOption,

@@ -275,11 +275,13 @@ serve(async (req) => {
         // e.g. "5mg/1mg/10mg/ml - 2mL" → rxQuantity = 2
         quantity: (() => {
           const mlMatch = variantDosageLabel?.match(/[\-–]\s*(\d+)\s*mL/i);
+          const orderQty = orderLine.quantity || 1;
           if (mlMatch) {
-            edgeLogger.info('Extracted Rx quantity from dosage label', { mlVolume: mlMatch[1], dosageLabel: variantDosageLabel });
-            return parseInt(mlMatch[1]);
+            const mlVol = parseInt(mlMatch[1]);
+            edgeLogger.info('Extracted Rx quantity from dosage label', { mlVolume: mlVol, orderQty, dosageLabel: variantDosageLabel });
+            return orderQty > 1 ? `${mlVol}mL x ${orderQty}` : mlVol;
           }
-          return orderLine.quantity || 1;
+          return orderQty;
         })(),
         signature: providerProfile.name || 'Authorized Prescriber',
         dispensing_option: 'dispense_as_written',
