@@ -206,9 +206,14 @@ export function buildViosOrderPayload(
       recipientLastName: patientLastName,
       recipientPhone: formatViosPhone(orderLine.patient_phone)
     },
+    // Extract mL volume from dosage label for injectable Rx quantity
+    const dosageLabel = orderLine.product_variants?.dosage_label || '';
+    const mlMatch = dosageLabel.match(/[\-–]\s*(\d+)\s*mL/i);
+    const rxQuantity = mlMatch ? parseInt(mlMatch[1]) : (orderLine.quantity || 1);
+
     rxs: [{
       rxType: 'new',
-      quantity: String(orderLine.quantity || 1),
+      quantity: String(rxQuantity),
       directions: orderLine.custom_sig || orderLine.custom_dosage || 'As directed',
       foreignRxNumber: orderLine.id,
       lfProductId: Number(viosProductId), // Required — validated upstream by product management
