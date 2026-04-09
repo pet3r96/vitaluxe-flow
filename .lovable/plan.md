@@ -1,46 +1,60 @@
 
 
-# Fix: Display "Qty: 2mL x 3" for Injectable Orders
+# Add Attestation as Page 2 of Prescription PDF
 
-## Problem
-
-When a patient orders 3 vials of a 2mL injectable, the system currently shows Rx Qty as just `2` (the mL per vial). The user wants **both** values shown — e.g., `Qty: 2mL x 3` — on both the prescription PDF and the order summary UI.
+## Summary
+Add a second page to every prescription PDF that renders the medical attestation form, including the attestation points, a timestamp of when the order was placed, and the provider's signature. Backfill for Renee Rodriguez's order after deploy.
 
 ## Changes
 
-### 1. `supabase/functions/generate-prescription-pdf/index.ts` (~line 276)
+### 1. `supabase/functions/generate-prescription-pdf/index.ts`
 
-Update the quantity logic to combine per-vial volume with order quantity when both exist:
+After the existing page 1 rendering (before the PDF output at ~line 693), add a new page:
 
-```typescript
-quantity: (() => {
-  const mlMatch = variantDosageLabel?.match(/[\-–]\s*(\d+)\s*mL/i);
-  const orderQty = orderLine.quantity || 1;
-  if (mlMatch) {
-    const mlVol = parseInt(mlMatch[1]);
-    // Show "2mL x 3" when ordering multiple vials
-    return orderQty > 1 ? `${mlVol}mL x ${orderQty}` : mlVol;
-  }
-  return orderQty;
-})(),
+- `doc.addPage('letter')` 
+- Render a professional header: "MEDICAL ATTESTATION" centered, with VitaLuxe branding
+- Fetch the attestation content from `checkout_attestation` table (there's only one row)
+- Render each attestation bullet point as a formatted list item
+- Add a checkbox visual (filled) next to the checkbox text ("I agree to all of the above")
+- Add timestamp: use the order's `created_at` date/time (already available as `date` variable for page 1, but we need the full datetime — pull from `orderLine.orders.created_at` or `prescriptionData.date`)
+- Add provider signature (reuse the same cursive rendering from page 1) and prescriber name
+- Add a "Date & Time of Attestation" field showing the order creation timestamp with time
+
+**Data needed**: Fetch `checkout_attestation` content inside the edge function. For the `order_line_id` path, the order `created_at` is already fetched via `orderLine.orders.created_at`. For the direct-call path, pass the current timestamp.
+
+**Attestation page layout** (letter size, inches):
+```text
++------------------------------------------+
+|        MEDICAL ATTESTATION               |
+|        VitaLuxe Services                 |
+|------------------------------------------|
+|                                          |
+|  Title: Medical Attestation Required     |
+|  Subtitle: Please read and confirm...    |
+|                                          |
+|  By checking the box below, you attest:  |
+|                                          |
+|  • Point 1                               |
+|  • Point 2                               |
+|  • Point 3                               |
+|  • Point 4                               |
+|  • Point 5 (long clinical attestation)   |
+|                                          |
+|  [X] I agree to all of the above        |
+|                                          |
+|  Date & Time: Apr 8, 2026, 2:14 PM      |
+|                                          |
+|  _____Provider Signature_____            |
+|  Prescriber: Mary McMillin               |
++------------------------------------------+
 ```
 
-Then in the PDF rendering section where quantity is drawn, ensure it renders as a string (it may already since `doc.text()` accepts strings).
+### 2. Backfill Renee Rodriguez
 
-### 2. `src/components/orders/OrderDetailsDialog.tsx`
-
-Add a **Volume** column next to the existing Qty column in the order lines table:
-
-- **Qty**: The order quantity (number of vials, e.g., `3`)
-- **Volume**: The per-unit mL extracted from `dosage_label` (e.g., `2mL`)
-
-This gives two clear columns instead of one ambiguous number.
-
-### 3. `src/components/products/PrescriptionWriterDialog.tsx`
-
-Apply the same combined display logic when creating new prescriptions — if the cart quantity > 1 and the variant has an mL volume, format as `"2mL x 3"`.
+After deploying, call the edge function with `order_line_id: 95d9e316-3cf2-4a6c-8cd9-f54b348b80dd` to regenerate with the attestation page.
 
 ## Scope
-- 3 files changed
-- No database/migration changes
+- 1 file changed: `generate-prescription-pdf/index.ts`
+- 1 regeneration call after deploy
+- No database/migration changes (attestation content is read from existing `checkout_attestation` table)
 
