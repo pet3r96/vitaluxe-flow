@@ -690,6 +690,164 @@ serve(async (req) => {
     const documentId = `${Date.now()}-${provider_id.substring(0, 8)}`;
     doc.text(`Digitally verified by ${prescriberDisplayName} on ${date}. Document ID: ${documentId}`, 4.25, bottomY + 2.00, { align: 'center' });
 
+    // ===== PAGE 2: MEDICAL ATTESTATION =====
+    // Fetch attestation content from database
+    const { data: attestationData } = await supabase
+      .from('checkout_attestation')
+      .select('title, subtitle, content, checkbox_text')
+      .eq('is_active', true)
+      .limit(1)
+      .single();
+
+    // Determine attestation timestamp
+    const attestationTimestamp = requestData.order_line_id
+      ? new Date(prescriptionData.date ? prescriptionData.date : Date.now())
+      : new Date();
+    // For order_line_id mode, use the full created_at from the order
+    let fullTimestamp: string;
+    if (requestData.order_line_id) {
+      // prescriptionData.date is already formatted as locale date string; get raw from orderLine
+      try {
+        const { data: olTs } = await supabase
+          .from('order_lines')
+          .select('orders!inner(created_at)')
+          .eq('id', requestData.order_line_id)
+          .single();
+        const rawTs = (olTs as any)?.orders?.created_at;
+        fullTimestamp = rawTs
+          ? new Date(rawTs).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+          : date;
+      } catch {
+        fullTimestamp = date;
+      }
+    } else {
+      fullTimestamp = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+
+    if (attestationData) {
+      doc.addPage('letter');
+
+      // White background for attestation page
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, 8.5, 11, 'F');
+
+      // Border
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.02);
+      doc.rect(0.5, 0.5, 7.5, 10, 'S');
+
+      // Header
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('MEDICAL ATTESTATION', 4.25, 1.1, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      doc.text('VitaLuxe Services', 4.25, 1.4, { align: 'center' });
+
+      // Horizontal rule
+      doc.setLineWidth(0.01);
+      doc.setDrawColor(150, 150, 150);
+      doc.line(0.75, 1.6, 7.75, 1.6);
+
+      // Title
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text(attestationData.title || 'Medical Attestation Required', 0.75, 2.0);
+
+      // Subtitle
+      let cursorY = 2.0;
+      if (attestationData.subtitle) {
+        cursorY += 0.35;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60);
+        const subtitleLines = doc.splitTextToSize(attestationData.subtitle, 6.5);
+        doc.text(subtitleLines, 0.75, cursorY);
+        cursorY += subtitleLines.length * 0.18;
+      }
+
+      // "By checking the box below, you attest:" intro
+      cursorY += 0.35;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('By checking the box below, you attest:', 0.75, cursorY);
+      cursorY += 0.35;
+
+      // Parse and render attestation content (bullet points)
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 30, 30);
+
+      const contentText = attestationData.content || '';
+      // Split by newlines or numbered items
+      const bulletPoints = contentText
+        .split(/\n/)
+        .map((line: string) => line.trim())
+        .filter((line: string) => line.length > 0);
+
+      for (const point of bulletPoints) {
+        const wrappedLines = doc.splitTextToSize(point, 6.0);
+        // Bullet
+        doc.text('•', 0.85, cursorY);
+        doc.text(wrappedLines, 1.15, cursorY);
+        cursorY += wrappedLines.length * 0.18 + 0.12;
+
+        // Page overflow check
+        if (cursorY > 9.0) break;
+      }
+
+      // Checkbox with agreement text
+      cursorY += 0.3;
+      doc.setDrawColor(0, 0, 0);
+      doc.setFillColor(0, 0, 0);
+      doc.rect(0.85, cursorY - 0.12, 0.15, 0.15, 'F'); // Filled checkbox
+      // Checkmark in white
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.text('✓', 0.875, cursorY);
+      // Checkbox label
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(attestationData.checkbox_text || 'I agree to all of the above', 1.15, cursorY);
+
+      // Date & Time of Attestation
+      cursorY += 0.5;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Date & Time of Attestation:', 0.85, cursorY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(fullTimestamp, 3.3, cursorY);
+
+      // Signature section
+      cursorY += 0.6;
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.01);
+      doc.line(0.85, cursorY + 0.15, 4.5, cursorY + 0.15); // Signature line
+
+      // Provider signature in cursive style
+      doc.setFontSize(16);
+      doc.setFont('times', 'italic');
+      doc.setTextColor(0, 0, 100);
+      doc.text(prescriberDisplayName, 0.95, cursorY + 0.05);
+
+      // Prescriber label
+      cursorY += 0.4;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Prescriber: ${prescriberDisplayName}`, 0.85, cursorY);
+
+      edgeLogger.info('Attestation page 2 added to prescription PDF');
+    } else {
+      edgeLogger.warn('No active attestation found, skipping page 2');
+    }
+
     // Get PDF as array buffer
     const pdfOutput = doc.output('arraybuffer');
 
