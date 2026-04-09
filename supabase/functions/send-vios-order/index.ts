@@ -150,7 +150,7 @@ serve(async (req) => {
     if (!validation.valid) {
       // Update order line status to routing error
       await supabaseAdmin.from("order_lines").update({
-        status: "pharmacy_routing_error"
+        status: "denied"
       }).eq("id", order_line_id);
       
       return new Response(
@@ -167,7 +167,7 @@ serve(async (req) => {
       // For controlled substances, PDF is mandatory
       if (isControlledSubstance(orderLineData) && !pdfBase64) {
         await supabaseAdmin.from("order_lines").update({
-          status: "pharmacy_routing_error"
+          status: "denied"
         }).eq("id", order_line_id);
         
         return new Response(
