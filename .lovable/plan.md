@@ -1,60 +1,39 @@
 
 
-# Add Attestation as Page 2 of Prescription PDF
+# Fix: Attestation Timestamp Displaying in UTC Instead of Local Time
 
-## Summary
-Add a second page to every prescription PDF that renders the medical attestation form, including the attestation points, a timestamp of when the order was placed, and the provider's signature. Backfill for Renee Rodriguez's order after deploy.
+## Problem
+The edge function uses `toLocaleString('en-US', ...)` without specifying a `timeZone` option. Deno edge functions run in UTC, so the timestamp shows "Apr 8, 2026, 2:31 AM" instead of the correct local time "Apr 7, 2026, 7:31 PM" (MST/Arizona).
 
-## Changes
+## Fix
 
-### 1. `supabase/functions/generate-prescription-pdf/index.ts`
+### `supabase/functions/generate-prescription-pdf/index.ts` (~lines 717-724)
 
-After the existing page 1 rendering (before the PDF output at ~line 693), add a new page:
+Add `timeZone: 'America/Phoenix'` to both `toLocaleString` calls for `fullTimestamp`:
 
-- `doc.addPage('letter')` 
-- Render a professional header: "MEDICAL ATTESTATION" centered, with VitaLuxe branding
-- Fetch the attestation content from `checkout_attestation` table (there's only one row)
-- Render each attestation bullet point as a formatted list item
-- Add a checkbox visual (filled) next to the checkbox text ("I agree to all of the above")
-- Add timestamp: use the order's `created_at` date/time (already available as `date` variable for page 1, but we need the full datetime — pull from `orderLine.orders.created_at` or `prescriptionData.date`)
-- Add provider signature (reuse the same cursive rendering from page 1) and prescriber name
-- Add a "Date & Time of Attestation" field showing the order creation timestamp with time
-
-**Data needed**: Fetch `checkout_attestation` content inside the edge function. For the `order_line_id` path, the order `created_at` is already fetched via `orderLine.orders.created_at`. For the direct-call path, pass the current timestamp.
-
-**Attestation page layout** (letter size, inches):
-```text
-+------------------------------------------+
-|        MEDICAL ATTESTATION               |
-|        VitaLuxe Services                 |
-|------------------------------------------|
-|                                          |
-|  Title: Medical Attestation Required     |
-|  Subtitle: Please read and confirm...    |
-|                                          |
-|  By checking the box below, you attest:  |
-|                                          |
-|  • Point 1                               |
-|  • Point 2                               |
-|  • Point 3                               |
-|  • Point 4                               |
-|  • Point 5 (long clinical attestation)   |
-|                                          |
-|  [X] I agree to all of the above        |
-|                                          |
-|  Date & Time: Apr 8, 2026, 2:14 PM      |
-|                                          |
-|  _____Provider Signature_____            |
-|  Prescriber: Mary McMillin               |
-+------------------------------------------+
+```typescript
+fullTimestamp = rawTs
+  ? new Date(rawTs).toLocaleString('en-US', { 
+      month: 'short', day: 'numeric', year: 'numeric', 
+      hour: 'numeric', minute: '2-digit', hour12: true,
+      timeZone: 'America/Phoenix'
+    })
+  : date;
 ```
 
-### 2. Backfill Renee Rodriguez
+And for the direct-call path (line 724):
+```typescript
+fullTimestamp = new Date().toLocaleString('en-US', { 
+  month: 'short', day: 'numeric', year: 'numeric', 
+  hour: 'numeric', minute: '2-digit', hour12: true,
+  timeZone: 'America/Phoenix'
+});
+```
 
-After deploying, call the edge function with `order_line_id: 95d9e316-3cf2-4a6c-8cd9-f54b348b80dd` to regenerate with the attestation page.
+### After deploy
+Regenerate Renee Rodriguez's prescription (`order_line_id: 95d9e316-3cf2-4a6c-8cd9-f54b348b80dd`) so the attestation shows "Apr 7, 2026, 7:31 PM".
 
 ## Scope
-- 1 file changed: `generate-prescription-pdf/index.ts`
-- 1 regeneration call after deploy
-- No database/migration changes (attestation content is read from existing `checkout_attestation` table)
+- 1 file, 2 locale option changes
+- 1 regeneration call
 
