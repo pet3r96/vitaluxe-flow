@@ -259,7 +259,11 @@ export function PrescriptionWriterDialog({
           practice_address: practice.address_formatted || practice.address,
           date: format(new Date(), 'MM/dd/yyyy'),
           notes: notes,
-          quantity: quantity,
+          // For injectables, extract mL volume from dosage as Rx quantity
+          quantity: (() => {
+            const mlMatch = customDosage?.match(/[\-–]\s*(\d+)\s*mL/i);
+            return mlMatch ? parseInt(mlMatch[1]) : quantity;
+          })(),
           signature: signature,
           dispensing_option: dispensingOption,
           days_supply: parseInt(daysSupply)

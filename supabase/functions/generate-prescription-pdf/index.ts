@@ -271,7 +271,16 @@ serve(async (req) => {
             : null)),
         date: new Date(orderLine.orders.created_at).toLocaleDateString('en-US'),
         notes: '',
-        quantity: orderLine.quantity || 1,
+        // For injectables, extract mL volume from dosage label as Rx quantity
+        // e.g. "5mg/1mg/10mg/ml - 2mL" → rxQuantity = 2
+        quantity: (() => {
+          const mlMatch = variantDosageLabel?.match(/[\-–]\s*(\d+)\s*mL/i);
+          if (mlMatch) {
+            edgeLogger.info('Extracted Rx quantity from dosage label', { mlVolume: mlMatch[1], dosageLabel: variantDosageLabel });
+            return parseInt(mlMatch[1]);
+          }
+          return orderLine.quantity || 1;
+        })(),
         signature: providerProfile.name || 'Authorized Prescriber',
         dispensing_option: 'dispense_as_written',
         refills_allowed: orderLine.refills_allowed ?? false,

@@ -114,6 +114,10 @@ serve(async (req) => {
           tracking_number,
           shipped_at,
           delivered_at,
+          variant_id,
+          product_variants (
+            dosage_label
+          ),
           products (
             id,
             name,
