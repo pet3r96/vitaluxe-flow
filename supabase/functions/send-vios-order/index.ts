@@ -177,8 +177,19 @@ serve(async (req) => {
       }
     }
 
-    // Get pharmacy ID for logging
-    const pharmacyId = orderLineData.assigned_pharmacy_id || null;
+    // Get pharmacy ID for logging - fall back to VIOS pharmacy record if not assigned
+    let pharmacyId = orderLineData.assigned_pharmacy_id || null;
+    if (!pharmacyId) {
+      const { data: viosPharmacy } = await supabaseAdmin
+        .from("pharmacies")
+        .select("id")
+        .eq("id", "d5e75179-e66c-450f-8cae-1f4df93b097c")
+        .maybeSingle();
+      pharmacyId = viosPharmacy?.id || null;
+      if (pharmacyId) {
+        edgeLogger.info("Resolved VIOS pharmacy ID for logging", { pharmacyId });
+      }
+    }
 
     // Submit to VIOS
     const result = await submitViosOrder(orderLineData, practice, { 
