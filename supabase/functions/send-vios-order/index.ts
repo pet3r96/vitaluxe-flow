@@ -225,7 +225,7 @@ serve(async (req) => {
       const { error: updateError } = await supabaseAdmin.from("order_lines").update({ 
         pharmacy_order_id: result.orderId, 
         pharmacy_order_metadata: result.metadata,
-        status: "sent_to_pharmacy"
+        status: "filled"
       }).eq("id", order_line_id);
       
       if (updateError) {
