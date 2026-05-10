@@ -1,37 +1,23 @@
+# Create a new super_admin login
 
+## What I'll do
 
-# Fix: Transmission Logging Fails Due to NULL pharmacy_id
+1. Create a new auth user via the Supabase Admin API in a one-off edge function call (email pre-confirmed, no verification needed):
+   - Email: `superadmin@vitaluxeservices.com`
+   - Password: auto-generated 20-char strong random password (shown once in chat)
+   - Name: `Super Admin`
+2. Insert a matching row in `public.profiles` with `status='active'`, `active=true`, `temp_password=false`, `must_change_password=false`, and terms pre-accepted so login isn't blocked by the post-login gates.
+3. Insert two rows in `public.user_roles` for this user: `admin` and `super_admin` (matching the existing super_admin pattern).
+4. Verify by querying `profiles` + `user_roles`.
+5. Return the credentials to you in chat. You should change the password after first login.
 
-## Root Cause
-The `pharmacy_order_transmissions.pharmacy_id` column is `NOT NULL`, but the edge function passes `orderLineData.assigned_pharmacy_id` which is `null` when no pharmacy is explicitly assigned. The insert silently fails with a constraint violation.
+## Technical details
 
-## Fix
-
-### 1. `supabase/functions/send-vios-order/index.ts` (line 181 & 204)
-
-Look up the VIOS pharmacy ID from the `pharmacies` table as a fallback when `assigned_pharmacy_id` is null:
-
-```typescript
-// Line 180-181: resolve pharmacy ID
-let pharmacyId = orderLineData.assigned_pharmacy_id || null;
-if (!pharmacyId) {
-  const { data: viosPharmacy } = await supabaseAdmin
-    .from("pharmacies")
-    .select("id")
-    .ilike("name", "%vios%")
-    .limit(1)
-    .maybeSingle();
-  pharmacyId = viosPharmacy?.id || null;
-}
-```
-
-If still null after lookup, skip the insert or use a placeholder — but the VIOS pharmacy should exist in the table.
-
-### 2. Verify VIOS pharmacy exists
-
-Query `pharmacies` table to confirm there's a VIOS entry and get its ID, so we use the correct UUID.
+- User creation will go through the existing `create_user_with_role` DB function (10-arg signature) to stay consistent with the project's signup pipeline, called from a small admin script via the migration/insert tools. Auth user is created first using `supabase.auth.admin.createUser({ email_confirm: true })`.
+- No schema changes. No new tables. No new edge functions.
+- One file touched? No — this is a data-only operation (auth user + profile + roles rows). No app code changes.
 
 ## Scope
-- 1 file, ~5 lines changed
-- No migration needed
-
+- 0 code files changed
+- 1 auth user created
+- 3 DB rows inserted (profiles + 2× user_roles)
