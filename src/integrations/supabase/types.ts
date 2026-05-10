@@ -153,6 +153,33 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_role_audit: {
+        Row: {
+          assigned_by: string | null
+          assigned_to: string
+          created_at: string
+          email: string | null
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_to: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_to?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       alerts: {
         Row: {
           acknowledged_at: string | null
