@@ -1,3 +1,5 @@
+[functions._oneshot_create_superadmin]
+verify_jwt = false
 project_id = "qbtsfajshnrwwlfzkeog"
 
 [functions.admin-get-password-status]
