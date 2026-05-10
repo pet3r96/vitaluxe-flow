@@ -1,4 +1,4 @@
-[functions._oneshot_create_superadmin]
+[functions.oneshot-create-superadmin]
 verify_jwt = false
 project_id = "qbtsfajshnrwwlfzkeog"
 
