@@ -1,5 +1,3 @@
-[functions.oneshot-create-superadmin]
-verify_jwt = false
 project_id = "qbtsfajshnrwwlfzkeog"
 
 [functions.admin-get-password-status]
